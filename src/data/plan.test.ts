@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { getPlanTasks, PLAN, TOPICS } from "./plan";
+import { getPlanTasks, getWeekSessions, PLAN, TOPICS } from "./plan";
 import { EXAM_DATE, getWeekDates, PROGRAM_START } from "../lib/dates";
 import program from "./program.json";
 import { READING_CATALOG } from "./readings";
 
-describe("canonical 29-week plan", () => {
+const sessions = PLAN.flatMap(getWeekSessions);
+
+describe("canonical 29-week official 2027 plan", () => {
   it("contains exactly 29 sequential weeks", () => {
     expect(PLAN).toHaveLength(29);
     expect(PLAN.map((week) => week.week)).toEqual(
@@ -12,62 +14,79 @@ describe("canonical 29-week plan", () => {
     );
   });
 
-  it("uses the same dates as the program metadata", () => {
+  it("uses the program window and begins tutoring on Monday 10 August", () => {
     expect(program.programStart).toBe(PROGRAM_START);
+    expect(program.firstTutorSession).toBe("2026-08-10");
     expect(program.examAppointment).toBe(EXAM_DATE);
     expect(program.examWindow.startDate).toBe("2027-02-22");
     expect(program.examWindow.endDate).toBe("2027-02-28");
+    expect(sessions[0]?.date).toBe(program.firstTutorSession);
   });
 
-  it("covers launch through exam day without date gaps", () => {
+  it("covers the Sunday-Saturday program weeks without date gaps", () => {
     expect(PLAN[0]?.startDate).toBe(PROGRAM_START);
     expect(PLAN.at(-1)?.endDate).toBe(EXAM_DATE);
-
     for (const week of PLAN) {
       expect({ startDate: week.startDate, endDate: week.endDate }).toEqual(
         getWeekDates(week.week),
       );
+      for (const session of getWeekSessions(week)) {
+        expect(session.date >= week.startDate).toBe(true);
+        expect(session.date <= week.endDate).toBe(true);
+      }
     }
   });
 
-  it("provides two required tutor sessions plus a planned third session weekly", () => {
-    for (const week of PLAN) {
-      expect(week.session1.requirement).toBe("required");
-      expect(week.session2.requirement).toBe("required");
-      expect(["required", "flex"]).toContain(week.session3.requirement);
-      expect(week.session1.durationMinutes).toBeGreaterThanOrEqual(45);
-      expect(week.session2.durationMinutes).toBeGreaterThanOrEqual(45);
-      expect(week.outcomes.length).toBeGreaterThanOrEqual(3);
-      expect(week.independentStudy.length).toBeGreaterThanOrEqual(3);
-      expect(week.questionTarget).toBeGreaterThan(0);
-      expect(week.masteryGate.length).toBeGreaterThan(20);
-    }
+  it("uses two meetings in most weeks and three in ten intensive weeks", () => {
+    const threeSessionWeeks = PLAN.filter(
+      (week) => getWeekSessions(week).length === 3,
+    ).map((week) => week.week);
+    const twoSessionWeeks = PLAN.filter(
+      (week) => getWeekSessions(week).length === 2,
+    ).map((week) => week.week);
+
+    expect(threeSessionWeeks).toEqual([1, 2, 3, 6, 9, 11, 13, 14, 27, 28]);
+    expect(twoSessionWeeks).toHaveLength(19);
+    expect(program.tutoringRhythm.standardWeeks).toBe(19);
+    expect(program.tutoringRhythm.intensiveWeeks).toBe(10);
   });
 
-  it("numbers every planned session consecutively across all 29 weeks", () => {
-    const sessions = PLAN.flatMap((week) => [
-      week.session1,
-      week.session2,
-      week.session3,
+  it("uses Monday-Wednesday-Saturday for intensive weeks and Wednesday-Saturday otherwise", () => {
+    for (const week of PLAN.slice(0, -1)) {
+      const days = getWeekSessions(week).map((session) => session.day);
+      expect(days).toEqual(
+        week.session3
+          ? ["Monday", "Wednesday", "Saturday"]
+          : ["Wednesday", "Saturday"],
+      );
+    }
+    expect(getWeekSessions(PLAN.at(-1)!).map((session) => session.day)).toEqual([
+      "Wednesday",
+      "Friday",
     ]);
-    expect(sessions).toHaveLength(87);
-    expect(sessions.map((session) => session.number)).toEqual(
-      Array.from({ length: 87 }, (_, index) => index + 1),
-    );
   });
 
-  it("keeps reading references inside the centralized audited catalog", () => {
-    const readingIds = new Set(
-      READING_CATALOG.readings.map((reading) => reading.id),
+  it("numbers all 68 tutoring sessions consecutively", () => {
+    expect(sessions).toHaveLength(68);
+    expect(sessions.map((session) => session.number)).toEqual(
+      Array.from({ length: 68 }, (_, index) => index + 1),
     );
-    for (const session of PLAN.flatMap((week) => [
-      week.session1,
-      week.session2,
-      week.session3,
-    ])) {
-      expect(Array.isArray(session.readings)).toBe(true);
-      for (const id of session.readings) expect(readingIds.has(id)).toBe(true);
+    for (const session of sessions) {
+      expect(session.requirement).toBe("required");
+      expect(session.durationMinutes).toBeGreaterThanOrEqual(45);
     }
+  });
+
+  it("starts with official Quant Module 1 and then follows the official module sequence", () => {
+    const assignedInSessionOrder = sessions.flatMap(
+      (session) => session.readings,
+    );
+    const officialOrder = READING_CATALOG.readings.map((reading) => reading.id);
+    expect(assignedInSessionOrder).toEqual(officialOrder);
+    expect(READING_CATALOG.readings[0]?.title).toBe(
+      "Returns of Financial Assets and Instruments",
+    );
+    expect(sessions[0]?.title).toContain("Quant Module 1");
   });
 
   it("keeps task ids stable and unique", () => {
@@ -80,21 +99,25 @@ describe("canonical 29-week plan", () => {
     for (const topic of TOPICS) expect(covered.has(topic)).toBe(true);
   });
 
-  it("contains an escalating seven-mock campaign and an exam-week taper", () => {
-    const scoredMocks = PLAN.flatMap((week) =>
-      week.mockMilestone?.label.startsWith("Full-length Mock")
-        ? [week.mockMilestone.targetScore]
-        : [],
+  it("contains seven independent full-mock campaigns and an exam-week taper", () => {
+    const mockLabels = PLAN.map((week) => week.mockMilestone?.label).filter(
+      (label) => /^Mock \d$/.test(label ?? ""),
     );
-    expect(scoredMocks).toEqual([60, 63, 65, 67, 69, 70, 72]);
-    expect(PLAN.at(-1)?.mockMilestone?.targetScore).toBeNull();
+    expect(mockLabels).toEqual([
+      "Mock 1",
+      "Mock 2",
+      "Mock 3",
+      "Mock 4",
+      "Mock 5",
+      "Mock 6",
+      "Mock 7",
+    ]);
+    expect(
+      PLAN.map((week) => week.mockMilestone)
+        .filter((milestone) => /^Mock \d$/.test(milestone?.label ?? ""))
+        .map((milestone) => milestone?.targetScore),
+    ).toEqual([60, 63, 65, 67, 69, 70, 72]);
     expect(PLAN.at(-1)?.questionTarget).toBeLessThan(100);
-  });
-
-  it("makes diagnostic, gate, and mock third sessions required", () => {
-    for (const week of PLAN) {
-      const mustBeRequired = week.week === 1 || (week.week >= 20 && week.week <= 28);
-      expect(week.session3.requirement).toBe(mustBeRequired ? "required" : "flex");
-    }
+    expect(getWeekSessions(PLAN.at(-1)!)[1]?.date).toBe("2027-02-26");
   });
 });

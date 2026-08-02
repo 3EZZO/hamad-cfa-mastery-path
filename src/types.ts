@@ -4,7 +4,9 @@ export interface PlanSession {
   title: string;
   objective: string;
   durationMinutes: number;
-  requirement: "required" | "flex";
+  requirement: "required";
+  date: string;
+  day: string;
   readings: string[];
 }
 
@@ -24,7 +26,7 @@ export interface PlanWeek {
   outcomes: string[];
   session1: PlanSession;
   session2: PlanSession;
-  session3: PlanSession;
+  session3?: PlanSession;
   independentStudy: string[];
   questionTarget: number;
   masteryGate: string;

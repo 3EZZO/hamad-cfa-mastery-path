@@ -1,1137 +1,1450 @@
 {
-  "catalogId": "project-202",
-  "pageRangeBasis": "PDF viewer page numbers; the source TOCs do not print page numbers.",
+  "catalogId": "project-202-official-2027-v1",
+  "pageRangeBasis": "Page numbers refer to the official 31-page 2027 Level I Topic Outlines PDF.",
   "sources": [
     {
-      "id": "b1-2024",
-      "fileName": "CFA-2024-Level-I-SchweserNotes-Book-1.pdf",
-      "title": "SchweserNotes 2024 Level I CFA Book 1: Quantitative Methods and Economics",
-      "editionYear": 2024,
-      "publishedYear": 2023,
-      "authority": "supplementary"
-    },
-    {
-      "id": "b3-2024",
-      "fileName": "CFA-2024-Level-I-SchweserNotes-Book-3.pdf",
-      "title": "SchweserNotes 2024 Level I CFA Book 3: Financial Statement Analysis and Equity Investments",
-      "editionYear": 2024,
-      "publishedYear": 2023,
-      "authority": "supplementary"
-    },
-    {
-      "id": "b2-2025",
-      "fileName": "CFA-2025-Level-I-FSA-Equity.pdf",
-      "title": "SchweserNotes 2025 Level I CFA Book 2: Financial Statement Analysis and Equity Investments",
-      "editionYear": 2025,
-      "publishedYear": 2024,
-      "authority": "supplementary"
-    },
-    {
-      "id": "b4-2025",
-      "fileName": "CFA-2025-Level-I-AI-PM-Ethics.pdf",
-      "title": "SchweserNotes 2025 Level I CFA Book 4: Alternative Investments, Portfolio Management, and Ethical and Professional Standards",
-      "editionYear": 2025,
-      "publishedYear": 2024,
-      "authority": "supplementary"
+      "id": "cfa-2027-outline",
+      "fileName": "2027levelitopicoutline_online.pdf",
+      "title": "CFA Institute 2027 Level I Topic Outlines",
+      "editionYear": 2027,
+      "publishedYear": 2026,
+      "authority": "official",
+      "url": "https://www.cfainstitute.org/sites/default/files/2027levelitopicoutline_online.pdf"
     }
   ],
   "coverageNotes": [
-    "All four attached Schweser volumes are supplementary; the 2027 CFA Institute Learning Ecosystem and current errata remain authoritative.",
-    "Current attached volumes are missing for Corporate Issuers/Corporate Finance, Fixed Income, and Derivatives; add the official 2027 readings and practice before finalizing coverage.",
-    "Add official 2027 supplements for Quantitative Methods, the substantially rewritten Equity curriculum, and the updated Ethics modules and cases.",
-    "The 2024 Book 3 readings are exact-title duplicates of 2025 Book 2 and mirror their primary equivalents' sessions; they should not be counted as additional curriculum coverage."
+    "All 102 publicly listed 2027 Level I learning modules are mapped to Sessions 01-44 in official topic order.",
+    "The candidate's registered 2027 Learning Ecosystem supplies the full lessons, examples, practice questions, and interactive tools.",
+    "The Learning Ecosystem and current CFA Institute errata remain authoritative if any wording or curriculum detail changes.",
+    "Check current errata regularly: https://www.cfainstitute.org/programs/candidate-resources/submit-errata"
   ],
   "readings": [
     {
-      "id": "b1-2024-r01",
+      "id": "cfa-2027-outline-m001",
       "number": 1,
-      "title": "Rates and Returns",
+      "title": "Returns of Financial Assets and Instruments",
       "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 13-26",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
+      "pageRange": "Official outline p. 1",
+      "authority": "official",
+      "curriculumStatus": "official",
       "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
       "sessionNumbers": [
-        7
+        1
       ]
     },
     {
-      "id": "b1-2024-r02",
+      "id": "cfa-2027-outline-m002",
       "number": 2,
+      "title": "Types of Financial Returns",
+      "topic": "Quantitative Methods",
+      "pageRange": "Official outline p. 1",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        1
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m003",
+      "number": 3,
+      "title": "Benchmarking Returns",
+      "topic": "Quantitative Methods",
+      "pageRange": "Official outline p. 1",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        2
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m004",
+      "number": 4,
       "title": "The Time Value of Money in Finance",
       "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 27-41",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
+      "pageRange": "Official outline p. 1",
+      "authority": "official",
+      "curriculumStatus": "official",
       "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
       "sessionNumbers": [
-        7
+        2
       ]
     },
     {
-      "id": "b1-2024-r03",
-      "number": 3,
-      "title": "Statistical Measures of Asset Returns",
-      "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 42-57",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
-      "sessionNumbers": [
-        8
-      ]
-    },
-    {
-      "id": "b1-2024-r04",
-      "number": 4,
-      "title": "Probability Trees and Conditional Expectations",
-      "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 58-63",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
-      "sessionNumbers": [
-        8
-      ]
-    },
-    {
-      "id": "b1-2024-r05",
+      "id": "cfa-2027-outline-m005",
       "number": 5,
-      "title": "Portfolio Mathematics",
+      "title": "Statistical Characteristics of Asset Returns",
       "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 64-71",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
+      "pageRange": "Official outline p. 2",
+      "authority": "official",
+      "curriculumStatus": "official",
       "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
       "sessionNumbers": [
-        8
+        3
       ]
     },
     {
-      "id": "b1-2024-r06",
+      "id": "cfa-2027-outline-m006",
       "number": 6,
-      "title": "Simulation Methods",
+      "title": "Statistical Distributions for Financial Asset Prices and Returns",
       "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 72-75",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
+      "pageRange": "Official outline p. 2",
+      "authority": "official",
+      "curriculumStatus": "official",
       "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
       "sessionNumbers": [
-        9
+        3
       ]
     },
     {
-      "id": "b1-2024-r07",
+      "id": "cfa-2027-outline-m007",
       "number": 7,
-      "title": "Estimation and Inference",
+      "title": "Estimation and Hypothesis Testing",
       "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 76-82",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
+      "pageRange": "Official outline p. 2",
+      "authority": "official",
+      "curriculumStatus": "official",
       "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
-      "sessionNumbers": [
-        9
-      ]
-    },
-    {
-      "id": "b1-2024-r08",
-      "number": 8,
-      "title": "Hypothesis Testing",
-      "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 83-100",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
-      "sessionNumbers": [
-        10
-      ]
-    },
-    {
-      "id": "b1-2024-r09",
-      "number": 9,
-      "title": "Parametric and Non-Parametric Tests of Independence",
-      "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 101-105",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
-      "sessionNumbers": [
-        11
-      ]
-    },
-    {
-      "id": "b1-2024-r10",
-      "number": 10,
-      "title": "Simple Linear Regression",
-      "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 106-124",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
-      "sessionNumbers": [
-        11,
-        12
-      ]
-    },
-    {
-      "id": "b1-2024-r11",
-      "number": 11,
-      "title": "Introduction to Big Data Techniques",
-      "topic": "Quantitative Methods",
-      "pageRange": "PDF pp. 125-129",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Use for scheduled practice and reconcile with the official 2027 Quantitative Methods material.",
-      "sessionNumbers": [
-        12
-      ]
-    },
-    {
-      "id": "b1-2024-r12",
-      "number": 12,
-      "title": "Firms and Market Structures",
-      "topic": "Economics",
-      "pageRange": "PDF pp. 131-150",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Title and published learning-outcome sequence appear aligned; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        13
-      ]
-    },
-    {
-      "id": "b1-2024-r13",
-      "number": 13,
-      "title": "Understanding Business Cycles",
-      "topic": "Economics",
-      "pageRange": "PDF pp. 151-157",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Title and published learning-outcome sequence appear aligned; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        13
-      ]
-    },
-    {
-      "id": "b1-2024-r14",
-      "number": 14,
-      "title": "Fiscal Policy",
-      "topic": "Economics",
-      "pageRange": "PDF pp. 158-167",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Title and published learning-outcome sequence appear aligned; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        13
-      ]
-    },
-    {
-      "id": "b1-2024-r15",
-      "number": 15,
-      "title": "Monetary Policy",
-      "topic": "Economics",
-      "pageRange": "PDF pp. 168-179",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Title and published learning-outcome sequence appear aligned; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        14
-      ]
-    },
-    {
-      "id": "b1-2024-r16",
-      "number": 16,
-      "title": "Introduction to Geopolitics",
-      "topic": "Economics",
-      "pageRange": "PDF pp. 180-187",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Title and published learning-outcome sequence appear aligned; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        14
-      ]
-    },
-    {
-      "id": "b1-2024-r17",
-      "number": 17,
-      "title": "International Trade",
-      "topic": "Economics",
-      "pageRange": "PDF pp. 188-196",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Title and published learning-outcome sequence appear aligned; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        14
-      ]
-    },
-    {
-      "id": "b1-2024-r18",
-      "number": 18,
-      "title": "Capital Flows and the FX Market",
-      "topic": "Economics",
-      "pageRange": "PDF pp. 197-207",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Title and published learning-outcome sequence appear aligned; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        15
-      ]
-    },
-    {
-      "id": "b1-2024-r19",
-      "number": 19,
-      "title": "Exchange Rate Calculations",
-      "topic": "Economics",
-      "pageRange": "PDF pp. 208-214",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Title and published learning-outcome sequence appear aligned; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        15
-      ]
-    },
-    {
-      "id": "b3-2024-r29",
-      "number": 29,
-      "title": "Introduction to Financial Statement Analysis",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 12-22",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r27",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        19
-      ]
-    },
-    {
-      "id": "b3-2024-r30",
-      "number": 30,
-      "title": "Analyzing Income Statements",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 23-53",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r28",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        19,
-        20
-      ]
-    },
-    {
-      "id": "b3-2024-r31",
-      "number": 31,
-      "title": "Analyzing Balance Sheets",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 54-65",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r29",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        20
-      ]
-    },
-    {
-      "id": "b3-2024-r32",
-      "number": 32,
-      "title": "Analyzing Statements of Cash Flows I",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 66-92",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r30",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        21,
-        22
-      ]
-    },
-    {
-      "id": "b3-2024-r33",
-      "number": 33,
-      "title": "Analyzing Statements of Cash Flows II",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 93-100",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r31",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        22
-      ]
-    },
-    {
-      "id": "b3-2024-r34",
-      "number": 34,
-      "title": "Analysis of Inventories",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 101-118",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r32",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        23
-      ]
-    },
-    {
-      "id": "b3-2024-r35",
-      "number": 35,
-      "title": "Analysis of Long-Term Assets",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 119-134",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r33",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        24
-      ]
-    },
-    {
-      "id": "b3-2024-r36",
-      "number": 36,
-      "title": "Topics in Long-Term Liabilities and Equity",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 135-156",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r34",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        24
-      ]
-    },
-    {
-      "id": "b3-2024-r37",
-      "number": 37,
-      "title": "Analysis of Income Taxes",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 157-175",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r35",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        25
-      ]
-    },
-    {
-      "id": "b3-2024-r38",
-      "number": 38,
-      "title": "Financial Reporting Quality",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 176-190",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r36",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        26
-      ]
-    },
-    {
-      "id": "b3-2024-r39",
-      "number": 39,
-      "title": "Financial Analysis Techniques",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 191-218",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r37",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        26,
-        27
-      ]
-    },
-    {
-      "id": "b3-2024-r40",
-      "number": 40,
-      "title": "Introduction to Financial Statement Modeling",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 219-228",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r38",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        27
-      ]
-    },
-    {
-      "id": "b3-2024-r41",
-      "number": 41,
-      "title": "Market Organization and Structure",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 230-255",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r39",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        28
-      ]
-    },
-    {
-      "id": "b3-2024-r42",
-      "number": 42,
-      "title": "Security Market Indexes",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 256-272",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r40",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        29
-      ]
-    },
-    {
-      "id": "b3-2024-r43",
-      "number": 43,
-      "title": "Market Efficiency",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 273-283",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r41",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        29
-      ]
-    },
-    {
-      "id": "b3-2024-r44",
-      "number": 44,
-      "title": "Overview of Equity Securities",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 284-295",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r42",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        30
-      ]
-    },
-    {
-      "id": "b3-2024-r45",
-      "number": 45,
-      "title": "Company Analysis: Past and Present",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 296-303",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r43",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        31
-      ]
-    },
-    {
-      "id": "b3-2024-r46",
-      "number": 46,
-      "title": "Industry and Competitive Analysis",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 304-318",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r44",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        31,
-        32
-      ]
-    },
-    {
-      "id": "b3-2024-r47",
-      "number": 47,
-      "title": "Company Analysis: Forecasting",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 319-328",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r45",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        32
-      ]
-    },
-    {
-      "id": "b3-2024-r48",
-      "number": 48,
-      "title": "Equity Valuation: Concepts and Basic Tools",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 329-356",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": "b2-2025-r46",
-      "notes": "Exact-title duplicate of the 2025 Book 2 primary equivalent; use only as backup explanation or extra practice.",
-      "sessionNumbers": [
-        33
-      ]
-    },
-    {
-      "id": "b2-2025-r27",
-      "number": 27,
-      "title": "Introduction to Financial Statement Analysis",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 13-24",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        19
-      ]
-    },
-    {
-      "id": "b2-2025-r28",
-      "number": 28,
-      "title": "Analyzing Income Statements",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 25-55",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        19,
-        20
-      ]
-    },
-    {
-      "id": "b2-2025-r29",
-      "number": 29,
-      "title": "Analyzing Balance Sheets",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 56-68",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        20
-      ]
-    },
-    {
-      "id": "b2-2025-r30",
-      "number": 30,
-      "title": "Analyzing Statements of Cash Flows I",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 69-95",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        21,
-        22
-      ]
-    },
-    {
-      "id": "b2-2025-r31",
-      "number": 31,
-      "title": "Analyzing Statements of Cash Flows II",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 96-103",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        22
-      ]
-    },
-    {
-      "id": "b2-2025-r32",
-      "number": 32,
-      "title": "Analysis of Inventories",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 104-122",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        23
-      ]
-    },
-    {
-      "id": "b2-2025-r33",
-      "number": 33,
-      "title": "Analysis of Long-Term Assets",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 123-138",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        24
-      ]
-    },
-    {
-      "id": "b2-2025-r34",
-      "number": 34,
-      "title": "Topics in Long-Term Liabilities and Equity",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 139-160",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        24
-      ]
-    },
-    {
-      "id": "b2-2025-r35",
-      "number": 35,
-      "title": "Analysis of Income Taxes",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 161-180",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        25
-      ]
-    },
-    {
-      "id": "b2-2025-r36",
-      "number": 36,
-      "title": "Financial Reporting Quality",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 181-196",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        26
-      ]
-    },
-    {
-      "id": "b2-2025-r37",
-      "number": 37,
-      "title": "Financial Analysis Techniques",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 197-226",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        26,
-        27
-      ]
-    },
-    {
-      "id": "b2-2025-r38",
-      "number": 38,
-      "title": "Introduction to Financial Statement Modeling",
-      "topic": "Financial Statement Analysis",
-      "pageRange": "PDF pp. 227-235",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; the 2027 LES and errata remain authoritative.",
-      "sessionNumbers": [
-        27
-      ]
-    },
-    {
-      "id": "b2-2025-r39",
-      "number": 39,
-      "title": "Market Organization and Structure",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 237-262",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Generic market-structure material has only partial overlap with the rewritten 2027 Equity sequence.",
-      "sessionNumbers": [
-        28
-      ]
-    },
-    {
-      "id": "b2-2025-r40",
-      "number": 40,
-      "title": "Security Market Indexes",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 263-279",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Index-type material remains useful; much index calculation content is reallocated in the 2027 curriculum.",
-      "sessionNumbers": [
-        29
-      ]
-    },
-    {
-      "id": "b2-2025-r41",
-      "number": 41,
-      "title": "Market Efficiency",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 280-290",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
-      "primaryEquivalent": null,
-      "notes": "No named 2027 Equity module; keep as optional legacy review rather than core coverage.",
-      "sessionNumbers": [
-        29
-      ]
-    },
-    {
-      "id": "b2-2025-r42",
-      "number": 42,
-      "title": "Overview of Equity Securities",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 291-302",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Useful foundation, but 2027 expands instrument features, jurisdictions, classes, and voting.",
-      "sessionNumbers": [
-        30
-      ]
-    },
-    {
-      "id": "b2-2025-r43",
-      "number": 43,
-      "title": "Company Analysis: Past and Present",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 303-310",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Useful company-analysis foundation; 2027 reorganizes and expands this material.",
-      "sessionNumbers": [
-        31
-      ]
-    },
-    {
-      "id": "b2-2025-r44",
-      "number": 44,
-      "title": "Industry and Competitive Analysis",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 311-327",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Five Forces and PESTLE remain useful, but 2027 integrates them more directly with valuation.",
-      "sessionNumbers": [
-        31,
-        32
-      ]
-    },
-    {
-      "id": "b2-2025-r45",
-      "number": 45,
-      "title": "Company Analysis: Forecasting",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 328-337",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Useful forecasting foundation; supplement with the 2027 valuation-linked forecasting module.",
-      "sessionNumbers": [
-        32
-      ]
-    },
-    {
-      "id": "b2-2025-r46",
-      "number": 46,
-      "title": "Equity Valuation: Concepts and Basic Tools",
-      "topic": "Equity Investments",
-      "pageRange": "PDF pp. 338-366",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Useful DDM and multiples foundation; 2027 adds or expands DCF, FCFE/FCFF, residual-income, and factor-model content.",
-      "sessionNumbers": [
-        33
-      ]
-    },
-    {
-      "id": "b4-2025-r76",
-      "number": 76,
-      "title": "Alternative Investment Features, Methods, and Structures",
-      "topic": "Alternative Investments",
-      "pageRange": "PDF pp. 11-17",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        43
-      ]
-    },
-    {
-      "id": "b4-2025-r77",
-      "number": 77,
-      "title": "Alternative Investment Performance and Returns",
-      "topic": "Alternative Investments",
-      "pageRange": "PDF pp. 18-27",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        43
-      ]
-    },
-    {
-      "id": "b4-2025-r78",
-      "number": 78,
-      "title": "Investments in Private Capital: Equity and Debt",
-      "topic": "Alternative Investments",
-      "pageRange": "PDF pp. 28-33",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        43
-      ]
-    },
-    {
-      "id": "b4-2025-r79",
-      "number": 79,
-      "title": "Real Estate and Infrastructure",
-      "topic": "Alternative Investments",
-      "pageRange": "PDF pp. 34-40",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        44
-      ]
-    },
-    {
-      "id": "b4-2025-r80",
-      "number": 80,
-      "title": "Natural Resources",
-      "topic": "Alternative Investments",
-      "pageRange": "PDF pp. 41-45",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        44
-      ]
-    },
-    {
-      "id": "b4-2025-r81",
-      "number": 81,
-      "title": "Hedge Funds",
-      "topic": "Alternative Investments",
-      "pageRange": "PDF pp. 46-51",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        45
-      ]
-    },
-    {
-      "id": "b4-2025-r82",
-      "number": 82,
-      "title": "Introduction to Digital Assets",
-      "topic": "Alternative Investments",
-      "pageRange": "PDF pp. 52-63",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "Published 2027 title and learning outcomes align; verify against the 2027 LES and errata.",
-      "sessionNumbers": [
-        45
-      ]
-    },
-    {
-      "id": "b4-2025-r83",
-      "number": 83,
-      "title": "Portfolio Risk and Return: Part I",
-      "topic": "Portfolio Construction",
-      "pageRange": "PDF pp. 66-82",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "The source labels this topic Portfolio Management; the 2027 outline calls it Portfolio Construction.",
-      "sessionNumbers": [
-        46
-      ]
-    },
-    {
-      "id": "b4-2025-r84",
-      "number": 84,
-      "title": "Portfolio Risk and Return: Part II",
-      "topic": "Portfolio Construction",
-      "pageRange": "PDF pp. 83-104",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "The source labels this topic Portfolio Management; the 2027 outline calls it Portfolio Construction.",
-      "sessionNumbers": [
-        46
-      ]
-    },
-    {
-      "id": "b4-2025-r85",
-      "number": 85,
-      "title": "Portfolio Management: An Overview",
-      "topic": "Portfolio Construction",
-      "pageRange": "PDF pp. 105-115",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "The source labels this topic Portfolio Management; the 2027 outline calls it Portfolio Construction.",
-      "sessionNumbers": [
-        47
-      ]
-    },
-    {
-      "id": "b4-2025-r86",
-      "number": 86,
-      "title": "Basics of Portfolio Planning and Construction",
-      "topic": "Portfolio Construction",
-      "pageRange": "PDF pp. 116-127",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "The source labels this topic Portfolio Management; the 2027 outline calls it Portfolio Construction.",
-      "sessionNumbers": [
-        47
-      ]
-    },
-    {
-      "id": "b4-2025-r87",
-      "number": 87,
-      "title": "The Behavioral Biases of Individuals",
-      "topic": "Portfolio Construction",
-      "pageRange": "PDF pp. 128-141",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "The source labels this topic Portfolio Management; the 2027 outline calls it Portfolio Construction.",
-      "sessionNumbers": [
-        48
-      ]
-    },
-    {
-      "id": "b4-2025-r88",
-      "number": 88,
-      "title": "Introduction to Risk Management",
-      "topic": "Portfolio Construction",
-      "pageRange": "PDF pp. 142-151",
-      "authority": "supplementary",
-      "curriculumStatus": "aligned",
-      "primaryEquivalent": null,
-      "notes": "The source labels this topic Portfolio Management; the 2027 outline calls it Portfolio Construction.",
-      "sessionNumbers": [
-        48
-      ]
-    },
-    {
-      "id": "b4-2025-r89",
-      "number": 89,
-      "title": "Ethics and Trust in the Investment Profession",
-      "topic": "Ethical and Professional Standards",
-      "pageRange": "PDF pp. 153-159",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
-      "primaryEquivalent": null,
-      "notes": "Useful Handbook v12 baseline; use the official 2027 Ethics module and cases as the source of truth.",
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
       "sessionNumbers": [
         4
       ]
     },
     {
-      "id": "b4-2025-r90",
-      "number": 90,
-      "title": "Code of Ethics and Standards of Professional Conduct",
-      "topic": "Ethical and Professional Standards",
-      "pageRange": "PDF pp. 160-165",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
+      "id": "cfa-2027-outline-m008",
+      "number": 8,
+      "title": "The Return and Risk of a Financial Portfolio",
+      "topic": "Quantitative Methods",
+      "pageRange": "Official outline p. 2",
+      "authority": "official",
+      "curriculumStatus": "official",
       "primaryEquivalent": null,
-      "notes": "Useful Handbook v12 baseline; use the official 2027 Ethics module and cases as the source of truth.",
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
       "sessionNumbers": [
-        5,
+        5
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m009",
+      "number": 9,
+      "title": "Simulation of Financial Asset Prices and Returns",
+      "topic": "Quantitative Methods",
+      "pageRange": "Official outline p. 2",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        5
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m010",
+      "number": 10,
+      "title": "Applications of Simple Linear Regression in Finance",
+      "topic": "Quantitative Methods",
+      "pageRange": "Official outline p. 3",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
         6
       ]
     },
     {
-      "id": "b4-2025-r91",
+      "id": "cfa-2027-outline-m011",
+      "number": 11,
+      "title": "Introduction to Financial Data Science",
+      "topic": "Quantitative Methods",
+      "pageRange": "Official outline p. 3",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        6
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m012",
+      "number": 12,
+      "title": "The Firm and Market Structures",
+      "topic": "Economics",
+      "pageRange": "Official outline p. 5",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        7
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m013",
+      "number": 13,
+      "title": "Understanding Business Cycles",
+      "topic": "Economics",
+      "pageRange": "Official outline p. 5",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        7
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m014",
+      "number": 14,
+      "title": "Fiscal Policy",
+      "topic": "Economics",
+      "pageRange": "Official outline p. 6",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        8
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m015",
+      "number": 15,
+      "title": "Monetary Policy",
+      "topic": "Economics",
+      "pageRange": "Official outline p. 6",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        8
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m016",
+      "number": 16,
+      "title": "Introduction to Geopolitics",
+      "topic": "Economics",
+      "pageRange": "Official outline p. 6",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        8
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m017",
+      "number": 17,
+      "title": "International Trade",
+      "topic": "Economics",
+      "pageRange": "Official outline p. 6",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        9
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m018",
+      "number": 18,
+      "title": "Capital Flows and the FX Market",
+      "topic": "Economics",
+      "pageRange": "Official outline p. 6",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        9
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m019",
+      "number": 19,
+      "title": "Exchange Rate Calculations",
+      "topic": "Economics",
+      "pageRange": "Official outline p. 7",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        9
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m020",
+      "number": 20,
+      "title": "Organizational Forms, Corporate Issuer Features, and Ownership",
+      "topic": "Corporate Issuers",
+      "pageRange": "Official outline p. 9",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        10
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m021",
+      "number": 21,
+      "title": "Investors and Other Stakeholders",
+      "topic": "Corporate Issuers",
+      "pageRange": "Official outline p. 9",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        10
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m022",
+      "number": 22,
+      "title": "Corporate Governance: Conflicts, Mechanisms, Risks, and Benefits",
+      "topic": "Corporate Issuers",
+      "pageRange": "Official outline p. 9",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        10
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m023",
+      "number": 23,
+      "title": "Working Capital and Liquidity",
+      "topic": "Corporate Issuers",
+      "pageRange": "Official outline p. 10",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        11
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m024",
+      "number": 24,
+      "title": "Capital Investments and Capital Allocation",
+      "topic": "Corporate Issuers",
+      "pageRange": "Official outline p. 10",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        11
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m025",
+      "number": 25,
+      "title": "Capital Structure",
+      "topic": "Corporate Issuers",
+      "pageRange": "Official outline p. 10",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        11
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m026",
+      "number": 26,
+      "title": "Business Models",
+      "topic": "Corporate Issuers",
+      "pageRange": "Official outline p. 10",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        11
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m027",
+      "number": 27,
+      "title": "Introduction to Financial Statement Analysis",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 11",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        12
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m028",
+      "number": 28,
+      "title": "Analyzing Income Statements",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 11",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        12
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m029",
+      "number": 29,
+      "title": "Analyzing Balance Sheets",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 12",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        13
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m030",
+      "number": 30,
+      "title": "Analyzing Statements of Cash Flows I",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 12",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        13
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m031",
+      "number": 31,
+      "title": "Analyzing Statements of Cash Flows II",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 12",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        13
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m032",
+      "number": 32,
+      "title": "Analysis of Inventories",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 12",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        14
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m033",
+      "number": 33,
+      "title": "Analysis of Long-Term Assets",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 12",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        14
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m034",
+      "number": 34,
+      "title": "Topics in Long-Term Liabilities and Equity",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 13",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        15
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m035",
+      "number": 35,
+      "title": "Analysis of Income Taxes",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 13",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        15
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m036",
+      "number": 36,
+      "title": "Financial Reporting Quality",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 13",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        16
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m037",
+      "number": 37,
+      "title": "Financial Analysis Techniques",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 13",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        17
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m038",
+      "number": 38,
+      "title": "Introduction to Financial Statement Modeling",
+      "topic": "Financial Statement Analysis",
+      "pageRange": "Official outline p. 14",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        18
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m039",
+      "number": 39,
+      "title": "Equity Instrument Features",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 15",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        19
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m040",
+      "number": 40,
+      "title": "Equity Jurisdictions, Classes, and the Voting Process",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 15",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        19
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m041",
+      "number": 41,
+      "title": "Equity Issuance and Trading",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 15",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        20
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m042",
+      "number": 42,
+      "title": "Sources of Equity Returns",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 16",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        20
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m043",
+      "number": 43,
+      "title": "Introduction to Equity Valuation",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 16",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        21
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m044",
+      "number": 44,
+      "title": "Discounted Cash Flow (DCF) and Growth Models",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 16",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        21
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m045",
+      "number": 45,
+      "title": "Relative Value Equity Valuation Approaches",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 16",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        22
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m046",
+      "number": 46,
+      "title": "Financial Statement Forecasting in Equity Valuation",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 16",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        22
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m047",
+      "number": 47,
+      "title": "Industry and Competitive Analysis",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 17",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        23
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m048",
+      "number": 48,
+      "title": "Company Analysis: Past, Present, and Future",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 17",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        24
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m049",
+      "number": 49,
+      "title": "Equity Analyst Research Reports",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 17",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        24
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m050",
+      "number": 50,
+      "title": "The Capital Asset Pricing Model, Market Model, and Other Factor-Based Equity Models",
+      "topic": "Equity Investments",
+      "pageRange": "Official outline p. 17",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        25
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m051",
+      "number": 51,
+      "title": "Fixed-Income Instrument Features",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 19",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        26
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m052",
+      "number": 52,
+      "title": "Fixed-Income Cash Flows and Types",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 19",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        26
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m053",
+      "number": 53,
+      "title": "Fixed-Income Issuance and Trading",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 19",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        27
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m054",
+      "number": 54,
+      "title": "Fixed-Income Markets for Corporate Issuers",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 20",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        27
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m055",
+      "number": 55,
+      "title": "Fixed-Income Markets for Government Issuers",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 20",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        27
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m056",
+      "number": 56,
+      "title": "Fixed-Income Bond Valuation: Prices and Yields",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 20",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        28
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m057",
+      "number": 57,
+      "title": "Yield and Yield Spread Measures for Fixed-Rate Bonds",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 20",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        28
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m058",
+      "number": 58,
+      "title": "Yield and Yield Spread Measures for Floating-Rate Instruments",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 20",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        29
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m059",
+      "number": 59,
+      "title": "The Term Structure of Interest Rates: Spot, Par, and Forward Curves",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 20",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        29
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m060",
+      "number": 60,
+      "title": "Interest Rate Risk and Return",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 20",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        30
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m061",
+      "number": 61,
+      "title": "Yield-Based Bond Duration Measures and Properties",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 21",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        30
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m062",
+      "number": 62,
+      "title": "Yield-Based Bond Convexity and Portfolio Properties",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 21",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        30
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m063",
+      "number": 63,
+      "title": "Curve-Based and Empirical Fixed-Income Risk Measures",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 21",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        31
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m064",
+      "number": 64,
+      "title": "Credit Risk",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 21",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        31
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m065",
+      "number": 65,
+      "title": "Credit Analysis for Government Issuers",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 21",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        32
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m066",
+      "number": 66,
+      "title": "Credit Analysis for Corporate Issuers",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 21",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        32
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m067",
+      "number": 67,
+      "title": "Fixed-Income Securitization",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 21",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        32
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m068",
+      "number": 68,
+      "title": "Asset-Backed Security (ABS) Instrument and Market Features",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 22",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        33
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m069",
+      "number": 69,
+      "title": "Mortgage-Backed Security (MBS) Instrument and Market Features",
+      "topic": "Fixed Income",
+      "pageRange": "Official outline p. 22",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        33
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m070",
+      "number": 70,
+      "title": "Derivative Instrument and Derivative Market Features",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 23",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        34
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m071",
+      "number": 71,
+      "title": "Forward Commitment and Contingent Claim Features and Instruments",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 23",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        34
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m072",
+      "number": 72,
+      "title": "Derivative Benefits, Risks, and Issuer and Investor Uses",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 23",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        34
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m073",
+      "number": 73,
+      "title": "Arbitrage, Replication, and the Cost of Carry in Pricing Derivatives",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 23",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        35
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m074",
+      "number": 74,
+      "title": "Pricing and Valuation of Forward Contracts and for an Underlying with Varying Maturities",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 24",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        35
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m075",
+      "number": 75,
+      "title": "Pricing and Valuation of Futures Contracts",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 24",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        35
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m076",
+      "number": 76,
+      "title": "Pricing and Valuation of Interest Rate and Other Swaps",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 24",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        36
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m077",
+      "number": 77,
+      "title": "Pricing and Valuation of Options",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 24",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        36
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m078",
+      "number": 78,
+      "title": "Option Replication Using Put-Call Parity",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 24",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        36
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m079",
+      "number": 79,
+      "title": "Valuing a Derivative Using a One-Period Binomial Model",
+      "topic": "Derivatives",
+      "pageRange": "Official outline p. 24",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        36
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m080",
+      "number": 80,
+      "title": "Alternative Investment Features, Methods, and Structures",
+      "topic": "Alternative Investments",
+      "pageRange": "Official outline p. 25",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        37
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m081",
+      "number": 81,
+      "title": "Alternative Investment Performance and Returns",
+      "topic": "Alternative Investments",
+      "pageRange": "Official outline p. 25",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        37
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m082",
+      "number": 82,
+      "title": "Investments in Private Capital: Equity and Debt",
+      "topic": "Alternative Investments",
+      "pageRange": "Official outline p. 25",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        37
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m083",
+      "number": 83,
+      "title": "Real Estate and Infrastructure",
+      "topic": "Alternative Investments",
+      "pageRange": "Official outline p. 25",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        38
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m084",
+      "number": 84,
+      "title": "Natural Resources",
+      "topic": "Alternative Investments",
+      "pageRange": "Official outline p. 26",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        38
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m085",
+      "number": 85,
+      "title": "Hedge Funds",
+      "topic": "Alternative Investments",
+      "pageRange": "Official outline p. 26",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        38
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m086",
+      "number": 86,
+      "title": "Introduction to Digital Assets",
+      "topic": "Alternative Investments",
+      "pageRange": "Official outline p. 26",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        38
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m087",
+      "number": 87,
+      "title": "Portfolio Risk and Return: Part I",
+      "topic": "Portfolio Management",
+      "pageRange": "Official outline p. 27",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        39
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m088",
+      "number": 88,
+      "title": "Portfolio Risk and Return: Part II",
+      "topic": "Portfolio Management",
+      "pageRange": "Official outline p. 27",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        39
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m089",
+      "number": 89,
+      "title": "Portfolio Management: An Overview",
+      "topic": "Portfolio Management",
+      "pageRange": "Official outline p. 28",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        40
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m090",
+      "number": 90,
+      "title": "Basics of Portfolio Planning and Construction",
+      "topic": "Portfolio Management",
+      "pageRange": "Official outline p. 28",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        40
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m091",
       "number": 91,
-      "title": "Guidance for Standards I-VII",
-      "topic": "Ethical and Professional Standards",
-      "pageRange": "PDF pp. 166-194",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
+      "title": "The Behavioral Biases of Individuals",
+      "topic": "Portfolio Management",
+      "pageRange": "Official outline p. 28",
+      "authority": "official",
+      "curriculumStatus": "official",
       "primaryEquivalent": null,
-      "notes": "The 2027 curriculum separates each Standard into its own module with updated targeted practice.",
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
       "sessionNumbers": [
-        49,
-        50,
-        51,
-        52
+        40
       ]
     },
     {
-      "id": "b4-2025-r92",
+      "id": "cfa-2027-outline-m092",
       "number": 92,
-      "title": "Introduction to the Global Investment Performance Standards (GIPS)",
-      "topic": "Ethical and Professional Standards",
-      "pageRange": "PDF pp. 195-199",
-      "authority": "supplementary",
-      "curriculumStatus": "legacy",
+      "title": "Introduction to Risk Management",
+      "topic": "Portfolio Management",
+      "pageRange": "Official outline p. 28",
+      "authority": "official",
+      "curriculumStatus": "official",
       "primaryEquivalent": null,
-      "notes": "Not present in the published 2027 Level I outline; cover only as a brief legacy note.",
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
       "sessionNumbers": [
-        53
+        40
       ]
     },
     {
-      "id": "b4-2025-r93",
+      "id": "cfa-2027-outline-m093",
       "number": 93,
-      "title": "Ethics Application",
+      "title": "Ethics and Trust in the Investment Profession",
       "topic": "Ethical and Professional Standards",
-      "pageRange": "PDF pp. 200-209",
-      "authority": "supplementary",
-      "curriculumStatus": "supplement",
+      "pageRange": "Official outline p. 29",
+      "authority": "official",
+      "curriculumStatus": "official",
       "primaryEquivalent": null,
-      "notes": "Use for application practice, then prioritize official 2027 cases and questions.",
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
       "sessionNumbers": [
-        53,
-        54
+        41
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m094",
+      "number": 94,
+      "title": "Code of Ethics and Standards of Professional Conduct",
+      "topic": "Ethical and Professional Standards",
+      "pageRange": "Official outline p. 29",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        41
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m095",
+      "number": 95,
+      "title": "Guidance for Standard I: Professionalism",
+      "topic": "Ethical and Professional Standards",
+      "pageRange": "Official outline p. 30",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        42
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m096",
+      "number": 96,
+      "title": "Guidance for Standard II: Integrity of Capital Markets",
+      "topic": "Ethical and Professional Standards",
+      "pageRange": "Official outline p. 30",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        42
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m097",
+      "number": 97,
+      "title": "Guidance for Standard III: Duties to Clients",
+      "topic": "Ethical and Professional Standards",
+      "pageRange": "Official outline p. 30",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        43
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m098",
+      "number": 98,
+      "title": "Guidance for Standard IV: Duties to Employers",
+      "topic": "Ethical and Professional Standards",
+      "pageRange": "Official outline p. 30",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        43
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m099",
+      "number": 99,
+      "title": "Guidance for Standard V: Investment Analysis, Recommendations, and Actions",
+      "topic": "Ethical and Professional Standards",
+      "pageRange": "Official outline p. 30",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        43
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m100",
+      "number": 100,
+      "title": "Guidance for Standard VI: Conflicts of Interest",
+      "topic": "Ethical and Professional Standards",
+      "pageRange": "Official outline p. 30",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        44
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m101",
+      "number": 101,
+      "title": "Guidance for Standard VII: Responsibilities as a CFA Institute Member or CFA Candidate",
+      "topic": "Ethical and Professional Standards",
+      "pageRange": "Official outline p. 31",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        44
+      ]
+    },
+    {
+      "id": "cfa-2027-outline-m102",
+      "number": 102,
+      "title": "Application of the Code and Standards: Level I",
+      "topic": "Ethical and Professional Standards",
+      "pageRange": "Official outline p. 31",
+      "authority": "official",
+      "curriculumStatus": "official",
+      "primaryEquivalent": null,
+      "notes": "Use the registered 2027 Learning Ecosystem lesson and current errata.",
+      "sessionNumbers": [
+        44
       ]
     }
   ]

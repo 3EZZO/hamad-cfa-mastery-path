@@ -1,5 +1,5 @@
 import rawPlan from "./plan.json";
-import type { PlanTask, PlanWeek } from "../types";
+import type { PlanSession, PlanTask, PlanWeek } from "../types";
 
 export const TOPICS = [
   "Ethical and Professional Standards",
@@ -18,15 +18,21 @@ export const PLAN = rawPlan as PlanWeek[];
 
 export const PHASES = Array.from(new Set(PLAN.map((week) => week.phase)));
 
+export function getWeekSessions(week: PlanWeek): PlanSession[] {
+  return [week.session1, week.session2, week.session3].filter(
+    (session): session is PlanSession => Boolean(session),
+  );
+}
+
 export function getPlanTasks(week: PlanWeek): PlanTask[] {
   const weekPrefix = `w${week.week}`;
-  const sessions = [week.session1, week.session2, week.session3].map(
+  const sessions = getWeekSessions(week).map(
     (session, index): PlanTask => ({
       id: `${weekPrefix}-session-${index + 1}`,
       label: session.title,
-      detail: `Session ${String(session.number).padStart(2, "0")} · ${session.requirement === "flex" ? "Flex" : "Required"} · ${session.durationMinutes} minutes`,
+      detail: `Session ${String(session.number).padStart(2, "0")} | ${session.label} | ${session.date} | ${session.durationMinutes} minutes`,
       kind: "session",
-      optional: session.requirement === "flex",
+      optional: false,
     }),
   );
 

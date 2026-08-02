@@ -1,1216 +1,1248 @@
 [
   {
-    "phase": "Phase 1 · Reset & Learning System",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 1,
     "startDate": "2026-08-09",
     "endDate": "2026-08-15",
-    "focus": "Reset the system: evidence, habits, and baseline",
+    "focus": "Quantitative Methods I: returns, benchmarking, time value, and distributions",
     "topics": [
-      "Mixed Curriculum",
-      "Ethical and Professional Standards"
+      "Quantitative Methods"
     ],
     "outcomes": [
-      "Convert the two prior attempts into specific lessons without blame",
-      "Establish a topic, timing, and confidence baseline",
-      "Build one calendar, one source map, and one tracking routine"
+      "At least 75% on fresh Quant questions with every calculator step reproducible.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 180,
+    "masteryGate": "At least 75% on fresh Quant questions with every calculator step reproducible.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "At least 75% on fresh Quant questions with every calculator step reproducible."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Attempt autopsy and baseline map",
-      "objective": "Identify repeat failure patterns, confidence gaps, time leaks, and study habits that must change.",
+      "label": "Monday intensive",
+      "title": "2027 Quant Module 1: returns and return types",
+      "objective": "Begin directly with the first official 2027 module and build a clean return vocabulary and calculation process.",
       "durationMinutes": 90,
       "number": 1,
       "requirement": "required",
-      "readings": []
+      "date": "2026-08-10",
+      "day": "Monday",
+      "readings": [
+        "cfa-2027-outline-m001",
+        "cfa-2027-outline-m002"
+      ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Diagnostic review and operating system",
-      "objective": "Review baseline evidence and agree the weekly study, practice, review, and accountability loop.",
+      "label": "Wednesday midweek",
+      "title": "Benchmarking returns and time value of money",
+      "objective": "Connect benchmark construction, money-weighted and time-weighted returns, and present-value logic.",
       "durationMinutes": 90,
       "number": 2,
       "requirement": "required",
-      "readings": []
+      "date": "2026-08-12",
+      "day": "Wednesday",
+      "readings": [
+        "cfa-2027-outline-m003",
+        "cfa-2027-outline-m004"
+      ]
     },
     "session3": {
-      "label": "Required tutor session 3",
-      "title": "Study-environment audit and recall clinic",
-      "objective": "Remove friction from the study setup and rehearse active-recall methods.",
-      "durationMinutes": 60,
+      "label": "Saturday weekend",
+      "title": "Return statistics and distributions",
+      "objective": "Interpret central tendency, dispersion, shape, and distributions before applying them under time pressure.",
+      "durationMinutes": 90,
       "number": 3,
       "requirement": "required",
-      "readings": []
-    },
-    "independentStudy": [
-      "Inventory all study materials and map each resource to one curriculum topic",
-      "Complete the baseline mixed-practice target in timed blocks",
-      "Open the error vault and write a correction rule for every reviewed miss",
-      "Verify registration, the 27 February appointment, and whether a prior Level I Practical Skills Module is already complete"
-    ],
-    "questionTarget": 120,
-    "masteryGate": "A recorded baseline by topic, timing, and error type; no score judgment this week.",
-    "mockMilestone": {
-      "label": "Baseline diagnostic",
-      "targetScore": null,
-      "instruction": "Complete two timed mixed blocks and preserve the results as the program baseline."
+      "date": "2026-08-15",
+      "day": "Saturday",
+      "readings": [
+        "cfa-2027-outline-m005",
+        "cfa-2027-outline-m006"
+      ]
     }
   },
   {
-    "phase": "Phase 1 · Reset & Learning System",
-    "focus": "Learning operating system and Ethics baseline",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
+    "week": 2,
+    "startDate": "2026-08-16",
+    "endDate": "2026-08-22",
+    "focus": "Quantitative Methods II: inference, portfolios, simulation, regression, and data science",
     "topics": [
-      "Ethical and Professional Standards",
-      "Mixed Curriculum"
+      "Quantitative Methods"
     ],
     "outcomes": [
-      "Use retrieval, spacing, interleaving, and review deliberately",
-      "Establish an Ethics baseline using the current standards framework",
-      "Translate the calendar into a repeatable daily operating rhythm"
+      "Complete two separated Quant sets at 75% or better with no recurring process error.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 200,
+    "masteryGate": "Complete two separated Quant sets at 75% or better with no recurring process error.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Complete two separated Quant sets at 75% or better with no recurring process error."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Build Hamad's learning operating system",
-      "objective": "Design the daily learn-practice-review loop, evidence rules, and recovery process for missed work.",
+      "label": "Monday intensive",
+      "title": "Estimation and hypothesis testing",
+      "objective": "Choose the correct estimator or test, state hypotheses correctly, and interpret statistical evidence.",
       "durationMinutes": 90,
       "number": 4,
       "requirement": "required",
+      "date": "2026-08-17",
+      "day": "Monday",
       "readings": [
-        "b4-2025-r89"
+        "cfa-2027-outline-m007"
       ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Ethics baseline and decision framework",
-      "objective": "Establish the starting Ethics evidence and introduce a fact-duty-action reasoning process.",
+      "label": "Wednesday midweek",
+      "title": "Portfolio return, risk, and simulation",
+      "objective": "Calculate portfolio risk and understand historical simulation, bootstrapping, and Monte Carlo logic.",
       "durationMinutes": 90,
       "number": 5,
       "requirement": "required",
+      "date": "2026-08-19",
+      "day": "Wednesday",
       "readings": [
-        "b4-2025-r90"
+        "cfa-2027-outline-m008",
+        "cfa-2027-outline-m009"
       ]
     },
     "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Retrieval and review lab",
-      "objective": "Rehearse closed-book recall, delayed retesting, and concise correction rules.",
-      "durationMinutes": 60,
+      "label": "Saturday weekend",
+      "title": "Regression and financial data science",
+      "objective": "Interpret simple regression and build the 2027 vocabulary for data, machine learning, AI, and large language models.",
+      "durationMinutes": 90,
       "number": 6,
-      "requirement": "flex",
+      "requirement": "required",
+      "date": "2026-08-22",
+      "day": "Saturday",
       "readings": [
-        "b4-2025-r90"
+        "cfa-2027-outline-m010",
+        "cfa-2027-outline-m011"
       ]
-    },
-    "independentStudy": [
-      "Run the daily learning loop on two short mixed blocks",
-      "Complete a fresh Ethics baseline and classify every miss",
-      "Build the recurring weekly calendar with protected practice and review blocks"
-    ],
-    "questionTarget": 150,
-    "masteryGate": "A working daily system, a recorded Ethics baseline, and a completed forty-eight-hour retest.",
-    "mockMilestone": null,
-    "week": 2,
-    "startDate": "2026-08-16",
-    "endDate": "2026-08-22"
+    }
   },
   {
-    "phase": "Phase 2 · Foundation Coverage",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 3,
     "startDate": "2026-08-23",
     "endDate": "2026-08-29",
-    "focus": "Quantitative foundations: rates, value, and data",
-    "topics": [
-      "Quantitative Methods"
-    ],
-    "outcomes": [
-      "Translate rates and cash-flow timelines accurately",
-      "Use descriptive statistics and return measures with confidence",
-      "Build a repeatable calculator and estimation routine"
-    ],
-    "session1": {
-      "label": "Required tutor session 1",
-      "title": "Rates and time-value reasoning",
-      "objective": "Rebuild the logic linking discount rates, cash-flow timing, present value, and future value.",
-      "durationMinutes": 90,
-      "number": 7,
-      "requirement": "required",
-      "readings": [
-        "b1-2024-r01",
-        "b1-2024-r02"
-      ]
-    },
-    "session2": {
-      "label": "Required tutor session 2",
-      "title": "Returns and descriptive statistics",
-      "objective": "Connect measures of return, central tendency, dispersion, and interpretation.",
-      "durationMinutes": 90,
-      "number": 8,
-      "requirement": "required",
-      "readings": [
-        "b1-2024-r03",
-        "b1-2024-r04",
-        "b1-2024-r05"
-      ]
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Simulation, estimation, and calculator workflow",
-      "objective": "Interpret simulation and estimation evidence while maintaining disciplined calculator setup, estimation checks, and clear assumptions.",
-      "durationMinutes": 60,
-      "number": 9,
-      "requirement": "flex",
-      "readings": [
-        "b1-2024-r06",
-        "b1-2024-r07"
-      ]
-    },
-    "independentStudy": [
-      "Create a one-page map of rate and cash-flow relationships",
-      "Complete mixed untimed practice before repeating the weakest items under time",
-      "Tag every miss as concept, setup, calculation, reading, or time management"
-    ],
-    "questionTarget": 160,
-    "masteryGate": "At least 70% on a fresh timed topic set with every miss explained in plain language.",
-    "mockMilestone": null
-  },
-  {
-    "phase": "Phase 2 · Foundation Coverage",
-    "week": 4,
-    "startDate": "2026-08-30",
-    "endDate": "2026-09-05",
-    "focus": "Quantitative uncertainty, inference, and relationships",
-    "topics": [
-      "Quantitative Methods"
-    ],
-    "outcomes": [
-      "Reason clearly about probability and distributions",
-      "Interpret sampling, estimation, and hypothesis evidence",
-      "Interpret regression, simulation, optimization, and data-science evidence without mechanical guessing"
-    ],
-    "session1": {
-      "label": "Required tutor session 1",
-      "title": "Hypothesis testing fundamentals",
-      "objective": "Connect the research question, hypotheses, test statistic, decision rule, evidence, and conclusion.",
-      "durationMinutes": 90,
-      "number": 10,
-      "requirement": "required",
-      "readings": [
-        "b1-2024-r08"
-      ]
-    },
-    "session2": {
-      "label": "Required tutor session 2",
-      "title": "Independence testing and regression",
-      "objective": "Choose and interpret independence tests and simple regression using assumptions, output, and limitations.",
-      "durationMinutes": 90,
-      "number": 11,
-      "requirement": "required",
-      "readings": [
-        "b1-2024-r09",
-        "b1-2024-r10"
-      ]
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Regression, financial data science, and 2027 Quant update",
-      "objective": "Consolidate regression and big-data foundations, then close simulation, optimization, data-science, and AI gaps from the official 2027 LES.",
-      "durationMinutes": 60,
-      "number": 12,
-      "requirement": "flex",
-      "readings": [
-        "b1-2024-r10",
-        "b1-2024-r11"
-      ]
-    },
-    "independentStudy": [
-      "Build a decision sheet for probability, sampling, inference, simulation, optimization, and model prompts",
-      "Complete practice in short sets and immediately redo every setup error",
-      "Teach back three difficult concepts without notes",
-      "If the Practical Skills Module is outstanding, select Financial Modeling or Python Fundamentals by week-end"
-    ],
-    "questionTarget": 180,
-    "masteryGate": "At least 70% on a fresh mixed Quantitative Methods set and no repeated setup error.",
-    "mockMilestone": null
-  },
-  {
-    "phase": "Phase 2 · Foundation Coverage",
-    "week": 5,
-    "startDate": "2026-09-06",
-    "endDate": "2026-09-12",
-    "focus": "Economics: markets, policy, growth, trade, and currencies",
+    "focus": "Economics: firms, cycles, policy, geopolitics, trade, and currencies",
     "topics": [
       "Economics"
     ],
     "outcomes": [
-      "Explain market adjustment, elasticity, costs, and market structure",
-      "Connect growth, cycles, inflation, and policy transmission",
-      "Reason consistently through trade and currency changes"
+      "Explain the policy-to-market chain and score 72% or better on a fresh Economics set.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 180,
+    "masteryGate": "Explain the policy-to-market chain and score 72% or better on a fresh Economics set.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Explain the policy-to-market chain and score 72% or better on a fresh Economics set."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Microeconomics and market adjustment",
-      "objective": "Use diagrams and directional reasoning to connect demand, supply, firms, costs, and market structure.",
+      "label": "Monday intensive",
+      "title": "Market structures and business cycles",
+      "objective": "Link firm behavior, market structure, cycle phases, and indicator interpretation.",
       "durationMinutes": 90,
-      "number": 13,
+      "number": 7,
       "requirement": "required",
+      "date": "2026-08-24",
+      "day": "Monday",
       "readings": [
-        "b1-2024-r12",
-        "b1-2024-r13",
-        "b1-2024-r14"
+        "cfa-2027-outline-m012",
+        "cfa-2027-outline-m013"
       ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Macroeconomics, policy, trade, and currencies",
-      "objective": "Map economic conditions to policy channels and apply a consistent currency convention.",
+      "label": "Wednesday midweek",
+      "title": "Fiscal policy, monetary policy, and geopolitics",
+      "objective": "Separate policy tools and transmission channels while integrating geopolitical risk.",
       "durationMinutes": 90,
-      "number": 14,
+      "number": 8,
       "requirement": "required",
+      "date": "2026-08-26",
+      "day": "Wednesday",
       "readings": [
-        "b1-2024-r15",
-        "b1-2024-r16",
-        "b1-2024-r17"
+        "cfa-2027-outline-m014",
+        "cfa-2027-outline-m015",
+        "cfa-2027-outline-m016"
       ]
     },
     "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Integrated Economics assessment",
-      "objective": "Test directional reasoning and repair the two weakest Economics subtopics.",
-      "durationMinutes": 75,
-      "number": 15,
-      "requirement": "flex",
+      "label": "Saturday weekend",
+      "title": "Trade, capital flows, and exchange rates",
+      "objective": "Work from international trade through FX markets to cross-rate and forward-rate calculations.",
+      "durationMinutes": 90,
+      "number": 9,
+      "requirement": "required",
+      "date": "2026-08-29",
+      "day": "Saturday",
       "readings": [
-        "b1-2024-r18",
-        "b1-2024-r19"
+        "cfa-2027-outline-m017",
+        "cfa-2027-outline-m018",
+        "cfa-2027-outline-m019"
       ]
-    },
-    "independentStudy": [
-      "Build one integrated micro-macro-policy-currency map",
-      "Complete Economics practice in timed mini-sets with written reasoning",
-      "Retest every direction-of-change and currency-convention error"
-    ],
-    "questionTarget": 260,
-    "masteryGate": "At least 72% on a fresh mixed Economics set with no repeated currency-convention error.",
-    "mockMilestone": null
+    }
   },
   {
-    "phase": "Phase 2 · Foundation Coverage",
-    "week": 6,
-    "startDate": "2026-09-13",
-    "endDate": "2026-09-19",
-    "focus": "Corporate Issuers: decisions, governance, and capital",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
+    "week": 4,
+    "startDate": "2026-08-30",
+    "endDate": "2026-09-05",
+    "focus": "Corporate Issuers: ownership, governance, liquidity, capital allocation, and business models",
     "topics": [
       "Corporate Issuers"
     ],
     "outcomes": [
-      "Connect governance and stakeholder decisions to value",
-      "Evaluate capital budgeting and funding choices",
-      "Interpret leverage, working capital, and business-model effects"
+      "Produce a one-page corporate decision map and clear 72% on fresh questions.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 160,
+    "masteryGate": "Produce a one-page corporate decision map and clear 72% on fresh questions.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Produce a one-page corporate decision map and clear 72% on fresh questions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Governance, stakeholders, and business models",
-      "objective": "Link organizational decisions and stakeholder incentives to risk and value creation.",
+      "label": "Wednesday midweek",
+      "title": "Issuer forms, stakeholders, and governance",
+      "objective": "Map ownership structures, stakeholder claims, conflicts, controls, and governance outcomes.",
+      "durationMinutes": 90,
+      "number": 10,
+      "requirement": "required",
+      "date": "2026-09-02",
+      "day": "Wednesday",
+      "readings": [
+        "cfa-2027-outline-m020",
+        "cfa-2027-outline-m021",
+        "cfa-2027-outline-m022"
+      ]
+    },
+    "session2": {
+      "label": "Saturday weekend",
+      "title": "Liquidity, capital allocation, structure, and business models",
+      "objective": "Connect operating liquidity, investment decisions, financing choices, and value creation.",
+      "durationMinutes": 90,
+      "number": 11,
+      "requirement": "required",
+      "date": "2026-09-05",
+      "day": "Saturday",
+      "readings": [
+        "cfa-2027-outline-m023",
+        "cfa-2027-outline-m024",
+        "cfa-2027-outline-m025",
+        "cfa-2027-outline-m026"
+      ]
+    }
+  },
+  {
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
+    "week": 5,
+    "startDate": "2026-09-06",
+    "endDate": "2026-09-12",
+    "focus": "Financial Statement Analysis I: statements and cash-flow linkage",
+    "topics": [
+      "Financial Statement Analysis"
+    ],
+    "outcomes": [
+      "Reconstruct statement links without notes and score 75% on a fresh FSA set.",
+      "Keep the tracker, error log, and delayed-retest queue current."
+    ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 200,
+    "masteryGate": "Reconstruct statement links without notes and score 75% on a fresh FSA set.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Reconstruct statement links without notes and score 75% on a fresh FSA set."
+    },
+    "session1": {
+      "label": "Wednesday midweek",
+      "title": "FSA framework and income statements",
+      "objective": "Apply the analysis framework and trace recognition choices through earnings quality.",
+      "durationMinutes": 90,
+      "number": 12,
+      "requirement": "required",
+      "date": "2026-09-09",
+      "day": "Wednesday",
+      "readings": [
+        "cfa-2027-outline-m027",
+        "cfa-2027-outline-m028"
+      ]
+    },
+    "session2": {
+      "label": "Saturday weekend",
+      "title": "Balance sheets and cash-flow statements",
+      "objective": "Reconcile the three statements and classify cash flows consistently.",
+      "durationMinutes": 90,
+      "number": 13,
+      "requirement": "required",
+      "date": "2026-09-12",
+      "day": "Saturday",
+      "readings": [
+        "cfa-2027-outline-m029",
+        "cfa-2027-outline-m030",
+        "cfa-2027-outline-m031"
+      ]
+    }
+  },
+  {
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
+    "week": 6,
+    "startDate": "2026-09-13",
+    "endDate": "2026-09-19",
+    "focus": "Financial Statement Analysis II: assets, liabilities, tax, and reporting quality",
+    "topics": [
+      "Financial Statement Analysis"
+    ],
+    "outcomes": [
+      "No repeated classification error across inventory, assets, liabilities, tax, or reporting quality.",
+      "Keep the tracker, error log, and delayed-retest queue current."
+    ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 220,
+    "masteryGate": "No repeated classification error across inventory, assets, liabilities, tax, or reporting quality.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "No repeated classification error across inventory, assets, liabilities, tax, or reporting quality."
+    },
+    "session1": {
+      "label": "Monday intensive",
+      "title": "Inventories and long-term assets",
+      "objective": "Normalize accounting choices and explain their ratio and cash-flow effects.",
+      "durationMinutes": 90,
+      "number": 14,
+      "requirement": "required",
+      "date": "2026-09-14",
+      "day": "Monday",
+      "readings": [
+        "cfa-2027-outline-m032",
+        "cfa-2027-outline-m033"
+      ]
+    },
+    "session2": {
+      "label": "Wednesday midweek",
+      "title": "Long-term obligations, equity, and income taxes",
+      "objective": "Analyze financing obligations, equity effects, and deferred-tax relationships.",
+      "durationMinutes": 90,
+      "number": 15,
+      "requirement": "required",
+      "date": "2026-09-16",
+      "day": "Wednesday",
+      "readings": [
+        "cfa-2027-outline-m034",
+        "cfa-2027-outline-m035"
+      ]
+    },
+    "session3": {
+      "label": "Saturday weekend",
+      "title": "Financial reporting quality",
+      "objective": "Distinguish reporting quality, earnings quality, bias, warning signs, and corrective adjustments.",
       "durationMinutes": 90,
       "number": 16,
       "requirement": "required",
-      "readings": []
-    },
-    "session2": {
-      "label": "Required tutor session 2",
-      "title": "Capital budgeting, funding, and liquidity",
-      "objective": "Use a consistent decision process for investments, cost of capital, leverage, and working capital.",
-      "durationMinutes": 90,
-      "number": 17,
-      "requirement": "required",
-      "readings": []
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Corporate decision-tree clinic",
-      "objective": "Turn common corporate decisions into short, auditable reasoning paths.",
-      "durationMinutes": 60,
-      "number": 18,
-      "requirement": "flex",
-      "readings": []
-    },
-    "independentStudy": [
-      "Build a corporate decision map from governance through financing",
-      "Complete mixed Corporate Issuers practice under topic timing",
-      "Retest all capital-budgeting and leverage errors after a delay"
-    ],
-    "questionTarget": 220,
-    "masteryGate": "At least 75% on a fresh set and a correct decision rationale for every reviewed miss.",
-    "mockMilestone": null
+      "date": "2026-09-19",
+      "day": "Saturday",
+      "readings": [
+        "cfa-2027-outline-m036"
+      ]
+    }
   },
   {
-    "phase": "Phase 3 · Core Reading Coverage",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 7,
     "startDate": "2026-09-20",
     "endDate": "2026-09-26",
-    "focus": "Financial Statement Analysis I: the reporting system",
+    "focus": "Financial Statement Analysis III: techniques and modeling",
     "topics": [
       "Financial Statement Analysis"
     ],
     "outcomes": [
-      "Connect the three primary financial statements",
-      "Understand the reporting process and analytical framework",
-      "Separate operating performance from presentation choices"
+      "Complete the cumulative FSA assessment at 75% or better and repair every material miss.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 200,
+    "masteryGate": "Complete the cumulative FSA assessment at 75% or better and repair every material miss.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Complete the cumulative FSA assessment at 75% or better and repair every material miss."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "FSA framework and income statements",
-      "objective": "Use the analytical framework to connect reporting mechanics, income recognition, performance, and disclosure quality.",
+      "label": "Wednesday midweek",
+      "title": "Financial analysis techniques",
+      "objective": "Select, calculate, interpret, and connect activity, liquidity, solvency, and profitability measures.",
       "durationMinutes": 90,
-      "number": 19,
+      "number": 17,
       "requirement": "required",
+      "date": "2026-09-23",
+      "day": "Wednesday",
       "readings": [
-        "b3-2024-r29",
-        "b3-2024-r30",
-        "b2-2025-r27",
-        "b2-2025-r28"
+        "cfa-2027-outline-m037"
       ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Income and balance-sheet analysis",
-      "objective": "Link income-statement signals and balance-sheet classifications to profitability, position, comparability, and risk.",
+      "label": "Saturday weekend",
+      "title": "Financial statement modeling and FSA integration",
+      "objective": "Build a sales-based pro forma model and integrate forecasting judgments with the full FSA framework.",
       "durationMinutes": 90,
-      "number": 20,
+      "number": 18,
       "requirement": "required",
+      "date": "2026-09-26",
+      "day": "Saturday",
       "readings": [
-        "b3-2024-r30",
-        "b3-2024-r31",
-        "b2-2025-r28",
-        "b2-2025-r29"
+        "cfa-2027-outline-m038"
       ]
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Cash-flow statements I and linkage",
-      "objective": "Classify cash flows and trace their links to income, balance-sheet movements, and operating performance.",
-      "durationMinutes": 60,
-      "number": 21,
-      "requirement": "flex",
-      "readings": [
-        "b3-2024-r32",
-        "b2-2025-r30"
-      ]
-    },
-    "independentStudy": [
-      "Build a one-page three-statement linkage map",
-      "Complete reporting-framework and statement-linkage practice",
-      "Explain each classification error using the underlying business event"
-    ],
-    "questionTarget": 200,
-    "masteryGate": "At least 72% on a fresh set and a complete three-statement explanation without notes.",
-    "mockMilestone": null
+    }
   },
   {
-    "phase": "Phase 3 · Core Reading Coverage",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 8,
     "startDate": "2026-09-27",
     "endDate": "2026-10-03",
-    "focus": "Financial Statement Analysis II: performance and cash flow",
-    "topics": [
-      "Financial Statement Analysis"
-    ],
-    "outcomes": [
-      "Analyze revenue, expense, and profitability signals",
-      "Classify and interpret cash-flow activity",
-      "Recognize warning signs in earnings and cash conversion"
-    ],
-    "session1": {
-      "label": "Required tutor session 1",
-      "title": "Cash-flow statements II and free cash flow",
-      "objective": "Complete cash-flow analysis, reconcile earnings with cash generation, and interpret free-cash-flow measures.",
-      "durationMinutes": 90,
-      "number": 22,
-      "requirement": "required",
-      "readings": [
-        "b3-2024-r32",
-        "b3-2024-r33",
-        "b2-2025-r30",
-        "b2-2025-r31"
-      ]
-    },
-    "session2": {
-      "label": "Required tutor session 2",
-      "title": "Inventory analysis and comparability",
-      "objective": "Map inventory choices and changes to statements, ratios, trends, and cross-company comparability.",
-      "durationMinutes": 90,
-      "number": 23,
-      "requirement": "required",
-      "readings": [
-        "b3-2024-r34",
-        "b2-2025-r32"
-      ]
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Long-lived assets, leases, and compensation",
-      "objective": "Connect long-lived assets, leases, liabilities, equity, and compensation choices to analytical effects.",
-      "durationMinutes": 60,
-      "number": 24,
-      "requirement": "flex",
-      "readings": [
-        "b3-2024-r35",
-        "b3-2024-r36",
-        "b2-2025-r33",
-        "b2-2025-r34"
-      ]
-    },
-    "independentStudy": [
-      "Create a recognition-and-cash-flow comparison sheet",
-      "Complete timed practice split between income and cash-flow analysis",
-      "Write a one-sentence business interpretation for every calculation"
-    ],
-    "questionTarget": 220,
-    "masteryGate": "At least 73% on a fresh set and correct cash-flow classification on nine of ten items.",
-    "mockMilestone": null
-  },
-  {
-    "phase": "Phase 3 · Core Reading Coverage",
-    "week": 9,
-    "startDate": "2026-10-04",
-    "endDate": "2026-10-10",
-    "focus": "Financial Statement Analysis III: assets, obligations, ratios, and diagnosis",
-    "topics": [
-      "Financial Statement Analysis"
-    ],
-    "outcomes": [
-      "Evaluate inventories, long-lived assets, taxes, and obligations",
-      "Use ratios as a connected business-diagnosis system",
-      "Normalize presentation differences and explain their analytical effects"
-    ],
-    "session1": {
-      "label": "Required tutor session 1",
-      "title": "Income taxes and deferred-tax analysis",
-      "objective": "Interpret current and deferred tax effects, temporary differences, and their impact on statements and ratios.",
-      "durationMinutes": 90,
-      "number": 25,
-      "requirement": "required",
-      "readings": [
-        "b3-2024-r37",
-        "b2-2025-r35"
-      ]
-    },
-    "session2": {
-      "label": "Required tutor session 2",
-      "title": "Reporting quality and financial analysis",
-      "objective": "Evaluate reporting quality and use an integrated ratio system to diagnose profitability, liquidity, solvency, and efficiency.",
-      "durationMinutes": 90,
-      "number": 26,
-      "requirement": "required",
-      "readings": [
-        "b3-2024-r38",
-        "b3-2024-r39",
-        "b2-2025-r36",
-        "b2-2025-r37"
-      ]
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Financial modeling and cumulative FSA repair",
-      "objective": "Build a compact modeling framework, test the complete FSA block, and repair the two weakest reading clusters.",
-      "durationMinutes": 75,
-      "number": 27,
-      "requirement": "flex",
-      "readings": [
-        "b3-2024-r39",
-        "b3-2024-r40",
-        "b2-2025-r37",
-        "b2-2025-r38"
-      ]
-    },
-    "independentStudy": [
-      "Build an effects matrix for assets, taxes, obligations, and ratios",
-      "Complete a cumulative FSA practice block under topic timing",
-      "Repair and retest the two weakest FSA reading clusters"
-    ],
-    "questionTarget": 300,
-    "masteryGate": "At least 75% on a cumulative FSA set and 80% on the focused weak-area retest.",
-    "mockMilestone": null
-  },
-  {
-    "phase": "Phase 3 · Core Reading Coverage",
-    "week": 10,
-    "startDate": "2026-10-11",
-    "endDate": "2026-10-17",
-    "focus": "Equity Investments I: markets, indexes, and efficiency",
+    "focus": "Equity Investments I: instruments, rights, trading, and return sources",
     "topics": [
       "Equity Investments"
     ],
     "outcomes": [
-      "Understand market organization, orders, and trading mechanics",
-      "Interpret security-market indexes and their construction",
-      "Connect market efficiency to analysis and decision-making"
+      "Explain the path from issuance to investor return and clear 72% on fresh questions.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 180,
+    "masteryGate": "Explain the path from issuance to investor return and clear 72% on fresh questions.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Explain the path from issuance to investor return and clear 72% on fresh questions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Market structure and trade execution",
-      "objective": "Map participants, order instructions, trading venues, and transaction outcomes.",
+      "label": "Wednesday midweek",
+      "title": "Equity instruments, jurisdictions, classes, and voting",
+      "objective": "Differentiate economic and voting rights across public, private, jurisdictional, and class structures.",
       "durationMinutes": 90,
-      "number": 28,
+      "number": 19,
       "requirement": "required",
+      "date": "2026-09-30",
+      "day": "Wednesday",
       "readings": [
-        "b3-2024-r41",
-        "b2-2025-r39"
+        "cfa-2027-outline-m039",
+        "cfa-2027-outline-m040"
       ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Indexes and market efficiency",
-      "objective": "Compare index choices and interpret what efficiency does and does not imply.",
+      "label": "Saturday weekend",
+      "title": "Equity issuance, trading, indexes, and return sources",
+      "objective": "Connect primary and secondary markets, liquidity, index structure, and drivers of equity return.",
       "durationMinutes": 90,
-      "number": 29,
+      "number": 20,
       "requirement": "required",
+      "date": "2026-10-03",
+      "day": "Saturday",
       "readings": [
-        "b3-2024-r42",
-        "b3-2024-r43",
-        "b2-2025-r40",
-        "b2-2025-r41"
+        "cfa-2027-outline-m041",
+        "cfa-2027-outline-m042"
+      ]
+    }
+  },
+  {
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
+    "week": 9,
+    "startDate": "2026-10-04",
+    "endDate": "2026-10-10",
+    "focus": "Equity Investments II: valuation and forecasting",
+    "topics": [
+      "Equity Investments"
+    ],
+    "outcomes": [
+      "Build and defend one concise valuation bridge, then score 75% on a fresh Equity set.",
+      "Keep the tracker, error log, and delayed-retest queue current."
+    ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 220,
+    "masteryGate": "Build and defend one concise valuation bridge, then score 75% on a fresh Equity set.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Build and defend one concise valuation bridge, then score 75% on a fresh Equity set."
+    },
+    "session1": {
+      "label": "Monday intensive",
+      "title": "Equity valuation and DCF growth models",
+      "objective": "Anchor valuation in cash flows, growth, required return, and explicit model assumptions.",
+      "durationMinutes": 90,
+      "number": 21,
+      "requirement": "required",
+      "date": "2026-10-05",
+      "day": "Monday",
+      "readings": [
+        "cfa-2027-outline-m043",
+        "cfa-2027-outline-m044"
+      ]
+    },
+    "session2": {
+      "label": "Wednesday midweek",
+      "title": "Relative valuation and financial statement forecasting",
+      "objective": "Choose comparables and connect disaggregated forecasts to valuation outputs and scenarios.",
+      "durationMinutes": 90,
+      "number": 22,
+      "requirement": "required",
+      "date": "2026-10-07",
+      "day": "Wednesday",
+      "readings": [
+        "cfa-2027-outline-m045",
+        "cfa-2027-outline-m046"
       ]
     },
     "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Equity securities, classes, and voting rights",
-      "objective": "Compare equity features, ownership claims, security classes, jurisdictional differences, and voting rights, including 2027 LES additions.",
-      "durationMinutes": 60,
-      "number": 30,
-      "requirement": "flex",
+      "label": "Saturday weekend",
+      "title": "Industry and competitive analysis",
+      "objective": "Use industry structure, Porter analysis, and PESTLE evidence to support a valuation narrative.",
+      "durationMinutes": 90,
+      "number": 23,
+      "requirement": "required",
+      "date": "2026-10-10",
+      "day": "Saturday",
       "readings": [
-        "b3-2024-r44",
-        "b2-2025-r42"
+        "cfa-2027-outline-m047"
       ]
-    },
-    "independentStudy": [
-      "Create a market-participant and order-type map",
-      "Complete market-organization and index practice in mixed sets",
-      "Explain the intuition behind every index calculation reviewed"
-    ],
-    "questionTarget": 240,
-    "masteryGate": "At least 75% on a fresh set and no repeated order, index, or efficiency-definition error.",
-    "mockMilestone": null
+    }
   },
   {
-    "phase": "Phase 3 · Core Reading Coverage",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
+    "week": 10,
+    "startDate": "2026-10-11",
+    "endDate": "2026-10-17",
+    "focus": "Equity Investments III: company analysis, research reports, and factor models",
+    "topics": [
+      "Equity Investments"
+    ],
+    "outcomes": [
+      "Complete the cumulative Equity assessment at 75% or better with a written repair plan.",
+      "Keep the tracker, error log, and delayed-retest queue current."
+    ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 220,
+    "masteryGate": "Complete the cumulative Equity assessment at 75% or better with a written repair plan.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Complete the cumulative Equity assessment at 75% or better with a written repair plan."
+    },
+    "session1": {
+      "label": "Wednesday midweek",
+      "title": "Company analysis and equity research reports",
+      "objective": "Turn historical evidence and forecasts into an investment thesis and structured research report.",
+      "durationMinutes": 90,
+      "number": 24,
+      "requirement": "required",
+      "date": "2026-10-14",
+      "day": "Wednesday",
+      "readings": [
+        "cfa-2027-outline-m048",
+        "cfa-2027-outline-m049"
+      ]
+    },
+    "session2": {
+      "label": "Saturday weekend",
+      "title": "CAPM, market model, factor models, and Equity integration",
+      "objective": "Estimate cost of equity, interpret factor exposures, and connect the result to valuation.",
+      "durationMinutes": 90,
+      "number": 25,
+      "requirement": "required",
+      "date": "2026-10-17",
+      "day": "Saturday",
+      "readings": [
+        "cfa-2027-outline-m050"
+      ]
+    }
+  },
+  {
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 11,
     "startDate": "2026-10-18",
     "endDate": "2026-10-24",
-    "focus": "Equity Investments II: industry, company, and valuation",
+    "focus": "Fixed Income I: instruments, markets, valuation, and yields",
     "topics": [
-      "Equity Investments",
-      "Financial Statement Analysis"
+      "Fixed Income"
     ],
     "outcomes": [
-      "Structure industry and company analysis",
-      "Select and interpret core equity valuation approaches",
-      "Link forecasting, scenarios, cost of equity, factor evidence, and financial statements to valuation"
+      "Price and interpret a bond cleanly from a timeline and clear 75% on fresh questions.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 220,
+    "masteryGate": "Price and interpret a bond cleanly from a timeline and clear 75% on fresh questions.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Price and interpret a bond cleanly from a timeline and clear 75% on fresh questions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Industry and company analysis",
-      "objective": "Build a top-down view of competitive position, growth, profitability, and risk.",
+      "label": "Monday intensive",
+      "title": "Fixed-income features and cash flows",
+      "objective": "Read indentures, classify structures, and model promised and contingent cash flows.",
       "durationMinutes": 90,
-      "number": 31,
+      "number": 26,
       "requirement": "required",
+      "date": "2026-10-19",
+      "day": "Monday",
       "readings": [
-        "b3-2024-r45",
-        "b3-2024-r46",
-        "b2-2025-r43",
-        "b2-2025-r44"
+        "cfa-2027-outline-m051",
+        "cfa-2027-outline-m052"
       ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Industry analysis and financial forecasting",
-      "objective": "Connect competitive analysis, scenarios, financial drivers, and forecasts to valuation-ready assumptions and the 2027 LES sequence.",
+      "label": "Wednesday midweek",
+      "title": "Issuance and corporate and government markets",
+      "objective": "Compare issuance, trading, funding, and market structures across issuer types.",
       "durationMinutes": 90,
-      "number": 32,
+      "number": 27,
       "requirement": "required",
+      "date": "2026-10-21",
+      "day": "Wednesday",
       "readings": [
-        "b3-2024-r46",
-        "b3-2024-r47",
-        "b2-2025-r44",
-        "b2-2025-r45"
+        "cfa-2027-outline-m053",
+        "cfa-2027-outline-m054",
+        "cfa-2027-outline-m055"
       ]
     },
     "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Equity valuation plus 2027 CAPM and multifactor supplement",
-      "objective": "Apply core valuation tools, then close cost-of-equity, CAPM, and multifactor-model gaps using the official 2027 LES.",
-      "durationMinutes": 60,
-      "number": 33,
-      "requirement": "flex",
+      "label": "Saturday weekend",
+      "title": "Bond valuation and fixed-rate yield spreads",
+      "objective": "Calculate prices, yields, and spreads and explain their economic meaning.",
+      "durationMinutes": 90,
+      "number": 28,
+      "requirement": "required",
+      "date": "2026-10-24",
+      "day": "Saturday",
       "readings": [
-        "b3-2024-r48",
-        "b2-2025-r46"
+        "cfa-2027-outline-m056",
+        "cfa-2027-outline-m057"
       ]
-    },
-    "independentStudy": [
-      "Build a valuation selection map with assumptions and failure points",
-      "Complete mixed valuation practice with inputs labeled before calculation",
-      "Link each valuation error to the relevant financial-statement driver"
-    ],
-    "questionTarget": 260,
-    "masteryGate": "At least 76% on a fresh set and correct model selection on four of five new scenarios.",
-    "mockMilestone": null
+    }
   },
   {
-    "phase": "Phase 3 · Core Reading Coverage",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 12,
     "startDate": "2026-10-25",
     "endDate": "2026-10-31",
-    "focus": "Fixed Income I: structures, cash flows, valuation, and term structure",
+    "focus": "Fixed Income II: curves, floating-rate instruments, duration, and convexity",
     "topics": [
       "Fixed Income"
     ],
     "outcomes": [
-      "Map bond structures and contractual cash-flow features",
-      "Connect price, yield, spot, forward, and curve information",
-      "Apply consistent timelines and periodicity conventions"
+      "Explain curve and sensitivity effects before calculating them, with 75% fresh-set accuracy.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 220,
+    "masteryGate": "Explain curve and sensitivity effects before calculating them, with 75% fresh-set accuracy.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Explain curve and sensitivity effects before calculating them, with 75% fresh-set accuracy."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Bond structures, cash flows, and yield",
-      "objective": "Classify instruments and connect contractual features to pricing, return, and risk.",
+      "label": "Wednesday midweek",
+      "title": "Floating-rate yields and the term structure",
+      "objective": "Interpret floating-rate margins and construct spot, par, and forward relationships.",
       "durationMinutes": 90,
-      "number": 34,
+      "number": 29,
       "requirement": "required",
-      "readings": []
+      "date": "2026-10-28",
+      "day": "Wednesday",
+      "readings": [
+        "cfa-2027-outline-m058",
+        "cfa-2027-outline-m059"
+      ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Valuation and term-structure logic",
-      "objective": "Connect discount rates, spot rates, forward rates, curve shape, and bond value.",
+      "label": "Saturday weekend",
+      "title": "Interest-rate risk, duration, and convexity",
+      "objective": "Translate yield changes into price risk using duration and convexity at instrument and portfolio level.",
       "durationMinutes": 90,
-      "number": 35,
+      "number": 30,
       "requirement": "required",
-      "readings": []
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Timeline and curve clinic",
-      "objective": "Remove timing, periodicity, and curve-interpretation errors through fresh setups.",
-      "durationMinutes": 60,
-      "number": 36,
-      "requirement": "flex",
-      "readings": []
-    },
-    "independentStudy": [
-      "Build a bond-feature, timeline, and term-structure map",
-      "Complete valuation and yield practice with every timeline drawn first",
-      "Redo all convention errors from a blank calculator state",
-      "If the Practical Skills Module is outstanding, reach at least the midpoint this week"
-    ],
-    "questionTarget": 280,
-    "masteryGate": "At least 75% on a fresh set and no repeated timeline, periodicity, or curve error.",
-    "mockMilestone": null
+      "date": "2026-10-31",
+      "day": "Saturday",
+      "readings": [
+        "cfa-2027-outline-m060",
+        "cfa-2027-outline-m061",
+        "cfa-2027-outline-m062"
+      ]
+    }
   },
   {
-    "phase": "Phase 3 · Core Reading Coverage",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 13,
     "startDate": "2026-11-01",
     "endDate": "2026-11-07",
-    "focus": "Fixed Income II: rate risk, credit, and structured products",
+    "focus": "Fixed Income III: empirical risk, credit, securitization, ABS, and MBS",
     "topics": [
       "Fixed Income"
     ],
     "outcomes": [
-      "Interpret duration and convexity as sensitivity measures",
-      "Analyze default, recovery, spread, and credit-quality drivers",
-      "Understand securitization structures and embedded risks"
+      "Complete the cumulative Fixed Income assessment at 75% or better and verify every repair.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 240,
+    "masteryGate": "Complete the cumulative Fixed Income assessment at 75% or better and verify every repair.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Complete the cumulative Fixed Income assessment at 75% or better and verify every repair."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Interest-rate risk and sensitivity",
-      "objective": "Connect price sensitivity, maturity, coupon, yield, duration, and convexity.",
+      "label": "Monday intensive",
+      "title": "Curve-based risk and credit risk",
+      "objective": "Compare empirical and analytical rate-risk measures and identify sources of credit loss.",
       "durationMinutes": 90,
-      "number": 37,
+      "number": 31,
       "requirement": "required",
-      "readings": []
+      "date": "2026-11-02",
+      "day": "Monday",
+      "readings": [
+        "cfa-2027-outline-m063",
+        "cfa-2027-outline-m064"
+      ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Credit analysis and structured products",
-      "objective": "Map default, recovery, spread, structure, and tranche risk into one process.",
+      "label": "Wednesday midweek",
+      "title": "Credit analysis and securitization",
+      "objective": "Apply sovereign and corporate credit frameworks and trace assets through a securitization structure.",
       "durationMinutes": 90,
-      "number": 38,
+      "number": 32,
       "requirement": "required",
-      "readings": []
+      "date": "2026-11-04",
+      "day": "Wednesday",
+      "readings": [
+        "cfa-2027-outline-m065",
+        "cfa-2027-outline-m066",
+        "cfa-2027-outline-m067"
+      ]
     },
     "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Fixed Income cumulative assessment",
-      "objective": "Test valuation, curve, rate-risk, credit, and structure concepts together.",
-      "durationMinutes": 75,
-      "number": 39,
-      "requirement": "flex",
-      "readings": []
-    },
-    "independentStudy": [
-      "Create a rate-risk and credit-spread driver sheet",
-      "Complete a cumulative Fixed Income practice block",
-      "Repair the three most frequent Fixed Income error patterns",
-      "Administrative checkpoint: confirm exam registration no later than the 5 November deadline"
-    ],
-    "questionTarget": 300,
-    "masteryGate": "At least 76% on a cumulative Fixed Income set and 80% on repaired weak areas.",
-    "mockMilestone": null
+      "label": "Saturday weekend",
+      "title": "ABS and MBS instruments",
+      "objective": "Map collateral, tranching, prepayment, extension, contraction, and cash-flow risk.",
+      "durationMinutes": 90,
+      "number": 33,
+      "requirement": "required",
+      "date": "2026-11-07",
+      "day": "Saturday",
+      "readings": [
+        "cfa-2027-outline-m068",
+        "cfa-2027-outline-m069"
+      ]
+    }
   },
   {
-    "phase": "Phase 3 · Core Reading Coverage",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 14,
     "startDate": "2026-11-08",
     "endDate": "2026-11-14",
-    "focus": "Derivatives: payoffs, pricing logic, and risk transfer",
+    "focus": "Derivatives: instruments, pricing, valuation, parity, and binomial logic",
     "topics": [
       "Derivatives"
     ],
     "outcomes": [
-      "Differentiate forward, futures, swap, and option exposures",
-      "Reason through payoff and value direction",
-      "Explain how derivatives transfer or reshape risk"
+      "Draw the payoff or cash-flow logic before calculation and clear 72% on fresh Derivatives questions.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 190,
+    "masteryGate": "Draw the payoff or cash-flow logic before calculation and clear 72% on fresh Derivatives questions.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Draw the payoff or cash-flow logic before calculation and clear 72% on fresh Derivatives questions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Forwards, futures, and swaps",
-      "objective": "Map contract structure, obligations, settlement, value direction, and common use cases.",
+      "label": "Monday intensive",
+      "title": "Derivative markets, instruments, benefits, and risks",
+      "objective": "Classify derivatives, compare market structures, and identify issuer and investor uses.",
       "durationMinutes": 90,
-      "number": 40,
+      "number": 34,
       "requirement": "required",
-      "readings": []
+      "date": "2026-11-09",
+      "day": "Monday",
+      "readings": [
+        "cfa-2027-outline-m070",
+        "cfa-2027-outline-m071",
+        "cfa-2027-outline-m072"
+      ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Options and contingent payoffs",
-      "objective": "Build payoff intuition before applying valuation relationships and risk interpretations.",
+      "label": "Wednesday midweek",
+      "title": "Arbitrage, carry, forwards, and futures",
+      "objective": "Use replication and cost-of-carry logic to price and value forward commitments.",
       "durationMinutes": 90,
-      "number": 41,
+      "number": 35,
       "requirement": "required",
-      "readings": []
+      "date": "2026-11-11",
+      "day": "Wednesday",
+      "readings": [
+        "cfa-2027-outline-m073",
+        "cfa-2027-outline-m074",
+        "cfa-2027-outline-m075"
+      ]
     },
     "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Payoff sketch clinic",
-      "objective": "Remove sign and position errors by sketching outcomes before calculation.",
-      "durationMinutes": 60,
-      "number": 42,
-      "requirement": "flex",
-      "readings": []
-    },
-    "independentStudy": [
-      "Create a contract comparison and payoff map",
-      "Complete mixed Derivatives practice with position and payoff labeled first",
-      "Redo every sign error after drawing the exposure from scratch",
-      "Administrative checkpoint: confirm the 27 February appointment no later than the 10 November scheduling deadline"
-    ],
-    "questionTarget": 220,
-    "masteryGate": "At least 75% on a fresh set and correct payoff direction on nine of ten new positions.",
-    "mockMilestone": null
+      "label": "Saturday weekend",
+      "title": "Swaps, options, put-call parity, and binomial valuation",
+      "objective": "Price and value swaps and options, apply parity, and solve a one-period binomial tree.",
+      "durationMinutes": 90,
+      "number": 36,
+      "requirement": "required",
+      "date": "2026-11-14",
+      "day": "Saturday",
+      "readings": [
+        "cfa-2027-outline-m076",
+        "cfa-2027-outline-m077",
+        "cfa-2027-outline-m078",
+        "cfa-2027-outline-m079"
+      ]
+    }
   },
   {
-    "phase": "Phase 3 · Core Reading Coverage",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 15,
     "startDate": "2026-11-15",
     "endDate": "2026-11-21",
-    "focus": "Alternative Investments: structures, returns, and due diligence",
+    "focus": "Alternative Investments: structures, returns, private markets, real assets, and diversifiers",
     "topics": [
       "Alternative Investments"
     ],
     "outcomes": [
-      "Compare private capital, real assets, and diversifying strategies",
-      "Interpret fee, liquidity, valuation, and return characteristics",
-      "Identify due-diligence risks and portfolio roles"
+      "Classify each alternative by vehicle, liquidity, valuation, risk, and diversification role.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 160,
+    "masteryGate": "Classify each alternative by vehicle, liquidity, valuation, risk, and diversification role.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Classify each alternative by vehicle, liquidity, valuation, risk, and diversification role."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Alternative structures, returns, and private capital",
-      "objective": "Connect alternative structures, fee and return mechanics, liquidity, and private equity and debt characteristics.",
+      "label": "Wednesday midweek",
+      "title": "Alternative structures, performance, and private capital",
+      "objective": "Compare ownership and fee structures, calculate returns, and distinguish private equity and debt.",
       "durationMinutes": 90,
-      "number": 43,
+      "number": 37,
       "requirement": "required",
+      "date": "2026-11-18",
+      "day": "Wednesday",
       "readings": [
-        "b4-2025-r76",
-        "b4-2025-r77",
-        "b4-2025-r78"
+        "cfa-2027-outline-m080",
+        "cfa-2027-outline-m081",
+        "cfa-2027-outline-m082"
       ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Real estate, infrastructure, and natural resources",
-      "objective": "Compare real-asset cash flows, valuation features, risk drivers, inflation links, and portfolio roles.",
+      "label": "Saturday weekend",
+      "title": "Real assets, hedge funds, and digital assets",
+      "objective": "Compare the return, risk, liquidity, diversification, and vehicle features of alternative categories.",
       "durationMinutes": 90,
-      "number": 44,
+      "number": 38,
       "requirement": "required",
+      "date": "2026-11-21",
+      "day": "Saturday",
       "readings": [
-        "b4-2025-r79",
-        "b4-2025-r80"
+        "cfa-2027-outline-m083",
+        "cfa-2027-outline-m084",
+        "cfa-2027-outline-m085",
+        "cfa-2027-outline-m086"
       ]
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Hedge funds and digital assets",
-      "objective": "Compare strategy, fee, liquidity, operational, and technology risks across hedge funds and digital assets.",
-      "durationMinutes": 60,
-      "number": 45,
-      "requirement": "flex",
-      "readings": [
-        "b4-2025-r81",
-        "b4-2025-r82"
-      ]
-    },
-    "independentStudy": [
-      "Build an alternatives comparison grid",
-      "Complete mixed Alternative Investments practice",
-      "Review fee and return-calculation errors from a blank setup"
-    ],
-    "questionTarget": 200,
-    "masteryGate": "At least 76% on a fresh set and a correct structure comparison without notes.",
-    "mockMilestone": null
+    }
   },
   {
-    "phase": "Phase 3 · Core Reading Coverage",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 16,
     "startDate": "2026-11-22",
     "endDate": "2026-11-28",
-    "focus": "Portfolio Management: risk, return, and investor fit",
+    "focus": "Portfolio Management: portfolio risk, construction, behavior, and risk governance",
     "topics": [
-      "Portfolio Management",
-      "Quantitative Methods"
+      "Portfolio Management"
     ],
     "outcomes": [
-      "Connect diversification to portfolio risk and return",
-      "Interpret risk models and performance evidence",
-      "Align portfolio decisions with investor objectives and constraints"
+      "Write an IPS-to-portfolio decision chain and score 75% on a fresh Portfolio set.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 180,
+    "masteryGate": "Write an IPS-to-portfolio decision chain and score 75% on a fresh Portfolio set.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Write an IPS-to-portfolio decision chain and score 75% on a fresh Portfolio set."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Portfolio risk, diversification, and required return",
-      "objective": "Build intuition for covariance, portfolio effects, systematic risk, and expected return.",
+      "label": "Wednesday midweek",
+      "title": "Portfolio risk and return I and II",
+      "objective": "Build portfolios from covariance through the efficient frontier, CAL, CML, beta, and CAPM.",
       "durationMinutes": 90,
-      "number": 46,
+      "number": 39,
       "requirement": "required",
+      "date": "2026-11-25",
+      "day": "Wednesday",
       "readings": [
-        "b4-2025-r83",
-        "b4-2025-r84"
+        "cfa-2027-outline-m087",
+        "cfa-2027-outline-m088"
       ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Investor needs and portfolio process",
-      "objective": "Translate objectives, risk tolerance, horizon, liquidity, and constraints into decisions.",
+      "label": "Saturday weekend",
+      "title": "Portfolio process, planning, behavioral biases, and risk management",
+      "objective": "Connect investor objectives and constraints to construction, behavioral risk, and governance.",
       "durationMinutes": 90,
-      "number": 47,
+      "number": 40,
       "requirement": "required",
+      "date": "2026-11-28",
+      "day": "Saturday",
       "readings": [
-        "b4-2025-r85",
-        "b4-2025-r86"
+        "cfa-2027-outline-m089",
+        "cfa-2027-outline-m090",
+        "cfa-2027-outline-m091",
+        "cfa-2027-outline-m092"
       ]
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Behavioral biases, risk management, and Portfolio gate",
-      "objective": "Integrate behavioral biases and risk-management foundations, then verify the complete Portfolio block under time.",
-      "durationMinutes": 60,
-      "number": 48,
-      "requirement": "flex",
-      "readings": [
-        "b4-2025-r87",
-        "b4-2025-r88"
-      ]
-    },
-    "independentStudy": [
-      "Create a risk-return-diversification concept map",
-      "Complete mixed Portfolio Management and Quantitative Methods practice",
-      "Write an investor-fit rationale for each reviewed scenario",
-      "If the Practical Skills Module is outstanding, reach at least seventy-five percent completion"
-    ],
-    "questionTarget": 240,
-    "masteryGate": "At least 76% on a fresh mixed set and correct investor-fit reasoning on four of five scenarios.",
-    "mockMilestone": {
-      "label": "Core curriculum checkpoint",
-      "targetScore": 74,
-      "instruction": "Complete a ninety-question mixed assessment covering Weeks 10 through 18."
     }
   },
   {
-    "phase": "Phase 4 · Ethics & Integration",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 17,
     "startDate": "2026-11-29",
     "endDate": "2026-12-05",
-    "focus": "Ethics I: Standards of Practice Handbook, 12th Edition framework",
+    "focus": "Ethics I: trust, the Code and Standards, Professionalism, and market integrity",
     "topics": [
       "Ethical and Professional Standards"
     ],
     "outcomes": [
-      "Navigate the standards using duties, facts, and required conduct",
-      "Separate violations from recommended practice",
-      "Use a repeatable ethics decision process"
+      "State the controlling duty before choosing an answer and clear 75% on fresh Ethics cases.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 180,
+    "masteryGate": "State the controlling duty before choosing an answer and clear 75% on fresh Ethics cases.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "State the controlling duty before choosing an answer and clear 75% on fresh Ethics cases."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "12th Edition ethical decision framework",
-      "objective": "Identify stakeholders, duties, material facts, conflicts, and the action required by the current standards framework.",
+      "label": "Wednesday midweek",
+      "title": "Ethics, trust, and the Code and Standards",
+      "objective": "Use a fact-duty-action framework and master the structure of the Code and Standards.",
       "durationMinutes": 90,
-      "number": 49,
+      "number": 41,
       "requirement": "required",
+      "date": "2026-12-02",
+      "day": "Wednesday",
       "readings": [
-        "b4-2025-r91"
+        "cfa-2027-outline-m093",
+        "cfa-2027-outline-m094"
       ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Standards application I",
-      "objective": "Apply the framework across professional conduct, market integrity, client, and employer duties.",
+      "label": "Saturday weekend",
+      "title": "Standards I and II",
+      "objective": "Apply the updated 2027 guidance for Professionalism and Integrity of Capital Markets.",
       "durationMinutes": 90,
-      "number": 50,
+      "number": 42,
       "requirement": "required",
+      "date": "2026-12-05",
+      "day": "Saturday",
       "readings": [
-        "b4-2025-r91"
+        "cfa-2027-outline-m095",
+        "cfa-2027-outline-m096"
       ]
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Ethics wording and trap clinic",
-      "objective": "Slow down fact-pattern reading and distinguish required, recommended, and prohibited conduct.",
-      "durationMinutes": 60,
-      "number": 51,
-      "requirement": "flex",
-      "readings": [
-        "b4-2025-r91"
-      ]
-    },
-    "independentStudy": [
-      "Build a standards decision map in original language",
-      "Complete Ethics practice in short reviewed sets",
-      "Record the decisive fact and correction rule for every miss"
-    ],
-    "questionTarget": 240,
-    "masteryGate": "At least 78% on a fresh set with the decisive fact identified for every reviewed item.",
-    "mockMilestone": null
+    }
   },
   {
-    "phase": "Phase 4 · Ethics & Integration",
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
     "week": 18,
     "startDate": "2026-12-06",
     "endDate": "2026-12-12",
-    "focus": "Ethics II: integrated application and performance presentation",
+    "focus": "Ethics II: duties, conflicts, candidate responsibilities, and integrated application",
     "topics": [
       "Ethical and Professional Standards"
     ],
     "outcomes": [
-      "Apply the full standards framework across mixed scenarios",
-      "Understand the purpose and structure of performance-presentation standards",
-      "Maintain accuracy under subtle wording and time pressure"
+      "Complete the cumulative Ethics benchmark at 78% or better and explain every corrected answer.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 220,
+    "masteryGate": "Complete the cumulative Ethics benchmark at 78% or better and explain every corrected answer.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Complete the cumulative Ethics benchmark at 78% or better and explain every corrected answer."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Standards application II",
-      "objective": "Integrate conflicts, research, recommendations, responsibilities, and professional conduct.",
+      "label": "Wednesday midweek",
+      "title": "Standards III, IV, and V",
+      "objective": "Apply duties to clients and employers and the requirements for investment analysis and communication.",
       "durationMinutes": 90,
-      "number": 52,
+      "number": 43,
       "requirement": "required",
+      "date": "2026-12-09",
+      "day": "Wednesday",
       "readings": [
-        "b4-2025-r91"
+        "cfa-2027-outline-m097",
+        "cfa-2027-outline-m098",
+        "cfa-2027-outline-m099"
       ]
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "GIPS legacy brief and Ethics application",
-      "objective": "Treat GIPS as a brief legacy note only, then prioritize current standards application and official 2027 Ethics cases.",
+      "label": "Saturday weekend",
+      "title": "Standards VI and VII and Level I application",
+      "objective": "Resolve conflicts, member and candidate responsibilities, and integrated cases using the updated guidance.",
       "durationMinutes": 90,
-      "number": 53,
+      "number": 44,
       "requirement": "required",
+      "date": "2026-12-12",
+      "day": "Saturday",
       "readings": [
-        "b4-2025-r92",
-        "b4-2025-r93"
+        "cfa-2027-outline-m100",
+        "cfa-2027-outline-m101",
+        "cfa-2027-outline-m102"
       ]
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Timed Ethics benchmark",
-      "objective": "Measure accuracy, reading discipline, and confidence on a fresh mixed set.",
-      "durationMinutes": 60,
-      "number": 54,
-      "requirement": "flex",
-      "readings": [
-        "b4-2025-r93"
-      ]
-    },
-    "independentStudy": [
-      "Complete a cumulative Ethics practice block under time",
-      "Compress the standards map into a final review sheet",
-      "Retest every Ethics error category after a delay"
-    ],
-    "questionTarget": 280,
-    "masteryGate": "At least 80% on a fresh cumulative Ethics set with no repeat of a reviewed error pattern.",
-    "mockMilestone": null
+    }
   },
   {
-    "phase": "Phase 4 · Ethics & Integration",
+    "phase": "Phase 2 | Integration and Coverage Gate",
     "week": 19,
     "startDate": "2026-12-13",
     "endDate": "2026-12-19",
-    "focus": "Full-curriculum integration: one connected decision system",
+    "focus": "Full-curriculum integration and topic switching",
     "topics": [
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Switch accurately between all ten topics",
-      "Use timing, confidence, and triage deliberately",
-      "Rank weaknesses using current evidence rather than memory"
+      "No topic below 65%, overall at least 72%, and every material miss classified and scheduled for repair.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 300,
+    "masteryGate": "No topic below 65%, overall at least 72%, and every material miss classified and scheduled for repair.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "No topic below 65%, overall at least 72%, and every material miss classified and scheduled for repair."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Mixed-set review and switching discipline",
-      "objective": "Review how Hamad identifies the topic, selects a method, and changes mental models under time.",
+      "label": "Wednesday midweek",
+      "title": "Integrated decision maps",
+      "objective": "Connect Quant, FSA, Equity, Fixed Income, Portfolio, and Ethics into reusable decision processes.",
       "durationMinutes": 90,
-      "number": 55,
+      "number": 45,
       "requirement": "required",
+      "date": "2026-12-16",
+      "day": "Wednesday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Readiness audit and weakness ranking",
-      "objective": "Use accuracy, time, confidence, and recurrence to choose the next six weeks of repairs.",
+      "label": "Saturday weekend",
+      "title": "Ninety-question switching debrief",
+      "objective": "Review timing, confidence, and topic-switching evidence from a timed mixed assessment.",
       "durationMinutes": 90,
-      "number": 56,
+      "number": 46,
       "requirement": "required",
+      "date": "2026-12-19",
+      "day": "Saturday",
       "readings": []
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Ninety-question integration checkpoint",
-      "objective": "Test full-curriculum switching and stamina before the mock campaign.",
-      "durationMinutes": 135,
-      "number": 57,
-      "requirement": "flex",
-      "readings": []
-    },
-    "independentStudy": [
-      "Complete mixed practice every study day with immediate review",
-      "Produce a ranked weakness board using tracker evidence",
-      "Create a time and confidence rule for exam-style decision-making"
-    ],
-    "questionTarget": 320,
-    "masteryGate": "At least 74% on the mixed checkpoint with every topic above 65% or assigned a repair block.",
-    "mockMilestone": {
-      "label": "Full-curriculum checkpoint",
-      "targetScore": 74,
-      "instruction": "Complete a ninety-question timed mixed assessment and rank every weakness by evidence."
     }
   },
   {
-    "phase": "Phase 4 · Ethics & Integration",
-    "focus": "Coverage gate: prove every reading has been learned, practiced, and reviewed",
+    "phase": "Phase 2 | Integration and Coverage Gate",
+    "week": 20,
+    "startDate": "2026-12-20",
+    "endDate": "2026-12-26",
+    "focus": "Official 2027 coverage gate and weakest-topic repair",
     "topics": [
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Account for every audited reading across the four attached Schweser volumes",
-      "Flag Corporate Issuers, Fixed Income, and Derivatives items requiring 2027 LES coverage",
-      "Enter the mock campaign with no silent coverage gaps"
+      "All 102 modules have evidence and every topic has two separated passing sets or an active repair plan.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 360,
+    "masteryGate": "All 102 modules have evidence and every topic has two separated passing sets or an active repair plan.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "All 102 modules have evidence and every topic has two separated passing sets or an active repair plan."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Reading-by-reading coverage audit",
-      "objective": "Crosswalk completed study, practice evidence, and error history against the audited reading catalog.",
-      "durationMinutes": 105,
-      "number": 58,
+      "label": "Wednesday midweek",
+      "title": "102-module coverage audit",
+      "objective": "Verify that every official 2027 module has learning, practice, review, and recall evidence.",
+      "durationMinutes": 90,
+      "number": 47,
       "requirement": "required",
+      "date": "2026-12-23",
+      "day": "Wednesday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Topic-floor repair",
-      "objective": "Close the highest-value uncovered or underperforming reading clusters before full mocks.",
+      "label": "Saturday weekend",
+      "title": "Coverage gate and repair release",
+      "objective": "Test the three weakest clusters and approve the mock campaign only after evidence closes the gaps.",
       "durationMinutes": 90,
-      "number": 59,
+      "number": 48,
       "requirement": "required",
+      "date": "2026-12-26",
+      "day": "Saturday",
       "readings": []
-    },
-    "session3": {
-      "label": "Required tutor session 3",
-      "title": "Coverage gate assessment",
-      "objective": "Verify mixed recall, switching, and minimum topic floors under time.",
-      "durationMinutes": 135,
-      "number": 60,
-      "requirement": "required",
-      "readings": []
-    },
-    "independentStudy": [
-      "Close every unmapped or incomplete reading on the coverage board",
-      "Complete the full-curriculum coverage assessment",
-      "Check official mock availability around the sixty-day mark; reserve a licensed provider mock if needed"
-    ],
-    "questionTarget": 360,
-    "masteryGate": "Every reading mapped, every topic represented by reviewed practice, and the mixed gate at 75% or assigned immediate repair.",
-    "mockMilestone": {
-      "label": "Full coverage gate",
-      "targetScore": 75,
-      "instruction": "No full mock yet; prove reading completeness and minimum topic floors before Mock 1."
-    },
-    "week": 20,
-    "startDate": "2026-12-20",
-    "endDate": "2026-12-26"
+    }
   },
   {
-    "phase": "Phase 5 · Mock Campaign",
+    "phase": "Phase 3 | Mock and Repair Campaign",
     "week": 21,
     "startDate": "2026-12-27",
     "endDate": "2027-01-02",
-    "focus": "Mock 1: establish full-exam execution baseline",
+    "focus": "Mock 1: establish the full-exam execution baseline",
     "topics": [
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Complete Full-length Mock 1 under controlled exam-like conditions",
-      "Separate knowledge, process, reading, timing, and confidence losses",
-      "Close the highest-value repair before the next rehearsal"
+      "Mock 1 is fully debriefed; every material miss has a cause, correction rule, and retest date.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 300,
+    "masteryGate": "Mock 1 is fully debriefed; every material miss has a cause, correction rule, and retest date.",
+    "mockMilestone": {
+      "label": "Mock 1",
+      "targetScore": 60,
+      "instruction": "Complete the full mock independently under two-session exam conditions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
+      "label": "Wednesday midweek",
       "title": "Mock 1 preparation and execution brief",
-      "objective": "Set the conditions, pace checks, skip-return rules, confidence tracking, and exam-day routine before the rehearsal.",
+      "objective": "Lock conditions, pacing, skip-return rules, confidence capture, and the independent mock appointment.",
       "durationMinutes": 75,
-      "number": 61,
+      "number": 49,
       "requirement": "required",
+      "date": "2026-12-30",
+      "day": "Wednesday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
+      "label": "Saturday weekend",
       "title": "Mock 1 forensic debrief",
-      "objective": "Reconstruct decisions, classify lost points, and rank repairs by recurrence and value.",
+      "objective": "Reconstruct decisions, classify lost points, and prescribe the highest-value repairs.",
       "durationMinutes": 105,
-      "number": 62,
+      "number": 50,
       "requirement": "required",
+      "date": "2027-01-02",
+      "day": "Saturday",
       "readings": []
-    },
-    "session3": {
-      "label": "Required tutor session 3",
-      "title": "Mock 1 repair verification",
-      "objective": "Re-teach the top weakness cluster and verify transfer on fresh practice.",
-      "durationMinutes": 75,
-      "number": 63,
-      "requirement": "required",
-      "readings": []
-    },
-    "independentStudy": [
-      "Complete Full-length Mock 1 outside the numbered tutor sessions",
-      "Review every incorrect and low-confidence correct response",
-      "Retest the highest-value repair areas after a delay"
-    ],
-    "questionTarget": 360,
-    "masteryGate": "Reach the 60% internal Mock 1 target or close a documented repair plan before the next full mock.",
-    "mockMilestone": {
-      "label": "Full-length Mock 1",
-      "targetScore": 60,
-      "instruction": "Use an available official mock, or a licensed provider mock if needed; this is an internal coaching target, not a claimed passing score."
     }
   },
   {
-    "phase": "Phase 5 · Mock Campaign",
+    "phase": "Phase 3 | Mock and Repair Campaign",
     "week": 22,
     "startDate": "2027-01-03",
     "endDate": "2027-01-09",
@@ -1219,106 +1251,94 @@
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Complete Full-length Mock 2 under controlled exam-like conditions",
-      "Separate knowledge, process, reading, timing, and confidence losses",
-      "Close the highest-value repair before the next rehearsal"
+      "No unexamined repeated error; recurring clusters move into the deep-repair week.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 300,
+    "masteryGate": "No unexamined repeated error; recurring clusters move into the deep-repair week.",
+    "mockMilestone": {
+      "label": "Mock 2",
+      "targetScore": 63,
+      "instruction": "Complete the full mock independently under two-session exam conditions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
+      "label": "Wednesday midweek",
       "title": "Mock 2 preparation and execution brief",
-      "objective": "Set the conditions, pace checks, skip-return rules, confidence tracking, and exam-day routine before the rehearsal.",
+      "objective": "Run the corrected pacing and decision rules under independent exam conditions.",
       "durationMinutes": 75,
-      "number": 64,
+      "number": 51,
       "requirement": "required",
+      "date": "2027-01-06",
+      "day": "Wednesday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
+      "label": "Saturday weekend",
       "title": "Mock 2 forensic debrief",
-      "objective": "Reconstruct decisions, classify lost points, and rank repairs by recurrence and value.",
+      "objective": "Measure recurrence, timing, confidence calibration, and transfer from Mock 1 repairs.",
       "durationMinutes": 105,
-      "number": 65,
+      "number": 52,
       "requirement": "required",
+      "date": "2027-01-09",
+      "day": "Saturday",
       "readings": []
-    },
-    "session3": {
-      "label": "Required tutor session 3",
-      "title": "Mock 2 repair verification",
-      "objective": "Re-teach the top weakness cluster and verify transfer on fresh practice.",
-      "durationMinutes": 75,
-      "number": 66,
-      "requirement": "required",
-      "readings": []
-    },
-    "independentStudy": [
-      "Complete Full-length Mock 2 outside the numbered tutor sessions",
-      "Review every incorrect and low-confidence correct response",
-      "Retest the highest-value repair areas after a delay"
-    ],
-    "questionTarget": 380,
-    "masteryGate": "Reach the 63% internal Mock 2 target or close a documented repair plan before the next full mock.",
-    "mockMilestone": {
-      "label": "Full-length Mock 2",
-      "targetScore": 63,
-      "instruction": "Internal coaching evidence only; review trend, topic balance, timing, and error recurrence alongside the score."
     }
   },
   {
-    "phase": "Phase 5 · Mock Campaign",
+    "phase": "Phase 3 | Mock and Repair Campaign",
+    "week": 23,
+    "startDate": "2027-01-10",
+    "endDate": "2027-01-16",
     "focus": "Deep repair: convert Mock 1 and 2 evidence into a stronger floor",
     "topics": [
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Identify the few recurring patterns responsible for most lost points",
-      "Rebuild the two weakest reading clusters from first principles",
-      "Verify transfer on a fresh ninety-question mixed assessment"
+      "The top recurring clusters pass delayed retests and no topic floor is below 65%.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 240,
+    "masteryGate": "The top recurring clusters pass delayed retests and no topic floor is below 65%.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "The top recurring clusters pass delayed retests and no topic floor is below 65%."
+    },
     "session1": {
-      "label": "Required tutor session 1",
+      "label": "Wednesday midweek",
       "title": "Two-mock pattern synthesis",
-      "objective": "Compare error recurrence, timing, confidence, and topic floors across Mock 1 and Mock 2.",
-      "durationMinutes": 105,
-      "number": 67,
+      "objective": "Rank recurring errors by frequency, value, confidence, and repairability.",
+      "durationMinutes": 90,
+      "number": 53,
       "requirement": "required",
+      "date": "2027-01-13",
+      "day": "Wednesday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Deep repair workshop",
-      "objective": "Re-teach the two highest-value clusters and compress each into a decision process.",
+      "label": "Saturday weekend",
+      "title": "Deep repair and transfer verification",
+      "objective": "Re-teach the highest-value clusters and verify transfer on fresh mixed questions.",
       "durationMinutes": 105,
-      "number": 68,
+      "number": 54,
       "requirement": "required",
+      "date": "2027-01-16",
+      "day": "Saturday",
       "readings": []
-    },
-    "session3": {
-      "label": "Required tutor session 3",
-      "title": "Ninety-question transfer debrief",
-      "objective": "Review the fresh mixed assessment and confirm whether the repair transferred under time.",
-      "durationMinutes": 90,
-      "number": 69,
-      "requirement": "required",
-      "readings": []
-    },
-    "independentStudy": [
-      "Complete focused relearning and deliberate practice on the two priority clusters",
-      "Complete a fresh ninety-question timed mixed assessment",
-      "If the Practical Skills Module is outstanding, complete it no later than 16 January"
-    ],
-    "questionTarget": 380,
-    "masteryGate": "At least 75% on the ninety-question transfer set and a material reduction in repeated errors.",
-    "mockMilestone": {
-      "label": "Ninety-question repair gate",
-      "targetScore": 75,
-      "instruction": "This is a deep-repair checkpoint between Mock 2 and Mock 3, not a full-length mock."
-    },
-    "week": 23,
-    "startDate": "2027-01-10",
-    "endDate": "2027-01-16"
+    }
   },
   {
-    "phase": "Phase 5 · Mock Campaign",
+    "phase": "Phase 3 | Mock and Repair Campaign",
     "week": 24,
     "startDate": "2027-01-17",
     "endDate": "2027-01-23",
@@ -1327,52 +1347,46 @@
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Complete Full-length Mock 3 under controlled exam-like conditions",
-      "Separate knowledge, process, reading, timing, and confidence losses",
-      "Close the highest-value repair before the next rehearsal"
+      "Overall evidence and topic floors improve without a new repeated-error cluster.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 300,
+    "masteryGate": "Overall evidence and topic floors improve without a new repeated-error cluster.",
+    "mockMilestone": {
+      "label": "Mock 3",
+      "targetScore": 65,
+      "instruction": "Complete the full mock independently under two-session exam conditions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
+      "label": "Wednesday midweek",
       "title": "Mock 3 preparation and execution brief",
-      "objective": "Set the conditions, pace checks, skip-return rules, confidence tracking, and exam-day routine before the rehearsal.",
+      "objective": "Protect routine and test whether the rebuilt topic floor survives time pressure.",
       "durationMinutes": 75,
-      "number": 70,
+      "number": 55,
       "requirement": "required",
+      "date": "2027-01-20",
+      "day": "Wednesday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
+      "label": "Saturday weekend",
       "title": "Mock 3 forensic debrief",
-      "objective": "Reconstruct decisions, classify lost points, and rank repairs by recurrence and value.",
+      "objective": "Separate knowledge, process, timing, and confidence losses and assign focused repairs.",
       "durationMinutes": 105,
-      "number": 71,
+      "number": 56,
       "requirement": "required",
+      "date": "2027-01-23",
+      "day": "Saturday",
       "readings": []
-    },
-    "session3": {
-      "label": "Required tutor session 3",
-      "title": "Mock 3 repair verification",
-      "objective": "Re-teach the top weakness cluster and verify transfer on fresh practice.",
-      "durationMinutes": 75,
-      "number": 72,
-      "requirement": "required",
-      "readings": []
-    },
-    "independentStudy": [
-      "Complete Full-length Mock 3 outside the numbered tutor sessions",
-      "Review every incorrect and low-confidence correct response",
-      "Retest the highest-value repair areas after a delay"
-    ],
-    "questionTarget": 400,
-    "masteryGate": "Reach the 65% internal Mock 3 target or close a documented repair plan before the next full mock.",
-    "mockMilestone": {
-      "label": "Full-length Mock 3",
-      "targetScore": 65,
-      "instruction": "Internal coaching evidence only; review trend, topic balance, timing, and error recurrence alongside the score."
     }
   },
   {
-    "phase": "Phase 5 · Mock Campaign",
+    "phase": "Phase 3 | Mock and Repair Campaign",
     "week": 25,
     "startDate": "2027-01-24",
     "endDate": "2027-01-30",
@@ -1381,52 +1395,46 @@
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Complete Full-length Mock 4 under controlled exam-like conditions",
-      "Separate knowledge, process, reading, timing, and confidence losses",
-      "Close the highest-value repair before the next rehearsal"
+      "Pacing is stable and the result is supported by explainable, repeatable decisions.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 300,
+    "masteryGate": "Pacing is stable and the result is supported by explainable, repeatable decisions.",
+    "mockMilestone": {
+      "label": "Mock 4",
+      "targetScore": 67,
+      "instruction": "Complete the full mock independently under two-session exam conditions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
+      "label": "Wednesday midweek",
       "title": "Mock 4 preparation and execution brief",
-      "objective": "Set the conditions, pace checks, skip-return rules, confidence tracking, and exam-day routine before the rehearsal.",
+      "objective": "Use the settled two-session exam routine with strict pacing and break discipline.",
       "durationMinutes": 75,
-      "number": 73,
+      "number": 57,
       "requirement": "required",
+      "date": "2027-01-27",
+      "day": "Wednesday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
+      "label": "Saturday weekend",
       "title": "Mock 4 forensic debrief",
-      "objective": "Reconstruct decisions, classify lost points, and rank repairs by recurrence and value.",
+      "objective": "Audit time allocation, changed answers, low-confidence wins, and avoidable losses.",
       "durationMinutes": 105,
-      "number": 74,
+      "number": 58,
       "requirement": "required",
+      "date": "2027-01-30",
+      "day": "Saturday",
       "readings": []
-    },
-    "session3": {
-      "label": "Required tutor session 3",
-      "title": "Mock 4 repair verification",
-      "objective": "Re-teach the top weakness cluster and verify transfer on fresh practice.",
-      "durationMinutes": 75,
-      "number": 75,
-      "requirement": "required",
-      "readings": []
-    },
-    "independentStudy": [
-      "Complete Full-length Mock 4 outside the numbered tutor sessions",
-      "Review every incorrect and low-confidence correct response",
-      "Retest the highest-value repair areas after a delay"
-    ],
-    "questionTarget": 400,
-    "masteryGate": "Reach the 67% internal Mock 4 target or close a documented repair plan before the next full mock.",
-    "mockMilestone": {
-      "label": "Full-length Mock 4",
-      "targetScore": 67,
-      "instruction": "Internal coaching evidence only; review trend, topic balance, timing, and error recurrence alongside the score."
     }
   },
   {
-    "phase": "Phase 5 · Mock Campaign",
+    "phase": "Phase 3 | Mock and Repair Campaign",
     "week": 26,
     "startDate": "2027-01-31",
     "endDate": "2027-02-06",
@@ -1435,52 +1443,46 @@
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Complete Full-length Mock 5 under controlled exam-like conditions",
-      "Separate knowledge, process, reading, timing, and confidence losses",
-      "Close the highest-value repair before the next rehearsal"
+      "Readiness is supported across overall score, topic floors, timing, and confidence calibration.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 300,
+    "masteryGate": "Readiness is supported across overall score, topic floors, timing, and confidence calibration.",
+    "mockMilestone": {
+      "label": "Mock 5",
+      "targetScore": 69,
+      "instruction": "Complete the full mock independently under two-session exam conditions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
+      "label": "Wednesday midweek",
       "title": "Mock 5 preparation and execution brief",
-      "objective": "Set the conditions, pace checks, skip-return rules, confidence tracking, and exam-day routine before the rehearsal.",
+      "objective": "Simulate the appointment routine, nutrition, break, and second-session reset.",
       "durationMinutes": 75,
-      "number": 76,
+      "number": 59,
       "requirement": "required",
+      "date": "2027-02-03",
+      "day": "Wednesday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
+      "label": "Saturday weekend",
       "title": "Mock 5 forensic debrief",
-      "objective": "Reconstruct decisions, classify lost points, and rank repairs by recurrence and value.",
+      "objective": "Test the stability of high-weight topics and close the smallest set of decisive gaps.",
       "durationMinutes": 105,
-      "number": 77,
+      "number": 60,
       "requirement": "required",
+      "date": "2027-02-06",
+      "day": "Saturday",
       "readings": []
-    },
-    "session3": {
-      "label": "Required tutor session 3",
-      "title": "Mock 5 repair verification",
-      "objective": "Re-teach the top weakness cluster and verify transfer on fresh practice.",
-      "durationMinutes": 75,
-      "number": 78,
-      "requirement": "required",
-      "readings": []
-    },
-    "independentStudy": [
-      "Complete Full-length Mock 5 outside the numbered tutor sessions",
-      "Review every incorrect and low-confidence correct response",
-      "Retest the highest-value repair areas after a delay"
-    ],
-    "questionTarget": 420,
-    "masteryGate": "Reach the 69% internal Mock 5 target or close a documented repair plan before the next full mock.",
-    "mockMilestone": {
-      "label": "Full-length Mock 5",
-      "targetScore": 69,
-      "instruction": "Internal coaching evidence only; review trend, topic balance, timing, and error recurrence alongside the score."
     }
   },
   {
-    "phase": "Phase 5 · Mock Campaign",
+    "phase": "Phase 3 | Mock and Repair Campaign",
     "week": 27,
     "startDate": "2027-02-07",
     "endDate": "2027-02-13",
@@ -1489,53 +1491,57 @@
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Complete Full-length Mock 6 under controlled exam-like conditions",
-      "Separate knowledge, process, reading, timing, and confidence losses",
-      "Close the highest-value repair before the next rehearsal"
+      "Two recent mocks show a stable readiness range and no critical topic floor remains hidden.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 300,
+    "masteryGate": "Two recent mocks show a stable readiness range and no critical topic floor remains hidden.",
+    "mockMilestone": {
+      "label": "Mock 6",
+      "targetScore": 70,
+      "instruction": "Complete the full mock independently under two-session exam conditions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Mock 6 preparation and execution brief",
-      "objective": "Set the conditions, pace checks, skip-return rules, confidence tracking, and exam-day routine before the rehearsal.",
+      "label": "Monday intensive",
+      "title": "Mock 6 launch and final-condition checklist",
+      "objective": "Confirm exact conditions and select the few behaviors that must remain automatic.",
       "durationMinutes": 75,
-      "number": 79,
+      "number": 61,
       "requirement": "required",
+      "date": "2027-02-08",
+      "day": "Monday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
+      "label": "Wednesday midweek",
       "title": "Mock 6 forensic debrief",
-      "objective": "Reconstruct decisions, classify lost points, and rank repairs by recurrence and value.",
+      "objective": "Compare the result with the prior three mocks and isolate only evidence-backed repairs.",
       "durationMinutes": 105,
-      "number": 80,
+      "number": 62,
       "requirement": "required",
+      "date": "2027-02-10",
+      "day": "Wednesday",
       "readings": []
     },
     "session3": {
-      "label": "Required tutor session 3",
+      "label": "Saturday weekend",
       "title": "Mock 6 repair verification",
-      "objective": "Re-teach the top weakness cluster and verify transfer on fresh practice.",
+      "objective": "Retest decisive weaknesses and freeze any topic that has earned release.",
       "durationMinutes": 75,
-      "number": 81,
+      "number": 63,
       "requirement": "required",
+      "date": "2027-02-13",
+      "day": "Saturday",
       "readings": []
-    },
-    "independentStudy": [
-      "Complete Full-length Mock 6 outside the numbered tutor sessions",
-      "Review every incorrect and low-confidence correct response",
-      "Retest the highest-value repair areas after a delay",
-      "Treat 11 February as the final rescheduling checkpoint; preserve the 27 February appointment unless a real need exists"
-    ],
-    "questionTarget": 420,
-    "masteryGate": "Reach the 70% internal Mock 6 target or close a documented repair plan before the next full mock.",
-    "mockMilestone": {
-      "label": "Full-length Mock 6",
-      "targetScore": 70,
-      "instruction": "Internal coaching evidence only; review trend, topic balance, timing, and error recurrence alongside the score."
     }
   },
   {
-    "phase": "Phase 5 · Mock Campaign",
+    "phase": "Phase 3 | Mock and Repair Campaign",
     "week": 28,
     "startDate": "2027-02-14",
     "endDate": "2027-02-20",
@@ -1544,52 +1550,57 @@
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "Complete Full-length Mock 7 under controlled exam-like conditions",
-      "Separate knowledge, process, reading, timing, and confidence losses",
-      "Close the highest-value repair before the next rehearsal"
+      "The final evidence supports taper; unresolved items are narrow, explicit, and low-risk.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 300,
+    "masteryGate": "The final evidence supports taper; unresolved items are narrow, explicit, and low-risk.",
+    "mockMilestone": {
+      "label": "Mock 7",
+      "targetScore": 72,
+      "instruction": "Complete the full mock independently under two-session exam conditions."
+    },
     "session1": {
-      "label": "Required tutor session 1",
-      "title": "Mock 7 preparation and execution brief",
-      "objective": "Set the conditions, pace checks, skip-return rules, confidence tracking, and exam-day routine before the rehearsal.",
+      "label": "Monday intensive",
+      "title": "Mock 7 launch and calm-execution brief",
+      "objective": "Run the final full rehearsal without introducing a new strategy.",
       "durationMinutes": 75,
-      "number": 82,
+      "number": 64,
       "requirement": "required",
+      "date": "2027-02-15",
+      "day": "Monday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
+      "label": "Wednesday midweek",
       "title": "Mock 7 forensic debrief",
-      "objective": "Reconstruct decisions, classify lost points, and rank repairs by recurrence and value.",
+      "objective": "Extract only high-value lessons and reject low-value panic repairs.",
       "durationMinutes": 105,
-      "number": 83,
+      "number": 65,
       "requirement": "required",
+      "date": "2027-02-17",
+      "day": "Wednesday",
       "readings": []
     },
     "session3": {
-      "label": "Required tutor session 3",
+      "label": "Saturday weekend",
       "title": "Final containment and taper handoff",
-      "objective": "Close only high-value misses, freeze the final review plan, and begin the deliberate taper.",
+      "objective": "Freeze the plan, define the light-review list, and protect confidence, sleep, and logistics.",
       "durationMinutes": 75,
-      "number": 84,
+      "number": 66,
       "requirement": "required",
+      "date": "2027-02-20",
+      "day": "Saturday",
       "readings": []
-    },
-    "independentStudy": [
-      "Complete Full-length Mock 7 outside the numbered tutor sessions",
-      "Review every incorrect and low-confidence correct response",
-      "Retest the highest-value repair areas after a delay"
-    ],
-    "questionTarget": 420,
-    "masteryGate": "Reach the 72% internal Mock 7 target or close a documented repair plan before the next full mock.",
-    "mockMilestone": {
-      "label": "Full-length Mock 7",
-      "targetScore": 72,
-      "instruction": "Internal coaching evidence only; review trend, topic balance, timing, and error recurrence alongside the score."
     }
   },
   {
-    "phase": "Phase 6 · Taper & Execute",
+    "phase": "Phase 4 | Taper and Exam",
     "week": 29,
     "startDate": "2027-02-21",
     "endDate": "2027-02-27",
@@ -1599,48 +1610,42 @@
       "Ethical and Professional Standards"
     ],
     "outcomes": [
-      "Arrive rested with logistics fully controlled",
-      "Keep recall active without heavy new learning",
-      "Execute the practiced pace, triage, and reset routine"
+      "Stop heavy work, preserve sleep, and arrive with the rehearsed plan intact.",
+      "Keep the tracker, error log, and delayed-retest queue current."
     ],
+    "independentStudy": [
+      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
+      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
+      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+    ],
+    "questionTarget": 60,
+    "masteryGate": "Stop heavy work, preserve sleep, and arrive with the rehearsed plan intact.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Stop heavy work, preserve sleep, and arrive with the rehearsed plan intact."
+    },
     "session1": {
-      "label": "Required tutor session 1",
+      "label": "Wednesday midweek",
       "title": "Confidence review and final decision rules",
-      "objective": "Rehearse the compact review card, reinforce strengths, and close only tiny factual gaps.",
+      "objective": "Use light retrieval to confirm high-value rules without reopening the curriculum.",
       "durationMinutes": 60,
-      "number": 85,
+      "number": 67,
       "requirement": "required",
+      "date": "2027-02-24",
+      "day": "Wednesday",
       "readings": []
     },
     "session2": {
-      "label": "Required tutor session 2",
-      "title": "Logistics lock and calm execution",
-      "objective": "Confirm travel, identification, timing, breaks, nutrition, sleep, and the mental reset routine.",
+      "label": "Friday pre-exam",
+      "title": "Pre-exam logistics and calm-execution check",
+      "objective": "Confirm documents, travel, sleep, food, break plan, and the first-minute routine for exam day.",
       "durationMinutes": 45,
-      "number": 86,
+      "number": 68,
       "requirement": "required",
+      "date": "2027-02-26",
+      "day": "Friday",
       "readings": []
-    },
-    "session3": {
-      "label": "Optional flex / assessment",
-      "title": "Twenty-minute confidence check",
-      "objective": "Use only if calming; stop immediately if it creates fatigue or second-guessing.",
-      "durationMinutes": 20,
-      "number": 87,
-      "requirement": "flex",
-      "readings": []
-    },
-    "independentStudy": [
-      "Use short recall blocks only; do not begin new material",
-      "Close study early enough to protect sleep and routine",
-      "Follow the written exam-day plan from wake-up through the final question"
-    ],
-    "questionTarget": 60,
-    "masteryGate": "No new learning, no full mock, and no unresolved logistics; calm execution is the gate.",
-    "mockMilestone": {
-      "label": "Exam-day execution",
-      "targetScore": null,
-      "instruction": "No full mock this week. Protect energy and execute the rehearsed system on 27 February 2027."
     }
   }
 ]

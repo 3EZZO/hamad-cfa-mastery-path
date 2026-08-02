@@ -1,7 +1,15 @@
 {
   "brand": "PROJECT 202 | Hamad's CFA Level I Mastery System",
   "programStart": "2026-08-09",
+  "firstTutorSession": "2026-08-10",
   "examAppointment": "2027-02-27",
+  "tutoringRhythm": {
+    "standard": ["Wednesday midweek", "Saturday weekend"],
+    "intensive": "Monday intensive",
+    "standardWeeks": 19,
+    "intensiveWeeks": 10,
+    "totalSessions": 68
+  },
   "examWindow": {
     "startDate": "2027-02-22",
     "endDate": "2027-02-28"
@@ -33,7 +41,7 @@
       "action": "Execute the rehearsed exam-day system."
     }
   ],
-  "practicalSkillsModules": ["Financial Modeling", "Python Fundamentals"],
+  "practicalSkillsModules": ["Financial Modeling", "Python Programming Fundamentals"],
   "mockGuidance": "Official mocks are expected around sixty days before the exam window. Use a licensed provider mock for the earliest rehearsal if an official mock is not yet available.",
   "readinessDisclaimer": "All score targets are internal coaching evidence, not an official CFA Institute passing score or guarantee."
 }
