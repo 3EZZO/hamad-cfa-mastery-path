@@ -10,8 +10,7 @@ import {
 await access("dist/server/index.js");
 
 // vinext exports a callable request handler. Sites runs a Cloudflare module
-// worker, which discovers a `fetch` method on the default export. Preserve the
-// callable shape for `vinext start` and expose the Worker method as well.
+// worker, which requires a default object exposing a `fetch` method.
 await rm("dist/server/vinext-handler.js", { force: true });
 await rename("dist/server/index.js", "dist/server/vinext-handler.js");
 await writeFile(
@@ -19,9 +18,11 @@ await writeFile(
   `import handler from "./vinext-handler.js";
 export * from "./vinext-handler.js";
 
-const sitesHandler = (...args) => handler(...args);
-sitesHandler.fetch = (request, _environment, context) =>
-  handler(request, context);
+const sitesHandler = {
+  fetch(request, _environment, context) {
+    return handler(request, context);
+  },
+};
 
 export default sitesHandler;
 `,
