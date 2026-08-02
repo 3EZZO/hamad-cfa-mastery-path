@@ -1,7 +1,6 @@
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import vinext from "vinext";
 
 export default defineConfig({
-  base: "./",
-  plugins: [react()],
+  plugins: [vinext()],
 });

@@ -2,7 +2,7 @@
 
 **Hamad's CFA Level I Mastery System** is a mobile-first, browser-local study tracker for the 29-week coaching program running from 9 August 2026 through Hamad's 27 February 2027 exam appointment.
 
-The application is intentionally isolated from the surrounding HN3 projects. It has its own dependencies, TypeScript configuration, tests, and Vite build output.
+The application is intentionally isolated from the surrounding HN3 projects. It has its own dependencies, TypeScript configuration, tests, and vinext production output.
 
 ## What is included
 
@@ -58,7 +58,7 @@ Requirements: Node.js 20 or newer and npm.
 
 ```powershell
 npm install
-npm run dev -- --host 0.0.0.0 --port 5174
+npm run dev -- --hostname 0.0.0.0 --port 5174
 ```
 
 Open `http://localhost:5174`.
@@ -69,16 +69,16 @@ Open `http://localhost:5174`.
 npm run typecheck
 npm test
 npm run build
-npm run preview -- --host 0.0.0.0 --port 4174
+npm run preview -- --hostname 0.0.0.0 --port 4174
 ```
 
 Tests protect calendar boundaries, week ordering, session numbering, required/flex rules, bidirectional reading assignments, duplicate-to-primary mappings, canonical counts, missing-source ranges, topic aliases, mock progression, and backup normalization.
 
-## Static deployment
+## Production deployment
 
-This is a static Vite app. For Cloudflare Pages, Vercel, or Netlify, configure this directory as the project root, run `npm run build`, and publish `dist`.
+The tracker uses vinext's App Router build so the production artifact contains the server entrypoint required by OpenAI Sites. `npm run build` also copies `.openai/hosting.json` into the ignored `dist` artifact and verifies `dist/server/index.js` before succeeding.
 
-The UI uses tabs rather than browser routes, so no SPA rewrite configuration is required.
+The UI still behaves as a single-page tracker: its sections use in-page tabs and all progress remains browser-local.
 
 ## Score-target disclaimer
 
