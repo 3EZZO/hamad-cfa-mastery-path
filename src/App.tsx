@@ -18,6 +18,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   ListChecks,
+  Menu,
   NotebookPen,
   Plus,
   ShieldCheck,
@@ -27,6 +28,7 @@ import {
   Trash2,
   TrendingUp,
   Upload,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -43,23 +45,14 @@ import {
   getOverallProgress,
   getPlanTasks,
   getRequiredTasks,
+  getWeekSessions,
   getWeekProgress,
   PHASES,
   PLAN,
   TOPICS,
 } from "./data/plan";
 import program from "./data/program.json";
-import {
-  ASSIGNED_SESSION_COUNT,
-  CANONICAL_ASSIGNMENT_COUNT,
-  CANONICAL_READING_COUNT,
-  READING_CATALOG,
-  READING_INDEX,
-  RAW_ASSIGNMENT_COUNT,
-  RAW_READING_COUNT,
-  resolveReadingIds,
-  shortSourceLabel,
-} from "./data/readings";
+import { READING_CATALOG, resolveReadingIds } from "./data/readings";
 import {
   daysUntilExam,
   formatDate,
@@ -113,64 +106,86 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     id: "dashboard",
-    label: "Command Center",
+    label: "Home",
     mobileLabel: "Home",
     icon: LayoutDashboard,
   },
-  { id: "roadmap", label: "29-Week Roadmap", mobileLabel: "Roadmap", icon: CalendarDays },
-  { id: "weekly", label: "Weekly Execution", mobileLabel: "Week", icon: ListChecks },
-  { id: "sessions", label: "Tutor Sessions", mobileLabel: "Sessions", icon: GraduationCap },
-  { id: "practice", label: "Practice Log", mobileLabel: "Practice", icon: TimerReset },
-  { id: "mastery", label: "Topic Mastery", mobileLabel: "Mastery", icon: Gauge },
-  { id: "mocks", label: "Mock Campaign", mobileLabel: "Mocks", icon: TrendingUp },
-  { id: "errors", label: "Error Vault", mobileLabel: "Errors", icon: Archive },
-  { id: "notes", label: "Notes & Backup", mobileLabel: "Notes", icon: NotebookPen },
+  { id: "roadmap", label: "Study Plan", mobileLabel: "Plan", icon: CalendarDays },
+  { id: "weekly", label: "This Week", mobileLabel: "Week", icon: ListChecks },
+  { id: "sessions", label: "Session Notes", mobileLabel: "Sessions", icon: GraduationCap },
+  { id: "practice", label: "Practice", mobileLabel: "Practice", icon: TimerReset },
+  { id: "mastery", label: "Topic Progress", mobileLabel: "Topics", icon: Gauge },
+  { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
+  { id: "errors", label: "Mistake Review", mobileLabel: "Mistakes", icon: Archive },
+  { id: "notes", label: "Notes & Data", mobileLabel: "Notes", icon: NotebookPen },
+];
+
+const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
+  { label: "Focus", ids: ["dashboard", "weekly"] },
+  { label: "Plan", ids: ["roadmap", "sessions"] },
+  { label: "Evidence", ids: ["practice", "mastery", "mocks", "errors"] },
+  { label: "Records", ids: ["notes"] },
+];
+
+const MOBILE_PRIMARY_IDS: TabId[] = [
+  "dashboard",
+  "weekly",
+  "roadmap",
+  "practice",
+];
+
+const MOBILE_MORE_IDS: TabId[] = [
+  "sessions",
+  "mastery",
+  "mocks",
+  "errors",
+  "notes",
 ];
 
 const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: string }> = {
   dashboard: {
-    eyebrow: "Live evidence",
-    title: "Command Center",
-    description: "The next right action, backed by the work already done.",
+    eyebrow: "Your study workspace",
+    title: "Home",
+    description: "One clear next step, with the full plan available when you need it.",
   },
   roadmap: {
     eyebrow: "August 2026 — February 2027",
-    title: "The 29-Week Roadmap",
-    description: "A complete rebuild, integration cycle, mock campaign, and deliberate taper.",
+    title: "Study Plan",
+    description: "The complete 29-week path from rebuild through exam day.",
   },
   weekly: {
-    eyebrow: "Execution over intention",
-    title: "Weekly Control Room",
-    description: "Close each required loop and preserve the evidence.",
+    eyebrow: "Your current focus",
+    title: "This Week",
+    description: "Complete the work in order and keep the evidence up to date.",
   },
   sessions: {
     eyebrow: "Tutor accountability",
-    title: "Session Log",
-    description: "Record what changed, not merely what was covered.",
+    title: "Session Notes",
+    description: "Record what changed and what must happen next.",
   },
   practice: {
     eyebrow: "Volume with feedback",
-    title: "Practice Log",
-    description: "Track attempts, accuracy, sources, and the lesson from every block.",
+    title: "Practice",
+    description: "Track volume, accuracy, and the lesson from each question block.",
   },
   mastery: {
     eyebrow: "Honest topic evidence",
-    title: "Mastery Board",
+    title: "Topic Progress",
     description: "A living view of confidence supported by results—not feeling.",
   },
   mocks: {
     eyebrow: "Performance under conditions",
-    title: "Mock Campaign",
+    title: "Mock Results",
     description: "Trend the score, then investigate what produced it.",
   },
   errors: {
     eyebrow: "Mistakes become assets",
-    title: "Error Vault",
-    description: "Capture the pattern and correction rule without storing copyrighted question text.",
+    title: "Mistake Review",
+    description: "Turn every recurring mistake into a correction rule and retest.",
   },
   notes: {
     eyebrow: "Reflection and continuity",
-    title: "Notes & Backup",
+    title: "Notes & Data",
     description: "Keep tutor decisions, commitments, and browser-local backups in one place.",
   },
 };
@@ -195,24 +210,11 @@ const NOTE_CATEGORIES = [
 const MockScoreChart = lazy(() => import("./components/MockScoreChart"));
 
 const PLANNED_SESSIONS = PLAN.flatMap((week) =>
-  [week.session1, week.session2, week.session3].map((session) => ({
+  getWeekSessions(week).map((session) => ({
     week,
     session,
   })),
 );
-
-function missingSourceForSession(number: number): string | null {
-  if (number >= 16 && number <= 18) {
-    return "2027 LES Corporate Issuers source not attached";
-  }
-  if (number >= 34 && number <= 39) {
-    return "2027 LES Fixed Income source not attached";
-  }
-  if (number >= 40 && number <= 42) {
-    return "2027 LES Derivatives source not attached";
-  }
-  return null;
-}
 
 function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
@@ -252,7 +254,18 @@ function topicShort(topic: string): string {
 }
 
 function phaseShort(phase: string): string {
-  return phase.replace(/^Phase \d+ · /, "");
+  return phase.replace(/^Phase \d+\s*(?:·|\|)\s*/, "");
+}
+
+function humanizeTaskDetail(detail: string): string {
+  return detail
+    .split(" | ")
+    .map((part) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(part)
+        ? formatDate(part, { day: "numeric", month: "short" })
+        : part,
+    )
+    .join(" · ");
 }
 
 function sortByDateDesc<T extends { date: string }>(entries: T[]): T[] {
@@ -334,7 +347,7 @@ function TaskChecklist({
             <span className="task-copy">
               <span className="task-label">{task.label}</span>
               <span className="task-detail">
-                {task.detail}
+                {humanizeTaskDetail(task.detail)}
                 {task.optional && <em>Optional</em>}
               </span>
             </span>
@@ -346,54 +359,39 @@ function TaskChecklist({
 }
 
 function ReadingCoverage({
-  week,
   session,
 }: {
   week: PlanWeek;
   session: PlanSession;
 }) {
   const readings = resolveReadingIds(session.readings);
-  const missingSource = missingSourceForSession(session.number);
 
   if (readings.length) {
     return (
-      <div className="reading-coverage">
-        <span><BookOpenCheck size={14} /> Reading coverage</span>
+      <details className="reading-coverage">
+        <summary>
+          <span><BookOpenCheck size={14} /> {readings.length} assigned {readings.length === 1 ? "module" : "modules"}</span>
+          <ChevronRight size={15} />
+        </summary>
         <ul>
-          {readings.map((reading) => {
-            const primary = reading.primaryEquivalent
-              ? READING_INDEX.get(reading.primaryEquivalent)
-              : undefined;
-            return (
-              <li key={reading.id}>
-                <div className="reading-title-row">
-                  <strong>{reading.title}</strong>
-                  <span className={cx("reading-status", `reading-status-${reading.curriculumStatus}`)}>
-                    {reading.curriculumStatus}
-                  </span>
-                </div>
-                <small>{shortSourceLabel(reading.source)} · {reading.pageRange}</small>
-                {primary && (
-                  <small className="reading-equivalent">
-                    Duplicate of {shortSourceLabel(primary.source)} · {primary.title}
-                  </small>
-                )}
-              </li>
-            );
-          })}
+          {readings.map((reading) => (
+            <li key={reading.id}>
+              <strong>{reading.title}</strong>
+              <small>Official 2027 curriculum module</small>
+            </li>
+          ))}
         </ul>
-      </div>
+      </details>
     );
   }
 
   return (
-    <div className={cx("reading-pending", missingSource ? "reading-missing" : "reading-no-new")}>
+    <div className="reading-pending reading-no-new">
       <BookOpenCheck size={14} />
       <span>
-        {missingSource ??
-          (session.number <= 3
-            ? "No scheduled reading · diagnostic and learning-system session"
-            : "No new reading · integration, mock, repair, or taper session")}
+        {session.number <= 3
+          ? "No assigned module — diagnostic and learning-system session"
+          : "No new module — integration, mock, repair, or taper session"}
       </span>
     </div>
   );
@@ -404,6 +402,7 @@ function App() {
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   const [selectedWeek, setSelectedWeek] = useState(initialWeek);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [tracker, setTracker] = useState<TrackerState>(() => loadState());
   const [toast, setToast] = useState<{
     message: string;
@@ -421,6 +420,15 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    if (!mobileMoreOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMoreOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMoreOpen]);
+
   const updateTracker: UpdateTracker = (recipe) => {
     setTracker((current) => ({
       ...recipe(current),
@@ -435,6 +443,7 @@ function App() {
   const navigate = (tab: TabId, week?: number) => {
     if (week) setSelectedWeek(week);
     setActiveTab(tab);
+    setMobileMoreOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -569,20 +578,26 @@ function App() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Project sections">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                className={cx("nav-button", activeTab === item.id && "is-active")}
-                key={item.id}
-                onClick={() => navigate(item.id)}
-                type="button"
-              >
-                <Icon size={18} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+          {NAV_GROUPS.map((group) => (
+            <div className="nav-group" key={group.label}>
+              <span className="nav-group-label">{group.label}</span>
+              {group.ids.map((id) => {
+                const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
+                const Icon = item.icon;
+                return (
+                  <button
+                    className={cx("nav-button", activeTab === item.id && "is-active")}
+                    key={item.id}
+                    onClick={() => navigate(item.id)}
+                    type="button"
+                  >
+                    <Icon size={17} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="sidebar-local">
@@ -605,10 +620,10 @@ function App() {
             </div>
           </div>
           <div className="topbar-title">
-            <span>PROJECT 202</span>
-            <strong>Hamad's CFA Level I Mastery System</strong>
-            <small>Created by Mohamed Ali, CFA</small>
+            <span>PROJECT 202 · {TAB_COPY[activeTab].eyebrow}</span>
+            <strong>{TAB_COPY[activeTab].title}</strong>
           </div>
+          <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
           <div className="data-actions">
             <button className="button button-ghost" type="button" onClick={handleExport}>
               <Download size={16} />
@@ -632,8 +647,9 @@ function App() {
           </div>
         </header>
 
-        <nav className="mobile-nav" aria-label="Project sections">
-          {NAV_ITEMS.map((item) => {
+        <nav className="mobile-nav" aria-label="Primary project sections">
+          {MOBILE_PRIMARY_IDS.map((id) => {
+            const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
             const Icon = item.icon;
             return (
               <button
@@ -647,21 +663,63 @@ function App() {
               </button>
             );
           })}
+          <button
+            className={cx(
+              "mobile-nav-button",
+              (mobileMoreOpen || MOBILE_MORE_IDS.includes(activeTab)) && "is-active",
+            )}
+            type="button"
+            aria-expanded={mobileMoreOpen}
+            aria-controls="mobile-more-menu"
+            onClick={() => setMobileMoreOpen((open) => !open)}
+          >
+            <Menu size={17} />
+            <span>More</span>
+          </button>
         </nav>
 
-        <div className="local-banner" role="note">
-          <CloudOff size={17} />
-          <p>
-            <strong>Progress is saved only in this browser.</strong> It does not sync
-            automatically to another phone or computer. Export a JSON backup regularly.
-          </p>
-        </div>
-
         <div className="page-shell">
-          <PageHeading tab={activeTab} />
+          {activeTab !== "dashboard" && activeTab !== "weekly" && <PageHeading tab={activeTab} />}
           {renderView()}
         </div>
       </main>
+
+      {mobileMoreOpen && (
+        <div className="mobile-more-backdrop" onClick={() => setMobileMoreOpen(false)}>
+          <section
+            className="mobile-more-sheet"
+            id="mobile-more-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="More tracker sections"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div><span>PROJECT 202</span><strong>More tools</strong></div>
+              <button className="icon-button" type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close menu"><X size={19} /></button>
+            </header>
+            <div className="mobile-more-grid">
+              {MOBILE_MORE_IDS.map((id) => {
+                const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
+                const Icon = item.icon;
+                return (
+                  <button
+                    className={cx("mobile-more-button", activeTab === item.id && "is-active")}
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigate(item.id)}
+                  >
+                    <span><Icon size={19} /></span>
+                    <div><strong>{item.label}</strong><small>{TAB_COPY[item.id].description}</small></div>
+                    <ChevronRight size={17} />
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mobile-more-credit">Created by Mohamed Ali, CFA</p>
+          </section>
+        </div>
+      )}
 
       {toast && (
         <div className={cx("toast", toast.tone === "warning" && "toast-warning")} role="status">
@@ -717,9 +775,11 @@ function DashboardView({
     (milestone) => milestone.date >= now,
   );
   const required = getRequiredTasks(week);
-  const nextTasks = getPlanTasks(week)
-    .filter((task) => !tracker.taskCompletions[task.id])
-    .slice(0, 5);
+  const incompleteTasks = getPlanTasks(week).filter(
+    (task) => !tracker.taskCompletions[task.id],
+  );
+  const nextTask = incompleteTasks[0];
+  const nextTasks = incompleteTasks.slice(0, 4);
   const programState =
     rawProgramWeek === 0
       ? "Pre-launch"
@@ -728,38 +788,60 @@ function DashboardView({
         : `Week ${rawProgramWeek} live`;
 
   return (
-    <div className="view-stack">
-      <section className="command-hero">
-        <div className="command-copy">
-          <div className="status-line">
-            <span className="live-dot" />
-            {programState}
-          </div>
-          <p className="hero-kicker">WEEK {String(currentWeek).padStart(2, "0")} · {phaseShort(week.phase)}</p>
-          <h2>{week.focus}</h2>
-          <p>{week.outcomes[0]}</p>
-          <div className="hero-actions">
-            <button className="button button-primary" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
-              Open this week <ChevronRight size={17} />
-            </button>
-            <span>{formatDate(week.startDate, { day: "numeric", month: "short" })} — {formatDate(week.endDate, { day: "numeric", month: "short" })}</span>
-          </div>
+    <div className="view-stack home-view">
+      <section className="today-hero">
+        <div className="today-hero-top">
+          <div className="status-line"><span className="live-dot" />{programState}</div>
+          <div className="exam-countdown"><strong>{days}</strong><span>days to exam</span></div>
         </div>
-        <div className="countdown-block">
-          <span>Exam countdown</span>
-          <strong>{days}</strong>
-          <small>days to 27 February</small>
-          <div className="countdown-rule" />
-          <p>Appointment falls inside the 22–28 February 2027 exam window.</p>
+        <div className="today-focus">
+          <div className="today-focus-copy">
+            <p className="hero-kicker">YOUR NEXT STEP · WEEK {String(currentWeek).padStart(2, "0")}</p>
+            {nextTask ? (
+              <>
+                <h1>{nextTask.label}</h1>
+                <p>{humanizeTaskDetail(nextTask.detail)}</p>
+                <div className="hero-actions">
+                  <button className="button button-accent" type="button" onClick={() => onToggleTask(nextTask.id)}>
+                    <Check size={17} /> Mark complete
+                  </button>
+                  <button className="button button-dark-ghost" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
+                    View this week <ChevronRight size={17} />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h1>This week is complete.</h1>
+                <p>Review the evidence, then move forward only with your tutor's direction.</p>
+                <button className="button button-accent" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
+                  Review the week <ChevronRight size={17} />
+                </button>
+              </>
+            )}
+          </div>
+          <aside className="week-snapshot">
+            <span>This week</span>
+            <strong>{weekProgress}%</strong>
+            <ProgressBar value={weekProgress} />
+            <p>{required.filter((task) => tracker.taskCompletions[task.id]).length} of {required.length} required items complete</p>
+            <small>{formatDate(week.startDate, { day: "numeric", month: "short" })} — {formatDate(week.endDate, { day: "numeric", month: "short" })}</small>
+          </aside>
+        </div>
+        <div className="quick-actions" aria-label="Quick actions">
+          <span>Quick log</span>
+          <button type="button" onClick={() => onNavigate("practice")}><TimerReset size={16} /> Practice</button>
+          <button type="button" onClick={() => onNavigate("sessions")}><GraduationCap size={16} /> Session</button>
+          <button type="button" onClick={() => onNavigate("errors")}><Archive size={16} /> Mistake</button>
         </div>
       </section>
 
-      <section className="metric-grid">
+      <section className="metric-grid home-metrics" aria-label="Progress at a glance">
         <MetricCard
           icon={ListChecks}
-          label="Program execution"
+          label="Plan complete"
           value={`${overallProgress}%`}
-          detail="Required tasks closed"
+          detail="Required work"
           progress={overallProgress}
         />
         <MetricCard
@@ -771,7 +853,7 @@ function DashboardView({
         />
         <MetricCard
           icon={Gauge}
-          label="Topic mastery"
+          label="Topic progress"
           value={masteryAverage ? `${masteryAverage}%` : "—"}
           detail="Ten-topic evidence average"
           progress={masteryAverage}
@@ -785,12 +867,12 @@ function DashboardView({
         />
       </section>
 
-      <section className="dashboard-grid">
+      <section className="home-main-grid">
         <article className="panel panel-large">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">This week</p>
-              <h3>{weekProgress}% of required work closed</h3>
+              <p className="eyebrow">Coming up</p>
+              <h3>{week.focus}</h3>
             </div>
             <span className="week-chip">{required.filter((task) => tracker.taskCompletions[task.id]).length}/{required.length}</span>
           </div>
@@ -808,69 +890,43 @@ function DashboardView({
             </EmptyState>
           )}
           <button className="text-button" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
-            See all weekly tasks <ChevronRight size={15} />
+            Open the full week <ChevronRight size={15} />
           </button>
         </article>
+        <div className="home-side-stack">
+          <article className="panel milestone-panel">
+            <div className="panel-heading">
+              <div><p className="eyebrow">Next important date</p><h3>{nextMilestone?.label ?? "All dates cleared"}</h3></div>
+              <CalendarClock size={21} />
+            </div>
+            {nextMilestone && (
+              <div className="milestone-card">
+                <div className="milestone-date"><strong>{formatDate(nextMilestone.date, { day: "2-digit" })}</strong><span>{formatDate(nextMilestone.date, { month: "short" }).toUpperCase()}</span></div>
+                <div><p>{nextMilestone.action}</p><small>{formatDate(nextMilestone.date)}</small></div>
+              </div>
+            )}
+          </article>
 
-        <article className="panel readiness-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Evidence index</p>
-              <h3>Readiness signal</h3>
+          <details className="panel readiness-disclosure">
+            <summary>
+              <div><p className="eyebrow">Evidence index</p><h3>Readiness details</h3></div>
+              <div className="readiness-summary"><strong>{readiness}</strong><span>/ 100</span><ChevronRight size={17} /></div>
+            </summary>
+            <div className="evidence-bars">
+              <EvidenceRow label="Execution" value={overallProgress} />
+              <EvidenceRow label="Mastery" value={masteryAverage} />
+              <EvidenceRow label="Practice" value={practiceAccuracy} />
+              <EvidenceRow label="Mocks" value={Math.round(mockEvidence)} />
             </div>
-            <ShieldCheck size={21} />
-          </div>
-          <div className="readiness-core">
-            <div
-              className="readiness-ring"
-              style={{ "--readiness": `${readiness * 3.6}deg` } as React.CSSProperties}
-            >
-              <div><strong>{readiness}</strong><span>/ 100</span></div>
-            </div>
-            <p>Execution, mastery, practice accuracy, and mock evidence combined.</p>
-          </div>
-          <div className="evidence-bars">
-            <EvidenceRow label="Execution" value={overallProgress} />
-            <EvidenceRow label="Mastery" value={masteryAverage} />
-            <EvidenceRow label="Practice" value={practiceAccuracy} />
-            <EvidenceRow label="Mocks" value={Math.round(mockEvidence)} />
-          </div>
-          <p className="fine-print">Coaching indicator only—not a pass prediction.</p>
-        </article>
+            <p className="fine-print">Coaching indicator only—not a pass prediction.</p>
+          </details>
+        </div>
       </section>
 
-      <section className="dashboard-grid dashboard-grid-secondary">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Next control point</p>
-              <h3>{nextMilestone?.label ?? "All milestones passed"}</h3>
-            </div>
-            <CalendarClock size={21} />
-          </div>
-          {nextMilestone ? (
-            <div className="milestone-card">
-              <div className="milestone-date">
-                <strong>{formatDate(nextMilestone.date, { day: "2-digit" })}</strong>
-                <span>{formatDate(nextMilestone.date, { month: "short" }).toUpperCase()}</span>
-              </div>
-              <div>
-                <p>{nextMilestone.action}</p>
-                <small>{formatDate(nextMilestone.date)}</small>
-              </div>
-            </div>
-          ) : null}
-        </article>
-
-        <article className="panel principle-panel">
-          <Sparkles size={21} />
-          <p className="eyebrow">Project 202 principle</p>
-          <blockquote>“Every mistake must pay rent.”</blockquote>
-          <span>A miss is not closed until its pattern, correction rule, and retest are recorded.</span>
-          <button className="text-button" type="button" onClick={() => onNavigate("errors")}>
-            Open the error vault <ChevronRight size={15} />
-          </button>
-        </article>
+      <section className="principle-strip">
+        <Sparkles size={19} />
+        <div><strong>Every mistake must pay rent.</strong><span>Record the pattern, correction rule, and retest.</span></div>
+        <button className="text-button" type="button" onClick={() => onNavigate("errors")}>Review mistakes <ChevronRight size={15} /></button>
       </section>
     </div>
   );
@@ -921,24 +977,22 @@ function RoadmapView({
   const [phase, setPhase] = useState("All phases");
   const visibleWeeks = phase === "All phases" ? PLAN : PLAN.filter((week) => week.phase === phase);
   const totalQuestions = PLAN.reduce((sum, week) => sum + week.questionTarget, 0);
-  const plannedSessions = PLAN.flatMap((week) => [week.session1, week.session2, week.session3]);
-  const requiredSessions = plannedSessions.filter((session) => session.requirement === "required").length;
-  const flexSessions = plannedSessions.length - requiredSessions;
+  const plannedSessions = PLAN.flatMap(getWeekSessions);
 
   return (
     <div className="view-stack">
       <section className="roadmap-summary panel">
         <div><strong>29</strong><span>structured weeks</span></div>
-        <div><strong>{requiredSessions}</strong><span>required tutor sessions</span></div>
-        <div><strong>{flexSessions}</strong><span>optional flex sessions</span></div>
+        <div><strong>{plannedSessions.length}</strong><span>numbered tutor sessions</span></div>
+        <div><strong>{READING_CATALOG.readings.length}</strong><span>official 2027 modules</span></div>
         <div><strong>{totalQuestions.toLocaleString()}</strong><span>practice target</span></div>
       </section>
 
-      <div className="reading-audit-banner">
+      <div className="curriculum-note">
         <BookOpenCheck size={18} />
         <p>
-          <strong>Attached-source crosswalk complete; curriculum coverage incomplete.</strong>{" "}
-          {RAW_READING_COUNT} raw / {CANONICAL_READING_COUNT} canonical readings; {RAW_ASSIGNMENT_COUNT} raw / {CANONICAL_ASSIGNMENT_COUNT} canonical assignments; {ASSIGNED_SESSION_COUNT}/87 sessions carry attached readings. Corporate Issuers Sessions 16–18, Fixed Income Sessions 34–39, and Derivatives Sessions 40–42 still require unattached 2027 LES sources. {READING_CATALOG.pageRangeBasis}
+          <strong>Built around the official 2027 CFA Level I curriculum.</strong>{" "}
+          Open a week to see its assigned modules, tutor sessions, independent work, practice target, and evidence gate.
         </p>
       </div>
 
@@ -984,9 +1038,9 @@ function RoadmapView({
                   </div>
                 </div>
                 <div className="session-plan-grid">
-                  {[week.session1, week.session2, week.session3].map((session) => (
-                    <article key={session.title} className={cx("session-plan-card", session.requirement === "flex" && "is-optional")}>
-                      <div><span>Session {String(session.number).padStart(2, "0")} · {session.requirement === "flex" ? "Flex" : "Required"}</span><strong>{session.durationMinutes} min</strong></div>
+                  {getWeekSessions(week).map((session) => (
+                    <article key={session.number} className="session-plan-card">
+                      <div><span>Session {String(session.number).padStart(2, "0")} · {session.label}</span><strong>{formatDate(session.date, { day: "numeric", month: "short" })} · {session.durationMinutes} min</strong></div>
                       <h4>{session.title}</h4>
                       <p>{session.objective}</p>
                       <ReadingCoverage week={week} session={session} />
@@ -1039,9 +1093,14 @@ function WeeklyView({
         <div className="week-number"><span>WEEK</span><strong>{String(week.week).padStart(2, "0")}</strong></div>
         <div className="week-hero-copy">
           <p className="eyebrow">{week.phase}</p>
-          <h2>{week.focus}</h2>
+          <h1>{week.focus}</h1>
           <p>{formatDate(week.startDate)} — {formatDate(week.endDate)}</p>
           <div className="topic-pills">{week.topics.map((topic) => <span key={topic}>{topic}</span>)}</div>
+          <div className="session-date-pills">
+            {getWeekSessions(week).map((session) => (
+              <span key={session.number}><strong>S{String(session.number).padStart(2, "0")}</strong>{session.day} · {formatDate(session.date, { day: "numeric", month: "short" })}</span>
+            ))}
+          </div>
         </div>
         <div className="week-score">
           <strong>{progress}%</strong>
@@ -1053,7 +1112,7 @@ function WeeklyView({
       <section className="weekly-grid">
         <article className="panel panel-large">
           <div className="panel-heading">
-            <div><p className="eyebrow">Execution checklist</p><h3>Close the loops</h3></div>
+            <div><p className="eyebrow">Step by step</p><h3>This week's checklist</h3></div>
             <ListChecks size={21} />
           </div>
           <TaskChecklist tasks={tasks} completions={tracker.taskCompletions} onToggle={onToggleTask} />
@@ -1073,10 +1132,10 @@ function WeeklyView({
             </ul>
           </article>
           <article className="panel weekly-readings">
-            <p className="eyebrow">Session reading coverage</p>
-            {[week.session1, week.session2, week.session3].map((session) => (
+            <p className="eyebrow">Official 2027 modules</p>
+            {getWeekSessions(week).map((session) => (
               <div key={session.number}>
-                <strong>Session {String(session.number).padStart(2, "0")}</strong>
+                <strong>Session {String(session.number).padStart(2, "0")} · {session.day}, {formatDate(session.date, { day: "numeric", month: "short" })}</strong>
                 <ReadingCoverage week={week} session={session} />
               </div>
             ))}
@@ -1100,10 +1159,10 @@ function SessionLogView({
 }) {
   const initialPlannedSession = PLAN[currentWeek - 1]!.session1;
   const [form, setForm] = useState({
-    date: todayDateOnly(),
+    date: initialPlannedSession.date,
     sessionNumber: initialPlannedSession.number,
     week: currentWeek,
-    type: initialPlannedSession.requirement === "flex" ? "Flex" : "Required",
+    type: "Tutor session",
     durationMinutes: initialPlannedSession.durationMinutes,
     focus: "",
     outcome: "",
@@ -1147,12 +1206,13 @@ function SessionLogView({
             const selected = PLANNED_SESSIONS.find((item) => item.session.number === sessionNumber)!;
             setForm({
               ...form,
+              date: selected.session.date,
               sessionNumber,
               week: selected.week.week,
-              type: selected.session.requirement === "flex" ? "Flex" : "Required",
+              type: "Tutor session",
               durationMinutes: selected.session.durationMinutes,
             });
-          }}>{PLANNED_SESSIONS.map(({ week, session }) => <option key={session.number} value={session.number}>Session {String(session.number).padStart(2, "0")} · W{week.week} · {session.title}</option>)}</select></label>
+          }}>{PLANNED_SESSIONS.map(({ week, session }) => <option key={session.number} value={session.number}>Session {String(session.number).padStart(2, "0")} · {session.day} {formatDate(session.date, { day: "numeric", month: "short" })} · W{week.week} · {session.title}</option>)}</select></label>
           <ReadingCoverage week={plannedSelection.week} session={plannedSelection.session} />
           <label><span>Focus</span><input required maxLength={120} placeholder="What did this session attack?" value={form.focus} onChange={(event) => setForm({ ...form, focus: event.target.value })} /></label>
           <label><span>What changed?</span><textarea required rows={3} placeholder="The observable breakthrough, decision, or remaining gap." value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} /></label>
