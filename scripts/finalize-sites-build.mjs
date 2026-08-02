@@ -1,7 +1,36 @@
-import { access, copyFile, mkdir } from "node:fs/promises";
+import {
+  access,
+  copyFile,
+  mkdir,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 
 await access("dist/server/index.js");
+
+// vinext exports a callable request handler. Sites runs a Cloudflare module
+// worker, which discovers a `fetch` method on the default export. Preserve the
+// callable shape for `vinext start` and expose the Worker method as well.
+await rm("dist/server/vinext-handler.js", { force: true });
+await rename("dist/server/index.js", "dist/server/vinext-handler.js");
+await writeFile(
+  "dist/server/index.js",
+  `import handler from "./vinext-handler.js";
+export * from "./vinext-handler.js";
+
+const sitesHandler = (...args) => handler(...args);
+sitesHandler.fetch = (request, _environment, context) =>
+  handler(request, context);
+
+export default sitesHandler;
+`,
+  "utf8",
+);
+
 await mkdir("dist/.openai", { recursive: true });
 await copyFile(".openai/hosting.json", "dist/.openai/hosting.json");
 
-console.log("Sites artifact verified: dist/server/index.js and hosting metadata are present.");
+console.log(
+  "Sites artifact verified: Worker fetch entrypoint and hosting metadata are present.",
+);
