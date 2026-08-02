@@ -2,6 +2,8 @@
 
 **Hamad's CFA Level I Mastery System** is a mobile-first, browser-local study tracker for the 29-week coaching program running from 9 August 2026 through Hamad's 27 February 2027 exam appointment.
 
+Created by Mohamed Ali, CFA.
+
 The application is intentionally isolated from the surrounding HN3 projects. It has its own dependencies, TypeScript configuration, tests, and vinext production output.
 
 ## What is included

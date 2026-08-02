@@ -3,6 +3,8 @@ import "../src/styles.css";
 export const metadata = {
   title: "PROJECT 202 | Hamad's CFA Level I Mastery System",
   description: "Project 202 — Hamad's CFA Level I Mastery System",
+  authors: [{ name: "Mohamed Ali, CFA" }],
+  creator: "Mohamed Ali, CFA",
   icons: { icon: "/project-202-mark.svg" },
 };
 

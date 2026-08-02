@@ -558,6 +558,7 @@ function App() {
           <div>
             <strong>PROJECT 202</strong>
             <span>Hamad's Mastery System</span>
+            <small className="creator-credit">Created by Mohamed Ali, CFA</small>
           </div>
         </div>
 
@@ -600,11 +601,13 @@ function App() {
             <div>
               <strong>PROJECT 202</strong>
               <span>Hamad's CFA Level I Mastery System</span>
+              <small className="creator-credit">Created by Mohamed Ali, CFA</small>
             </div>
           </div>
           <div className="topbar-title">
             <span>PROJECT 202</span>
             <strong>Hamad's CFA Level I Mastery System</strong>
+            <small>Created by Mohamed Ali, CFA</small>
           </div>
           <div className="data-actions">
             <button className="button button-ghost" type="button" onClick={handleExport}>

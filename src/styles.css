@@ -144,6 +144,17 @@ blockquote {
   white-space: nowrap;
 }
 
+.mobile-brand .creator-credit,
+.brand-lockup .creator-credit {
+  overflow: hidden;
+  color: var(--gold);
+  font-size: 0.56rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .brand-mark {
   display: grid;
   width: 38px;
@@ -2268,6 +2279,10 @@ textarea:focus {
     font-size: 0.67rem;
   }
 
+  .sidebar .brand-lockup .creator-credit {
+    color: #d6ae5b;
+  }
+
   .sidebar-exam {
     display: flex;
     margin: 28px 2px 20px;
@@ -2410,6 +2425,12 @@ textarea:focus {
     margin-top: 2px;
     color: var(--ink);
     font-size: 0.77rem;
+  }
+
+  .topbar-title small {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 0.61rem;
   }
 
   .local-banner {
