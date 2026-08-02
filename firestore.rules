@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function activeProject202Member() {
+      return signedIn()
+        && exists(
+          /databases/$(database)/documents/programs/project-202/members/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/programs/project-202/members/$(request.auth.uid)
+        ).data.active == true;
+    }
+
+    function validTrackerEnvelope() {
+      return request.resource.data.keys().hasOnly([
+          'state',
+          'revision',
+          'updatedBy',
+          'updatedAtClient'
+        ])
+        && request.resource.data.revision is int
+        && request.resource.data.revision > 0
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAtClient is string
+        && request.resource.data.updatedAtClient.size() <= 40
+        && request.resource.data.state is map
+        && request.resource.data.state.keys().hasOnly([
+          'version',
+          'updatedAt',
+          'taskCompletions',
+          'topicMastery',
+          'sessionLogs',
+          'practiceLogs',
+          'mockScores',
+          'errorEntries',
+          'notes'
+        ])
+        && request.resource.data.state.version == 1
+        && request.resource.data.state.updatedAt is string
+        && request.resource.data.state.updatedAt.size() <= 40
+        && request.resource.data.state.taskCompletions is map
+        && request.resource.data.state.taskCompletions.size() <= 1000
+        && request.resource.data.state.topicMastery is map
+        && request.resource.data.state.topicMastery.size() <= 20
+        && request.resource.data.state.sessionLogs is list
+        && request.resource.data.state.sessionLogs.size() <= 300
+        && request.resource.data.state.practiceLogs is list
+        && request.resource.data.state.practiceLogs.size() <= 5000
+        && request.resource.data.state.mockScores is list
+        && request.resource.data.state.mockScores.size() <= 100
+        && request.resource.data.state.errorEntries is list
+        && request.resource.data.state.errorEntries.size() <= 2000
+        && request.resource.data.state.notes is list
+        && request.resource.data.state.notes.size() <= 1000;
+    }
+
+    // Membership is provisioned only by the project owner in the Firebase
+    // console or another trusted admin environment. A client may read its own
+    // record to display its role, but cannot list or change the allowlist.
+    match /programs/project-202/members/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    // Project 202 intentionally uses one synchronized tracker document. Both
+    // active members may read and update it; deletion is admin-only.
+    match /programs/project-202/tracker/current {
+      allow get: if activeProject202Member();
+      allow create: if activeProject202Member()
+        && validTrackerEnvelope()
+        && request.resource.data.revision == 1;
+      allow update: if activeProject202Member()
+        && validTrackerEnvelope()
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow list, delete: if false;
+    }
+
+    // Everything not explicitly listed above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

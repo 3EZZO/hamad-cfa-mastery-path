@@ -9,8 +9,8 @@ import {
   ChevronRight,
   CircleAlert,
   CircleCheckBig,
+  Cloud,
   Clock3,
-  CloudOff,
   Download,
   FileText,
   Flag,
@@ -18,6 +18,8 @@ import {
   GraduationCap,
   LayoutDashboard,
   ListChecks,
+  LogIn,
+  LogOut,
   Menu,
   NotebookPen,
   Plus,
@@ -28,6 +30,7 @@ import {
   Trash2,
   TrendingUp,
   Upload,
+  WifiOff,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -63,10 +66,12 @@ import {
 } from "./lib/dates";
 import {
   downloadBackup,
-  loadState,
   readBackup,
-  saveState,
 } from "./lib/storage";
+import {
+  type TrackerSyncStatus,
+  useTrackerSync,
+} from "./hooks/useTrackerSync";
 import type {
   ErrorEntry,
   MockScore,
@@ -186,7 +191,7 @@ const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: str
   notes: {
     eyebrow: "Reflection and continuity",
     title: "Notes & Data",
-    description: "Keep tutor decisions, commitments, and browser-local backups in one place.",
+    description: "Keep tutor decisions, commitments, live sync, and recovery tools in one place.",
   },
 };
 
@@ -397,22 +402,232 @@ function ReadingCoverage({
   );
 }
 
+function syncPresentation(status: TrackerSyncStatus): {
+  label: string;
+  detail: string;
+  tone: string;
+  icon: LucideIcon;
+} {
+  switch (status) {
+    case "synced":
+      return {
+        label: "Synced",
+        detail: "Progress is current on every signed-in device.",
+        tone: "is-synced",
+        icon: CircleCheckBig,
+      };
+    case "saving":
+      return {
+        label: "Saving...",
+        detail: "Your latest change is being uploaded.",
+        tone: "is-saving",
+        icon: Cloud,
+      };
+    case "offline":
+      return {
+        label: "Offline - changes queued",
+        detail: "This device will sync automatically when it reconnects.",
+        tone: "is-offline",
+        icon: WifiOff,
+      };
+    case "error":
+      return {
+        label: "Sync needs attention",
+        detail: "Your work is safe on this device. Try syncing again.",
+        tone: "is-error",
+        icon: CircleAlert,
+      };
+    case "loading":
+    default:
+      return {
+        label: "Connecting...",
+        detail: "Loading the latest shared progress.",
+        tone: "is-loading",
+        icon: Cloud,
+      };
+  }
+}
+
+function CloudLoadingScreen() {
+  return (
+    <main className="access-shell">
+      <section className="access-card access-card-loading" aria-live="polite">
+        <span className="access-mark"><Cloud size={28} /></span>
+        <p className="eyebrow">Project 202 secure workspace</p>
+        <h1>Loading the latest progress</h1>
+        <p>Connecting this device to Hamad's shared tracker...</p>
+        <span className="access-loader" aria-hidden="true" />
+      </section>
+    </main>
+  );
+}
+
+function CloudConfigurationScreen({ missingKeys }: { missingKeys: string[] }) {
+  return (
+    <main className="access-shell">
+      <section className="access-card">
+        <span className="access-mark"><Cloud size={28} /></span>
+        <p className="eyebrow">One-time cloud setup</p>
+        <h1>Connect Project 202 to Firebase</h1>
+        <p>
+          Live sync is built into this tracker. Add the Firebase web configuration
+          before deploying so progress can load securely on every device.
+        </p>
+        <div className="access-notice">
+          <strong>Configuration still needed</strong>
+          <span>{missingKeys.join(", ")}</span>
+        </div>
+        <p className="access-footnote">
+          Follow <strong>DEPLOY_GITHUB_PAGES.md</strong>. No payment method or
+          private server key is required.
+        </p>
+      </section>
+    </main>
+  );
+}
+
+function CloudAccessDeniedScreen({
+  email,
+  error,
+  onSignOut,
+}: {
+  email: string | null;
+  error: string | null;
+  onSignOut: () => Promise<void>;
+}) {
+  return (
+    <main className="access-shell">
+      <section className="access-card">
+        <span className="access-mark access-mark-warning"><ShieldCheck size={28} /></span>
+        <p className="eyebrow">Private Project 202 workspace</p>
+        <h1>This account has not been approved</h1>
+        <p>{error ?? "Only Hamad and Mohamed can open this shared tracker."}</p>
+        {email && <div className="access-notice"><strong>Signed in as</strong><span>{email}</span></div>}
+        <button className="button button-primary" type="button" onClick={() => void onSignOut()}>
+          <LogOut size={16} /> Use another account
+        </button>
+      </section>
+    </main>
+  );
+}
+
+function SignInScreen({
+  busy,
+  error,
+  onGoogle,
+  onPassword,
+}: {
+  busy: boolean;
+  error: string | null;
+  onGoogle: () => Promise<void>;
+  onPassword: (email: string, password: string) => Promise<void>;
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void onPassword(email.trim(), password);
+  };
+
+  return (
+    <main className="access-shell">
+      <section className="access-card">
+        <div className="access-brand">
+          <span className="access-mark"><Target size={27} /></span>
+          <div>
+            <strong>PROJECT 202</strong>
+            <span>Hamad's CFA Level I Mastery System</span>
+          </div>
+        </div>
+        <p className="eyebrow">Private shared tracker</p>
+        <h1>Welcome back</h1>
+        <p>
+          Sign in as Hamad or Mohamed. The latest progress will appear
+          automatically and stay synchronized across devices.
+        </p>
+
+        <button
+          className="button button-google"
+          disabled={busy}
+          type="button"
+          onClick={() => void onGoogle()}
+        >
+          <span className="google-mark" aria-hidden="true">G</span>
+          Continue with Google
+        </button>
+
+        <div className="access-divider"><span>or use your tracker account</span></div>
+
+        <form className="access-form" onSubmit={submit}>
+          <label>
+            <span>Email</span>
+            <input
+              autoComplete="email"
+              disabled={busy}
+              required
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>Password</span>
+            <input
+              autoComplete="current-password"
+              disabled={busy}
+              minLength={6}
+              required
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          <button className="button button-primary" disabled={busy} type="submit">
+            <LogIn size={16} /> {busy ? "Signing in..." : "Sign in securely"}
+          </button>
+        </form>
+
+        {error && <div className="access-error" role="alert"><CircleAlert size={17} /> {error}</div>}
+        <p className="access-footnote">
+          Access is limited to the tutor and student accounts approved for this
+          program. There is no public registration.
+        </p>
+      </section>
+    </main>
+  );
+}
+
 function App() {
   const rawProgramWeek = getProgramWeek();
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   const [selectedWeek, setSelectedWeek] = useState(initialWeek);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
-  const [tracker, setTracker] = useState<TrackerState>(() => loadState());
+  const {
+    tracker,
+    updateTracker,
+    replaceTracker,
+    cloudConfigured,
+    missingConfiguration,
+    authReady,
+    authBusy,
+    authError,
+    user,
+    accessDenied,
+    trackerReady,
+    syncStatus,
+    syncError,
+    signInWithGoogle,
+    signInWithPassword,
+    signOut,
+    retrySync,
+  } = useTrackerSync();
   const [toast, setToast] = useState<{
     message: string;
     tone: "success" | "warning";
   } | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    saveState(tracker);
-  }, [tracker]);
 
   useEffect(() => {
     if (!toast) return;
@@ -429,12 +644,41 @@ function App() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [mobileMoreOpen]);
 
-  const updateTracker: UpdateTracker = (recipe) => {
-    setTracker((current) => ({
-      ...recipe(current),
-      updatedAt: new Date().toISOString(),
-    }));
-  };
+  if (!cloudConfigured) {
+    return <CloudConfigurationScreen missingKeys={missingConfiguration} />;
+  }
+
+  if (!authReady) {
+    return <CloudLoadingScreen />;
+  }
+
+  if (!user) {
+    return (
+      <SignInScreen
+        busy={authBusy}
+        error={authError}
+        onGoogle={signInWithGoogle}
+        onPassword={signInWithPassword}
+      />
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <CloudAccessDeniedScreen
+        email={user.email}
+        error={syncError}
+        onSignOut={signOut}
+      />
+    );
+  }
+
+  if (!trackerReady) {
+    return <CloudLoadingScreen />;
+  }
+
+  const syncCopy = syncPresentation(syncStatus);
+  const SyncIcon = syncCopy.icon;
 
   const notify: Notify = (message, tone = "success") => {
     setToast({ message, tone });
@@ -457,11 +701,11 @@ function App() {
     try {
       const imported = await readBackup(file);
       const approved = window.confirm(
-        "Importing this backup will replace the progress stored in this browser. Continue?",
+        "Importing this backup will replace the current shared progress and sync it to every device. Continue?",
       );
       if (!approved) return;
-      setTracker(imported);
-      notify("Backup imported into this browser.");
+      replaceTracker(imported);
+      notify("Backup imported and queued for cloud sync.");
     } catch (error) {
       notify(
         error instanceof Error ? error.message : "Unable to import this backup.",
@@ -554,6 +798,10 @@ function App() {
             notify={notify}
             onExport={handleExport}
             onImport={() => importRef.current?.click()}
+            syncStatus={syncStatus}
+            syncError={syncError}
+            userEmail={user.email ?? "Approved Project 202 account"}
+            onRetrySync={retrySync}
           />
         );
     }
@@ -600,11 +848,14 @@ function App() {
           ))}
         </nav>
 
-        <div className="sidebar-local">
-          <CloudOff size={17} />
+        <div className={cx("sidebar-local", syncCopy.tone)}>
+          <SyncIcon size={17} />
           <div>
-            <strong>Browser-local data</strong>
-            <span>Export a backup regularly.</span>
+            <strong>{syncCopy.label}</strong>
+            <span>{syncStatus === "error" ? syncError ?? syncCopy.detail : syncCopy.detail}</span>
+            {syncStatus === "error" && (
+              <button type="button" onClick={retrySync}>Try again</button>
+            )}
           </div>
         </div>
       </aside>
@@ -625,6 +876,10 @@ function App() {
           </div>
           <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
           <div className="data-actions">
+            <span className={cx("sync-chip", syncCopy.tone)} title={syncCopy.detail}>
+              <SyncIcon size={15} />
+              <span>{syncCopy.label}</span>
+            </span>
             <button className="button button-ghost" type="button" onClick={handleExport}>
               <Download size={16} />
               <span>Export</span>
@@ -636,6 +891,15 @@ function App() {
             >
               <Upload size={16} />
               <span>Import</span>
+            </button>
+            <button
+              className="button button-ghost"
+              type="button"
+              onClick={() => void signOut()}
+              title={`Sign out ${user.email ?? ""}`.trim()}
+            >
+              <LogOut size={16} />
+              <span>Sign out</span>
             </button>
             <input
               className="visually-hidden"
@@ -1215,8 +1479,8 @@ function SessionLogView({
           }}>{PLANNED_SESSIONS.map(({ week, session }) => <option key={session.number} value={session.number}>Session {String(session.number).padStart(2, "0")} · {session.day} {formatDate(session.date, { day: "numeric", month: "short" })} · W{week.week} · {session.title}</option>)}</select></label>
           <ReadingCoverage week={plannedSelection.week} session={plannedSelection.session} />
           <label><span>Focus</span><input required maxLength={120} placeholder="What did this session attack?" value={form.focus} onChange={(event) => setForm({ ...form, focus: event.target.value })} /></label>
-          <label><span>What changed?</span><textarea required rows={3} placeholder="The observable breakthrough, decision, or remaining gap." value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} /></label>
-          <label><span>Next action</span><textarea required rows={2} placeholder="Specific work to complete before the next session." value={form.nextAction} onChange={(event) => setForm({ ...form, nextAction: event.target.value })} /></label>
+          <label><span>What changed?</span><textarea required rows={3} maxLength={600} placeholder="The observable breakthrough, decision, or remaining gap." value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} /></label>
+          <label><span>Next action</span><textarea required rows={2} maxLength={400} placeholder="Specific work to complete before the next session." value={form.nextAction} onChange={(event) => setForm({ ...form, nextAction: event.target.value })} /></label>
           <button className="button button-primary" type="submit"><Plus size={16} /> Save session</button>
         </form>
 
@@ -1297,7 +1561,7 @@ function PracticeLogView({
             <label><span>Correct</span><input type="number" min="0" max={form.attempted} required value={form.correct} onChange={(event) => setForm({ ...form, correct: Number(event.target.value) })} /></label>
           </div>
           <label><span>Source label <em>optional</em></span><input maxLength={80} placeholder="e.g. Topic review set A" value={form.source} onChange={(event) => setForm({ ...form, source: event.target.value })} /></label>
-          <label><span>Lesson from the block</span><textarea rows={3} placeholder="Pattern noticed, decision to change, or area to revisit." value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
+          <label><span>Lesson from the block</span><textarea rows={3} maxLength={500} placeholder="Pattern noticed, decision to change, or area to revisit." value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
           {formError && <p className="form-error"><CircleAlert size={15} />{formError}</p>}
           <button className="button button-primary" type="submit"><Plus size={16} /> Save practice</button>
         </form>
@@ -1441,7 +1705,7 @@ function MockView({
           <label><span>Date</span><input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
           <label><span>Label</span><input required maxLength={50} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} /></label>
           <label><span>Score %</span><input required type="number" min="0" max="100" value={form.score} onChange={(event) => setForm({ ...form, score: Number(event.target.value) })} /></label>
-          <label><span>Evidence note</span><textarea rows={3} placeholder="What drove this result?" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
+          <label><span>Evidence note</span><textarea rows={3} maxLength={500} placeholder="What drove this result?" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
           <button className="button button-primary" type="submit"><Plus size={16} /> Save result</button>
         </form>
       </section>
@@ -1567,12 +1831,20 @@ function NotesView({
   notify,
   onExport,
   onImport,
+  syncStatus,
+  syncError,
+  userEmail,
+  onRetrySync,
 }: {
   tracker: TrackerState;
   updateTracker: UpdateTracker;
   notify: Notify;
   onExport: () => void;
   onImport: () => void;
+  syncStatus: TrackerSyncStatus;
+  syncError: string | null;
+  userEmail: string;
+  onRetrySync: () => void;
 }) {
   const [form, setForm] = useState({
     date: todayDateOnly(),
@@ -1594,12 +1866,34 @@ function NotesView({
     updateTracker((current) => ({ ...current, notes: current.notes.filter((entry) => entry.id !== id) }));
   };
 
+  const syncCopy = syncPresentation(syncStatus);
+  const SyncIcon = syncCopy.icon;
+
   return (
     <div className="view-stack">
       <section className="backup-panel panel">
-        <div className="backup-icon"><CloudOff size={25} /></div>
-        <div><p className="eyebrow">Data custody</p><h3>This tracker is local to this browser</h3><p>Progress does not automatically appear on another device. Download a JSON backup after each tutor session and import it wherever you need to continue.</p></div>
-        <div className="backup-actions"><button className="button button-primary" type="button" onClick={onExport}><Download size={16} /> Export JSON</button><button className="button button-secondary" type="button" onClick={onImport}><Upload size={16} /> Import JSON</button></div>
+        <div className={cx("backup-icon", syncCopy.tone)}><SyncIcon size={25} /></div>
+        <div>
+          <p className="eyebrow">Live cloud sync</p>
+          <h3>Progress follows you to every device</h3>
+          <p>
+            Signed in as {userEmail}. Every change is saved to the shared tracker
+            automatically; JSON export is now an optional recovery copy.
+          </p>
+          <span className={cx("backup-sync-status", syncCopy.tone)}>
+            <SyncIcon size={14} /> {syncCopy.label}
+            {syncStatus === "error" && syncError ? ` - ${syncError}` : ""}
+          </span>
+        </div>
+        <div className="backup-actions">
+          {syncStatus === "error" && (
+            <button className="button button-primary" type="button" onClick={onRetrySync}>
+              Try sync again
+            </button>
+          )}
+          <button className="button button-secondary" type="button" onClick={onExport}><Download size={16} /> Export JSON</button>
+          <button className="button button-secondary" type="button" onClick={onImport}><Upload size={16} /> Import JSON</button>
+        </div>
       </section>
 
       <section className="form-and-list">
@@ -1610,7 +1904,7 @@ function NotesView({
             <label><span>Category</span><select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{NOTE_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></label>
           </div>
           <label><span>Title</span><input required maxLength={100} placeholder="A short, useful heading" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></label>
-          <label><span>Note</span><textarea required rows={6} placeholder="Decision, reflection, resource URL, or commitment." value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label>
+          <label><span>Note</span><textarea required rows={6} maxLength={2000} placeholder="Decision, reflection, resource URL, or commitment." value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label>
           <button className="button button-primary" type="submit"><Plus size={16} /> Save note</button>
         </form>
 

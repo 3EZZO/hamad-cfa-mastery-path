@@ -2,6 +2,16 @@ import { TOPICS } from "../data/plan";
 import type { TrackerState } from "../types";
 
 export const STORAGE_KEY = "project-202-tracker-v1";
+export const PENDING_SYNC_KEY = "project-202-pending-sync-v1";
+
+export interface PendingSync {
+  version: 1;
+  baseRevision: number;
+  baseState: TrackerState;
+  localState: TrackerState;
+  queuedAt: string;
+  mutationId: string;
+}
 
 export function createDefaultState(): TrackerState {
   return {
@@ -76,9 +86,52 @@ export function loadState(): TrackerState {
 }
 
 export function saveState(state: TrackerState): TrackerState {
-  const next = { ...state, updatedAt: new Date().toISOString() };
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  return next;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  return state;
+}
+
+export function loadPendingSync(): PendingSync | null {
+  if (typeof window === "undefined") return null;
+  const saved = window.localStorage.getItem(PENDING_SYNC_KEY);
+  if (!saved) return null;
+  try {
+    const value = JSON.parse(saved) as Partial<PendingSync>;
+    if (
+      value.version !== 1 ||
+      !Number.isInteger(value.baseRevision) ||
+      Number(value.baseRevision) < 0
+    ) {
+      throw new Error("Invalid pending sync metadata.");
+    }
+    return {
+      version: 1,
+      baseRevision: Number(value.baseRevision),
+      baseState: normalizeState(value.baseState),
+      localState: normalizeState(value.localState),
+      queuedAt:
+        typeof value.queuedAt === "string"
+          ? value.queuedAt
+          : new Date().toISOString(),
+      mutationId:
+        typeof value.mutationId === "string" && value.mutationId
+          ? value.mutationId
+          : `${value.queuedAt ?? "legacy"}:${value.localState?.updatedAt ?? "pending"}`,
+    };
+  } catch {
+    window.localStorage.removeItem(PENDING_SYNC_KEY);
+    return null;
+  }
+}
+
+export function savePendingSync(pending: PendingSync): PendingSync {
+  window.localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(pending));
+  return pending;
+}
+
+export function clearPendingSync(): void {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(PENDING_SYNC_KEY);
+  }
 }
 
 export function downloadBackup(state: TrackerState): void {

@@ -17,19 +17,22 @@ The application is isolated from the surrounding HN3 projects. It has its own de
 - Weekly completion checklists, evidence gates, independent work, and question targets
 - Tutor-session, practice, mock, mistake, and note logs
 - Ten-topic mastery board and internal coaching targets
-- JSON backup export and import
+- Authenticated Firestore synchronization between Mohamed and Hamad
+- JSON backup export and import for migration and recovery
 
 No proprietary CFA Institute curriculum prose, question text, or third-party study material is included. The registered candidate's current 2027 Learning Ecosystem and official errata remain authoritative.
 
 ## Student experience
 
-The Home view focuses on the next required action. Quick logging supports practice, tutoring sessions, and mistakes without forcing the student through the full data model. Deeper roadmap, curriculum, mock, mastery, evidence, and backup tools remain available through grouped navigation and progressive disclosure.
+The Home view focuses on the next required action. Quick logging supports practice, tutoring sessions, and mistakes without forcing the student through the full data model. Deeper roadmap, curriculum, mock, mastery, evidence, and backup tools remain available through grouped navigation and progressive disclosure. Firebase Authentication limits the shared tracker to the tutor and student accounts placed on the Project 202 membership allowlist.
 
-## Important data limitation
+## Runtime data and synchronization
 
-Progress is saved only in the current browser's `localStorage`. It does not automatically sync between the tutor's and student's devices or between hosting domains. Export a JSON backup regularly and import it on another device or a newly deployed URL when needed.
+When the four `VITE_FIREBASE_*` values are configured, the application synchronizes one shared document at `programs/project-202/tracker/current`. Only authenticated users with an active document at `programs/project-202/members/{uid}` may access it. Firestore rules deny all other client paths and prevent the browser from changing the membership allowlist.
 
-The app can later be connected to an authenticated database without changing the canonical plan.
+The browser retains local state for continuity, but Firestore is the cross-device copy shared by Mohamed and Hamad. JSON export remains the independent recovery format. A deployment without Firebase configuration displays a setup screen instead of opening an unsafe browser-only production tracker.
+
+Progress from an older hosting origin does not migrate automatically. Export JSON from the old tracker and perform the documented one-time import only after Firebase and GitHub Pages are configured. See [DEPLOY_GITHUB_PAGES.md](DEPLOY_GITHUB_PAGES.md#7-perform-the-one-time-data-migration).
 
 ## Canonical data
 
@@ -37,6 +40,9 @@ The app can later be connected to an authenticated database without changing the
 - `src/data/readings.json` contains the 102-module official 2027 outline catalog and its session assignments.
 - `src/data/program.json` contains the exam appointment, cadence, Practical Skills Module, and administrative milestone metadata.
 - `scripts/build-2027-data.py` reproducibly generates the plan and reading data.
+- `firestore.rules` is the production authorization boundary for the membership documents and shared tracker document.
+- `firebase.json` points the Firebase CLI to the checked-in Firestore rules.
+- `.env.example` lists the public Firebase Web App values required by local and Pages builds without containing credentials.
 
 When updating the schedule, preserve these invariants:
 
@@ -71,9 +77,13 @@ Tests protect calendar boundaries, cadence, session numbering, curriculum order 
 
 ## Deployment
 
-GitHub Pages is the recommended permanent host because this is a static, browser-only tracker. `npm run build:pages` creates the repository-subpath-aware artifact in `dist-pages/`, and `.github/workflows/deploy-pages.yml` tests, builds, and deploys it automatically after a push to `main`.
+GitHub Pages is the permanent static host, and Firebase Spark provides Authentication and Firestore persistence. `npm run build:pages` creates the repository-subpath-aware artifact in `dist-pages/`. `.github/workflows/deploy-pages.yml` reads the four public Firebase Web App values from GitHub repository variables, tests the project, builds it, and deploys after a push to `main`.
 
-Follow `DEPLOY_GITHUB_PAGES.md` for the one-time repository and Pages setup. The existing `npm run build` command remains available for the separate OpenAI Sites/Cloudflare-compatible artifact.
+Follow [DEPLOY_GITHUB_PAGES.md](DEPLOY_GITHUB_PAGES.md) for the one-time Firebase project, Authentication users, UID membership allowlist, Firestore rules, authorized Pages domain, GitHub variables, deployment, and legacy-data migration. Firestore rules are deployed separately with the Firebase CLI; the Pages workflow does not change backend authorization.
+
+Firebase Web App configuration is safe to ship to the browser, but Firebase Admin credentials are not. Never commit a service-account JSON file, private key, or server credential. Security depends on Authentication, the UID membership allowlist, and the deployed Firestore rules.
+
+The existing `npm run build` command remains available for the separate OpenAI Sites/Cloudflare-compatible artifact.
 
 ## Score-target disclaimer
 
