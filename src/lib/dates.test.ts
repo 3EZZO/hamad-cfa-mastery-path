@@ -5,10 +5,18 @@ import {
   daysUntilExam,
   getProgramWeek,
   getWeekDates,
+  isValidDateOnly,
   parseDateOnly,
 } from "./dates";
 
 describe("Project 202 calendar", () => {
+  it("distinguishes real date-only values from JavaScript rollover dates", () => {
+    expect(isValidDateOnly("2026-08-19")).toBe(true);
+    expect(isValidDateOnly("2026-02-30")).toBe(false);
+    expect(isValidDateOnly("2026-13-01")).toBe(false);
+    expect(isValidDateOnly("19-08-2026")).toBe(false);
+  });
+
   it("uses the agreed launch and exam dates", () => {
     expect(PROGRAM_START).toBe("2026-08-16");
     expect(EXAM_DATE).toBe("2027-02-27");

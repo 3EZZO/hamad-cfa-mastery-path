@@ -1,5 +1,10 @@
 import rawPlan from "./plan.json";
-import type { PlanSession, PlanTask, PlanWeek } from "../types";
+import type {
+  PlanSession,
+  PlanTask,
+  PlanWeek,
+  SessionOverride,
+} from "../types";
 
 export const TOPICS = [
   "Ethical and Professional Standards",
@@ -24,13 +29,23 @@ export function getWeekSessions(week: PlanWeek): PlanSession[] {
   );
 }
 
-export function getPlanTasks(week: PlanWeek): PlanTask[] {
+export function getSessionTaskId(week: PlanWeek, session: PlanSession): string {
+  const index = getWeekSessions(week).findIndex(
+    (candidate) => candidate.number === session.number,
+  );
+  return `w${week.week}-session-${index + 1}`;
+}
+
+export function getPlanTasks(
+  week: PlanWeek,
+  sessionOverrides: Record<string, SessionOverride> = {},
+): PlanTask[] {
   const weekPrefix = `w${week.week}`;
   const sessions = getWeekSessions(week).map(
     (session, index): PlanTask => ({
       id: `${weekPrefix}-session-${index + 1}`,
       label: session.title,
-      detail: `Session ${String(session.number).padStart(2, "0")} | ${session.label} | ${session.date} | ${session.durationMinutes} minutes`,
+      detail: `Session ${String(session.number).padStart(2, "0")} | ${session.label} | ${sessionOverrides[String(session.number)]?.date ?? session.date} | ${session.durationMinutes} minutes`,
       kind: "session",
       optional: false,
     }),

@@ -90,6 +90,30 @@ export interface NoteEntry {
   body: string;
 }
 
+export interface SessionOverride {
+  sessionNumber: number;
+  date: string;
+  reason: string;
+  updatedAt: string;
+}
+
+export interface DiagnosticEntry {
+  id: string;
+  date: string;
+  sessionNumber: 1;
+  status: "draft" | "final";
+  attempted: number;
+  correct: number;
+  studyHoursPerWeek: number;
+  pacingRating: number;
+  confidenceRating: number;
+  calculatorReady: boolean;
+  priorityTopics: string[];
+  strengths: string;
+  barriers: string;
+  tutorPlan: string;
+}
+
 export interface TrackerState {
   version: 1;
   updatedAt: string;
@@ -100,4 +124,6 @@ export interface TrackerState {
   mockScores: MockScore[];
   errorEntries: ErrorEntry[];
   notes: NoteEntry[];
+  sessionOverrides: Record<string, SessionOverride>;
+  diagnostics: DiagnosticEntry[];
 }

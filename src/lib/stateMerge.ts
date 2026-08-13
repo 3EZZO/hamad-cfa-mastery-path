@@ -161,7 +161,8 @@ export function isStateMeaningfullyEmpty(state: TrackerState): boolean {
     state.practiceLogs.length > 0 ||
     state.mockScores.length > 0 ||
     state.errorEntries.length > 0 ||
-    state.notes.length > 0;
+    state.notes.length > 0 ||
+    state.diagnostics.length > 0;
 
   return !hasCompletedTask && !hasMastery && !hasArrayRecords;
 }
@@ -208,5 +209,15 @@ export function mergeTrackerStates(
       remote.errorEntries,
     ),
     notes: mergeArrayById(base.notes, local.notes, remote.notes),
+    sessionOverrides: mergeMap(
+      base.sessionOverrides,
+      local.sessionOverrides,
+      remote.sessionOverrides,
+    ),
+    diagnostics: mergeArrayById(
+      base.diagnostics,
+      local.diagnostics,
+      remote.diagnostics,
+    ),
   };
 }

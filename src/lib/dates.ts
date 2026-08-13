@@ -4,6 +4,24 @@ export const TOTAL_WEEKS = 28;
 
 const DAY_MS = 86_400_000;
 
+/**
+ * Accepts only a real Gregorian calendar date in the project's date-only
+ * wire format. Date's normal rollover behaviour must not turn values such as
+ * 2026-02-30 into a different, apparently valid day.
+ */
+export function isValidDateOnly(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year!, month! - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month! - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
 export function parseDateOnly(value: string): Date {
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) {

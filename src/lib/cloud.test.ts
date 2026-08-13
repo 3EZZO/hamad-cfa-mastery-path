@@ -4,6 +4,7 @@ import {
   getCloudConfigurationStatus,
   mapCloudError,
   parseCloudEnvelope,
+  parseProjectMember,
 } from "./cloud";
 
 function state(): TrackerState {
@@ -17,6 +18,8 @@ function state(): TrackerState {
     mockScores: [],
     errorEntries: [],
     notes: [],
+    sessionOverrides: {},
+    diagnostics: [],
   };
 }
 
@@ -69,6 +72,26 @@ describe("cloud envelope validation", () => {
         updatedAtClient: "2026-08-03T01:00:00.000Z",
       }),
     ).toThrow(/valid Project 202 tracker/i);
+  });
+});
+
+describe("Project 202 member validation", () => {
+  it("accepts active tutor and student membership records", () => {
+    expect(
+      parseProjectMember("tutor-uid", { active: true, role: "tutor" }),
+    ).toEqual({ uid: "tutor-uid", active: true, role: "tutor" });
+    expect(
+      parseProjectMember("student-uid", { active: false, role: "student" }),
+    ).toEqual({ uid: "student-uid", active: false, role: "student" });
+  });
+
+  it("rejects malformed or elevated membership roles", () => {
+    expect(() =>
+      parseProjectMember("uid", { active: true, role: "admin" }),
+    ).toThrow(/membership record is invalid/i);
+    expect(() => parseProjectMember("uid", { role: "tutor" })).toThrow(
+      /membership record is invalid/i,
+    );
   });
 });
 

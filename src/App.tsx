@@ -4,6 +4,7 @@ import {
   BookOpenCheck,
   CalendarClock,
   CalendarDays,
+  CalendarPlus,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -11,6 +12,7 @@ import {
   CircleCheckBig,
   Cloud,
   Clock3,
+  Copy,
   Download,
   FileText,
   Flag,
@@ -23,6 +25,8 @@ import {
   Menu,
   NotebookPen,
   Plus,
+  Printer,
+  RotateCcw,
   ShieldCheck,
   Sparkles,
   Target,
@@ -30,6 +34,7 @@ import {
   Trash2,
   TrendingUp,
   Upload,
+  UserCog,
   WifiOff,
   X,
 } from "lucide-react";
@@ -65,15 +70,32 @@ import {
   TOTAL_WEEKS,
 } from "./lib/dates";
 import {
+  createDefaultState,
   downloadBackup,
   readBackup,
 } from "./lib/storage";
+import { downloadProject202Calendar } from "./lib/calendarExport";
+import { isStateMeaningfullyEmpty } from "./lib/stateMerge";
+import { buildRiskIndicators } from "./lib/risk";
+import {
+  cascadeReschedule,
+  effectiveSessionDate,
+  getEffectiveSessions,
+  restoreCanonicalScheduleFrom,
+  sessionDayLabel,
+} from "./lib/schedule";
+import {
+  buildWeeklyReport,
+  formatWeeklyReportText,
+  printWeeklyReport,
+} from "./lib/weeklyReport";
 import {
   type TrackerSyncStatus,
   useTrackerSync,
 } from "./hooks/useTrackerSync";
 import type {
   ErrorEntry,
+  DiagnosticEntry,
   MockScore,
   NoteEntry,
   PlanTask,
@@ -93,7 +115,8 @@ type TabId =
   | "mastery"
   | "mocks"
   | "errors"
-  | "notes";
+  | "notes"
+  | "coach";
 
 type UpdateTracker = (
   recipe: (current: TrackerState) => TrackerState,
@@ -123,6 +146,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
   { id: "errors", label: "Mistake Review", mobileLabel: "Mistakes", icon: Archive },
   { id: "notes", label: "Notes & Data", mobileLabel: "Notes", icon: NotebookPen },
+  { id: "coach", label: "Tutor Console", mobileLabel: "Tutor", icon: UserCog },
 ];
 
 const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
@@ -130,6 +154,7 @@ const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
   { label: "Plan", ids: ["roadmap", "sessions"] },
   { label: "Evidence", ids: ["practice", "mastery", "mocks", "errors"] },
   { label: "Records", ids: ["notes"] },
+  { label: "Tutor", ids: ["coach"] },
 ];
 
 const MOBILE_PRIMARY_IDS: TabId[] = [
@@ -145,6 +170,7 @@ const MOBILE_MORE_IDS: TabId[] = [
   "mocks",
   "errors",
   "notes",
+  "coach",
 ];
 
 const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: string }> = {
@@ -193,6 +219,11 @@ const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: str
     title: "Notes & Data",
     description: "Keep tutor decisions, commitments, live sync, and recovery tools in one place.",
   },
+  coach: {
+    eyebrow: "Tutor-only administration",
+    title: "Tutor Console",
+    description: "Run launch checks, manage the baseline, reschedule safely, and protect shared progress.",
+  },
 };
 
 const ERROR_CATEGORIES = [
@@ -205,7 +236,7 @@ const ERROR_CATEGORIES = [
 ];
 
 const NOTE_CATEGORIES = [
-  "Tutor note",
+  "Shared tutor note",
   "Weekly reflection",
   "Commitment",
   "Resource link",
@@ -607,13 +638,15 @@ function App() {
   const {
     tracker,
     updateTracker,
-    replaceTracker,
     cloudConfigured,
     missingConfiguration,
     authReady,
     authBusy,
     authError,
     user,
+    memberReady,
+    role,
+    capabilities,
     accessDenied,
     trackerReady,
     syncStatus,
@@ -621,6 +654,8 @@ function App() {
     signInWithGoogle,
     signInWithPassword,
     signOut,
+    replaceTrackerAuthoritatively,
+    authoritativeReplaceBusy,
     retrySync,
   } = useTrackerSync();
   const [toast, setToast] = useState<{
@@ -663,6 +698,10 @@ function App() {
     );
   }
 
+  if (!memberReady) {
+    return <CloudLoadingScreen />;
+  }
+
   if (accessDenied) {
     return (
       <CloudAccessDeniedScreen
@@ -696,16 +735,25 @@ function App() {
     notify("JSON backup downloaded.");
   };
 
+  const handleCalendarExport = () => {
+    downloadProject202Calendar({ sessionOverrides: tracker.sessionOverrides });
+    notify("Project 202 calendar downloaded.");
+  };
+
   const handleImport = async (file: File | undefined) => {
     if (!file) return;
+    if (!capabilities.canImportData) {
+      notify("Only the tutor can replace shared tracker data.", "warning");
+      return;
+    }
     try {
       const imported = await readBackup(file);
       const approved = window.confirm(
         "Importing this backup will replace the current shared progress and sync it to every device. Continue?",
       );
       if (!approved) return;
-      replaceTracker(imported);
-      notify("Backup imported and queued for cloud sync.");
+      await replaceTrackerAuthoritatively(imported);
+      notify("Backup imported and synchronized authoritatively.");
     } catch (error) {
       notify(
         error instanceof Error ? error.message : "Unable to import this backup.",
@@ -717,6 +765,7 @@ function App() {
   };
 
   const toggleTask = (id: string) => {
+    if (!capabilities.canToggleTasks) return;
     updateTracker((current) => ({
       ...current,
       taskCompletions: {
@@ -753,6 +802,7 @@ function App() {
             selectedWeek={selectedWeek}
             setSelectedWeek={setSelectedWeek}
             onToggleTask={toggleTask}
+            notify={notify}
           />
         );
       case "sessions":
@@ -762,6 +812,7 @@ function App() {
             currentWeek={initialWeek}
             updateTracker={updateTracker}
             notify={notify}
+            canManage={capabilities.canManageTutorSessions}
           />
         );
       case "practice":
@@ -773,13 +824,20 @@ function App() {
           />
         );
       case "mastery":
-        return <MasteryView tracker={tracker} updateTracker={updateTracker} />;
+        return (
+          <MasteryView
+            tracker={tracker}
+            updateTracker={updateTracker}
+            canEdit={capabilities.canEditMastery}
+          />
+        );
       case "mocks":
         return (
           <MockView
             tracker={tracker}
             updateTracker={updateTracker}
             notify={notify}
+            canManage={capabilities.canManageMocks}
           />
         );
       case "errors":
@@ -798,11 +856,28 @@ function App() {
             notify={notify}
             onExport={handleExport}
             onImport={() => importRef.current?.click()}
+            onCalendarExport={handleCalendarExport}
+            canImport={capabilities.canImportData}
             syncStatus={syncStatus}
             syncError={syncError}
             userEmail={user.email ?? "Approved Project 202 account"}
             onRetrySync={retrySync}
           />
+        );
+      case "coach":
+        return capabilities.canResetTracker ? (
+          <TutorConsoleView
+            tracker={tracker}
+            updateTracker={updateTracker}
+            replaceTrackerAuthoritatively={replaceTrackerAuthoritatively}
+            authoritativeReplaceBusy={authoritativeReplaceBusy}
+            syncStatus={syncStatus}
+            notify={notify}
+          />
+        ) : (
+          <EmptyState icon={ShieldCheck} title="Tutor access only">
+            This console is protected for schedule, diagnostic, and reset administration.
+          </EmptyState>
         );
     }
   };
@@ -826,7 +901,9 @@ function App() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Project sections">
-          {NAV_GROUPS.map((group) => (
+          {NAV_GROUPS.filter(
+            (group) => group.label !== "Tutor" || capabilities.canResetTracker,
+          ).map((group) => (
             <div className="nav-group" key={group.label}>
               <span className="nav-group-label">{group.label}</span>
               {group.ids.map((id) => {
@@ -876,6 +953,7 @@ function App() {
           </div>
           <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
           <div className="data-actions">
+            <span className="role-chip"><ShieldCheck size={14} />{role === "tutor" ? "Tutor" : "Student"}</span>
             <span className={cx("sync-chip", syncCopy.tone)} title={syncCopy.detail}>
               <SyncIcon size={15} />
               <span>{syncCopy.label}</span>
@@ -884,14 +962,18 @@ function App() {
               <Download size={16} />
               <span>Export</span>
             </button>
-            <button
+            <button className="button button-ghost" type="button" onClick={handleCalendarExport}>
+              <CalendarPlus size={16} />
+              <span>Calendar</span>
+            </button>
+            {capabilities.canImportData && <button
               className="button button-ghost"
               type="button"
               onClick={() => importRef.current?.click()}
             >
               <Upload size={16} />
               <span>Import</span>
-            </button>
+            </button>}
             <button
               className="button button-ghost"
               type="button"
@@ -963,7 +1045,9 @@ function App() {
               <button className="icon-button" type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close menu"><X size={19} /></button>
             </header>
             <div className="mobile-more-grid">
-              {MOBILE_MORE_IDS.map((id) => {
+              {MOBILE_MORE_IDS.filter(
+                (id) => id !== "coach" || capabilities.canResetTracker,
+              ).map((id) => {
                 const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
                 const Icon = item.icon;
                 return (
@@ -1035,11 +1119,12 @@ function DashboardView({
       mockEvidence * 0.2,
   );
   const now = todayDateOnly();
+  const risks = buildRiskIndicators(tracker, now);
   const nextMilestone = program.administrativeMilestones.find(
     (milestone) => milestone.date >= now,
   );
   const required = getRequiredTasks(week);
-  const incompleteTasks = getPlanTasks(week).filter(
+  const incompleteTasks = getPlanTasks(week, tracker.sessionOverrides).filter(
     (task) => !tracker.taskCompletions[task.id],
   );
   const nextTask = incompleteTasks[0];
@@ -1129,6 +1214,23 @@ function DashboardView({
           detail={latestMock ? latestMock.label : "No full mock recorded yet"}
           progress={latestMock?.score ?? 0}
         />
+      </section>
+
+      <section className="panel risk-panel" aria-label="Automatic coaching signals">
+        <div className="panel-heading">
+          <div><p className="eyebrow">Automatic coaching signals</p><h3>What needs attention now</h3></div>
+          <ShieldCheck size={21} />
+        </div>
+        <div className="risk-grid">
+          {risks.map((risk) => (
+            <article className={cx("risk-card", `risk-${risk.tone}`)} key={risk.id}>
+              <span>{risk.tone === "green" ? "On track" : risk.tone === "red" ? "Act now" : "Watch"}</span>
+              <strong>{risk.title}</strong>
+              <p>{risk.detail}</p>
+              <small>{risk.action}</small>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="home-main-grid">
@@ -1304,9 +1406,12 @@ function RoadmapView({
                 <div className="session-plan-grid">
                   {getWeekSessions(week).map((session) => (
                     <article key={session.number} className="session-plan-card">
-                      <div><span>Session {String(session.number).padStart(2, "0")} · {session.label}</span><strong>{formatDate(session.date, { day: "numeric", month: "short" })} · {session.durationMinutes} min</strong></div>
+                      <div><span>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}</span><strong>{formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} · {session.durationMinutes} min</strong></div>
                       <h4>{session.title}</h4>
                       <p>{session.objective}</p>
+                      {tracker.sessionOverrides[String(session.number)] && (
+                        <small className="reschedule-note">Rescheduled from {formatDate(session.date, { day: "numeric", month: "short" })}: {tracker.sessionOverrides[String(session.number)]!.reason}</small>
+                      )}
                       <ReadingCoverage week={week} session={session} />
                     </article>
                   ))}
@@ -1328,17 +1433,37 @@ function WeeklyView({
   selectedWeek,
   setSelectedWeek,
   onToggleTask,
+  notify,
 }: {
   tracker: TrackerState;
   selectedWeek: number;
   setSelectedWeek: (week: number) => void;
   onToggleTask: (id: string) => void;
+  notify: Notify;
 }) {
   const week = PLAN[selectedWeek - 1]!;
-  const tasks = getPlanTasks(week);
+  const tasks = getPlanTasks(week, tracker.sessionOverrides);
   const required = tasks.filter((task) => !task.optional);
   const completed = required.filter((task) => tracker.taskCompletions[task.id]).length;
   const progress = getWeekProgress(week, tracker.taskCompletions);
+  const report = buildWeeklyReport(week, tracker, todayDateOnly());
+
+  const copyReport = async () => {
+    try {
+      await navigator.clipboard.writeText(formatWeeklyReportText(report));
+      notify("Weekly report copied for WhatsApp.");
+    } catch {
+      notify("Clipboard access was blocked by the browser.", "warning");
+    }
+  };
+
+  const printReport = () => {
+    try {
+      printWeeklyReport(report);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Unable to open the report.", "warning");
+    }
+  };
 
   return (
     <div className="view-stack">
@@ -1351,6 +1476,10 @@ function WeeklyView({
           </select>
         </label>
         <button className="icon-button" type="button" disabled={selectedWeek === TOTAL_WEEKS} onClick={() => setSelectedWeek(selectedWeek + 1)} aria-label="Next week"><ChevronRight size={19} /></button>
+        <div className="week-report-actions">
+          <button className="button button-secondary" type="button" onClick={() => void copyReport()}><Copy size={16} /> Copy report</button>
+          <button className="button button-secondary" type="button" onClick={printReport}><Printer size={16} /> Print / PDF</button>
+        </div>
       </section>
 
       <section className="week-hero panel">
@@ -1362,7 +1491,7 @@ function WeeklyView({
           <div className="topic-pills">{week.topics.map((topic) => <span key={topic}>{topic}</span>)}</div>
           <div className="session-date-pills">
             {getWeekSessions(week).map((session) => (
-              <span key={session.number}><strong>S{String(session.number).padStart(2, "0")}</strong>{session.day} · {formatDate(session.date, { day: "numeric", month: "short" })}</span>
+              <span key={session.number}><strong>S{String(session.number).padStart(2, "0")}</strong>{sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))} · {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })}</span>
             ))}
           </div>
         </div>
@@ -1399,7 +1528,10 @@ function WeeklyView({
             <p className="eyebrow">Official 2027 modules</p>
             {getWeekSessions(week).map((session) => (
               <div key={session.number}>
-                <strong>Session {String(session.number).padStart(2, "0")} · {session.day}, {formatDate(session.date, { day: "numeric", month: "short" })}</strong>
+                <strong>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}, {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })}</strong>
+                {tracker.sessionOverrides[String(session.number)] && (
+                  <small className="reschedule-note">Rescheduled from {sessionDayLabel(session.date)}, {formatDate(session.date)}: {tracker.sessionOverrides[String(session.number)]!.reason}</small>
+                )}
                 <ReadingCoverage week={week} session={session} />
               </div>
             ))}
@@ -1415,15 +1547,17 @@ function SessionLogView({
   currentWeek,
   updateTracker,
   notify,
+  canManage,
 }: {
   tracker: TrackerState;
   currentWeek: number;
   updateTracker: UpdateTracker;
   notify: Notify;
+  canManage: boolean;
 }) {
   const initialPlannedSession = PLAN[currentWeek - 1]!.session1;
   const [form, setForm] = useState({
-    date: initialPlannedSession.date,
+    date: effectiveSessionDate(initialPlannedSession, tracker.sessionOverrides),
     sessionNumber: initialPlannedSession.number,
     week: currentWeek,
     type: "Tutor session",
@@ -1439,6 +1573,7 @@ function SessionLogView({
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!canManage) return;
     const entry: SessionLog = { id: makeId("session"), ...form };
     updateTracker((current) => ({ ...current, sessionLogs: [entry, ...current.sessionLogs] }));
     setForm((current) => ({ ...current, focus: "", outcome: "", nextAction: "" }));
@@ -1459,7 +1594,7 @@ function SessionLogView({
       </section>
 
       <section className="form-and-list">
-        <form className="panel entry-form" onSubmit={submit}>
+        {canManage ? <form className="panel entry-form" onSubmit={submit}>
           <div className="panel-heading"><div><p className="eyebrow">New evidence</p><h3>Log a tutor session</h3></div><Plus size={20} /></div>
           <div className="form-grid form-grid-2">
             <label><span>Date</span><input type="date" required value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
@@ -1470,19 +1605,19 @@ function SessionLogView({
             const selected = PLANNED_SESSIONS.find((item) => item.session.number === sessionNumber)!;
             setForm({
               ...form,
-              date: selected.session.date,
+              date: effectiveSessionDate(selected.session, tracker.sessionOverrides),
               sessionNumber,
               week: selected.week.week,
               type: "Tutor session",
               durationMinutes: selected.session.durationMinutes,
             });
-          }}>{PLANNED_SESSIONS.map(({ week, session }) => <option key={session.number} value={session.number}>Session {String(session.number).padStart(2, "0")} · {session.day} {formatDate(session.date, { day: "numeric", month: "short" })} · W{week.week} · {session.title}</option>)}</select></label>
+          }}>{PLANNED_SESSIONS.map(({ week, session }) => <option key={session.number} value={session.number}>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))} {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} · W{week.week} · {session.title}</option>)}</select></label>
           <ReadingCoverage week={plannedSelection.week} session={plannedSelection.session} />
           <label><span>Focus</span><input required maxLength={120} placeholder="What did this session attack?" value={form.focus} onChange={(event) => setForm({ ...form, focus: event.target.value })} /></label>
           <label><span>What changed?</span><textarea required rows={3} maxLength={600} placeholder="The observable breakthrough, decision, or remaining gap." value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} /></label>
           <label><span>Next action</span><textarea required rows={2} maxLength={400} placeholder="Specific work to complete before the next session." value={form.nextAction} onChange={(event) => setForm({ ...form, nextAction: event.target.value })} /></label>
           <button className="button button-primary" type="submit"><Plus size={16} /> Save session</button>
-        </form>
+        </form> : <article className="panel read-only-panel"><ShieldCheck size={22} /><div><p className="eyebrow">Student view</p><h3>Tutor session records are tutor-managed</h3><p>You can review every recorded outcome and next action below. Mohamed controls additions and corrections.</p></div></article>}
 
         <section className="panel log-panel">
           <div className="panel-heading"><div><p className="eyebrow">History</p><h3>Session record</h3></div><FileText size={20} /></div>
@@ -1490,7 +1625,7 @@ function SessionLogView({
             <div className="entry-list">
               {sortByDateDesc(tracker.sessionLogs).map((entry) => (
                 <article className="log-entry" key={entry.id}>
-                  <div className="log-entry-top"><div><span>{entry.sessionNumber ? `Session ${String(entry.sessionNumber).padStart(2, "0")} · ` : ""}Week {entry.week} · {entry.type}</span><strong>{entry.focus}</strong></div><button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete session"><Trash2 size={15} /></button></div>
+                  <div className="log-entry-top"><div><span>{entry.sessionNumber ? `Session ${String(entry.sessionNumber).padStart(2, "0")} · ` : ""}Week {entry.week} · {entry.type}</span><strong>{entry.focus}</strong></div>{canManage && <button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete session"><Trash2 size={15} /></button>}</div>
                   <p>{entry.outcome}</p>
                   <div className="next-action"><Flag size={15} /><span><strong>Next:</strong> {entry.nextAction}</span></div>
                   <footer>{formatDate(entry.date)} · {entry.durationMinutes} minutes</footer>
@@ -1588,7 +1723,7 @@ function PracticeLogView({
   );
 }
 
-function MasteryView({ tracker, updateTracker }: { tracker: TrackerState; updateTracker: UpdateTracker }) {
+function MasteryView({ tracker, updateTracker, canEdit }: { tracker: TrackerState; updateTracker: UpdateTracker; canEdit: boolean }) {
   const masteryAverage = Math.round(average(TOPICS.map((topic) => tracker.topicMastery[topic] ?? 0)));
   const readyTopics = TOPICS.filter((topic) => (tracker.topicMastery[topic] ?? 0) >= 80).length;
 
@@ -1609,6 +1744,7 @@ function MasteryView({ tracker, updateTracker }: { tracker: TrackerState; update
         <div><p className="eyebrow">Ten-topic portfolio</p><h2>{masteryAverage || 0}% average mastery</h2><p>Set these levels from recent, timed, reviewed evidence. Confidence alone is not evidence.</p></div>
         <div className="mastery-total"><strong>{readyTopics}</strong><span>topics at 80%+</span></div>
       </section>
+      {!canEdit && <div className="disclaimer-card"><ShieldCheck size={19} /><p><strong>Evidence review.</strong> Mohamed updates the mastery levels from reviewed practice, session, and mock evidence.</p></div>}
       <section className="mastery-grid">
         {TOPICS.map((topic, index) => {
           const score = tracker.topicMastery[topic] ?? 0;
@@ -1623,6 +1759,7 @@ function MasteryView({ tracker, updateTracker }: { tracker: TrackerState; update
                 className="mastery-slider"
                 aria-label={`${topic} mastery`}
                 type="range"
+                disabled={!canEdit}
                 min="0"
                 max="100"
                 step="1"
@@ -1646,10 +1783,12 @@ function MockView({
   tracker,
   updateTracker,
   notify,
+  canManage,
 }: {
   tracker: TrackerState;
   updateTracker: UpdateTracker;
   notify: Notify;
+  canManage: boolean;
 }) {
   const [form, setForm] = useState({
     date: todayDateOnly(),
@@ -1673,6 +1812,7 @@ function MockView({
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!canManage) return;
     const entry: MockScore = { id: makeId("mock"), ...form, score: clamp(form.score) };
     updateTracker((current) => ({ ...current, mockScores: [...current.mockScores, entry] }));
     setForm({ date: todayDateOnly(), label: `Mock ${tracker.mockScores.length + 2}`, score: 0, note: "" });
@@ -1700,14 +1840,14 @@ function MockView({
           <p className="chart-note">{program.mockGuidance}</p>
         </article>
 
-        <form className="panel entry-form mock-form" onSubmit={submit}>
+        {canManage ? <form className="panel entry-form mock-form" onSubmit={submit}>
           <div className="panel-heading"><div><p className="eyebrow">New result</p><h3>Log a mock</h3></div><Plus size={20} /></div>
           <label><span>Date</span><input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
           <label><span>Label</span><input required maxLength={50} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} /></label>
           <label><span>Score %</span><input required type="number" min="0" max="100" value={form.score} onChange={(event) => setForm({ ...form, score: Number(event.target.value) })} /></label>
           <label><span>Evidence note</span><textarea rows={3} maxLength={500} placeholder="What drove this result?" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
           <button className="button button-primary" type="submit"><Plus size={16} /> Save result</button>
-        </form>
+        </form> : <article className="panel read-only-panel"><ShieldCheck size={22} /><div><p className="eyebrow">Student view</p><h3>Mock administration is tutor-managed</h3><p>Results and the campaign ladder remain visible here as soon as Mohamed records them.</p></div></article>}
       </section>
 
       <section className="panel">
@@ -1735,7 +1875,7 @@ function MockView({
               <article className="mock-entry" key={entry.id}>
                 <div className="mock-score"><strong>{entry.score}%</strong></div>
                 <div><span>{formatDate(entry.date)}</span><h4>{entry.label}</h4>{entry.note && <p>{entry.note}</p>}</div>
-                <button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete mock"><Trash2 size={15} /></button>
+                {canManage && <button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete mock"><Trash2 size={15} /></button>}
               </article>
             ))}
           </div>
@@ -1825,12 +1965,253 @@ function ErrorVaultView({
   );
 }
 
+function TutorConsoleView({
+  tracker,
+  updateTracker,
+  replaceTrackerAuthoritatively,
+  authoritativeReplaceBusy,
+  syncStatus,
+  notify,
+}: {
+  tracker: TrackerState;
+  updateTracker: UpdateTracker;
+  replaceTrackerAuthoritatively: (state: TrackerState) => Promise<void>;
+  authoritativeReplaceBusy: boolean;
+  syncStatus: TrackerSyncStatus;
+  notify: Notify;
+}) {
+  const effectiveSessions = getEffectiveSessions(tracker.sessionOverrides);
+  const [selectedSession, setSelectedSession] = useState(1);
+  const selected = effectiveSessions.find(
+    (entry) => entry.session.number === selectedSession,
+  ) ?? effectiveSessions[0]!;
+  const [newDate, setNewDate] = useState(selected.effectiveDate);
+  const [rescheduleReason, setRescheduleReason] = useState("");
+  const savedDiagnostic = tracker.diagnostics.find(
+    (entry) => entry.sessionNumber === 1,
+  );
+  const [diagnostic, setDiagnostic] = useState({
+    date: savedDiagnostic?.date ?? effectiveSessions[0]!.effectiveDate,
+    attempted: savedDiagnostic?.attempted ?? 30,
+    correct: savedDiagnostic?.correct ?? 0,
+    studyHoursPerWeek: savedDiagnostic?.studyHoursPerWeek ?? 10,
+    pacingRating: savedDiagnostic?.pacingRating ?? 3,
+    confidenceRating: savedDiagnostic?.confidenceRating ?? 3,
+    calculatorReady: savedDiagnostic?.calculatorReady ?? false,
+    priorityTopics: savedDiagnostic?.priorityTopics ?? ([] as string[]),
+    strengths: savedDiagnostic?.strengths ?? "",
+    barriers: savedDiagnostic?.barriers ?? "",
+    tutorPlan: savedDiagnostic?.tutorPlan ?? "",
+  });
+  const hasProgress = !isStateMeaningfullyEmpty(tracker);
+  const scheduleIntact =
+    effectiveSessions[0]?.effectiveDate === "2026-08-19" &&
+    (effectiveSessions.at(-1)?.effectiveDate ?? program.examAppointment) <
+      program.examAppointment;
+  const launchChecks = [
+    {
+      label: "Tutor role verified",
+      detail: "This console is available only to the Firebase member with role tutor.",
+      complete: true,
+    },
+    {
+      label: "Live synchronization",
+      detail: syncStatus === "synced" ? "Cloud progress is current." : "Wait for the Synced indicator before resetting or importing.",
+      complete: syncStatus === "synced",
+    },
+    {
+      label: "Schedule safety",
+      detail: `${effectiveSessions.length} sessions; first ${effectiveSessions[0]?.effectiveDate}; final ${effectiveSessions.at(-1)?.effectiveDate}; exam ${program.examAppointment}.`,
+      complete: effectiveSessions.length === 68 && scheduleIntact,
+    },
+    {
+      label: "Shared progress state",
+      detail: hasProgress ? "Existing evidence is present. Export before any reset." : "The shared tracker is clean for launch.",
+      complete: !hasProgress,
+    },
+  ];
+
+  const chooseSession = (sessionNumber: number) => {
+    const entry = effectiveSessions.find(
+      (candidate) => candidate.session.number === sessionNumber,
+    );
+    setSelectedSession(sessionNumber);
+    if (entry) setNewDate(entry.effectiveDate);
+  };
+
+  const submitReschedule = (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      const result = cascadeReschedule(
+        tracker.sessionOverrides,
+        selectedSession,
+        newDate,
+        rescheduleReason,
+      );
+      const summary = result.changedSessionNumbers.length > 1
+        ? `This change will reflow ${result.changedSessionNumbers.length} sessions and keep Session 68 on ${result.finalSessionDate}. Continue?`
+        : `Move Session ${String(selectedSession).padStart(2, "0")} to ${newDate}?`;
+      if (!window.confirm(summary)) return;
+      updateTracker((current) => ({
+        ...current,
+        sessionOverrides: result.overrides,
+      }));
+      setRescheduleReason("");
+      notify(
+        result.changedSessionNumbers.length > 1
+          ? `${result.changedSessionNumbers.length} sessions safely reflowed.`
+          : `Session ${String(selectedSession).padStart(2, "0")} rescheduled.`,
+      );
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Unable to reschedule.", "warning");
+    }
+  };
+
+  const restoreSchedule = () => {
+    if (!window.confirm(`Restore the canonical dates from Session ${String(selectedSession).padStart(2, "0")} onward?`)) return;
+    updateTracker((current) => ({
+      ...current,
+      sessionOverrides: restoreCanonicalScheduleFrom(
+        current.sessionOverrides,
+        selectedSession,
+      ),
+    }));
+    notify("Canonical session dates restored.");
+  };
+
+  const togglePriorityTopic = (topic: string) => {
+    setDiagnostic((current) => ({
+      ...current,
+      priorityTopics: current.priorityTopics.includes(topic)
+        ? current.priorityTopics.filter((item) => item !== topic)
+        : [...current.priorityTopics, topic],
+    }));
+  };
+
+  const saveDiagnostic = (status: DiagnosticEntry["status"]) => {
+    if (diagnostic.correct > diagnostic.attempted) {
+      notify("Diagnostic correct answers cannot exceed attempted answers.", "warning");
+      return;
+    }
+    if (status === "final" && (!diagnostic.barriers.trim() || !diagnostic.tutorPlan.trim())) {
+      notify("Record the barriers and tutor repair plan before finalizing.", "warning");
+      return;
+    }
+    const entry: DiagnosticEntry = {
+      id: savedDiagnostic?.id ?? makeId("diagnostic"),
+      sessionNumber: 1,
+      status,
+      ...diagnostic,
+    };
+    updateTracker((current) => ({
+      ...current,
+      diagnostics: [
+        entry,
+        ...current.diagnostics.filter((item) => item.sessionNumber !== 1),
+      ],
+    }));
+    notify(status === "final" ? "Session 01 diagnostic finalized." : "Diagnostic draft saved.");
+  };
+
+  const resetSharedProgress = async () => {
+    const confirmation = window.prompt(
+      "A JSON backup will download first. To erase all shared progress on every device, type RESET PROJECT 202",
+    );
+    if (confirmation !== "RESET PROJECT 202") {
+      notify("Reset cancelled. The confirmation text did not match.", "warning");
+      return;
+    }
+    downloadBackup(tracker);
+    try {
+      await replaceTrackerAuthoritatively(createDefaultState());
+      notify("Shared progress reset. The backup remains on this device.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Reset failed.", "warning");
+    }
+  };
+
+  return (
+    <div className="view-stack tutor-console">
+      <section className="panel launch-control-panel">
+        <div className="panel-heading"><div><p className="eyebrow">Pre-launch control</p><h3>Four live checks before the first session</h3></div><ShieldCheck size={21} /></div>
+        <div className="launch-check-grid">
+          {launchChecks.map((check) => (
+            <article className={cx("launch-check", check.complete && "is-complete")} key={check.label}>
+              {check.complete ? <CircleCheckBig size={18} /> : <CircleAlert size={18} />}
+              <div><strong>{check.label}</strong><p>{check.detail}</p></div>
+            </article>
+          ))}
+          <article className="launch-check launch-reminder">
+            <CircleAlert size={18} />
+            <div>
+              <strong>Manual account reminder</strong>
+              <p>Ask Hamad to replace the temporary Firebase password after his first successful login. Firebase does not expose password-change status to this tracker.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section className="form-and-list tutor-tool-grid">
+        <form className="panel entry-form" onSubmit={submitReschedule}>
+          <div className="panel-heading"><div><p className="eyebrow">Safe rescheduling</p><h3>Move a session and reflow collisions</h3></div><CalendarClock size={21} /></div>
+          <label><span>Session</span><select value={selectedSession} onChange={(event) => chooseSession(Number(event.target.value))}>{effectiveSessions.map((entry) => <option value={entry.session.number} key={entry.session.number}>S{String(entry.session.number).padStart(2, "0")} · {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })} · {entry.session.title}</option>)}</select></label>
+          <div className="form-grid form-grid-2">
+            <label><span>New date</span><input type="date" min="2026-08-16" max="2027-02-26" required value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
+            <label><span>Current date</span><input type="text" readOnly value={formatDate(selected.effectiveDate)} /></label>
+          </div>
+          <label><span>Reason</span><textarea required rows={3} maxLength={300} placeholder="Short tutor-approved reason for the schedule record." value={rescheduleReason} onChange={(event) => setRescheduleReason(event.target.value)} /></label>
+          <div className="inline-actions">
+            <button className="button button-primary" type="submit"><CalendarClock size={16} /> Preview and apply</button>
+            <button className="button button-secondary" type="button" onClick={restoreSchedule}><RotateCcw size={16} /> Restore from S{String(selectedSession).padStart(2, "0")}</button>
+          </div>
+          <p className="fine-print">The tool preserves sequence, limits weeks to three sessions, retains later dates whenever possible, and refuses a plan that reaches exam day.</p>
+        </form>
+
+        <article className="panel override-panel">
+          <div className="panel-heading"><div><p className="eyebrow">Live schedule record</p><h3>{Object.keys(tracker.sessionOverrides).length} changed dates</h3></div><CalendarDays size={21} /></div>
+          {Object.keys(tracker.sessionOverrides).length ? (
+            <div className="override-list">{effectiveSessions.filter((entry) => entry.rescheduled).map((entry) => <div key={entry.session.number}><strong>S{String(entry.session.number).padStart(2, "0")}</strong><span>{formatDate(entry.session.date, { day: "numeric", month: "short" })} → {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })}</span><small>{entry.reason}</small></div>)}</div>
+          ) : <EmptyState icon={CalendarDays} title="Canonical schedule active">No session date has been overridden.</EmptyState>}
+        </article>
+      </section>
+
+      <section className="panel diagnostic-panel">
+        <div className="panel-heading"><div><p className="eyebrow">Session 01 · first 25 minutes</p><h3>Prior-attempt diagnostic and repair baseline</h3></div><Target size={21} /></div>
+        <p className="panel-intro">Capture what happened across the two prior attempts, then continue Session 01 with official 2027 Quant Module 1.</p>
+        <div className="form-grid form-grid-4">
+          <label><span>Date</span><input type="date" value={diagnostic.date} onChange={(event) => setDiagnostic({ ...diagnostic, date: event.target.value })} /></label>
+          <label><span>Questions attempted</span><input type="number" min="0" max="500" value={diagnostic.attempted} onChange={(event) => setDiagnostic({ ...diagnostic, attempted: Number(event.target.value) })} /></label>
+          <label><span>Correct</span><input type="number" min="0" max={diagnostic.attempted} value={diagnostic.correct} onChange={(event) => setDiagnostic({ ...diagnostic, correct: Number(event.target.value) })} /></label>
+          <label><span>Study hours / week</span><input type="number" min="0" max="80" value={diagnostic.studyHoursPerWeek} onChange={(event) => setDiagnostic({ ...diagnostic, studyHoursPerWeek: Number(event.target.value) })} /></label>
+          <label><span>Pacing (1-5)</span><input type="number" min="1" max="5" value={diagnostic.pacingRating} onChange={(event) => setDiagnostic({ ...diagnostic, pacingRating: Number(event.target.value) })} /></label>
+          <label><span>Confidence (1-5)</span><input type="number" min="1" max="5" value={diagnostic.confidenceRating} onChange={(event) => setDiagnostic({ ...diagnostic, confidenceRating: Number(event.target.value) })} /></label>
+          <label className="checkbox-field"><input type="checkbox" checked={diagnostic.calculatorReady} onChange={(event) => setDiagnostic({ ...diagnostic, calculatorReady: event.target.checked })} /><span>Calculator workflow ready</span></label>
+        </div>
+        <fieldset className="topic-selector"><legend>Priority repair topics</legend>{TOPICS.map((topic) => <label key={topic}><input type="checkbox" checked={diagnostic.priorityTopics.includes(topic)} onChange={() => togglePriorityTopic(topic)} /><span>{topicShort(topic)}</span></label>)}</fieldset>
+        <div className="form-grid form-grid-3">
+          <label><span>What already works</span><textarea rows={4} maxLength={1000} value={diagnostic.strengths} onChange={(event) => setDiagnostic({ ...diagnostic, strengths: event.target.value })} /></label>
+          <label><span>Barriers from prior attempts</span><textarea rows={4} maxLength={1000} value={diagnostic.barriers} onChange={(event) => setDiagnostic({ ...diagnostic, barriers: event.target.value })} /></label>
+          <label><span>Tutor repair plan</span><textarea rows={4} maxLength={2000} value={diagnostic.tutorPlan} onChange={(event) => setDiagnostic({ ...diagnostic, tutorPlan: event.target.value })} /></label>
+        </div>
+        <div className="inline-actions"><button className="button button-secondary" type="button" onClick={() => saveDiagnostic("draft")}>Save draft</button><button className="button button-primary" type="button" onClick={() => saveDiagnostic("final")}><Check size={16} /> Finalize baseline</button>{savedDiagnostic && <span className={cx("status-badge", savedDiagnostic.status === "final" ? "status-positive" : "status-gold")}>{savedDiagnostic.status === "final" ? "Finalized" : "Draft"}</span>}</div>
+      </section>
+
+      <section className="panel danger-zone">
+        <div><p className="eyebrow">Protected recovery control</p><h3>Export, then reset all shared progress</h3><p>Use only before genuine course work begins. This creates a local JSON recovery copy before replacing the synchronized tracker on every device.</p></div>
+        <button className="button button-danger" type="button" disabled={authoritativeReplaceBusy || syncStatus !== "synced"} onClick={() => void resetSharedProgress()}><Trash2 size={16} />{authoritativeReplaceBusy ? "Resetting..." : "Export and reset"}</button>
+      </section>
+    </div>
+  );
+}
+
 function NotesView({
   tracker,
   updateTracker,
   notify,
   onExport,
   onImport,
+  onCalendarExport,
+  canImport,
   syncStatus,
   syncError,
   userEmail,
@@ -1841,6 +2222,8 @@ function NotesView({
   notify: Notify;
   onExport: () => void;
   onImport: () => void;
+  onCalendarExport: () => void;
+  canImport: boolean;
   syncStatus: TrackerSyncStatus;
   syncError: string | null;
   userEmail: string;
@@ -1892,7 +2275,8 @@ function NotesView({
             </button>
           )}
           <button className="button button-secondary" type="button" onClick={onExport}><Download size={16} /> Export JSON</button>
-          <button className="button button-secondary" type="button" onClick={onImport}><Upload size={16} /> Import JSON</button>
+          <button className="button button-secondary" type="button" onClick={onCalendarExport}><CalendarPlus size={16} /> Calendar</button>
+          {canImport && <button className="button button-secondary" type="button" onClick={onImport}><Upload size={16} /> Import JSON</button>}
         </div>
       </section>
 

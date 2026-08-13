@@ -24,6 +24,7 @@ import {
 import type { TrackerState } from "../types";
 import { mergeTrackerStates } from "./stateMerge";
 import { normalizeState } from "./storage";
+import type { ProjectRole } from "./permissions";
 
 const FIREBASE_APP_NAME = "project-202-cloud";
 const PROGRAM_ID = "project-202";
@@ -63,6 +64,12 @@ export interface CloudUser {
   providerIds: string[];
 }
 
+export interface ProjectMember {
+  uid: string;
+  role: ProjectRole;
+  active: boolean;
+}
+
 export interface CloudEnvelope {
   state: TrackerState;
   revision: number;
@@ -94,6 +101,7 @@ export type CloudErrorCode =
   | "browser-required"
   | "authentication-required"
   | "invalid-cloud-data"
+  | "invalid-membership"
   | "conflict-base-missing"
   | "permission-denied"
   | "popup-blocked"
@@ -114,6 +122,8 @@ const FRIENDLY_ERROR_MESSAGES: Record<CloudErrorCode, string> = {
   "authentication-required": "Sign in before using cloud sync.",
   "invalid-cloud-data":
     "The saved cloud record is not a valid Project 202 tracker.",
+  "invalid-membership":
+    "This account's Project 202 membership record is invalid. Ask the tutor to check Firebase.",
   "conflict-base-missing":
     "The cloud tracker changed before this device finished loading it. Refresh and try again.",
   "permission-denied":
@@ -289,6 +299,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+export function parseProjectMember(
+  uid: string,
+  value: unknown,
+): ProjectMember {
+  if (!isRecord(value)) {
+    throw new CloudClientError("invalid-membership");
+  }
+  if (
+    typeof value.active !== "boolean" ||
+    (value.role !== "tutor" && value.role !== "student")
+  ) {
+    throw new CloudClientError("invalid-membership");
+  }
+  return { uid, active: value.active, role: value.role };
+}
+
 export function parseCloudEnvelope(value: unknown): CloudEnvelope {
   if (!isRecord(value)) {
     throw new CloudClientError("invalid-cloud-data");
@@ -323,6 +349,34 @@ export function parseCloudEnvelope(value: unknown): CloudEnvelope {
 
 function trackerDocument(firestore: Firestore) {
   return doc(firestore, "programs", PROGRAM_ID, "tracker", "current");
+}
+
+function memberDocument(firestore: Firestore, uid: string) {
+  return doc(firestore, "programs", PROGRAM_ID, "members", uid);
+}
+
+export function observeCurrentProjectMember(
+  onMember: (member: ProjectMember | null) => void,
+  onError?: (error: CloudClientError) => void,
+): CloudUnsubscribe {
+  const { auth, firestore } = getFirebaseServices();
+  const user = requireAuthenticatedUser(auth);
+
+  return onSnapshot(
+    memberDocument(firestore, user.uid),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        onMember(null);
+        return;
+      }
+      try {
+        onMember(parseProjectMember(user.uid, snapshot.data()));
+      } catch (error) {
+        onError?.(mapCloudError(error));
+      }
+    },
+    (error) => onError?.(mapCloudError(error)),
+  );
 }
 
 function createEnvelope(
@@ -440,6 +494,34 @@ export async function saveCloudTracker(
         initialized: false,
         previousRevision: remoteEnvelope.revision,
       };
+    });
+  } catch (error) {
+    throw mapCloudError(error);
+  }
+}
+
+/**
+ * Replaces the synchronized state without applying the normal three-way merge.
+ * Firestore Rules restrict this operation to the tutor account. It is intended
+ * for an explicitly confirmed import or pre-launch reset.
+ */
+export async function replaceCloudTracker(
+  replacementState: TrackerState,
+): Promise<CloudEnvelope> {
+  try {
+    const { auth, firestore } = getFirebaseServices();
+    const user = requireAuthenticatedUser(auth);
+    const reference = trackerDocument(firestore);
+    const safeState = normalizeState(replacementState);
+
+    return await runTransaction(firestore, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const revision = snapshot.exists()
+        ? parseCloudEnvelope(snapshot.data()).revision + 1
+        : 1;
+      const envelope = createEnvelope(safeState, revision, user.uid);
+      transaction.set(reference, envelope);
+      return envelope;
     });
   } catch (error) {
     throw mapCloudError(error);

@@ -10,7 +10,9 @@ import {
   getCloudErrorMessage,
   initializeCloudTracker,
   mapCloudError,
+  observeCurrentProjectMember,
   observeAuth,
+  replaceCloudTracker,
   saveCloudTracker,
   signInWithEmailPassword as cloudSignInWithEmailPassword,
   signInWithGoogle as cloudSignInWithGoogle,
@@ -18,7 +20,13 @@ import {
   subscribeToCloudTracker,
   type CloudRevisionBase,
   type CloudUser,
+  type ProjectMember,
 } from "../lib/cloud";
+import {
+  capabilitiesForRole,
+  type ProjectCapabilities,
+  type ProjectRole,
+} from "../lib/permissions";
 import { mergeTrackerStates } from "../lib/stateMerge";
 import {
   clearPendingSync,
@@ -50,6 +58,10 @@ export interface TrackerSyncController {
   authBusy: boolean;
   authError: string | null;
   user: CloudUser | null;
+  member: ProjectMember | null;
+  memberReady: boolean;
+  role: ProjectRole | null;
+  capabilities: ProjectCapabilities;
   accessDenied: boolean;
   trackerReady: boolean;
   syncStatus: TrackerSyncStatus;
@@ -57,6 +69,8 @@ export interface TrackerSyncController {
   signInWithGoogle: () => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  replaceTrackerAuthoritatively: (state: TrackerState) => Promise<void>;
+  authoritativeReplaceBusy: boolean;
   retrySync: () => void;
 }
 
@@ -87,6 +101,8 @@ export function useTrackerSync(): TrackerSyncController {
   const configuration = getCloudConfigurationStatus();
   const [tracker, setTracker] = useState<TrackerState>(() => loadState());
   const [user, setUser] = useState<CloudUser | null>(null);
+  const [member, setMember] = useState<ProjectMember | null>(null);
+  const [memberReady, setMemberReady] = useState(!configuration.configured);
   const [authReady, setAuthReady] = useState(!configuration.configured);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -95,6 +111,8 @@ export function useTrackerSync(): TrackerSyncController {
   const [syncStatus, setSyncStatus] =
     useState<TrackerSyncStatus>("loading");
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [authoritativeReplaceBusy, setAuthoritativeReplaceBusy] =
+    useState(false);
 
   const trackerRef = useRef(tracker);
   const userRef = useRef<CloudUser | null>(null);
@@ -252,6 +270,8 @@ export function useTrackerSync(): TrackerSyncController {
         window.clearTimeout(fallbackTimer);
         userRef.current = nextUser;
         setUser(nextUser);
+        setMember(null);
+        setMemberReady(!nextUser);
         setAuthReady(true);
         setAuthError(null);
         setAccessDenied(false);
@@ -275,6 +295,45 @@ export function useTrackerSync(): TrackerSyncController {
 
   useEffect(() => {
     if (!configuration.configured || !user) return;
+    setMemberReady(false);
+    setMember(null);
+
+    return observeCurrentProjectMember(
+      (nextMember) => {
+        setMember(nextMember);
+        setMemberReady(true);
+        if (!nextMember || !nextMember.active) {
+          setAccessDenied(true);
+          setTrackerReady(false);
+          setSyncError(
+            "This account is not an active Project 202 member. Ask the tutor to check Firebase.",
+          );
+          setSyncStatus("error");
+          return;
+        }
+        setAccessDenied(false);
+        setSyncError(null);
+      },
+      (error) => {
+        setMember(null);
+        setMemberReady(true);
+        setAccessDenied(true);
+        setTrackerReady(false);
+        setSyncError(error.message);
+        setSyncStatus("error");
+      },
+    );
+  }, [configuration.configured, user]);
+
+  useEffect(() => {
+    if (
+      !configuration.configured ||
+      !user ||
+      !memberReady ||
+      !member?.active
+    ) {
+      return;
+    }
     setTrackerReady(!onlineNow());
     setSyncStatus(onlineNow() ? "loading" : "offline");
     setSyncError(null);
@@ -393,6 +452,8 @@ export function useTrackerSync(): TrackerSyncController {
     );
   }, [
     configuration.configured,
+    member,
+    memberReady,
     scheduleFlush,
     setCachedTracker,
     user,
@@ -422,6 +483,55 @@ export function useTrackerSync(): TrackerSyncController {
   const replaceTracker = useCallback(
     (state: TrackerState) => queueState(normalizeState(state)),
     [queueState],
+  );
+
+  const replaceTrackerAuthoritatively = useCallback(
+    async (state: TrackerState) => {
+      if (!member?.active || member.role !== "tutor") {
+        throw new Error("Only the Project 202 tutor can replace shared progress.");
+      }
+
+      setAuthoritativeReplaceBusy(true);
+      setSyncError(null);
+      setSyncStatus("saving");
+      if (flushTimerRef.current !== null) {
+        window.clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      while (flushInFlightRef.current) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 20));
+      }
+
+      const previousPending = pendingRef.current;
+      pendingRef.current = null;
+      clearPendingSync();
+      try {
+        const envelope = await replaceCloudTracker(normalizeState(state));
+        baseRef.current = {
+          revision: envelope.revision,
+          state: envelope.state,
+        };
+        setCachedTracker(envelope.state);
+        setSyncStatus("synced");
+      } catch (error) {
+        const cloudError = mapCloudError(error);
+        if (previousPending) {
+          pendingRef.current = savePendingSync(previousPending);
+          scheduleFlush(0);
+        }
+        setSyncError(cloudError.message);
+        if (cloudError.code === "permission-denied") setAccessDenied(true);
+        setSyncStatus(
+          !onlineNow() || cloudError.code === "network-unavailable"
+            ? "offline"
+            : "error",
+        );
+        throw cloudError;
+      } finally {
+        setAuthoritativeReplaceBusy(false);
+      }
+    },
+    [member, scheduleFlush, setCachedTracker],
   );
 
   const signInWithGoogle = useCallback(async () => {
@@ -481,6 +591,10 @@ export function useTrackerSync(): TrackerSyncController {
     authBusy,
     authError,
     user,
+    member,
+    memberReady,
+    role: member?.active ? member.role : null,
+    capabilities: capabilitiesForRole(member?.active ? member.role : null),
     accessDenied,
     trackerReady,
     syncStatus,
@@ -488,6 +602,8 @@ export function useTrackerSync(): TrackerSyncController {
     signInWithGoogle,
     signInWithPassword,
     signOut,
+    replaceTrackerAuthoritatively,
+    authoritativeReplaceBusy,
     retrySync,
   };
 }

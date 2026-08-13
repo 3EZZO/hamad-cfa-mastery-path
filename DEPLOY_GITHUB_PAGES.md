@@ -45,9 +45,9 @@ If Email/Password is used, choose long, unique passwords and store them in a pas
      - `active`: Boolean `true`
      - `role`: String `student`
 
-The client cannot create, list, edit, or delete membership documents. To revoke access, change that member's `active` field to `false` in the Firebase console and disable the Authentication account.
+The client reads only its own membership record so the interface can apply the correct role. It cannot create, list, edit, or delete membership documents. To revoke access, change that member's `active` field to `false` in the Firebase console and disable the Authentication account.
 
-The synchronized tracker document is `programs/project-202/tracker/current`. The application creates it when an allowlisted member performs the first cloud save or imports the initial backup.
+The synchronized tracker document is `programs/project-202/tracker/current`. The tutor account creates it through the first cloud save, confirmed import, or pre-launch reset. The student account cannot initialize or administratively replace the shared document.
 
 ## 4. Deploy the Firestore rules
 
@@ -61,12 +61,16 @@ npx firebase-tools@latest deploy --only firestore:rules --project YOUR_FIREBASE_
 The rules intentionally allow:
 
 - a signed-in user to read only their own membership document;
-- an active Project 202 member to read and update `tracker/current`;
+- either active role to read `tracker/current`;
+- the tutor role to create and administer the complete shared tracker state;
+- the student role to update only task completion, practice, mistake, and note evidence;
 - no client to list or edit the membership allowlist;
 - no client access to any other Firestore path;
 - no client deletion of the tracker document.
 
 Repeat the deploy command after every intentional change to `firestore.rules`. Rules are not deployed by the GitHub Pages workflow.
+
+When a release changes both rules and the web client, deploy the backward-compatible rules first, then deploy Pages. The checked-in rules accept legacy tracker documents that do not yet contain the optional `sessionOverrides` and `diagnostics` containers.
 
 ## 5. Configure and verify locally
 
@@ -134,6 +138,10 @@ Do not import the same legacy backup independently from both accounts. The first
 - GitHub Pages contains no private database credential. Never add an Admin SDK key or service-account file.
 - Firebase Web App values identify the project; Firestore Rules authorize access.
 - The `members` allowlist is the access boundary. An authenticated but unlisted Firebase user cannot read or change tracker data.
+- Membership `role` is also enforced by Firestore Rules, not only hidden or disabled in the interface. Keep Mohamed's role exactly `tutor` and Hamad's exactly `student`.
+- Import, reset, session scheduling, tutor-session records, diagnostic administration, topic mastery, and mock administration are tutor-controlled. Hamad may update his checklist, practice evidence, mistake records, and notes.
+- Every cloud snapshot and imported backup is normalized before rendering. Malformed evidence records are discarded, numeric/text fields are bounded, duplicate record IDs are removed, and schedule overrides are accepted only when the complete 68-session effective calendar remains ordered, on cadence, within three sessions per week, and before the exam.
+- Firestore Rules enforce roles, top-level types, collection limits, revision/timestamp consistency, and the fixed Session 01-68 override-key space. Because the tracker intentionally remains one Firestore document, Rules cannot iterate through every object in its large evidence arrays; the application normalizer is the detailed record-shape boundary and JSON export remains the recovery path.
 - Keep the database in Spark limits by synchronizing the single tracker document only when state changes, not on a timer.
 - JSON export remains the recovery path for accidental edits or service disruption.
 - Renaming the GitHub repository changes the Pages URL and base path. Update bookmarks and add any new custom hostname to Firebase Authorized domains.

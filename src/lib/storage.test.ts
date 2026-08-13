@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TOPICS } from "../data/plan";
+import { cascadeReschedule } from "./schedule";
 import { createDefaultState, normalizeState } from "./storage";
 
 describe("tracker backup invariants", () => {
@@ -22,5 +23,228 @@ describe("tracker backup invariants", () => {
     });
     expect(state.topicMastery[TOPICS[0]]).toBe(100);
     expect(state.topicMastery[TOPICS[1]]).toBe(0);
+  });
+
+  it("upgrades older version 1 backups with new safe defaults", () => {
+    const legacy = createDefaultState();
+    const { sessionOverrides: _overrides, diagnostics: _diagnostics, ...oldState } = legacy;
+    const normalized = normalizeState(oldState);
+    expect(normalized.sessionOverrides).toEqual({});
+    expect(normalized.diagnostics).toEqual([]);
+  });
+
+  it("normalizes tutor-controlled schedule and diagnostic records", () => {
+    const validOverrides = cascadeReschedule(
+      {},
+      2,
+      "2026-08-24",
+      "Travel",
+      "2026-08-13T00:00:00.000Z",
+    ).overrides;
+    const normalized = normalizeState({
+      ...createDefaultState(),
+      sessionOverrides: {
+        ...validOverrides,
+        invalid: { date: "not-a-date" },
+      },
+      diagnostics: [{
+        id: "d1",
+        date: "2026-08-19",
+        status: "final",
+        attempted: 30,
+        correct: 22,
+        studyHoursPerWeek: 12,
+        pacingRating: 3,
+        confidenceRating: 4,
+        calculatorReady: true,
+        priorityTopics: ["Quantitative Methods"],
+        strengths: "Persistent",
+        barriers: "Pacing",
+        tutorPlan: "Weekly timed sets",
+      }],
+    });
+    expect(normalized.sessionOverrides["2"]?.reason).toBe("Travel");
+    expect(normalized.sessionOverrides.invalid).toBeUndefined();
+    expect(normalized.diagnostics[0]).toMatchObject({
+      sessionNumber: 1,
+      status: "final",
+      correct: 22,
+    });
+  });
+
+  it("filters malformed records and clamps UI-facing numeric and text fields", () => {
+    const longText = "x".repeat(2_500);
+    const normalized = normalizeState({
+      ...createDefaultState(),
+      taskCompletions: { valid: true, truthyString: "yes" },
+      sessionLogs: [
+        {
+          id: "session-1",
+          date: "2026-08-19",
+          sessionNumber: 1,
+          week: 999,
+          type: 42,
+          durationMinutes: 9_999,
+          focus: longText,
+          outcome: longText,
+          nextAction: longText,
+        },
+        { id: "bad-session", date: "2026-02-30", sessionNumber: 1 },
+      ],
+      practiceLogs: [
+        {
+          id: "practice-1",
+          date: "2026-08-20",
+          topic: TOPICS[0],
+          attempted: "30",
+          correct: 80,
+          source: longText,
+          note: longText,
+        },
+        {
+          id: "wrong-topic",
+          date: "2026-08-20",
+          topic: "Unknown topic",
+          attempted: 10,
+          correct: 5,
+        },
+        null,
+      ],
+      mockScores: [
+        {
+          id: "mock-1",
+          date: "2026-12-20",
+          label: longText,
+          score: 250,
+          note: longText,
+        },
+      ],
+      errorEntries: [
+        {
+          id: "error-1",
+          date: "2026-08-20",
+          topic: TOPICS[1],
+          category: "Injected category",
+          summary: longText,
+          correction: longText,
+          revisitDate: "2026-13-01",
+          resolved: "true",
+        },
+      ],
+      notes: [
+        {
+          id: "note-1",
+          date: "2026-08-20",
+          category: "Injected category",
+          title: longText,
+          body: longText,
+        },
+        { id: "note-2", date: {} },
+      ],
+    });
+
+    expect(normalized.taskCompletions).toEqual({ valid: true });
+    expect(normalized.sessionLogs).toHaveLength(1);
+    expect(normalized.sessionLogs[0]).toMatchObject({
+      week: 1,
+      type: "Tutor session",
+      durationMinutes: 240,
+    });
+    expect(normalized.sessionLogs[0]?.focus).toHaveLength(120);
+    expect(normalized.practiceLogs).toHaveLength(1);
+    expect(normalized.practiceLogs[0]).toMatchObject({
+      attempted: 30,
+      correct: 30,
+    });
+    expect(normalized.mockScores[0]).toMatchObject({ score: 100 });
+    expect(normalized.mockScores[0]?.label).toHaveLength(50);
+    expect(normalized.errorEntries[0]).toMatchObject({
+      category: "Concept gap",
+      revisitDate: "",
+      resolved: false,
+    });
+    expect(normalized.notes).toHaveLength(1);
+    expect(normalized.notes[0]).toMatchObject({
+      category: "Shared tutor note",
+    });
+    expect(normalized.notes[0]?.body).toHaveLength(2_000);
+  });
+
+  it("deduplicates repeated record identities before merge code sees them", () => {
+    const state = createDefaultState();
+    state.practiceLogs = [
+      {
+        id: "same-id",
+        date: "2026-08-20",
+        topic: TOPICS[0],
+        attempted: 10,
+        correct: 7,
+        source: "First",
+        note: "",
+      },
+      {
+        id: "same-id",
+        date: "2026-08-21",
+        topic: TOPICS[0],
+        attempted: 20,
+        correct: 15,
+        source: "Second",
+        note: "",
+      },
+    ];
+    const normalized = normalizeState(state);
+    expect(normalized.practiceLogs).toHaveLength(1);
+    expect(normalized.practiceLogs[0]?.source).toBe("First");
+  });
+
+  it("rejects override maps whose effective 68-session schedule is unsafe", () => {
+    const invalidSchedules = [
+      {
+        "2": {
+          sessionNumber: 2,
+          date: "2026-08-19",
+          reason: "Collision",
+          updatedAt: "2026-08-13T00:00:00.000Z",
+        },
+      },
+      {
+        "2": {
+          sessionNumber: 2,
+          date: "2026-08-23",
+          reason: "Wrong cadence",
+          updatedAt: "2026-08-13T00:00:00.000Z",
+        },
+      },
+      {
+        "68": {
+          sessionNumber: 68,
+          date: "2027-02-27",
+          reason: "Exam collision",
+          updatedAt: "2026-08-13T00:00:00.000Z",
+        },
+      },
+      {
+        "2": {
+          sessionNumber: 3,
+          date: "2026-08-24",
+          reason: "Mismatched identity",
+          updatedAt: "2026-08-13T00:00:00.000Z",
+        },
+      },
+      {
+        "2": {
+          sessionNumber: 2,
+          date: "2026-02-30",
+          reason: "Impossible date",
+          updatedAt: "2026-08-13T00:00:00.000Z",
+        },
+      },
+    ];
+
+    for (const sessionOverrides of invalidSchedules) {
+      expect(() =>
+        normalizeState({ ...createDefaultState(), sessionOverrides }),
+      ).toThrow();
+    }
   });
 });

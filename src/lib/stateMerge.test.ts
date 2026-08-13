@@ -22,6 +22,8 @@ function makeState(overrides: Partial<TrackerState> = {}): TrackerState {
     mockScores: [],
     errorEntries: [],
     notes: [],
+    sessionOverrides: {},
+    diagnostics: [],
     ...overrides,
   };
 }
@@ -266,5 +268,44 @@ describe("mergeTrackerStates", () => {
     });
 
     expect(mergeTrackerStates(base, local, remote)).toEqual(remote);
+  });
+
+  it("merges tutor schedule overrides and diagnostics without losing remote evidence", () => {
+    const base = makeState();
+    const local = makeState({
+      sessionOverrides: {
+        "2": {
+          sessionNumber: 2,
+          date: "2026-08-24",
+          reason: "Travel",
+          updatedAt: "2026-08-13T00:00:00.000Z",
+        },
+      },
+      diagnostics: [{
+        id: "d1",
+        date: "2026-08-19",
+        sessionNumber: 1,
+        status: "final",
+        attempted: 30,
+        correct: 22,
+        studyHoursPerWeek: 12,
+        pacingRating: 3,
+        confidenceRating: 3,
+        calculatorReady: true,
+        priorityTopics: ["Quantitative Methods"],
+        strengths: "Persistence",
+        barriers: "Pacing",
+        tutorPlan: "Timed retrieval",
+      }],
+    });
+    const remotePractice = practice("remote", "Keep this evidence");
+    const merged = mergeTrackerStates(
+      base,
+      local,
+      makeState({ practiceLogs: [remotePractice] }),
+    );
+    expect(merged.sessionOverrides["2"]?.date).toBe("2026-08-24");
+    expect(merged.diagnostics[0]?.status).toBe("final");
+    expect(merged.practiceLogs).toEqual([remotePractice]);
   });
 });

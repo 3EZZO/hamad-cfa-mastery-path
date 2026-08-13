@@ -2051,6 +2051,7 @@ textarea:focus {
 .access-shell {
   position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100vh;
   place-items: center;
   overflow: hidden;
@@ -2086,7 +2087,9 @@ textarea:focus {
 .access-card {
   position: relative;
   z-index: 1;
-  width: min(100%, 510px);
+  width: 100%;
+  min-width: 0;
+  max-width: 510px;
   padding: clamp(25px, 6vw, 42px);
   border: 1px solid rgba(255, 255, 255, 0.66);
   border-radius: 24px;
@@ -3313,7 +3316,284 @@ body {
   font-size: 0.65rem;
 }
 
+/* Project 202 coaching controls and reporting */
+.role-chip {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid rgba(21, 94, 91, 0.18);
+  border-radius: 10px;
+  color: var(--green);
+  background: rgba(228, 244, 237, 0.72);
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.button-danger {
+  color: white;
+  background: #a34743;
+  box-shadow: 0 8px 18px rgba(163, 71, 67, 0.18);
+}
+
+.button-danger:hover:not(:disabled) {
+  background: #8d3936;
+}
+
+.risk-panel {
+  overflow: hidden;
+}
+
+.risk-grid {
+  display: grid;
+  gap: 9px;
+}
+
+.risk-card {
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  border: 1px solid #cfe0d7;
+  border-left: 5px solid #4f9a76;
+  border-radius: 12px;
+  background: #eff8f2;
+}
+
+.risk-card > span {
+  color: #477a61;
+  font-size: 0.57rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.risk-card strong {
+  color: var(--ink);
+  font-size: 0.76rem;
+}
+
+.risk-card p,
+.risk-card small {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+.risk-card small {
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.risk-amber {
+  border-color: #ead39d;
+  border-left-color: #d4a13a;
+  background: #fff8e9;
+}
+
+.risk-amber > span { color: #9d721c; }
+
+.risk-red {
+  border-color: #e9b9b5;
+  border-left-color: #b84945;
+  background: #fff1f0;
+}
+
+.risk-red > span { color: #a03d39; }
+
+.reschedule-note {
+  display: block;
+  margin-top: 7px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  color: #81621f;
+  background: #fff5d8;
+  font-size: 0.6rem;
+  line-height: 1.4;
+}
+
+.week-selector .week-report-actions {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.week-report-actions .button {
+  min-height: 38px;
+  flex: 1 1 145px;
+}
+
+.read-only-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.read-only-panel svg {
+  flex: 0 0 auto;
+  color: var(--green);
+}
+
+.read-only-panel h3,
+.read-only-panel p {
+  margin: 0 0 5px;
+}
+
+.launch-check-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.launch-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid #e4d1a8;
+  border-radius: 11px;
+  color: #9a6c19;
+  background: #fff8e9;
+}
+
+.launch-check.is-complete {
+  border-color: #c9dfd3;
+  color: #3f8262;
+  background: #eff8f2;
+}
+
+.launch-check svg { flex: 0 0 auto; }
+.launch-check strong { display: block; color: var(--ink); font-size: 0.7rem; }
+.launch-check p { margin: 2px 0 0; color: var(--muted); font-size: 0.62rem; line-height: 1.45; }
+
+.inline-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.override-list {
+  display: grid;
+  gap: 8px;
+  max-height: 430px;
+  overflow: auto;
+}
+
+.override-list > div {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 2px 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.override-list strong { grid-row: 1 / span 2; color: var(--gold); }
+.override-list span { color: var(--ink); font-size: 0.68rem; font-weight: 700; }
+.override-list small { color: var(--muted); font-size: 0.59rem; line-height: 1.35; }
+
+.diagnostic-panel .panel-intro {
+  margin: -6px 0 18px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.form-grid-3,
+.form-grid-4 {
+  display: grid;
+  gap: 10px;
+}
+
+.checkbox-field {
+  display: flex !important;
+  min-height: 42px;
+  align-items: center;
+  flex-direction: row !important;
+  gap: 8px !important;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fffefa;
+}
+
+.checkbox-field input { width: auto !important; }
+
+.topic-selector {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+
+.topic-selector legend {
+  padding: 0 5px;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.topic-selector label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 4px 8px 4px 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink-soft);
+  background: #fffefa;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-color: #e6b7b3;
+  background: #fff5f4;
+}
+
+.danger-zone h3,
+.danger-zone p { margin: 0 0 5px; }
+.danger-zone p { max-width: 760px; color: var(--muted); font-size: 0.68rem; line-height: 1.5; }
+
+@media (min-width: 700px) {
+  .risk-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .launch-check-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .form-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .week-selector .week-report-actions { width: auto; margin-left: auto; }
+}
+
+@media (max-width: 699px) {
+  .danger-zone { align-items: stretch; flex-direction: column; }
+  .danger-zone .button { width: 100%; }
+}
+
 @media (max-width: 520px) {
+  .access-card {
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+
+  .access-brand {
+    margin-bottom: 24px;
+  }
+
+  .access-card h1 {
+    font-size: clamp(2rem, 11vw, 2.55rem);
+  }
+
   .data-actions {
     display: none;
   }

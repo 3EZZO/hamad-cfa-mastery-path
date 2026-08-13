@@ -92,7 +92,9 @@ describe("canonical 28-week official 2027 plan", () => {
   });
 
   it("keeps task ids stable and unique", () => {
-    const ids = PLAN.flatMap(getPlanTasks).map((task) => task.id);
+    const ids = PLAN.flatMap((week) => getPlanTasks(week)).map(
+      (task) => task.id,
+    );
     expect(new Set(ids).size).toBe(ids.length);
   });
 

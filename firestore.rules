@@ -13,7 +13,83 @@ service cloud.firestore {
         )
         && get(
           /databases/$(database)/documents/programs/project-202/members/$(request.auth.uid)
-        ).data.active == true;
+        ).data.active == true
+        && get(
+          /databases/$(database)/documents/programs/project-202/members/$(request.auth.uid)
+        ).data.role in ['tutor', 'student'];
+    }
+
+    function activeProject202Role(role) {
+      return activeProject202Member()
+        && get(
+          /databases/$(database)/documents/programs/project-202/members/$(request.auth.uid)
+        ).data.role == role;
+    }
+
+    function validOptionalTrackerState() {
+      return (
+          !request.resource.data.state.keys().hasAny(['sessionOverrides'])
+          || (
+            request.resource.data.state.sessionOverrides is map
+            && request.resource.data.state.sessionOverrides.size() <= 68
+            && request.resource.data.state.sessionOverrides.keys().hasOnly([
+              '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
+              '11', '12', '13', '14', '15', '16', '17', '18', '19', '20',
+              '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
+              '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
+              '41', '42', '43', '44', '45', '46', '47', '48', '49', '50',
+              '51', '52', '53', '54', '55', '56', '57', '58', '59', '60',
+              '61', '62', '63', '64', '65', '66', '67', '68'
+            ])
+          )
+        )
+        && (
+          !request.resource.data.state.keys().hasAny(['diagnostics'])
+          || (
+            request.resource.data.state.diagnostics is list
+            && request.resource.data.state.diagnostics.size() <= 1
+          )
+        );
+    }
+
+    // A newly deployed client may add empty optional containers to a legacy
+    // document. Students may make that one compatibility change, but may not
+    // create, edit, or remove tutor-controlled schedule/diagnostic data.
+    function studentPreservesTutorControlledState() {
+      return (
+          (
+            !resource.data.state.keys().hasAny(['sessionOverrides'])
+            && !request.resource.data.state.keys().hasAny(['sessionOverrides'])
+          )
+          || (
+            !resource.data.state.keys().hasAny(['sessionOverrides'])
+            && request.resource.data.state.keys().hasAny(['sessionOverrides'])
+            && request.resource.data.state.sessionOverrides.size() == 0
+          )
+          || (
+            resource.data.state.keys().hasAny(['sessionOverrides'])
+            && request.resource.data.state.keys().hasAny(['sessionOverrides'])
+            && request.resource.data.state.sessionOverrides
+              == resource.data.state.sessionOverrides
+          )
+        )
+        && (
+          (
+            !resource.data.state.keys().hasAny(['diagnostics'])
+            && !request.resource.data.state.keys().hasAny(['diagnostics'])
+          )
+          || (
+            !resource.data.state.keys().hasAny(['diagnostics'])
+            && request.resource.data.state.keys().hasAny(['diagnostics'])
+            && request.resource.data.state.diagnostics.size() == 0
+          )
+          || (
+            resource.data.state.keys().hasAny(['diagnostics'])
+            && request.resource.data.state.keys().hasAny(['diagnostics'])
+            && request.resource.data.state.diagnostics
+              == resource.data.state.diagnostics
+          )
+        );
     }
 
     function validTrackerEnvelope() {
@@ -38,11 +114,26 @@ service cloud.firestore {
           'practiceLogs',
           'mockScores',
           'errorEntries',
+          'notes',
+          'sessionOverrides',
+          'diagnostics'
+        ])
+        && request.resource.data.state.keys().hasAll([
+          'version',
+          'updatedAt',
+          'taskCompletions',
+          'topicMastery',
+          'sessionLogs',
+          'practiceLogs',
+          'mockScores',
+          'errorEntries',
           'notes'
         ])
         && request.resource.data.state.version == 1
         && request.resource.data.state.updatedAt is string
         && request.resource.data.state.updatedAt.size() <= 40
+        && request.resource.data.state.updatedAt
+          == request.resource.data.updatedAtClient
         && request.resource.data.state.taskCompletions is map
         && request.resource.data.state.taskCompletions.size() <= 1000
         && request.resource.data.state.topicMastery is map
@@ -56,7 +147,8 @@ service cloud.firestore {
         && request.resource.data.state.errorEntries is list
         && request.resource.data.state.errorEntries.size() <= 2000
         && request.resource.data.state.notes is list
-        && request.resource.data.state.notes.size() <= 1000;
+        && request.resource.data.state.notes.size() <= 1000
+        && validOptionalTrackerState();
     }
 
     // Membership is provisioned only by the project owner in the Firebase
@@ -69,15 +161,33 @@ service cloud.firestore {
     }
 
     // Project 202 intentionally uses one synchronized tracker document. Both
-    // active members may read and update it; deletion is admin-only.
+    // active roles may read it. The tutor administers the complete state;
+    // students may update only their study evidence fields.
     match /programs/project-202/tracker/current {
       allow get: if activeProject202Member();
-      allow create: if activeProject202Member()
+      allow create: if activeProject202Role('tutor')
         && validTrackerEnvelope()
         && request.resource.data.revision == 1;
       allow update: if activeProject202Member()
         && validTrackerEnvelope()
-        && request.resource.data.revision == resource.data.revision + 1;
+        && request.resource.data.revision == resource.data.revision + 1
+        && (
+          activeProject202Role('tutor')
+          || (
+            activeProject202Role('student')
+            && request.resource.data.state.diff(resource.data.state)
+              .affectedKeys().hasOnly([
+                'updatedAt',
+                'taskCompletions',
+                'practiceLogs',
+                'errorEntries',
+                'notes',
+                'sessionOverrides',
+                'diagnostics'
+              ])
+            && studentPreservesTutorControlledState()
+          )
+        );
       allow list, delete: if false;
     }
 
