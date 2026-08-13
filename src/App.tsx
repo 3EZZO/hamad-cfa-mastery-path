@@ -156,7 +156,7 @@ const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: str
   roadmap: {
     eyebrow: "August 2026 — February 2027",
     title: "Study Plan",
-    description: "The complete 29-week path from rebuild through exam day.",
+    description: `The complete ${TOTAL_WEEKS}-week path from rebuild through exam day.`,
   },
   weekly: {
     eyebrow: "Your current focus",
@@ -1246,7 +1246,7 @@ function RoadmapView({
   return (
     <div className="view-stack">
       <section className="roadmap-summary panel">
-        <div><strong>29</strong><span>structured weeks</span></div>
+        <div><strong>{PLAN.length}</strong><span>structured weeks</span></div>
         <div><strong>{plannedSessions.length}</strong><span>numbered tutor sessions</span></div>
         <div><strong>{READING_CATALOG.readings.length}</strong><span>official 2027 modules</span></div>
         <div><strong>{totalQuestions.toLocaleString()}</strong><span>practice target</span></div>

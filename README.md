@@ -1,6 +1,6 @@
 # PROJECT 202
 
-**Hamad's CFA Level I Mastery System** is a mobile-first study tracker for a 29-week private coaching program running from 9 August 2026 through the 27 February 2027 CFA Level I exam appointment.
+**Hamad's CFA Level I Mastery System** is a mobile-first study tracker for a 28-week private coaching program running from 16 August 2026 through the 27 February 2027 CFA Level I exam appointment. The first tutor session is Wednesday, 19 August 2026.
 
 Created by Mohamed Ali, CFA.
 
@@ -10,8 +10,8 @@ The application is isolated from the surrounding HN3 projects. It has its own de
 
 - All 102 learning modules in the official public 2027 CFA Level I topic outline, taught once in published order
 - 68 consecutively numbered tutoring sessions
-- 19 standard weeks with a Wednesday midweek session and a Saturday weekend session
-- 10 intensive weeks that add a Monday session
+- 16 standard weeks with a Wednesday midweek session and a Saturday weekend session
+- 12 intensive weeks that add a Monday session
 - Session 01 begins with Quantitative Methods Module 1, `Returns of Financial Assets and Instruments`
 - Curriculum coverage in Sessions 01-44, integration in Sessions 45-48, seven mock-and-repair cycles in Sessions 49-66, and taper/exam preparation in Sessions 67-68
 - Weekly completion checklists, evidence gates, independent work, and question targets
@@ -36,7 +36,7 @@ Progress from an older hosting origin does not migrate automatically. Export JSO
 
 ## Canonical data
 
-- `src/data/plan.json` is the source of truth for all 29 weeks and 68 sessions. Each week includes its phase, dates, outcomes, session schedule, independent work, question target, mastery gate, and mock milestone.
+- `src/data/plan.json` is the source of truth for all 28 weeks and 68 sessions. Each week includes its phase, dates, outcomes, session schedule, independent work, question target, mastery gate, and mock milestone.
 - `src/data/readings.json` contains the 102-module official 2027 outline catalog and its session assignments.
 - `src/data/program.json` contains the exam appointment, cadence, Practical Skills Module, and administrative milestone metadata.
 - `scripts/build-2027-data.py` reproducibly generates the plan and reading data.
@@ -46,7 +46,7 @@ Progress from an older hosting origin does not migrate automatically. Export JSO
 
 When updating the schedule, preserve these invariants:
 
-1. Exactly 29 consecutive Sunday-to-Saturday weeks, beginning 9 August 2026 and ending 27 February 2027.
+1. Exactly 28 consecutive Sunday-to-Saturday weeks, beginning 16 August 2026 and ending 27 February 2027.
 2. Exactly 68 consecutively numbered required tutoring sessions.
 3. Standard weeks use Wednesday and Saturday; designated intensive weeks add Monday.
 4. The exam week uses Wednesday 24 February and Friday 26 February, with Saturday reserved for the exam.

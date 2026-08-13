@@ -6,17 +6,17 @@ import { READING_CATALOG } from "./readings";
 
 const sessions = PLAN.flatMap(getWeekSessions);
 
-describe("canonical 29-week official 2027 plan", () => {
-  it("contains exactly 29 sequential weeks", () => {
-    expect(PLAN).toHaveLength(29);
+describe("canonical 28-week official 2027 plan", () => {
+  it("contains exactly 28 sequential weeks", () => {
+    expect(PLAN).toHaveLength(28);
     expect(PLAN.map((week) => week.week)).toEqual(
-      Array.from({ length: 29 }, (_, index) => index + 1),
+      Array.from({ length: 28 }, (_, index) => index + 1),
     );
   });
 
-  it("uses the program window and begins tutoring on Monday 10 August", () => {
+  it("uses the program window and begins tutoring on Wednesday 19 August", () => {
     expect(program.programStart).toBe(PROGRAM_START);
-    expect(program.firstTutorSession).toBe("2026-08-10");
+    expect(program.firstTutorSession).toBe("2026-08-19");
     expect(program.examAppointment).toBe(EXAM_DATE);
     expect(program.examWindow.startDate).toBe("2027-02-22");
     expect(program.examWindow.endDate).toBe("2027-02-28");
@@ -37,7 +37,7 @@ describe("canonical 29-week official 2027 plan", () => {
     }
   });
 
-  it("uses two meetings in most weeks and three in ten intensive weeks", () => {
+  it("uses two meetings in most weeks and three in twelve intensive weeks", () => {
     const threeSessionWeeks = PLAN.filter(
       (week) => getWeekSessions(week).length === 3,
     ).map((week) => week.week);
@@ -45,10 +45,12 @@ describe("canonical 29-week official 2027 plan", () => {
       (week) => getWeekSessions(week).length === 2,
     ).map((week) => week.week);
 
-    expect(threeSessionWeeks).toEqual([1, 2, 3, 6, 9, 11, 13, 14, 27, 28]);
-    expect(twoSessionWeeks).toHaveLength(19);
-    expect(program.tutoringRhythm.standardWeeks).toBe(19);
-    expect(program.tutoringRhythm.intensiveWeeks).toBe(10);
+    expect(threeSessionWeeks).toEqual([
+      2, 3, 4, 6, 9, 11, 13, 14, 15, 16, 26, 27,
+    ]);
+    expect(twoSessionWeeks).toHaveLength(16);
+    expect(program.tutoringRhythm.standardWeeks).toBe(16);
+    expect(program.tutoringRhythm.intensiveWeeks).toBe(12);
   });
 
   it("uses Monday-Wednesday-Saturday for intensive weeks and Wednesday-Saturday otherwise", () => {

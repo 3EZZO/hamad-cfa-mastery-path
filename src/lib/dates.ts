@@ -1,6 +1,6 @@
-export const PROGRAM_START = "2026-08-09";
+export const PROGRAM_START = "2026-08-16";
 export const EXAM_DATE = "2027-02-27";
-export const TOTAL_WEEKS = 29;
+export const TOTAL_WEEKS = 28;
 
 const DAY_MS = 86_400_000;
 
@@ -43,7 +43,7 @@ export function daysUntilExam(today = new Date()): number {
   return Math.max(0, differenceInCalendarDays(parseDateOnly(EXAM_DATE), today));
 }
 
-/** Returns 0 before launch, 1–29 during the plan, and 30 after exam day. */
+/** Returns 0 before launch, 1-28 during the plan, and 29 after exam day. */
 export function getProgramWeek(today = new Date()): number {
   const fromStart = differenceInCalendarDays(today, parseDateOnly(PROGRAM_START));
   if (fromStart < 0) return 0;
