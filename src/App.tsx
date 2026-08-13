@@ -50,11 +50,11 @@ import {
   useState,
 } from "react";
 import {
-  getOverallProgress,
+  getOverallProgressForState,
   getPlanTasks,
   getRequiredTasks,
   getWeekSessions,
-  getWeekProgress,
+  getWeekProgressForState,
   PHASES,
   PLAN,
   TOPICS,
@@ -77,6 +77,7 @@ import {
 import { downloadProject202Calendar } from "./lib/calendarExport";
 import { isStateMeaningfullyEmpty } from "./lib/stateMerge";
 import { buildRiskIndicators } from "./lib/risk";
+import { getTaskStatus, isTaskComplete } from "./lib/taskStatus";
 import {
   cascadeReschedule,
   effectiveSessionDate,
@@ -93,6 +94,8 @@ import {
   type TrackerSyncStatus,
   useTrackerSync,
 } from "./hooks/useTrackerSync";
+import CalendarExportDialog from "./components/CalendarExportDialog";
+import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
   DiagnosticEntry,
@@ -102,6 +105,7 @@ import type {
   PlanSession,
   PlanWeek,
   PracticeLog,
+  PrivateTutorNote,
   SessionLog,
   TrackerState,
 } from "./types";
@@ -357,19 +361,33 @@ function PageHeading({ tab }: { tab: TabId }) {
 
 function TaskChecklist({
   tasks,
-  completions,
+  tracker,
+  role,
   onToggle,
   compact = false,
 }: {
   tasks: PlanTask[];
-  completions: Record<string, boolean>;
+  tracker: TrackerState;
+  role: "tutor" | "student";
   onToggle: (id: string) => void;
   compact?: boolean;
 }) {
   return (
     <div className={cx("task-list", compact && "task-list-compact")}>
       {tasks.map((task) => {
-        const complete = Boolean(completions[task.id]);
+        const status = getTaskStatus(task, tracker);
+        const complete = isTaskComplete(task, tracker);
+        const statusCopy = task.kind === "session"
+          ? status === "approved"
+            ? "Tutor approved"
+            : status === "requested"
+              ? "Awaiting tutor approval"
+              : status === "returned"
+                ? "Returned for follow-up"
+                : role === "student"
+                  ? "Request tutor approval"
+                  : "Awaiting student request"
+          : complete ? "Complete" : "Mark complete";
         return (
           <label className={cx("task-row", complete && "is-complete")} key={task.id}>
             <input
@@ -385,6 +403,7 @@ function TaskChecklist({
               <span className="task-detail">
                 {humanizeTaskDetail(task.detail)}
                 {task.optional && <em>Optional</em>}
+                <em className={`task-status task-status-${status}`}>{statusCopy}</em>
               </span>
             </span>
           </label>
@@ -635,6 +654,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   const [selectedWeek, setSelectedWeek] = useState(initialWeek);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const {
     tracker,
     updateTracker,
@@ -657,6 +677,11 @@ function App() {
     replaceTrackerAuthoritatively,
     authoritativeReplaceBusy,
     retrySync,
+    privateTutorNotes,
+    privateNotesReady,
+    privateNotesBusy,
+    privateNotesError,
+    updatePrivateTutorNotes,
   } = useTrackerSync();
   const [toast, setToast] = useState<{
     message: string;
@@ -735,9 +760,12 @@ function App() {
     notify("JSON backup downloaded.");
   };
 
-  const handleCalendarExport = () => {
-    downloadProject202Calendar({ sessionOverrides: tracker.sessionOverrides });
-    notify("Project 202 calendar downloaded.");
+  const handleCalendarExport = (preferences: CalendarExportPreferences) => {
+    downloadProject202Calendar({
+      sessionOverrides: tracker.sessionOverrides,
+      preferences,
+    });
+    notify("Calendar import downloaded with Riyadh times and reminders.");
   };
 
   const handleImport = async (file: File | undefined) => {
@@ -766,6 +794,32 @@ function App() {
 
   const toggleTask = (id: string) => {
     if (!capabilities.canToggleTasks) return;
+    const task = PLAN.flatMap((week) =>
+      getPlanTasks(week, tracker.sessionOverrides),
+    ).find((item) => item.id === id);
+    if (!task) return;
+    if (task.kind === "session") {
+      if (role === "tutor") {
+        navigate("coach");
+        notify("Review session completion requests in the Tutor Console.", "warning");
+        return;
+      }
+      const status = getTaskStatus(task, tracker);
+      if (status === "approved") {
+        notify("This session completion is already tutor-approved.");
+        return;
+      }
+      updateTracker((current) => {
+        const requests = { ...current.sessionCompletionRequests };
+        if (status === "requested") delete requests[id];
+        else requests[id] = { taskId: id, requestedAt: new Date().toISOString() };
+        const taskCompletions = { ...current.taskCompletions };
+        delete taskCompletions[id];
+        return { ...current, taskCompletions, sessionCompletionRequests: requests };
+      });
+      notify(status === "requested" ? "Approval request withdrawn." : "Sent to Mohamed for approval.");
+      return;
+    }
     updateTracker((current) => ({
       ...current,
       taskCompletions: {
@@ -785,6 +839,7 @@ function App() {
             rawProgramWeek={rawProgramWeek}
             onToggleTask={toggleTask}
             onNavigate={navigate}
+            role={role!}
           />
         );
       case "roadmap":
@@ -803,6 +858,7 @@ function App() {
             setSelectedWeek={setSelectedWeek}
             onToggleTask={toggleTask}
             notify={notify}
+            role={role!}
           />
         );
       case "sessions":
@@ -856,12 +912,18 @@ function App() {
             notify={notify}
             onExport={handleExport}
             onImport={() => importRef.current?.click()}
-            onCalendarExport={handleCalendarExport}
+            onCalendarExport={() => setCalendarDialogOpen(true)}
             canImport={capabilities.canImportData}
             syncStatus={syncStatus}
             syncError={syncError}
             userEmail={user.email ?? "Approved Project 202 account"}
             onRetrySync={retrySync}
+            role={role!}
+            privateTutorNotes={privateTutorNotes}
+            privateNotesReady={privateNotesReady}
+            privateNotesBusy={privateNotesBusy}
+            privateNotesError={privateNotesError}
+            updatePrivateTutorNotes={updatePrivateTutorNotes}
           />
         );
       case "coach":
@@ -962,9 +1024,9 @@ function App() {
               <Download size={16} />
               <span>Export</span>
             </button>
-            <button className="button button-ghost" type="button" onClick={handleCalendarExport}>
+            <button className="button button-ghost" type="button" onClick={() => setCalendarDialogOpen(true)}>
               <CalendarPlus size={16} />
-              <span>Calendar</span>
+              <span>Calendar import</span>
             </button>
             {capabilities.canImportData && <button
               className="button button-ghost"
@@ -1069,6 +1131,12 @@ function App() {
         </div>
       )}
 
+      <CalendarExportDialog
+        open={calendarDialogOpen}
+        onClose={() => setCalendarDialogOpen(false)}
+        onExport={handleCalendarExport}
+      />
+
       {toast && (
         <div className={cx("toast", toast.tone === "warning" && "toast-warning")} role="status">
           {toast.tone === "success" ? <CircleCheckBig size={18} /> : <CircleAlert size={18} />}
@@ -1085,17 +1153,19 @@ function DashboardView({
   rawProgramWeek,
   onToggleTask,
   onNavigate,
+  role,
 }: {
   tracker: TrackerState;
   currentWeek: number;
   rawProgramWeek: number;
   onToggleTask: (id: string) => void;
   onNavigate: (tab: TabId, week?: number) => void;
+  role: "tutor" | "student";
 }) {
   const week = PLAN[currentWeek - 1]!;
   const days = daysUntilExam();
-  const weekProgress = getWeekProgress(week, tracker.taskCompletions);
-  const overallProgress = getOverallProgress(tracker.taskCompletions);
+  const weekProgress = getWeekProgressForState(week, tracker);
+  const overallProgress = getOverallProgressForState(tracker);
   const practiceAttempted = tracker.practiceLogs.reduce(
     (sum, log) => sum + log.attempted,
     0,
@@ -1125,10 +1195,20 @@ function DashboardView({
   );
   const required = getRequiredTasks(week);
   const incompleteTasks = getPlanTasks(week, tracker.sessionOverrides).filter(
-    (task) => !tracker.taskCompletions[task.id],
+    (task) => !isTaskComplete(task, tracker),
   );
   const nextTask = incompleteTasks[0];
   const nextTasks = incompleteTasks.slice(0, 4);
+  const nextTaskStatus = nextTask ? getTaskStatus(nextTask, tracker) : null;
+  const nextTaskAction = nextTask?.kind === "session"
+    ? role === "tutor"
+      ? "Open approval queue"
+      : nextTaskStatus === "requested"
+        ? "Withdraw request"
+        : nextTaskStatus === "returned"
+          ? "Request approval again"
+          : "Request tutor approval"
+    : "Mark complete";
   const programState =
     rawProgramWeek === 0
       ? "Pre-launch"
@@ -1152,7 +1232,7 @@ function DashboardView({
                 <p>{humanizeTaskDetail(nextTask.detail)}</p>
                 <div className="hero-actions">
                   <button className="button button-accent" type="button" onClick={() => onToggleTask(nextTask.id)}>
-                    <Check size={17} /> Mark complete
+                    <Check size={17} /> {nextTaskAction}
                   </button>
                   <button className="button button-dark-ghost" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
                     View this week <ChevronRight size={17} />
@@ -1173,7 +1253,7 @@ function DashboardView({
             <span>This week</span>
             <strong>{weekProgress}%</strong>
             <ProgressBar value={weekProgress} />
-            <p>{required.filter((task) => tracker.taskCompletions[task.id]).length} of {required.length} required items complete</p>
+            <p>{required.filter((task) => isTaskComplete(task, tracker)).length} of {required.length} required items complete</p>
             <small>{formatDate(week.startDate, { day: "numeric", month: "short" })} — {formatDate(week.endDate, { day: "numeric", month: "short" })}</small>
           </aside>
         </div>
@@ -1240,13 +1320,14 @@ function DashboardView({
               <p className="eyebrow">Coming up</p>
               <h3>{week.focus}</h3>
             </div>
-            <span className="week-chip">{required.filter((task) => tracker.taskCompletions[task.id]).length}/{required.length}</span>
+            <span className="week-chip">{required.filter((task) => isTaskComplete(task, tracker)).length}/{required.length}</span>
           </div>
           <ProgressBar value={weekProgress} />
           {nextTasks.length ? (
             <TaskChecklist
               tasks={nextTasks}
-              completions={tracker.taskCompletions}
+              tracker={tracker}
+              role={role}
               onToggle={onToggleTask}
               compact
             />
@@ -1375,7 +1456,7 @@ function RoadmapView({
 
       <section className="timeline">
         {visibleWeeks.map((week) => {
-          const progress = getWeekProgress(week, tracker.taskCompletions);
+          const progress = getWeekProgressForState(week, tracker);
           return (
             <details className={cx("timeline-week", week.week === currentWeek && "is-current")} key={week.week} open={week.week === currentWeek}>
               <summary>
@@ -1434,18 +1515,20 @@ function WeeklyView({
   setSelectedWeek,
   onToggleTask,
   notify,
+  role,
 }: {
   tracker: TrackerState;
   selectedWeek: number;
   setSelectedWeek: (week: number) => void;
   onToggleTask: (id: string) => void;
   notify: Notify;
+  role: "tutor" | "student";
 }) {
   const week = PLAN[selectedWeek - 1]!;
   const tasks = getPlanTasks(week, tracker.sessionOverrides);
   const required = tasks.filter((task) => !task.optional);
-  const completed = required.filter((task) => tracker.taskCompletions[task.id]).length;
-  const progress = getWeekProgress(week, tracker.taskCompletions);
+  const completed = required.filter((task) => isTaskComplete(task, tracker)).length;
+  const progress = getWeekProgressForState(week, tracker);
   const report = buildWeeklyReport(week, tracker, todayDateOnly());
 
   const copyReport = async () => {
@@ -1508,7 +1591,7 @@ function WeeklyView({
             <div><p className="eyebrow">Step by step</p><h3>This week's checklist</h3></div>
             <ListChecks size={21} />
           </div>
-          <TaskChecklist tasks={tasks} completions={tracker.taskCompletions} onToggle={onToggleTask} />
+          <TaskChecklist tasks={tasks} tracker={tracker} role={role} onToggle={onToggleTask} />
         </article>
 
         <div className="weekly-side-stack">
@@ -1653,6 +1736,7 @@ function PracticeLogView({
     topic: TOPICS[0] as string,
     attempted: 30,
     correct: 0,
+    confidence: 3,
     source: "",
     note: "",
   });
@@ -1694,6 +1778,7 @@ function PracticeLogView({
             <label><span>Topic</span><select value={form.topic} onChange={(event) => setForm({ ...form, topic: event.target.value })}>{TOPICS.map((topic) => <option key={topic}>{topic}</option>)}</select></label>
             <label><span>Attempted</span><input type="number" min="1" max="500" required value={form.attempted} onChange={(event) => setForm({ ...form, attempted: Number(event.target.value) })} /></label>
             <label><span>Correct</span><input type="number" min="0" max={form.attempted} required value={form.correct} onChange={(event) => setForm({ ...form, correct: Number(event.target.value) })} /></label>
+            <label><span>Confidence (1-5)</span><input type="number" min="1" max="5" required value={form.confidence} onChange={(event) => setForm({ ...form, confidence: Number(event.target.value) })} /></label>
           </div>
           <label><span>Source label <em>optional</em></span><input maxLength={80} placeholder="e.g. Topic review set A" value={form.source} onChange={(event) => setForm({ ...form, source: event.target.value })} /></label>
           <label><span>Lesson from the block</span><textarea rows={3} maxLength={500} placeholder="Pattern noticed, decision to change, or area to revisit." value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
@@ -1710,7 +1795,7 @@ function PracticeLogView({
                 return (
                   <article className="practice-entry" key={entry.id}>
                     <div className="practice-score"><strong>{score}%</strong><span>{entry.correct}/{entry.attempted}</span></div>
-                    <div className="practice-copy"><span>{topicShort(entry.topic)} · {formatDate(entry.date)}</span><strong>{entry.source || "Practice block"}</strong>{entry.note && <p>{entry.note}</p>}<ProgressBar value={score} tone={score >= 70 ? "green" : "gold"} /></div>
+                    <div className="practice-copy"><span>{topicShort(entry.topic)} · {formatDate(entry.date)} · confidence {entry.confidence ?? 3}/5</span><strong>{entry.source || "Practice block"}</strong>{entry.note && <p>{entry.note}</p>}<ProgressBar value={score} tone={score >= 70 ? "green" : "gold"} /></div>
                     <button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete practice block"><Trash2 size={15} /></button>
                   </article>
                 );
@@ -1792,14 +1877,15 @@ function MockView({
 }) {
   const [form, setForm] = useState({
     date: todayDateOnly(),
-    label: `Mock ${tracker.mockScores.length + 1}`,
+    milestoneWeek: null as number | null,
+    label: "",
     score: 0,
     note: "",
   });
   const fullMockTargets = PLAN.flatMap((week) =>
     week.mockMilestone &&
     week.mockMilestone.targetScore !== null &&
-    (week.mockMilestone.label.includes("Full-length") || week.mockMilestone.label.includes("Final full-length"))
+    /^Mock [1-7]$/.test(week.mockMilestone.label)
       ? [{ week: week.week, ...week.mockMilestone }]
       : [],
   );
@@ -1807,7 +1893,7 @@ function MockView({
   const chartData = chronological.map((entry, index) => ({
     name: entry.label,
     score: entry.score,
-    target: fullMockTargets[index]?.targetScore ?? 72,
+    target: PLAN.find((week) => week.week === entry.milestoneWeek)?.mockMilestone?.targetScore ?? fullMockTargets[index]?.targetScore ?? 72,
   }));
 
   const submit = (event: FormEvent) => {
@@ -1815,7 +1901,7 @@ function MockView({
     if (!canManage) return;
     const entry: MockScore = { id: makeId("mock"), ...form, score: clamp(form.score) };
     updateTracker((current) => ({ ...current, mockScores: [...current.mockScores, entry] }));
-    setForm({ date: todayDateOnly(), label: `Mock ${tracker.mockScores.length + 2}`, score: 0, note: "" });
+    setForm({ date: todayDateOnly(), milestoneWeek: null, label: "", score: 0, note: "" });
     notify("Mock score logged.");
   };
 
@@ -1843,7 +1929,7 @@ function MockView({
         {canManage ? <form className="panel entry-form mock-form" onSubmit={submit}>
           <div className="panel-heading"><div><p className="eyebrow">New result</p><h3>Log a mock</h3></div><Plus size={20} /></div>
           <label><span>Date</span><input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
-          <label><span>Label</span><input required maxLength={50} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} /></label>
+          <label><span>Mock milestone</span><select required value={form.milestoneWeek ?? ""} onChange={(event) => { const milestoneWeek = Number(event.target.value); const milestone = fullMockTargets.find((item) => item.week === milestoneWeek); setForm({ ...form, milestoneWeek, label: milestone?.label ?? "" }); }}><option value="" disabled>Select Mock 1-7</option>{fullMockTargets.map((item) => <option key={item.week} value={item.week}>Week {item.week} · {item.label} · target {item.targetScore}%</option>)}</select></label>
           <label><span>Score %</span><input required type="number" min="0" max="100" value={form.score} onChange={(event) => setForm({ ...form, score: Number(event.target.value) })} /></label>
           <label><span>Evidence note</span><textarea rows={3} maxLength={500} placeholder="What drove this result?" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
           <button className="button button-primary" type="submit"><Plus size={16} /> Save result</button>
@@ -1853,8 +1939,10 @@ function MockView({
       <section className="panel">
         <div className="panel-heading"><div><p className="eyebrow">Campaign ladder</p><h3>Internal targets by rehearsal</h3></div><Flag size={20} /></div>
         <div className="target-ladder">
-          {fullMockTargets.map((target, index) => {
-            const actual = chronological[index];
+          {fullMockTargets.map((target) => {
+            const actual = chronological.find(
+              (entry) => entry.milestoneWeek === target.week,
+            );
             return (
               <article key={target.label} className={cx(actual && "has-result")}>
                 <span>W{target.week}</span>
@@ -2030,6 +2118,39 @@ function TutorConsoleView({
       complete: !hasProgress,
     },
   ];
+  const pendingSessionRequests = PLAN.flatMap((week) =>
+    getPlanTasks(week, tracker.sessionOverrides)
+      .filter((task) => task.kind === "session")
+      .map((task) => ({ task, request: tracker.sessionCompletionRequests[task.id] }))
+      .filter((entry) => entry.request && getTaskStatus(entry.task, tracker) === "requested"),
+  );
+
+  const reviewSessionRequest = (
+    taskId: string,
+    status: "approved" | "returned",
+  ) => {
+    updateTracker((current) => {
+      const request = current.sessionCompletionRequests[taskId];
+      if (!request) return current;
+      const note = status === "returned"
+        ? window.prompt("Optional follow-up note for Hamad:", "Please review the session action points.") ?? ""
+        : "";
+      return {
+        ...current,
+        sessionCompletionReviews: {
+          ...current.sessionCompletionReviews,
+          [taskId]: {
+            taskId,
+            requestedAt: request.requestedAt,
+            status,
+            reviewedAt: new Date().toISOString(),
+            note,
+          },
+        },
+      };
+    });
+    notify(status === "approved" ? "Session completion approved." : "Session request returned to Hamad.");
+  };
 
   const chooseSession = (sessionNumber: number) => {
     const entry = effectiveSessions.find(
@@ -2132,6 +2253,10 @@ function TutorConsoleView({
 
   return (
     <div className="view-stack tutor-console">
+      <section className="panel approval-queue">
+        <div className="panel-heading"><div><p className="eyebrow">Tutor approval</p><h3>Session completion queue</h3></div><CircleCheckBig size={21} /></div>
+        {pendingSessionRequests.length ? <div className="entry-list">{pendingSessionRequests.map(({ task, request }) => <article className="approval-entry" key={task.id}><div><strong>{task.label}</strong><span>Requested {request ? new Date(request.requestedAt).toLocaleString() : ""}</span></div><div className="inline-actions"><button className="button button-primary" type="button" onClick={() => reviewSessionRequest(task.id, "approved")}><Check size={16} /> Approve</button><button className="button button-secondary" type="button" onClick={() => reviewSessionRequest(task.id, "returned")}><RotateCcw size={16} /> Return</button></div></article>)}</div> : <EmptyState icon={CircleCheckBig} title="No approvals waiting">Hamad's session-completion requests will appear here.</EmptyState>}
+      </section>
       <section className="panel launch-control-panel">
         <div className="panel-heading"><div><p className="eyebrow">Pre-launch control</p><h3>Four live checks before the first session</h3></div><ShieldCheck size={21} /></div>
         <div className="launch-check-grid">
@@ -2216,6 +2341,12 @@ function NotesView({
   syncError,
   userEmail,
   onRetrySync,
+  role,
+  privateTutorNotes,
+  privateNotesReady,
+  privateNotesBusy,
+  privateNotesError,
+  updatePrivateTutorNotes,
 }: {
   tracker: TrackerState;
   updateTracker: UpdateTracker;
@@ -2228,20 +2359,56 @@ function NotesView({
   syncError: string | null;
   userEmail: string;
   onRetrySync: () => void;
+  role: "tutor" | "student";
+  privateTutorNotes: PrivateTutorNote[];
+  privateNotesReady: boolean;
+  privateNotesBusy: boolean;
+  privateNotesError: string | null;
+  updatePrivateTutorNotes: (
+    recipe: (notes: PrivateTutorNote[]) => PrivateTutorNote[],
+  ) => Promise<void>;
 }) {
   const [form, setForm] = useState({
     date: todayDateOnly(),
     category: NOTE_CATEGORIES[0],
     title: "",
     body: "",
+    visibility: "shared" as "shared" | "private",
   });
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const entry: NoteEntry = { id: makeId("note"), ...form };
+    const { visibility, ...noteFields } = form;
+    if (visibility === "private" && role === "tutor") {
+      const now = new Date().toISOString();
+      const entry: PrivateTutorNote = {
+        id: makeId("private-note"),
+        ...noteFields,
+        updatedAt: now,
+      };
+      try {
+        await updatePrivateTutorNotes((notes) => [entry, ...notes]);
+        setForm((current) => ({ ...current, title: "", body: "" }));
+        notify("Private tutor note saved securely.");
+      } catch (error) {
+        notify(error instanceof Error ? error.message : "Private note could not be saved.", "warning");
+      }
+      return;
+    }
+    const entry: NoteEntry = { id: makeId("note"), ...noteFields };
     updateTracker((current) => ({ ...current, notes: [entry, ...current.notes] }));
     setForm((current) => ({ ...current, title: "", body: "" }));
     notify("Note saved.");
+  };
+
+  const removePrivate = async (id: string) => {
+    if (!window.confirm("Delete this private tutor note?")) return;
+    try {
+      await updatePrivateTutorNotes((notes) => notes.filter((entry) => entry.id !== id));
+      notify("Private tutor note deleted.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Private note could not be deleted.", "warning");
+    }
   };
 
   const remove = (id: string) => {
@@ -2275,7 +2442,7 @@ function NotesView({
             </button>
           )}
           <button className="button button-secondary" type="button" onClick={onExport}><Download size={16} /> Export JSON</button>
-          <button className="button button-secondary" type="button" onClick={onCalendarExport}><CalendarPlus size={16} /> Calendar</button>
+          <button className="button button-secondary" type="button" onClick={onCalendarExport}><CalendarPlus size={16} /> Calendar import</button>
           {canImport && <button className="button button-secondary" type="button" onClick={onImport}><Upload size={16} /> Import JSON</button>}
         </div>
       </section>
@@ -2286,10 +2453,11 @@ function NotesView({
           <div className="form-grid form-grid-2">
             <label><span>Date</span><input type="date" required value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
             <label><span>Category</span><select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{NOTE_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></label>
+            {role === "tutor" && <label><span>Visibility</span><select value={form.visibility} onChange={(event) => setForm({ ...form, visibility: event.target.value as "shared" | "private" })}><option value="shared">Shared with Hamad</option><option value="private">Private tutor note</option></select></label>}
           </div>
           <label><span>Title</span><input required maxLength={100} placeholder="A short, useful heading" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></label>
           <label><span>Note</span><textarea required rows={6} maxLength={2000} placeholder="Decision, reflection, resource URL, or commitment." value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label>
-          <button className="button button-primary" type="submit"><Plus size={16} /> Save note</button>
+          <button className="button button-primary" type="submit" disabled={privateNotesBusy}><Plus size={16} /> {form.visibility === "private" ? "Save privately" : "Save note"}</button>
         </form>
 
         <section className="panel log-panel">
@@ -2306,6 +2474,23 @@ function NotesView({
           ) : <EmptyState icon={NotebookPen} title="No notes yet">Capture the first decision, commitment, or resource link.</EmptyState>}
         </section>
       </section>
+      {role === "tutor" && (
+        <section className="panel private-notes-panel">
+          <div className="panel-heading"><div><p className="eyebrow">Tutor only</p><h3>Private coaching notes</h3></div><ShieldCheck size={20} /></div>
+          <p className="fine-print">Stored in a separate tutor-only Firestore document. Hamad's account cannot read this data.</p>
+          {privateNotesError && <p className="form-error"><CircleAlert size={15} />{privateNotesError}</p>}
+          {!privateNotesReady ? <p>Loading private notes…</p> : privateTutorNotes.length ? (
+            <div className="entry-list">
+              {sortByDateDesc(privateTutorNotes).map((entry) => (
+                <article className="note-entry private-note-entry" key={entry.id}>
+                  <div className="log-entry-top"><div><span>{entry.category} · {formatDate(entry.date)}</span><strong>{entry.title}</strong></div><button className="icon-button icon-button-danger" disabled={privateNotesBusy} type="button" onClick={() => void removePrivate(entry.id)} aria-label="Delete private note"><Trash2 size={15} /></button></div>
+                  <p>{entry.body}</p>
+                </article>
+              ))}
+            </div>
+          ) : <EmptyState icon={ShieldCheck} title="No private notes">Choose Private tutor note above when an observation should remain visible only to Mohamed.</EmptyState>}
+        </section>
+      )}
     </div>
   );
 }

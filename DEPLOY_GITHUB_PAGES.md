@@ -62,13 +62,14 @@ The rules intentionally allow:
 
 - a signed-in user to read only their own membership document;
 - either active role to read `tracker/current`;
-- the tutor role to create and administer the complete shared tracker state;
-- the student role to update only task completion, practice, mistake, and note evidence;
+- the tutor role to create and administer the complete shared tracker state and approve session completion;
+- the student role to update independent/evidence completion, session approval requests, confidence-rated practice, mistakes, and shared notes;
+- only the tutor role to read or write `programs/project-202/tutorPrivate/notes`;
 - no client to list or edit the membership allowlist;
 - no client access to any other Firestore path;
 - no client deletion of the tracker document.
 
-Repeat the deploy command after every intentional change to `firestore.rules`. Rules are not deployed by the GitHub Pages workflow.
+Repeat the deploy command after every intentional change to `firestore.rules`. Rules are not deployed by the GitHub Pages workflow. For this release, deploy the backward-compatible rules before publishing the new Pages build so the new session-approval fields and private-note path are authorized when the client becomes live.
 
 When a release changes both rules and the web client, deploy the backward-compatible rules first, then deploy Pages. The checked-in rules accept legacy tracker documents that do not yet contain the optional `sessionOverrides` and `diagnostics` containers.
 
@@ -89,10 +90,23 @@ npm ci
 npm test
 npm run build:pages
 Remove-Item Env:BASE_PATH
-npm run preview:pages -- --host 127.0.0.1 --port 4175
+
+# Mount the artifact exactly as GitHub Pages will mount it. Vite's preview
+# server does not remount files copied from public/ below the configured base.
+$previewRoot = Join-Path $env:TEMP "project-202-pages-preview"
+$previewApp = Join-Path $previewRoot "hamad-cfa-project-202"
+New-Item -ItemType Directory -Force -Path $previewApp | Out-Null
+Copy-Item -Path "dist-pages\*" -Destination $previewApp -Recurse -Force
+python -m http.server 4175 --bind 127.0.0.1 --directory $previewRoot
 ```
 
 Open `http://127.0.0.1:4175/hamad-cfa-project-202/`, sign in, and confirm that an unlisted test account receives no Firestore access. Delete or disable the test account afterward.
+
+This repository-path mount also verifies the PWA files. Browser installation
+normally requires HTTPS; GitHub Pages supplies HTTPS automatically. Service
+workers are also allowed on localhost/127.0.0.1 for local verification. In
+Chrome DevTools, check **Application > Manifest** for the Project 202 icon set
+and **Application > Service workers** for the scoped worker.
 
 ## 6. Configure GitHub and deploy Pages
 
@@ -119,6 +133,13 @@ Open `http://127.0.0.1:4175/hamad-cfa-project-202/`, sign in, and confirm that a
 
 Every later push to `main` tests, builds, and redeploys the static tracker. It does not redeploy Firestore rules.
 
+After the first PWA deployment, open the Pages URL online once before installing.
+On Android or desktop Chromium, use the Project 202 **Install app** card. On
+iPhone or iPad, use Safari's **Share > Add to Home Screen** flow. The service
+worker caches only the hosted application shell; Firebase Authentication and
+Firestore requests remain network-controlled and resume through the tracker's
+existing synchronization queue when connectivity returns.
+
 ## 7. Perform the one-time data migration
 
 Data belongs to a browser origin, so the old hosted tracker and the new GitHub Pages tracker do not share `localStorage`.
@@ -139,11 +160,12 @@ Do not import the same legacy backup independently from both accounts. The first
 - Firebase Web App values identify the project; Firestore Rules authorize access.
 - The `members` allowlist is the access boundary. An authenticated but unlisted Firebase user cannot read or change tracker data.
 - Membership `role` is also enforced by Firestore Rules, not only hidden or disabled in the interface. Keep Mohamed's role exactly `tutor` and Hamad's exactly `student`.
-- Import, reset, session scheduling, tutor-session records, diagnostic administration, topic mastery, and mock administration are tutor-controlled. Hamad may update his checklist, practice evidence, mistake records, and notes.
+- Import, reset, session scheduling, tutor-session records, session approval, diagnostic administration, topic mastery, mock administration, and private tutor notes are tutor-controlled. Hamad may complete independent/evidence tasks, request or withdraw session completion, record confidence-rated practice and mistakes, and manage shared notes.
 - Every cloud snapshot and imported backup is normalized before rendering. Malformed evidence records are discarded, numeric/text fields are bounded, duplicate record IDs are removed, and schedule overrides are accepted only when the complete 68-session effective calendar remains ordered, on cadence, within three sessions per week, and before the exam.
 - Firestore Rules enforce roles, top-level types, collection limits, revision/timestamp consistency, and the fixed Session 01-68 override-key space. Because the tracker intentionally remains one Firestore document, Rules cannot iterate through every object in its large evidence arrays; the application normalizer is the detailed record-shape boundary and JSON export remains the recovery path.
 - Keep the database in Spark limits by synchronizing the single tracker document only when state changes, not on a timer.
 - JSON export remains the recovery path for accidental edits or service disruption.
+- Calendar-import time and reminder preferences use browser `localStorage` only; they are not written to Firestore or shared between Mohamed and Hamad. Each person should confirm their Riyadh-time defaults before importing the generated `.ics` file. It is a published calendar import with stable event IDs, not an email invitation.
 - Renaming the GitHub repository changes the Pages URL and base path. Update bookmarks and add any new custom hostname to Firebase Authorized domains.
 
 Official references: [Firebase Web setup](https://firebase.google.com/docs/web/setup), [Firebase Authentication](https://firebase.google.com/docs/auth/web/start), [Firestore Security Rules](https://firebase.google.com/docs/firestore/security/get-started), [Firebase API key guidance](https://firebase.google.com/docs/projects/api-keys), and [GitHub Pages custom workflows](https://docs.github.com/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).

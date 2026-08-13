@@ -15,12 +15,16 @@ The application is isolated from the surrounding HN3 projects. It has its own de
 - Session 01 begins with Quantitative Methods Module 1, `Returns of Financial Assets and Instruments`
 - Curriculum coverage in Sessions 01-44, integration in Sessions 45-48, seven mock-and-repair cycles in Sessions 49-66, and taper/exam preparation in Sessions 67-68
 - Weekly completion checklists, evidence gates, independent work, and question targets
-- Tutor-session, practice, mock, mistake, and note logs
+- Tutor-session, confidence-rated practice, mock, mistake, and note logs
+- Student session-completion requests with explicit tutor approval/return workflow
+- Shared notes plus separately stored, tutor-only private coaching notes
 - Ten-topic mastery board and internal coaching targets
 - Tutor-only launch checks, structured Session 01 diagnostic, and safe schedule overrides
 - Automatic coaching-risk signals derived from due work, practice evidence, mistakes, and mocks
 - Weekly WhatsApp-ready summaries plus print-to-PDF progress reports
-- One-click calendar export for all 68 sessions and administrative milestones
+- Calendar import for all 68 timed tutor sessions and administrative milestones, with user-selected Riyadh start times and reminders
+- Installable Project 202 web app with branded Android, maskable, and iPhone icons
+- Repository-path-aware offline app shell; Firebase resumes synchronization when connectivity returns
 - Authenticated Firestore synchronization between Mohamed and Hamad
 - JSON backup export and import for migration and recovery
 
@@ -28,11 +32,11 @@ No proprietary CFA Institute curriculum prose, question text, or third-party stu
 
 ## Student experience
 
-The Home view focuses on the next required action. Quick logging supports practice and mistakes without forcing the student through the full data model. Deeper roadmap, curriculum, mock, mastery, evidence, reporting, and backup tools remain available through grouped navigation and progressive disclosure. Firebase Authentication limits the shared tracker to the tutor and student accounts placed on the Project 202 membership allowlist, while the membership role controls which actions each account may perform. The Tutor Console is visible only to Mohamed and centralizes the launch checklist, Session 01 diagnostic, rescheduling, and protected reset controls.
+The Home view focuses on the next required action. Quick logging supports practice and mistakes without forcing the student through the full data model. Hamad marks independent work directly and sends session completion to Mohamed for approval; only an approved session counts toward progress, reports, or risk signals. The Tutor Console is visible only to Mohamed and centralizes the approval queue, launch checklist, Session 01 diagnostic, rescheduling, and protected reset controls.
 
 ## Runtime data and synchronization
 
-When the four `VITE_FIREBASE_*` values are configured, the application synchronizes one shared document at `programs/project-202/tracker/current`. Only authenticated users with an active `tutor` or `student` document at `programs/project-202/members/{uid}` may access it. Firestore rules give the tutor administrative control while limiting the student to task completion, practice, mistake, and note evidence. They deny all other client paths and prevent the browser from changing the membership allowlist.
+When the four `VITE_FIREBASE_*` values are configured, the application synchronizes shared work at `programs/project-202/tracker/current`. Only authenticated users with an active `tutor` or `student` membership may access it. Private tutor notes use the separate `programs/project-202/tutorPrivate/notes` document, which Firestore rules deny to the student account even when the path is known. Rules also keep schedule, mastery, mock results, diagnostics, and session approvals tutor-controlled.
 
 The browser retains local state for continuity, but Firestore is the cross-device copy shared by Mohamed and Hamad. JSON export remains the independent recovery format. A deployment without Firebase configuration displays a setup screen instead of opening an unsafe browser-only production tracker.
 
@@ -70,6 +74,25 @@ npm run dev -- --hostname 0.0.0.0 --port 5174
 
 Open `http://localhost:5174`.
 
+## Install on a phone or computer
+
+The production GitHub Pages tracker is an installable Progressive Web App. It
+opens in a standalone window with the Project 202 icon and caches the application
+shell so the interface can reopen during a connection interruption. Firebase
+Authentication and Firestore are intentionally never cached by the service
+worker; the existing sync indicator continues to show whether shared progress is
+current, queued, or offline.
+
+- **Android / Chrome and desktop Chromium:** open the deployed tracker, choose
+  **Install app** when Project 202 offers it, and confirm the browser prompt.
+- **iPhone / iPad:** open the tracker in Safari, tap **Share**, choose **Add to
+  Home Screen**, then tap **Add**. The in-app installation card shows these
+  steps because iOS does not provide the same browser installation prompt.
+
+Installation requires the HTTPS production URL (or `localhost` during local
+development). After a deployment, refresh the installed app once while online
+to allow the new service worker to update its cached shell.
+
 ## Verification
 
 ```powershell
@@ -79,7 +102,9 @@ npm run build
 npm run build:pages
 ```
 
-Tests protect calendar boundaries, cadence, session numbering, curriculum order and completeness, reading-to-session mappings, mock progression, role capabilities, and backup normalization.
+Tests protect calendar boundaries, cadence, session numbering, curriculum order and completeness, reading-to-session mappings, mock progression, role capabilities, backup normalization, and PWA registration helpers. The Pages build also fails unless its manifest, service worker, branded icon set, and installation metadata are present.
+
+Calendar export opens a settings dialog before download because tutoring start times are not part of the canonical study plan. Monday, Wednesday, Saturday, and final-Friday defaults plus reminder lead times are stored only in that browser. The resulting `.ics` file uses `Asia/Riyadh`, derives each end time from the planned session duration, follows tutor-approved rescheduled dates, embeds display reminders, and leaves deadlines as all-day events. It is a calendar import file, not an email invitation.
 
 ## Deployment
 

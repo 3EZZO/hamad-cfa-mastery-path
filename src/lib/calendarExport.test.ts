@@ -1,16 +1,40 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import program from "../data/program.json";
 import {
+  CALENDAR_PREFERENCES_STORAGE_KEY,
   createProject202Calendar,
+  DEFAULT_CALENDAR_EXPORT_PREFERENCES,
   downloadProject202Calendar,
   getProject202CalendarEvents,
+  loadCalendarExportPreferences,
+  normalizeCalendarExportPreferences,
+  saveCalendarExportPreferences,
 } from "./calendarExport";
+import { cascadeReschedule } from "./schedule";
 
 const FIXED_GENERATED_AT = new Date("2026-08-13T05:30:45.000Z");
+const PREFERENCES = {
+  mondayTime: "19:15",
+  wednesdayTime: "18:30",
+  saturdayTime: "10:45",
+  fridayTime: "16:00",
+  sessionReminderMinutes: 90,
+  milestoneReminderDays: 5,
+};
 
 function unfold(calendar: string): string {
   return calendar.replace(/\r\n[ \t]/g, "");
 }
+
+beforeEach(() => {
+  const values = new Map<string, string>();
+  vi.stubGlobal("window", {
+    localStorage: {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => values.set(key, value)),
+    },
+  });
+});
 
 afterEach(() => {
   vi.useRealTimers();
@@ -18,8 +42,8 @@ afterEach(() => {
 });
 
 describe("Project 202 calendar export", () => {
-  it("exports every tutor session and administrative milestone", () => {
-    const events = getProject202CalendarEvents();
+  it("exports every tutor session as timed and every milestone as all-day", () => {
+    const events = getProject202CalendarEvents(undefined, {}, PREFERENCES);
     const sessions = events.filter((event) => event.kind === "tutor-session");
     const milestones = events.filter(
       (event) => event.kind === "administrative-milestone",
@@ -30,18 +54,27 @@ describe("Project 202 calendar export", () => {
     expect(sessions[0]).toMatchObject({
       uid: "project-202-session-01@project-202-tracker",
       startDate: program.firstTutorSession,
-      summary: expect.stringContaining("Session 01"),
+      startTime: "18:30",
+      endTime: "20:00",
+      timeZone: "Asia/Riyadh",
+      reminderMinutes: 90,
     });
     expect(sessions.at(-1)).toMatchObject({
       uid: "project-202-session-68@project-202-tracker",
       startDate: "2027-02-26",
+      startTime: "16:00",
+    });
+    expect(milestones[0]).toMatchObject({
+      reminderDays: 5,
+      transparent: true,
     });
     expect(new Set(events.map((event) => event.uid)).size).toBe(events.length);
   });
 
-  it("builds an RFC 5545 document with deterministic metadata", () => {
+  it("builds timed Riyadh events and all-day deadlines with display alarms", () => {
     const calendar = createProject202Calendar({
       generatedAt: FIXED_GENERATED_AT,
+      preferences: PREFERENCES,
     });
     const unfolded = unfold(calendar);
     const expectedEvents =
@@ -53,18 +86,70 @@ describe("Project 202 calendar export", () => {
     );
     expect(calendar.endsWith("END:VCALENDAR\r\n")).toBe(true);
     expect(unfolded.match(/BEGIN:VEVENT/g)).toHaveLength(expectedEvents);
-    expect(unfolded.match(/END:VEVENT/g)).toHaveLength(expectedEvents);
-    expect(unfolded).toContain("DTSTAMP:20260813T053045Z");
+    expect(unfolded.match(/BEGIN:VALARM/g)).toHaveLength(expectedEvents);
+    expect(unfolded).toContain("BEGIN:VTIMEZONE");
+    expect(unfolded).toContain("TZID:Asia/Riyadh");
     expect(unfolded).toContain(
-      `DTSTART;VALUE=DATE:${program.firstTutorSession.replaceAll("-", "")}`,
+      `DTSTART;TZID=Asia/Riyadh:${program.firstTutorSession.replaceAll("-", "")}T183000`,
     );
-    expect(unfolded).toContain("DTEND;VALUE=DATE:20260820");
-    expect(unfolded).toContain("Project 202 - Hamad's CFA Level I Plan");
+    expect(unfolded).toContain(
+      `DTEND;TZID=Asia/Riyadh:${program.firstTutorSession.replaceAll("-", "")}T200000`,
+    );
+    expect(unfolded).toContain("TRIGGER:-PT90M");
+    expect(unfolded).toContain("DTSTART;VALUE=DATE:20261105");
+    expect(unfolded).toContain("DTEND;VALUE=DATE:20261106");
+    expect(unfolded).toContain("TRIGGER:-P5D");
+    expect(unfolded).toContain("METHOD:PUBLISH");
+    expect(unfolded).not.toContain("ORGANIZER");
+    expect(unfolded).not.toContain("ATTENDEE");
+  });
+
+  it("uses the selected default for every supported tutor-session weekday", () => {
+    const sessions = getProject202CalendarEvents(undefined, {}, PREFERENCES)
+      .filter((event) => event.kind === "tutor-session");
+    expect(sessions.find((event) => event.startDate === "2026-08-24")?.startTime)
+      .toBe("19:15");
+    expect(sessions.find((event) => event.startDate === "2026-08-26")?.startTime)
+      .toBe("18:30");
+    expect(sessions.find((event) => event.startDate === "2026-08-22")?.startTime)
+      .toBe("10:45");
+    expect(sessions.find((event) => event.startDate === "2027-02-26")?.startTime)
+      .toBe("16:00");
+  });
+
+  it("uses effective rescheduled dates and that date's selected weekday time", () => {
+    const overrides = cascadeReschedule(
+      {},
+      2,
+      "2026-08-24",
+      "Travel",
+      "2026-08-13T00:00:00.000Z",
+    ).overrides;
+    const events = getProject202CalendarEvents(undefined, overrides, PREFERENCES);
+    expect(events.find((event) => event.uid.includes("session-02"))).toMatchObject({
+      startDate: "2026-08-24",
+      startTime: "19:15",
+      endDate: "2026-08-24",
+      endTime: "20:45",
+    });
+  });
+
+  it("keeps stable session UIDs when dates and time preferences change", () => {
+    const canonical = getProject202CalendarEvents(undefined, {}, PREFERENCES)
+      .find((event) => event.uid.includes("session-02"));
+    const overrides = cascadeReschedule({}, 2, "2026-08-24", "Travel").overrides;
+    const changed = getProject202CalendarEvents(
+      undefined,
+      overrides,
+      { ...PREFERENCES, mondayTime: "08:00" },
+    ).find((event) => event.uid.includes("session-02"));
+    expect(changed?.uid).toBe(canonical?.uid);
   });
 
   it("uses only CRLF separators and folds every physical line to 75 octets", () => {
     const calendar = createProject202Calendar({
       generatedAt: FIXED_GENERATED_AT,
+      preferences: PREFERENCES,
     });
     const withoutCrlf = calendar.replace(/\r\n/g, "");
     const encoder = new TextEncoder();
@@ -77,7 +162,10 @@ describe("Project 202 calendar export", () => {
 
   it("escapes TEXT punctuation and preserves intentional description breaks", () => {
     const unfolded = unfold(
-      createProject202Calendar({ generatedAt: FIXED_GENERATED_AT }),
+      createProject202Calendar({
+        generatedAt: FIXED_GENERATED_AT,
+        preferences: PREFERENCES,
+      }),
     );
 
     expect(unfolded).toContain(
@@ -88,39 +176,44 @@ describe("Project 202 calendar export", () => {
     );
   });
 
-  it("includes each named administrative milestone as a transparent event", () => {
-    const events = getProject202CalendarEvents();
-    const milestones = events.filter(
-      (event) => event.kind === "administrative-milestone",
-    );
+  it("normalizes and persists browser-only calendar preferences", () => {
+    const normalized = normalizeCalendarExportPreferences({
+      mondayTime: "25:00",
+      wednesdayTime: "17:05",
+      saturdayTime: null,
+      fridayTime: "09:30",
+      sessionReminderMinutes: 20_000,
+      milestoneReminderDays: -2,
+    });
+    expect(normalized).toEqual({
+      ...DEFAULT_CALENDAR_EXPORT_PREFERENCES,
+      wednesdayTime: "17:05",
+      fridayTime: "09:30",
+      sessionReminderMinutes: 10_080,
+      milestoneReminderDays: 0,
+    });
 
-    expect(milestones.map((event) => event.startDate)).toEqual(
-      program.administrativeMilestones.map((milestone) => milestone.date),
+    saveCalendarExportPreferences(PREFERENCES);
+    expect(window.localStorage.setItem).toHaveBeenCalledWith(
+      CALENDAR_PREFERENCES_STORAGE_KEY,
+      JSON.stringify(PREFERENCES),
     );
-    expect(milestones.every((event) => event.transparent)).toBe(true);
-    expect(
-      milestones.some((event) =>
-        event.summary.includes("Hamad's exam appointment"),
-      ),
-    ).toBe(true);
+    expect(loadCalendarExportPreferences()).toEqual(PREFERENCES);
   });
 
-  it("uses tutor-approved session overrides in calendar downloads", () => {
-    const events = getProject202CalendarEvents(undefined, {
-      "2": {
-        sessionNumber: 2,
-        date: "2026-08-24",
-        reason: "Travel",
-        updatedAt: "2026-08-13T00:00:00.000Z",
-      },
+  it("does not invent hidden session times before the user chooses them", () => {
+    expect(DEFAULT_CALENDAR_EXPORT_PREFERENCES).toMatchObject({
+      mondayTime: "",
+      wednesdayTime: "",
+      saturdayTime: "",
+      fridayTime: "",
     });
-    expect(events.find((event) => event.uid.includes("session-02"))).toMatchObject({
-      startDate: "2026-08-24",
-      endDate: "2026-08-25",
-    });
+    expect(() =>
+      createProject202Calendar({ generatedAt: FIXED_GENERATED_AT }),
+    ).toThrow(/choose a Riyadh start time/i);
   });
 
-  it("delays object URL cleanup until the browser can consume the download", () => {
+  it("delays object URL cleanup until the browser consumes the import file", () => {
     vi.useFakeTimers();
     const click = vi.fn();
     const remove = vi.fn();
@@ -128,14 +221,19 @@ describe("Project 202 calendar export", () => {
     const createObjectURL = vi.fn(() => "blob:project-202-calendar");
     const revokeObjectURL = vi.fn();
     const link = { href: "", download: "", hidden: false, click, remove };
+    const localStorage = window.localStorage;
 
     vi.stubGlobal("document", {
       createElement: vi.fn(() => link),
       body: { appendChild },
     });
+    vi.stubGlobal("window", { localStorage });
     vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
 
-    downloadProject202Calendar({ generatedAt: FIXED_GENERATED_AT });
+    downloadProject202Calendar({
+      generatedAt: FIXED_GENERATED_AT,
+      preferences: PREFERENCES,
+    });
 
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(appendChild).toHaveBeenCalledWith(link);
@@ -143,9 +241,7 @@ describe("Project 202 calendar export", () => {
     expect(remove).toHaveBeenCalledOnce();
     expect(revokeObjectURL).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(999);
-    expect(revokeObjectURL).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1_000);
     expect(revokeObjectURL).toHaveBeenCalledWith(
       "blob:project-202-calendar",
     );

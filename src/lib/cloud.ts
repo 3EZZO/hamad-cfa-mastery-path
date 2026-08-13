@@ -21,9 +21,9 @@ import {
   runTransaction,
   type Firestore,
 } from "firebase/firestore";
-import type { TrackerState } from "../types";
+import type { PrivateTutorNote, TrackerState } from "../types";
 import { mergeTrackerStates } from "./stateMerge";
-import { normalizeState } from "./storage";
+import { normalizePrivateTutorNotes, normalizeState } from "./storage";
 import type { ProjectRole } from "./permissions";
 
 const FIREBASE_APP_NAME = "project-202-cloud";
@@ -31,6 +31,8 @@ const PROGRAM_ID = "project-202";
 
 export const CLOUD_TRACKER_DOCUMENT_PATH =
   "programs/project-202/tracker/current" as const;
+export const PRIVATE_TUTOR_NOTES_DOCUMENT_PATH =
+  "programs/project-202/tutorPrivate/notes" as const;
 
 export const REQUIRED_FIREBASE_ENV_KEYS = [
   "VITE_FIREBASE_API_KEY",
@@ -299,6 +301,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+export interface PrivateTutorNotesEnvelope {
+  notes: PrivateTutorNote[];
+  revision: number;
+  updatedBy: string;
+  updatedAtClient: string;
+}
+
 export function parseProjectMember(
   uid: string,
   value: unknown,
@@ -351,8 +360,81 @@ function trackerDocument(firestore: Firestore) {
   return doc(firestore, "programs", PROGRAM_ID, "tracker", "current");
 }
 
+export function parsePrivateTutorNotesEnvelope(
+  value: unknown,
+): PrivateTutorNotesEnvelope {
+  if (!isRecord(value)) throw new CloudClientError("invalid-cloud-data");
+  const revision = Number(value.revision);
+  if (
+    !Number.isSafeInteger(revision) ||
+    revision < 1 ||
+    typeof value.updatedBy !== "string" ||
+    typeof value.updatedAtClient !== "string" ||
+    Number.isNaN(Date.parse(value.updatedAtClient))
+  ) {
+    throw new CloudClientError("invalid-cloud-data");
+  }
+  return {
+    notes: normalizePrivateTutorNotes(value.notes),
+    revision,
+    updatedBy: value.updatedBy,
+    updatedAtClient: value.updatedAtClient,
+  };
+}
+
 function memberDocument(firestore: Firestore, uid: string) {
   return doc(firestore, "programs", PROGRAM_ID, "members", uid);
+}
+
+function privateTutorNotesDocument(firestore: Firestore) {
+  return doc(firestore, "programs", PROGRAM_ID, "tutorPrivate", "notes");
+}
+
+export function subscribeToPrivateTutorNotes(
+  onEnvelope: (envelope: PrivateTutorNotesEnvelope | null) => void,
+  onError?: (error: CloudClientError) => void,
+): CloudUnsubscribe {
+  const { auth, firestore } = getFirebaseServices();
+  requireAuthenticatedUser(auth);
+  return onSnapshot(
+    privateTutorNotesDocument(firestore),
+    (snapshot) => {
+      if (!snapshot.exists()) return onEnvelope(null);
+      try {
+        onEnvelope(parsePrivateTutorNotesEnvelope(snapshot.data()));
+      } catch (error) {
+        onError?.(mapCloudError(error));
+      }
+    },
+    (error) => onError?.(mapCloudError(error)),
+  );
+}
+
+export async function mutatePrivateTutorNotes(
+  recipe: (notes: PrivateTutorNote[]) => PrivateTutorNote[],
+): Promise<PrivateTutorNotesEnvelope> {
+  try {
+    const { auth, firestore } = getFirebaseServices();
+    const user = requireAuthenticatedUser(auth);
+    const reference = privateTutorNotesDocument(firestore);
+    return await runTransaction(firestore, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const current = snapshot.exists()
+        ? parsePrivateTutorNotesEnvelope(snapshot.data())
+        : null;
+      const updatedAtClient = new Date().toISOString();
+      const envelope: PrivateTutorNotesEnvelope = {
+        notes: normalizePrivateTutorNotes(recipe(current?.notes ?? [])),
+        revision: (current?.revision ?? 0) + 1,
+        updatedBy: user.uid,
+        updatedAtClient,
+      };
+      transaction.set(reference, envelope);
+      return envelope;
+    });
+  } catch (error) {
+    throw mapCloudError(error);
+  }
 }
 
 export function observeCurrentProjectMember(

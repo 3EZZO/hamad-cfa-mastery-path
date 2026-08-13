@@ -1,0 +1,40 @@
+{
+  "id": "./",
+  "name": "Project 202 - Hamad's CFA Level I Mastery System",
+  "short_name": "Project 202",
+  "description": "Hamad's private CFA Level I study plan, evidence tracker, and shared tutoring workspace.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f5f6f2",
+  "theme_color": "#10272b",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "./icons/project-202-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/project-202-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/project-202-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icons/project-202-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -6,6 +6,7 @@ dist-pages/
 .wrangler/
 next-env.d.ts
 coverage/
+tmp/
 .env
 .env.*
 !.env.example

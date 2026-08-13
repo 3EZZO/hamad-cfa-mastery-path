@@ -2,7 +2,7 @@ import { getPlanTasks, getWeekSessions, PLAN, TOPICS } from "../data/plan";
 import type { PlanWeek, TrackerState } from "../types";
 import { formatDate } from "./dates";
 import { buildRiskIndicators, type RiskIndicator } from "./risk";
-import { effectiveSessionDate } from "./schedule";
+import { isTaskComplete } from "./taskStatus";
 
 export interface WeeklyReport {
   week: number;
@@ -37,7 +37,7 @@ export function buildWeeklyReport(
   today: string,
 ): WeeklyReport {
   const tasks = getPlanTasks(week, tracker.sessionOverrides);
-  const completedTasks = tasks.filter((task) => tracker.taskCompletions[task.id]).length;
+  const completedTasks = tasks.filter((task) => isTaskComplete(task, tracker)).length;
   const practice = tracker.practiceLogs.filter((entry) =>
     between(entry.date, week.startDate, week.endDate),
   );
@@ -55,7 +55,8 @@ export function buildWeeklyReport(
   const mocks = tracker.mockScores.filter((entry) =>
     between(entry.date, week.startDate, week.endDate),
   );
-  const incomplete = tasks.filter((task) => !tracker.taskCompletions[task.id]);
+  const incomplete = tasks.filter((task) => !isTaskComplete(task, tracker));
+  const sessionTasks = tasks.filter((task) => task.kind === "session");
   const openErrors = errors.filter((entry) => !entry.resolved);
   const risks = buildRiskIndicators(tracker, today);
   const priorities = [
@@ -72,7 +73,7 @@ export function buildWeeklyReport(
     completionPercent: tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0,
     completedTasks,
     totalTasks: tasks.length,
-    sessionsCompleted: new Set(sessionLogs.map((entry) => entry.sessionNumber)).size,
+    sessionsCompleted: sessionTasks.filter((task) => isTaskComplete(task, tracker)).length,
     plannedSessions: sessions.length,
     tutorMinutes: sessionLogs.reduce((sum, entry) => sum + entry.durationMinutes, 0),
     practiceAttempted,

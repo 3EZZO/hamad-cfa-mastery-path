@@ -4,6 +4,7 @@ import {
   getCloudConfigurationStatus,
   mapCloudError,
   parseCloudEnvelope,
+  parsePrivateTutorNotesEnvelope,
   parseProjectMember,
 } from "./cloud";
 
@@ -11,7 +12,9 @@ function state(): TrackerState {
   return {
     version: 1,
     updatedAt: "2026-08-03T00:00:00.000Z",
-    taskCompletions: {},
+  taskCompletions: {},
+  sessionCompletionRequests: {},
+  sessionCompletionReviews: {},
     topicMastery: {},
     sessionLogs: [],
     practiceLogs: [],
@@ -72,6 +75,25 @@ describe("cloud envelope validation", () => {
         updatedAtClient: "2026-08-03T01:00:00.000Z",
       }),
     ).toThrow(/valid Project 202 tracker/i);
+  });
+});
+
+describe("private tutor note envelope validation", () => {
+  it("normalizes the separate tutor-only payload", () => {
+    const envelope = parsePrivateTutorNotesEnvelope({
+      notes: [{
+        id: "private-1",
+        date: "2026-08-20",
+        category: "Shared tutor note",
+        title: "Coaching observation",
+        body: "Tutor only",
+        updatedAt: "2026-08-20T10:00:00.000Z",
+      }],
+      revision: 1,
+      updatedBy: "tutor-uid",
+      updatedAtClient: "2026-08-20T10:00:00.000Z",
+    });
+    expect(envelope.notes[0]?.title).toBe("Coaching observation");
   });
 });
 

@@ -1,4 +1,5 @@
 import { access, copyFile } from "node:fs/promises";
+import "./verify-pwa-build.mjs";
 
 const indexPath = "dist-pages/index.html";
 const fallbackPath = "dist-pages/404.html";
@@ -10,5 +11,5 @@ await access(indexPath);
 await copyFile(indexPath, fallbackPath);
 
 console.log(
-  "GitHub Pages artifact verified: static index and SPA fallback are present.",
+  "GitHub Pages artifact verified: static index, PWA shell, and SPA fallback are present.",
 );

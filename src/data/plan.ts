@@ -4,7 +4,9 @@ import type {
   PlanTask,
   PlanWeek,
   SessionOverride,
+  TrackerState,
 } from "../types";
+import { isTaskComplete } from "../lib/taskStatus";
 
 export const TOPICS = [
   "Ethical and Professional Standards",
@@ -94,5 +96,22 @@ export function getOverallProgress(
   const tasks = PLAN.flatMap(getRequiredTasks);
   if (!tasks.length) return 0;
   const complete = tasks.filter((task) => completions[task.id]).length;
+  return Math.round((complete / tasks.length) * 100);
+}
+
+export function getWeekProgressForState(
+  week: PlanWeek,
+  tracker: TrackerState,
+): number {
+  const tasks = getRequiredTasks(week);
+  if (!tasks.length) return 0;
+  const complete = tasks.filter((task) => isTaskComplete(task, tracker)).length;
+  return Math.round((complete / tasks.length) * 100);
+}
+
+export function getOverallProgressForState(tracker: TrackerState): number {
+  const tasks = PLAN.flatMap(getRequiredTasks);
+  if (!tasks.length) return 0;
+  const complete = tasks.filter((task) => isTaskComplete(task, tracker)).length;
   return Math.round((complete / tasks.length) * 100);
 }

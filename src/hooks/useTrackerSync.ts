@@ -4,12 +4,13 @@ import {
   useRef,
   useState,
 } from "react";
-import type { TrackerState } from "../types";
+import type { PrivateTutorNote, TrackerState } from "../types";
 import {
   getCloudConfigurationStatus,
   getCloudErrorMessage,
   initializeCloudTracker,
   mapCloudError,
+  mutatePrivateTutorNotes,
   observeCurrentProjectMember,
   observeAuth,
   replaceCloudTracker,
@@ -18,6 +19,7 @@ import {
   signInWithGoogle as cloudSignInWithGoogle,
   signOutCloud,
   subscribeToCloudTracker,
+  subscribeToPrivateTutorNotes,
   type CloudRevisionBase,
   type CloudUser,
   type ProjectMember,
@@ -72,6 +74,13 @@ export interface TrackerSyncController {
   replaceTrackerAuthoritatively: (state: TrackerState) => Promise<void>;
   authoritativeReplaceBusy: boolean;
   retrySync: () => void;
+  privateTutorNotes: PrivateTutorNote[];
+  privateNotesReady: boolean;
+  privateNotesBusy: boolean;
+  privateNotesError: string | null;
+  updatePrivateTutorNotes: (
+    recipe: (notes: PrivateTutorNote[]) => PrivateTutorNote[],
+  ) => Promise<void>;
 }
 
 function pendingBase(pending: PendingSync): CloudRevisionBase | null {
@@ -113,6 +122,10 @@ export function useTrackerSync(): TrackerSyncController {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [authoritativeReplaceBusy, setAuthoritativeReplaceBusy] =
     useState(false);
+  const [privateTutorNotes, setPrivateTutorNotes] = useState<PrivateTutorNote[]>([]);
+  const [privateNotesReady, setPrivateNotesReady] = useState(false);
+  const [privateNotesBusy, setPrivateNotesBusy] = useState(false);
+  const [privateNotesError, setPrivateNotesError] = useState<string | null>(null);
 
   const trackerRef = useRef(tracker);
   const userRef = useRef<CloudUser | null>(null);
@@ -324,6 +337,26 @@ export function useTrackerSync(): TrackerSyncController {
       },
     );
   }, [configuration.configured, user]);
+
+  useEffect(() => {
+    setPrivateTutorNotes([]);
+    setPrivateNotesError(null);
+    if (!configuration.configured || !user || member?.role !== "tutor" || !member.active) {
+      setPrivateNotesReady(member?.role !== "tutor");
+      return;
+    }
+    setPrivateNotesReady(false);
+    return subscribeToPrivateTutorNotes(
+      (envelope) => {
+        setPrivateTutorNotes(envelope?.notes ?? []);
+        setPrivateNotesReady(true);
+      },
+      (error) => {
+        setPrivateNotesError(error.message);
+        setPrivateNotesReady(true);
+      },
+    );
+  }, [configuration.configured, member, user]);
 
   useEffect(() => {
     if (
@@ -581,6 +614,27 @@ export function useTrackerSync(): TrackerSyncController {
     scheduleFlush(0);
   }, [scheduleFlush]);
 
+  const updatePrivateTutorNotes = useCallback(
+    async (recipe: (notes: PrivateTutorNote[]) => PrivateTutorNote[]) => {
+      if (!member?.active || member.role !== "tutor") {
+        throw new Error("Only the Project 202 tutor can access private notes.");
+      }
+      setPrivateNotesBusy(true);
+      setPrivateNotesError(null);
+      try {
+        const envelope = await mutatePrivateTutorNotes(recipe);
+        setPrivateTutorNotes(envelope.notes);
+      } catch (error) {
+        const message = getCloudErrorMessage(error);
+        setPrivateNotesError(message);
+        throw error;
+      } finally {
+        setPrivateNotesBusy(false);
+      }
+    },
+    [member],
+  );
+
   return {
     tracker,
     updateTracker,
@@ -605,5 +659,10 @@ export function useTrackerSync(): TrackerSyncController {
     replaceTrackerAuthoritatively,
     authoritativeReplaceBusy,
     retrySync,
+    privateTutorNotes,
+    privateNotesReady,
+    privateNotesBusy,
+    privateNotesError,
+    updatePrivateTutorNotes,
   };
 }

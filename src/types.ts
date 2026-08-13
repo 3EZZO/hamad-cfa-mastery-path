@@ -61,6 +61,7 @@ export interface PracticeLog {
   correct: number;
   source: string;
   note: string;
+  confidence: number;
 }
 
 export interface MockScore {
@@ -69,6 +70,29 @@ export interface MockScore {
   label: string;
   score: number;
   note: string;
+  milestoneWeek?: number | null;
+}
+
+export interface SessionCompletionRequest {
+  taskId: string;
+  requestedAt: string;
+}
+
+export interface SessionCompletionReview {
+  taskId: string;
+  requestedAt: string;
+  status: "approved" | "returned";
+  reviewedAt: string;
+  note: string;
+}
+
+export interface PrivateTutorNote {
+  id: string;
+  date: string;
+  category: string;
+  title: string;
+  body: string;
+  updatedAt: string;
 }
 
 export interface ErrorEntry {
@@ -118,6 +142,8 @@ export interface TrackerState {
   version: 1;
   updatedAt: string;
   taskCompletions: Record<string, boolean>;
+  sessionCompletionRequests: Record<string, SessionCompletionRequest>;
+  sessionCompletionReviews: Record<string, SessionCompletionReview>;
   topicMastery: Record<string, number>;
   sessionLogs: SessionLog[];
   practiceLogs: PracticeLog[];

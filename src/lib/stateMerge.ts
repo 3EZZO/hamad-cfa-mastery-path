@@ -6,6 +6,17 @@ function hasOwn(record: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, key);
 }
 
+function valuesEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (
+    typeof left === "object" && left !== null &&
+    typeof right === "object" && right !== null
+  ) {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+  return false;
+}
+
 function mergeMap<T>(
   base: Record<string, T>,
   local: Record<string, T>,
@@ -22,7 +33,7 @@ function mergeMap<T>(
     const existsLocally = hasOwn(local, key);
     const changedLocally =
       existedInBase !== existsLocally ||
-      (existedInBase && existsLocally && !Object.is(base[key], local[key]));
+      (existedInBase && existsLocally && !valuesEqual(base[key], local[key]));
 
     if (!changedLocally) continue;
 
@@ -153,6 +164,9 @@ function mergeArrayById<T extends IdentifiedRecord>(
  */
 export function isStateMeaningfullyEmpty(state: TrackerState): boolean {
   const hasCompletedTask = Object.values(state.taskCompletions).some(Boolean);
+  const hasSessionCompletionActivity =
+    Object.keys(state.sessionCompletionRequests).length > 0 ||
+    Object.keys(state.sessionCompletionReviews).length > 0;
   const hasMastery = Object.values(state.topicMastery).some(
     (value) => value !== 0,
   );
@@ -164,7 +178,7 @@ export function isStateMeaningfullyEmpty(state: TrackerState): boolean {
     state.notes.length > 0 ||
     state.diagnostics.length > 0;
 
-  return !hasCompletedTask && !hasMastery && !hasArrayRecords;
+  return !hasCompletedTask && !hasSessionCompletionActivity && !hasMastery && !hasArrayRecords;
 }
 
 /**
@@ -213,6 +227,16 @@ export function mergeTrackerStates(
       base.sessionOverrides,
       local.sessionOverrides,
       remote.sessionOverrides,
+    ),
+    sessionCompletionRequests: mergeMap(
+      base.sessionCompletionRequests,
+      local.sessionCompletionRequests,
+      remote.sessionCompletionRequests,
+    ),
+    sessionCompletionReviews: mergeMap(
+      base.sessionCompletionReviews,
+      local.sessionCompletionReviews,
+      remote.sessionCompletionReviews,
     ),
     diagnostics: mergeArrayById(
       base.diagnostics,

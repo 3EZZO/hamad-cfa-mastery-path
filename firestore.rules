@@ -89,6 +89,23 @@ service cloud.firestore {
             && request.resource.data.state.diagnostics
               == resource.data.state.diagnostics
           )
+        )
+        && (
+          (
+            !resource.data.state.keys().hasAny(['sessionCompletionReviews'])
+            && !request.resource.data.state.keys().hasAny(['sessionCompletionReviews'])
+          )
+          || (
+            !resource.data.state.keys().hasAny(['sessionCompletionReviews'])
+            && request.resource.data.state.keys().hasAny(['sessionCompletionReviews'])
+            && request.resource.data.state.sessionCompletionReviews.size() == 0
+          )
+          || (
+            resource.data.state.keys().hasAny(['sessionCompletionReviews'])
+            && request.resource.data.state.keys().hasAny(['sessionCompletionReviews'])
+            && request.resource.data.state.sessionCompletionReviews
+              == resource.data.state.sessionCompletionReviews
+          )
         );
     }
 
@@ -109,6 +126,8 @@ service cloud.firestore {
           'version',
           'updatedAt',
           'taskCompletions',
+          'sessionCompletionRequests',
+          'sessionCompletionReviews',
           'topicMastery',
           'sessionLogs',
           'practiceLogs',
@@ -136,6 +155,20 @@ service cloud.firestore {
           == request.resource.data.updatedAtClient
         && request.resource.data.state.taskCompletions is map
         && request.resource.data.state.taskCompletions.size() <= 1000
+        && (
+          !request.resource.data.state.keys().hasAny(['sessionCompletionRequests'])
+          || (
+            request.resource.data.state.sessionCompletionRequests is map
+            && request.resource.data.state.sessionCompletionRequests.size() <= 68
+          )
+        )
+        && (
+          !request.resource.data.state.keys().hasAny(['sessionCompletionReviews'])
+          || (
+            request.resource.data.state.sessionCompletionReviews is map
+            && request.resource.data.state.sessionCompletionReviews.size() <= 68
+          )
+        )
         && request.resource.data.state.topicMastery is map
         && request.resource.data.state.topicMastery.size() <= 20
         && request.resource.data.state.sessionLogs is list
@@ -179,6 +212,7 @@ service cloud.firestore {
               .affectedKeys().hasOnly([
                 'updatedAt',
                 'taskCompletions',
+                'sessionCompletionRequests',
                 'practiceLogs',
                 'errorEntries',
                 'notes',
@@ -188,6 +222,30 @@ service cloud.firestore {
             && studentPreservesTutorControlledState()
           )
         );
+      allow list, delete: if false;
+    }
+
+    function validPrivateTutorNotesEnvelope() {
+      return request.resource.data.keys().hasOnly([
+          'notes', 'revision', 'updatedBy', 'updatedAtClient'
+        ])
+        && request.resource.data.notes is list
+        && request.resource.data.notes.size() <= 1000
+        && request.resource.data.revision is int
+        && request.resource.data.revision > 0
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAtClient is string
+        && request.resource.data.updatedAtClient.size() <= 40;
+    }
+
+    match /programs/project-202/tutorPrivate/notes {
+      allow get: if activeProject202Role('tutor');
+      allow create: if activeProject202Role('tutor')
+        && validPrivateTutorNotesEnvelope()
+        && request.resource.data.revision == 1;
+      allow update: if activeProject202Role('tutor')
+        && validPrivateTutorNotesEnvelope()
+        && request.resource.data.revision == resource.data.revision + 1;
       allow list, delete: if false;
     }
 

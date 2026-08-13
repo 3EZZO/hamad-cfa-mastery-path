@@ -3404,6 +3404,42 @@ body {
 
 .risk-red > span { color: #a03d39; }
 
+.task-status {
+  display: inline-flex;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #edf2ef;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.task-status-requested { background: #fff2cf; color: #8d6618; }
+.task-status-approved,
+.task-status-complete { background: #ddf2e6; color: #286a4a; }
+.task-status-returned { background: #ffe2df; color: #963d39; }
+
+.approval-queue .entry-list { gap: 10px; }
+.approval-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.approval-entry > div:first-child { display: grid; gap: 4px; }
+.approval-entry span { color: var(--muted); font-size: 0.72rem; }
+.private-notes-panel { border-left: 4px solid var(--gold); }
+.private-note-entry { background: #fffbef; }
+
+@media (max-width: 720px) {
+  .approval-entry { align-items: stretch; flex-direction: column; }
+}
+
 .reschedule-note {
   display: block;
   margin-top: 7px;
@@ -3580,6 +3616,155 @@ body {
   .danger-zone .button { width: 100%; }
 }
 
+.calendar-dialog-backdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(3, 20, 37, 0.72);
+  backdrop-filter: blur(7px);
+}
+
+.calendar-dialog {
+  width: min(680px, 100%);
+  max-height: calc(100vh - 44px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid rgba(212, 161, 58, 0.38);
+  border-radius: 22px;
+  color: var(--ink);
+  background: #fffefa;
+  box-shadow: 0 28px 80px rgba(3, 20, 37, 0.34);
+}
+
+.calendar-dialog-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+}
+
+.calendar-dialog-header h2,
+.calendar-dialog-header p {
+  margin: 0;
+}
+
+.calendar-dialog-header h2 {
+  margin-top: 3px;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+  line-height: 1.08;
+}
+
+.calendar-dialog-mark {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 13px;
+  color: var(--gold);
+  background: var(--gold-pale);
+}
+
+.calendar-dialog-intro {
+  margin: 18px 0;
+  padding: 12px 14px;
+  border-left: 4px solid var(--teal);
+  border-radius: 9px;
+  color: var(--muted);
+  background: #eef8f6;
+  font-size: 0.73rem;
+  line-height: 1.55;
+}
+
+.calendar-dialog-form,
+.calendar-dialog-form fieldset {
+  display: grid;
+  gap: 14px;
+}
+
+.calendar-dialog-form fieldset {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.calendar-dialog-form legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.calendar-time-grid,
+.calendar-reminder-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.calendar-dialog-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.calendar-dialog-form label > span {
+  color: var(--ink-soft);
+  font-size: 0.63rem;
+  font-weight: 800;
+}
+
+.calendar-dialog-note {
+  padding: 11px 13px;
+  border: 1px solid #ead39d;
+  border-radius: 10px;
+  color: #79602a;
+  background: #fff8e9;
+  font-size: 0.67rem;
+  line-height: 1.5;
+}
+
+.calendar-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 2px;
+}
+
+@media (max-width: 620px) {
+  .calendar-dialog-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .calendar-dialog {
+    width: 100%;
+    max-height: 92vh;
+    padding: 20px;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .calendar-time-grid,
+  .calendar-reminder-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-dialog-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .calendar-dialog-actions .button {
+    width: 100%;
+  }
+}
+
 @media (max-width: 520px) {
   .access-card {
     padding: 24px 20px;
@@ -3741,5 +3926,110 @@ body {
 
   .page-heading h1 {
     font-size: 2.65rem;
+  }
+}
+
+/* Installable app prompt ------------------------------------------------- */
+
+.pwa-install-card {
+  position: fixed;
+  right: 14px;
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  left: 14px;
+  z-index: 120;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px 12px;
+  padding: 14px;
+  border: 1px solid rgba(214, 174, 91, 0.42);
+  border-radius: 17px;
+  color: #f8f3e8;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(214, 174, 91, 0.18), transparent 12rem),
+    #102f32;
+  box-shadow: 0 22px 60px rgba(8, 29, 30, 0.32);
+}
+
+.pwa-install-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(214, 174, 91, 0.4);
+  border-radius: 12px;
+  color: #e4bd69;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.pwa-install-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pwa-install-copy > strong {
+  color: #fff9eb;
+  font-size: 0.76rem;
+}
+
+.pwa-install-copy > span {
+  color: #b8cbc5;
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+.pwa-install-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.pwa-install-actions .button-primary {
+  min-height: 38px;
+}
+
+.pwa-install-actions .icon-button {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #d4e0dc;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pwa-ios-guide {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 7px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  color: #f5e5b9;
+  background: rgba(214, 174, 91, 0.13);
+}
+
+.pwa-ios-guide svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.pwa-ios-guide p {
+  margin: 0;
+  font-size: 0.65rem;
+  line-height: 1.5;
+}
+
+@media (min-width: 600px) {
+  .pwa-install-card {
+    right: 20px;
+    bottom: 20px;
+    left: auto;
+    width: min(430px, calc(100vw - 40px));
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .pwa-install-actions {
+    grid-column: auto;
   }
 }

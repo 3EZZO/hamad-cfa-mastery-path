@@ -27,10 +27,18 @@ describe("tracker backup invariants", () => {
 
   it("upgrades older version 1 backups with new safe defaults", () => {
     const legacy = createDefaultState();
-    const { sessionOverrides: _overrides, diagnostics: _diagnostics, ...oldState } = legacy;
+    const {
+      sessionOverrides: _overrides,
+      diagnostics: _diagnostics,
+      sessionCompletionRequests: _requests,
+      sessionCompletionReviews: _reviews,
+      ...oldState
+    } = legacy;
     const normalized = normalizeState(oldState);
     expect(normalized.sessionOverrides).toEqual({});
     expect(normalized.diagnostics).toEqual([]);
+    expect(normalized.sessionCompletionRequests).toEqual({});
+    expect(normalized.sessionCompletionReviews).toEqual({});
   });
 
   it("normalizes tutor-controlled schedule and diagnostic records", () => {
@@ -100,6 +108,7 @@ describe("tracker backup invariants", () => {
           correct: 80,
           source: longText,
           note: longText,
+          confidence: 99,
         },
         {
           id: "wrong-topic",
@@ -155,6 +164,7 @@ describe("tracker backup invariants", () => {
     expect(normalized.practiceLogs[0]).toMatchObject({
       attempted: 30,
       correct: 30,
+      confidence: 5,
     });
     expect(normalized.mockScores[0]).toMatchObject({ score: 100 });
     expect(normalized.mockScores[0]?.label).toHaveLength(50);
@@ -170,6 +180,36 @@ describe("tracker backup invariants", () => {
     expect(normalized.notes[0]?.body).toHaveLength(2_000);
   });
 
+  it("normalizes session approval maps and infers a legacy mock milestone", () => {
+    const normalized = normalizeState({
+      ...createDefaultState(),
+      sessionCompletionRequests: {
+        "w1-session-1": {
+          taskId: "w1-session-1",
+          requestedAt: "2026-08-19T10:00:00.000Z",
+        },
+      },
+      sessionCompletionReviews: {
+        "w1-session-1": {
+          taskId: "w1-session-1",
+          requestedAt: "2026-08-19T10:00:00.000Z",
+          status: "approved",
+          reviewedAt: "2026-08-19T11:00:00.000Z",
+          note: "Ready",
+        },
+      },
+      mockScores: [{
+        id: "legacy-mock",
+        date: "2027-01-11",
+        label: "Mock 1",
+        score: 62,
+        note: "",
+      }],
+    });
+    expect(normalized.sessionCompletionReviews["w1-session-1"]?.status).toBe("approved");
+    expect(normalized.mockScores[0]?.milestoneWeek).toBe(20);
+  });
+
   it("deduplicates repeated record identities before merge code sees them", () => {
     const state = createDefaultState();
     state.practiceLogs = [
@@ -181,6 +221,7 @@ describe("tracker backup invariants", () => {
         correct: 7,
         source: "First",
         note: "",
+        confidence: 3,
       },
       {
         id: "same-id",
@@ -190,6 +231,7 @@ describe("tracker backup invariants", () => {
         correct: 15,
         source: "Second",
         note: "",
+        confidence: 3,
       },
     ];
     const normalized = normalizeState(state);

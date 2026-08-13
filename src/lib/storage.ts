@@ -5,6 +5,9 @@ import type {
   MockScore,
   NoteEntry,
   PracticeLog,
+  PrivateTutorNote,
+  SessionCompletionRequest,
+  SessionCompletionReview,
   SessionOverride,
   SessionLog,
   TrackerState,
@@ -29,6 +32,8 @@ export function createDefaultState(): TrackerState {
     version: 1,
     updatedAt: new Date().toISOString(),
     taskCompletions: {},
+    sessionCompletionRequests: {},
+    sessionCompletionReviews: {},
     topicMastery: Object.fromEntries(TOPICS.map((topic) => [topic, 0])),
     sessionLogs: [],
     practiceLogs: [],
@@ -177,6 +182,7 @@ function normalizePracticeLogs(value: unknown): PracticeLog[] {
       correct: boundedInteger(raw.correct, 0, attempted, 0),
       source: clippedText(raw.source, 80),
       note: clippedText(raw.note, 500),
+      confidence: boundedInteger(raw.confidence, 1, 5, 3),
     };
   });
 }
@@ -191,8 +197,70 @@ function normalizeMockScores(value: unknown): MockScore[] {
       label: clippedText(raw.label, 50, "Mock result"),
       score: boundedNumber(raw.score, 0, 100, 0),
       note: clippedText(raw.note, 500),
+      milestoneWeek: normalizeMockMilestoneWeek(raw.milestoneWeek, raw.label),
     };
   });
+}
+
+function normalizeMockMilestoneWeek(
+  value: unknown,
+  label: unknown,
+): number | null {
+  const milestoneWeeks = PLAN.filter(
+    (week) => week.mockMilestone?.targetScore != null,
+  ).map(
+    (week) => week.week,
+  );
+  const week = Number(value);
+  if (Number.isInteger(week) && milestoneWeeks.includes(week)) return week;
+  if (typeof label !== "string") return null;
+  const normalizedLabel = label.trim().toLowerCase();
+  const match = PLAN.find(
+    (item) =>
+      item.mockMilestone?.targetScore != null &&
+      item.mockMilestone.label.trim().toLowerCase() === normalizedLabel,
+  );
+  return match?.week ?? null;
+}
+
+function normalizeSessionCompletionRequests(
+  value: unknown,
+): Record<string, SessionCompletionRequest> {
+  if (!isRecord(value)) return {};
+  const result: Record<string, SessionCompletionRequest> = {};
+  for (const [key, raw] of Object.entries(value).slice(0, 68)) {
+    if (!isRecord(raw) || key.length > 120 || raw.taskId !== key) continue;
+    const requestedAt = validTimestamp(raw.requestedAt, "");
+    if (!requestedAt) continue;
+    result[key] = { taskId: key, requestedAt };
+  }
+  return result;
+}
+
+function normalizeSessionCompletionReviews(
+  value: unknown,
+): Record<string, SessionCompletionReview> {
+  if (!isRecord(value)) return {};
+  const result: Record<string, SessionCompletionReview> = {};
+  for (const [key, raw] of Object.entries(value).slice(0, 68)) {
+    if (
+      !isRecord(raw) ||
+      key.length > 120 ||
+      raw.taskId !== key ||
+      (raw.status !== "approved" && raw.status !== "returned")
+    ) continue;
+    const requestedAt = validTimestamp(raw.requestedAt, "");
+    const reviewedAt = validTimestamp(raw.reviewedAt, "");
+    if (!requestedAt || !reviewedAt) continue;
+    result[key] = {
+      taskId: key,
+      requestedAt,
+      status: raw.status,
+      reviewedAt,
+      note: clippedText(raw.note, 500),
+    };
+  }
+  return result;
 }
 
 function normalizeErrorEntries(value: unknown): ErrorEntry[] {
@@ -235,6 +303,24 @@ function normalizeNotes(value: unknown): NoteEntry[] {
           : "Shared tutor note",
       title: clippedText(raw.title, 100),
       body: clippedText(raw.body, 2_000),
+    };
+  });
+}
+
+export function normalizePrivateTutorNotes(value: unknown): PrivateTutorNote[] {
+  return normalizedRecords(value, 1_000, (raw) => {
+    const id = recordId(raw.id);
+    if (!id || !isValidDateOnly(raw.date)) return null;
+    return {
+      id,
+      date: raw.date,
+      category:
+        typeof raw.category === "string" && NOTE_CATEGORIES.has(raw.category)
+          ? raw.category
+          : "Shared tutor note",
+      title: clippedText(raw.title, 100),
+      body: clippedText(raw.body, 2_000),
+      updatedAt: validTimestamp(raw.updatedAt, new Date(0).toISOString()),
     };
   });
 }
@@ -347,6 +433,12 @@ export function normalizeState(value: unknown): TrackerState {
     ...defaults,
     updatedAt: normalizedUpdatedAt,
     taskCompletions,
+    sessionCompletionRequests: normalizeSessionCompletionRequests(
+      value.sessionCompletionRequests,
+    ),
+    sessionCompletionReviews: normalizeSessionCompletionReviews(
+      value.sessionCompletionReviews,
+    ),
     topicMastery,
     sessionLogs: normalizeSessionLogs(value.sessionLogs),
     practiceLogs: normalizePracticeLogs(value.practiceLogs),

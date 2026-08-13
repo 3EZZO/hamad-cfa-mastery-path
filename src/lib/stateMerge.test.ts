@@ -16,6 +16,8 @@ function makeState(overrides: Partial<TrackerState> = {}): TrackerState {
     version: 1,
     updatedAt: "2026-08-01T00:00:00.000Z",
     taskCompletions: {},
+    sessionCompletionRequests: {},
+    sessionCompletionReviews: {},
     topicMastery: {},
     sessionLogs: [],
     practiceLogs: [],
@@ -37,6 +39,7 @@ function practice(id: string, note: string): PracticeLog {
     correct: 24,
     source: "LES",
     note,
+    confidence: 3,
   };
 }
 
@@ -100,6 +103,14 @@ describe("isStateMeaningfullyEmpty", () => {
       ),
     ).toBe(false);
     expect(isStateMeaningfullyEmpty(makeState({ notes: [note("n1", "Plan", "Start")] }))).toBe(false);
+    expect(isStateMeaningfullyEmpty(makeState({
+      sessionCompletionRequests: {
+        "w1-session-1": {
+          taskId: "w1-session-1",
+          requestedAt: "2026-08-19T10:00:00.000Z",
+        },
+      },
+    }))).toBe(false);
   });
 });
 
@@ -268,6 +279,23 @@ describe("mergeTrackerStates", () => {
     });
 
     expect(mergeTrackerStates(base, local, remote)).toEqual(remote);
+  });
+
+  it("retains a remote session review when the local object is unchanged", () => {
+    const baseReview = {
+      taskId: "w1-session-1",
+      requestedAt: "2026-08-19T10:00:00.000Z",
+      status: "returned" as const,
+      reviewedAt: "2026-08-19T11:00:00.000Z",
+      note: "Review",
+    };
+    const approvedReview = { ...baseReview, status: "approved" as const };
+    const merged = mergeTrackerStates(
+      makeState({ sessionCompletionReviews: { [baseReview.taskId]: baseReview } }),
+      makeState({ sessionCompletionReviews: { [baseReview.taskId]: { ...baseReview } } }),
+      makeState({ sessionCompletionReviews: { [baseReview.taskId]: approvedReview } }),
+    );
+    expect(merged.sessionCompletionReviews[baseReview.taskId]).toEqual(approvedReview);
   });
 
   it("merges tutor schedule overrides and diagnostics without losing remote evidence", () => {

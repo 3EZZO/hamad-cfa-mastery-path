@@ -1,7 +1,8 @@
-import { getPlanTasks, getSessionTaskId, getWeekSessions, PLAN } from "../data/plan";
+import { getPlanTasks, getWeekSessions, PLAN } from "../data/plan";
 import type { TrackerState } from "../types";
 import { differenceInCalendarDays, getProgramWeek, parseDateOnly } from "./dates";
 import { effectiveSessionDate } from "./schedule";
+import { isTaskComplete } from "./taskStatus";
 
 export type RiskTone = "green" | "amber" | "red";
 
@@ -13,9 +14,78 @@ export interface RiskIndicator {
   action: string;
 }
 
-function withinDays(date: string, today: string, days: number): boolean {
-  const age = differenceInCalendarDays(parseDateOnly(today), parseDateOnly(date));
-  return age >= 0 && age <= days;
+function ageInDays(date: string, today: string): number {
+  return differenceInCalendarDays(parseDateOnly(today), parseDateOnly(date));
+}
+
+function withinDayRange(
+  date: string,
+  today: string,
+  minimumAge: number,
+  maximumAge: number,
+): boolean {
+  const age = ageInDays(date, today);
+  return age >= minimumAge && age <= maximumAge;
+}
+
+function practiceSummary(
+  tracker: TrackerState,
+  today: string,
+  minimumAge: number,
+  maximumAge: number,
+): { attempted: number; correct: number; accuracy: number | null } {
+  const entries = tracker.practiceLogs.filter((entry) =>
+    withinDayRange(entry.date, today, minimumAge, maximumAge),
+  );
+  const attempted = entries.reduce((sum, entry) => sum + entry.attempted, 0);
+  const correct = entries.reduce((sum, entry) => sum + entry.correct, 0);
+  return {
+    attempted,
+    correct,
+    accuracy: attempted ? Math.round((correct / attempted) * 100) : null,
+  };
+}
+
+function targetForMock(tracker: TrackerState): number | null {
+  const latestMock = [...tracker.mockScores]
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .at(-1);
+  if (!latestMock) return null;
+
+  if (latestMock.milestoneWeek != null) {
+    const exactWeek = PLAN.find((week) => week.week === latestMock.milestoneWeek);
+    if (exactWeek?.mockMilestone?.targetScore != null) {
+      return exactWeek.mockMilestone.targetScore;
+    }
+  }
+
+  const matchingLabel = PLAN.find(
+    (week) =>
+      week.mockMilestone?.label.localeCompare(latestMock.label, undefined, {
+        sensitivity: "accent",
+      }) === 0 && week.mockMilestone.targetScore != null,
+  );
+  return matchingLabel?.mockMilestone?.targetScore ?? 72;
+}
+
+function isPast(date: string, today: string): boolean {
+  return date < today;
+}
+
+function requiredWorkDueDate(
+  taskKind: "session" | "independent" | "evidence",
+  sessionDate: string | null,
+  weekEndDate: string,
+): string {
+  return taskKind === "session" && sessionDate ? sessionDate : weekEndDate;
+}
+
+function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+  return count === 1 ? singular : pluralForm;
+}
+
+function signedPointDifference(value: number): string {
+  return `${Math.abs(value)} percentage ${plural(Math.abs(value), "point")}`;
 }
 
 export function buildRiskIndicators(
@@ -37,19 +107,34 @@ export function buildRiskIndicators(
   }
 
   const indicators: RiskIndicator[] = [];
-  const overdueSessions = PLAN.flatMap((week) =>
-    getWeekSessions(week).filter((session) => {
-      const date = effectiveSessionDate(session, tracker.sessionOverrides);
-      return date < today && !tracker.taskCompletions[getSessionTaskId(week, session)];
-    }),
-  );
-  if (overdueSessions.length) {
+  const overdueWork = PLAN.flatMap((week) => {
+    const sessions = getWeekSessions(week);
+    return getPlanTasks(week, tracker.sessionOverrides).flatMap((task) => {
+      const sessionIndex = task.kind === "session"
+        ? Number(task.id.match(/session-(\d+)$/)?.[1] ?? 0) - 1
+        : -1;
+      const session = sessionIndex >= 0 ? sessions[sessionIndex] : null;
+      const dueDate = requiredWorkDueDate(
+        task.kind,
+        session ? effectiveSessionDate(session, tracker.sessionOverrides) : null,
+        week.endDate,
+      );
+      return !task.optional && isPast(dueDate, today) && !isTaskComplete(task, tracker)
+        ? [{ task, dueDate, sessionNumber: session?.number ?? null }]
+        : [];
+    });
+  }).sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+  if (overdueWork.length) {
+    const oldest = overdueWork[0];
+    const oldestLabel = oldest.sessionNumber == null
+      ? oldest.task.label
+      : `Session ${String(oldest.sessionNumber).padStart(2, "0")}`;
     indicators.push({
-      id: "overdue-sessions",
-      tone: overdueSessions.length >= 2 ? "red" : "amber",
-      title: `${overdueSessions.length} overdue tutor-session ${overdueSessions.length === 1 ? "task" : "tasks"}`,
-      detail: `The oldest open session is S${String(overdueSessions[0].number).padStart(2, "0")}.`,
-      action: "Reconcile the checklist with the tutor before adding new backlog.",
+      id: "overdue-work",
+      tone: overdueWork.length >= 3 ? "red" : "amber",
+      title: `${overdueWork.length} overdue required ${plural(overdueWork.length, "item")}`,
+      detail: `The oldest is "${oldestLabel}," due ${oldest.dueDate}. Session work counts only after tutor approval.`,
+      action: "Reconcile the oldest required work with the tutor before adding new backlog.",
     });
   }
 
@@ -57,7 +142,7 @@ export function buildRiskIndicators(
   if (programWeek >= 1 && programWeek <= PLAN.length) {
     const week = PLAN[programWeek - 1];
     const tasks = getPlanTasks(week);
-    const complete = tasks.filter((task) => tracker.taskCompletions[task.id]).length;
+    const complete = tasks.filter((task) => isTaskComplete(task, tracker)).length;
     const elapsed = Math.max(
       1,
       Math.min(
@@ -77,12 +162,11 @@ export function buildRiskIndicators(
     }
   }
 
-  const recentPractice = tracker.practiceLogs.filter((entry) =>
-    withinDays(entry.date, today, 14),
-  );
-  const attempted = recentPractice.reduce((sum, entry) => sum + entry.attempted, 0);
-  const correct = recentPractice.reduce((sum, entry) => sum + entry.correct, 0);
-  const accuracy = attempted ? Math.round((correct / attempted) * 100) : 0;
+  const recentPractice = practiceSummary(tracker, today, 0, 13);
+  const priorPractice = practiceSummary(tracker, today, 14, 27);
+  const attempted = recentPractice.attempted;
+  const correct = recentPractice.correct;
+  const accuracy = recentPractice.accuracy;
   const daysSinceLaunch = differenceInCalendarDays(
     parseDateOnly(today),
     parseDateOnly(firstSession),
@@ -95,7 +179,23 @@ export function buildRiskIndicators(
       detail: "The tracker has no recent question-volume evidence.",
       action: "Log the next reviewed practice block, including the lesson from it.",
     });
-  } else if (attempted >= 30 && accuracy < 70) {
+  }
+  const accuracyDecline =
+    attempted >= 30 &&
+    priorPractice.attempted >= 30 &&
+    accuracy != null &&
+    priorPractice.accuracy != null
+      ? priorPractice.accuracy - accuracy
+      : 0;
+  if (accuracyDecline >= 8 && accuracy != null && priorPractice.accuracy != null) {
+    indicators.push({
+      id: "practice-decline",
+      tone: accuracyDecline >= 15 || accuracy < 60 ? "red" : "amber",
+      title: `Practice accuracy declined to ${accuracy}%`,
+      detail: `The latest 14-day window is ${signedPointDifference(accuracyDecline)} below the prior 14-day window (${priorPractice.accuracy}%), with meaningful samples in both.`,
+      action: "Pause new breadth, identify the dominant change, and retest it in a fresh set.",
+    });
+  } else if (attempted >= 30 && accuracy != null && accuracy < 70) {
     indicators.push({
       id: "practice-accuracy",
       tone: accuracy < 60 ? "red" : "amber",
@@ -105,7 +205,8 @@ export function buildRiskIndicators(
     });
   }
 
-  const dueRetests = tracker.errorEntries.filter(
+  const openMistakes = tracker.errorEntries.filter((entry) => !entry.resolved);
+  const dueRetests = openMistakes.filter(
     (entry) => !entry.resolved && entry.revisitDate && entry.revisitDate <= today,
   );
   if (dueRetests.length) {
@@ -113,8 +214,21 @@ export function buildRiskIndicators(
       id: "due-retests",
       tone: dueRetests.length >= 3 ? "red" : "amber",
       title: `${dueRetests.length} mistake ${dueRetests.length === 1 ? "retest is" : "retests are"} due`,
-      detail: "Open correction rules have reached their planned revisit date.",
+      detail: `${dueRetests.length} of ${openMistakes.length} open ${plural(openMistakes.length, "mistake")} have reached their planned revisit date.`,
       action: "Run delayed retrieval before adding another large question set.",
+    });
+  } else if (openMistakes.length) {
+    const unscheduled = openMistakes.filter((entry) => !entry.revisitDate).length;
+    indicators.push({
+      id: "open-mistakes",
+      tone: openMistakes.length >= 5 || unscheduled >= 2 ? "red" : "amber",
+      title: `${openMistakes.length} unresolved ${plural(openMistakes.length, "mistake")}`,
+      detail: unscheduled
+        ? `${unscheduled} ${plural(unscheduled, "mistake has", "mistakes have")} no retest date.`
+        : "The correction work is scheduled and remains open.",
+      action: unscheduled
+        ? "Assign a retest date and a reproducible correction rule to every open mistake."
+        : "Complete each delayed retest on its scheduled date and record the result.",
     });
   }
 
@@ -131,12 +245,10 @@ export function buildRiskIndicators(
     });
   }
 
-  const latestMock = [...tracker.mockScores].sort((a, b) => a.date.localeCompare(b.date)).at(-1);
+  const sortedMocks = [...tracker.mockScores].sort((a, b) => a.date.localeCompare(b.date));
+  const latestMock = sortedMocks.at(-1);
   if (latestMock) {
-    const mockTargets = PLAN.flatMap((week) =>
-      week.mockMilestone?.targetScore == null ? [] : [week.mockMilestone.targetScore],
-    );
-    const target = mockTargets[Math.max(0, tracker.mockScores.length - 1)] ?? 72;
+    const target = targetForMock(tracker) ?? 72;
     if (latestMock.score < target) {
       const gap = target - latestMock.score;
       indicators.push({
@@ -145,6 +257,18 @@ export function buildRiskIndicators(
         title: `${latestMock.label} is ${gap} points below its internal target`,
         detail: `Recorded ${latestMock.score}% against the ${target}% coaching target.`,
         action: "Complete the debrief and targeted repair before the next full mock.",
+      });
+    }
+
+    const priorMock = sortedMocks.at(-2);
+    if (priorMock && latestMock.score <= priorMock.score - 4) {
+      const decline = priorMock.score - latestMock.score;
+      indicators.push({
+        id: "mock-decline",
+        tone: decline >= 8 ? "red" : "amber",
+        title: `Latest mock declined by ${decline} points`,
+        detail: `${priorMock.label} was ${priorMock.score}%; ${latestMock.label} was ${latestMock.score}%.`,
+        action: "Compare the two debriefs and repair the topics or pacing decisions that regressed.",
       });
     }
   }

@@ -16,10 +16,20 @@ afterEach(() => {
 describe("weekly report generator", () => {
   it("summarizes the selected week without storing a report blob", () => {
     const state = createDefaultState();
-    state.taskCompletions["w1-session-1"] = true;
+    state.sessionCompletionRequests["w1-session-1"] = {
+      taskId: "w1-session-1",
+      requestedAt: "2026-08-20T08:00:00.000Z",
+    };
+    state.sessionCompletionReviews["w1-session-1"] = {
+      taskId: "w1-session-1",
+      requestedAt: "2026-08-20T08:00:00.000Z",
+      reviewedAt: "2026-08-20T09:00:00.000Z",
+      status: "approved",
+      note: "Evidence reviewed.",
+    };
     state.practiceLogs.push({
       id: "p1", date: "2026-08-20", topic: "Quantitative Methods",
-      attempted: 40, correct: 30, source: "LES", note: "Baseline",
+      attempted: 40, correct: 30, source: "LES", note: "Baseline", confidence: 3,
     });
     const report = buildWeeklyReport(PLAN[0], state, "2026-08-22");
     expect(report.week).toBe(1);
