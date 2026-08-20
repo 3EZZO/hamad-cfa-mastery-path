@@ -1,4 +1,4 @@
-const VERSION = "project-202-pwa-v2";
+const VERSION = "project-202-pwa-v3";
 const APP_SCOPE = new URL(self.registration.scope);
 const APP_BASE = APP_SCOPE.pathname.endsWith("/")
   ? APP_SCOPE.pathname

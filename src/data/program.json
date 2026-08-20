@@ -1,13 +1,13 @@
 {
   "brand": "PROJECT 202 | Hamad's CFA Level I Mastery System",
-  "programStart": "2026-08-16",
-  "firstTutorSession": "2026-08-19",
+  "programStart": "2026-08-23",
+  "firstTutorSession": "2026-08-26",
   "examAppointment": "2027-02-27",
   "tutoringRhythm": {
     "standard": ["Wednesday midweek", "Saturday weekend"],
     "intensive": "Monday intensive",
-    "standardWeeks": 16,
-    "intensiveWeeks": 12,
+    "standardWeeks": 13,
+    "intensiveWeeks": 14,
     "totalSessions": 68
   },
   "examWindow": {

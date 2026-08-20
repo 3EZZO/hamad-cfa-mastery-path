@@ -2093,7 +2093,7 @@ function TutorConsoleView({
   });
   const hasProgress = !isStateMeaningfullyEmpty(tracker);
   const scheduleIntact =
-    effectiveSessions[0]?.effectiveDate === "2026-08-19" &&
+    effectiveSessions[0]?.effectiveDate === program.firstTutorSession &&
     (effectiveSessions.at(-1)?.effectiveDate ?? program.examAppointment) <
       program.examAppointment;
   const launchChecks = [
@@ -2281,7 +2281,7 @@ function TutorConsoleView({
           <div className="panel-heading"><div><p className="eyebrow">Safe rescheduling</p><h3>Move a session and reflow collisions</h3></div><CalendarClock size={21} /></div>
           <label><span>Session</span><select value={selectedSession} onChange={(event) => chooseSession(Number(event.target.value))}>{effectiveSessions.map((entry) => <option value={entry.session.number} key={entry.session.number}>S{String(entry.session.number).padStart(2, "0")} · {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })} · {entry.session.title}</option>)}</select></label>
           <div className="form-grid form-grid-2">
-            <label><span>New date</span><input type="date" min="2026-08-16" max="2027-02-26" required value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
+            <label><span>New date</span><input type="date" min={program.programStart} max="2027-02-26" required value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
             <label><span>Current date</span><input type="text" readOnly value={formatDate(selected.effectiveDate)} /></label>
           </div>
           <label><span>Reason</span><textarea required rows={3} maxLength={300} placeholder="Short tutor-approved reason for the schedule record." value={rescheduleReason} onChange={(event) => setRescheduleReason(event.target.value)} /></label>

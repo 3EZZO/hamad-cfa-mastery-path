@@ -107,11 +107,11 @@ describe("Project 202 calendar export", () => {
   it("uses the selected default for every supported tutor-session weekday", () => {
     const sessions = getProject202CalendarEvents(undefined, {}, PREFERENCES)
       .filter((event) => event.kind === "tutor-session");
-    expect(sessions.find((event) => event.startDate === "2026-08-24")?.startTime)
+    expect(sessions.find((event) => event.startDate === "2026-08-31")?.startTime)
       .toBe("19:15");
     expect(sessions.find((event) => event.startDate === "2026-08-26")?.startTime)
       .toBe("18:30");
-    expect(sessions.find((event) => event.startDate === "2026-08-22")?.startTime)
+    expect(sessions.find((event) => event.startDate === "2026-08-29")?.startTime)
       .toBe("10:45");
     expect(sessions.find((event) => event.startDate === "2027-02-26")?.startTime)
       .toBe("16:00");
@@ -121,15 +121,15 @@ describe("Project 202 calendar export", () => {
     const overrides = cascadeReschedule(
       {},
       2,
-      "2026-08-24",
+      "2026-08-31",
       "Travel",
       "2026-08-13T00:00:00.000Z",
     ).overrides;
     const events = getProject202CalendarEvents(undefined, overrides, PREFERENCES);
     expect(events.find((event) => event.uid.includes("session-02"))).toMatchObject({
-      startDate: "2026-08-24",
+      startDate: "2026-08-31",
       startTime: "19:15",
-      endDate: "2026-08-24",
+      endDate: "2026-08-31",
       endTime: "20:45",
     });
   });
@@ -137,7 +137,7 @@ describe("Project 202 calendar export", () => {
   it("keeps stable session UIDs when dates and time preferences change", () => {
     const canonical = getProject202CalendarEvents(undefined, {}, PREFERENCES)
       .find((event) => event.uid.includes("session-02"));
-    const overrides = cascadeReschedule({}, 2, "2026-08-24", "Travel").overrides;
+    const overrides = cascadeReschedule({}, 2, "2026-08-31", "Travel").overrides;
     const changed = getProject202CalendarEvents(
       undefined,
       overrides,

@@ -1,4 +1,4 @@
-"""Build the official 2027 curriculum catalog and 28-week tutoring plan.
+"""Build the official 2027 curriculum catalog and 27-week tutoring plan.
 
 The public CFA Institute 2027 Level I Topic Outlines are the module-title
 authority. Full curriculum lessons, examples, questions, and Equation
@@ -684,12 +684,12 @@ WEEKS: list[dict] = [
 
 
 def scheduled_weeks() -> list[dict]:
-    """Reflow the curriculum sequence into the revised 28-week window.
+    """Reflow the curriculum sequence into the revised 27-week window.
 
-    The 19 August launch removes one calendar week but not any tutoring
-    session. Sessions remain in their original order. The opening is
-    redistributed so Session 01 begins on Wednesday, with the remaining
-    compression placed in late-November coverage before the mock campaign.
+    The 26 August launch removes one further calendar week but not any
+    tutoring session or official module. Sessions remain in their original
+    order. The additional compression is placed in the coverage-to-integration
+    bridge so the seven-mock campaign and final taper retain their dates.
     """
 
     opening = [
@@ -738,22 +738,40 @@ def scheduled_weeks() -> list[dict]:
         "masteryGate": "Complete the portfolio decision map and apply the controlling ethical duty before selecting an answer on fresh cases.",
     }
 
+    ethics_and_integration = {
+        "focus": "Ethics II and integration I: duties, conflicts, candidate responsibilities, application, and decision maps",
+        "topics": ["Ethical and Professional Standards", "Mixed Curriculum"],
+        "sessions": [*WEEKS[17]["sessions"], WEEKS[18]["sessions"][0]],
+        "questionTarget": 440,
+        "masteryGate": "Clear the cumulative Ethics gate, explain every corrected answer, and complete the first integrated decision maps without adding new gaps.",
+    }
+    integration_and_gate = {
+        "focus": "Full-curriculum switching, 102-module audit, and coverage gate",
+        "topics": ["Mixed Curriculum"],
+        "sessions": [WEEKS[18]["sessions"][1], *WEEKS[19]["sessions"]],
+        "questionTarget": 440,
+        "masteryGate": "Verify all 102 official modules, clear the mixed switching set, and convert every remaining weakness into a narrow active-repair item before Mock 1.",
+    }
+
     return [
         *opening,
         *WEEKS[4:14],
         alternatives_and_portfolio,
         portfolio_and_ethics,
-        WEEKS[17],
-        *WEEKS[18:],
+        ethics_and_integration,
+        integration_and_gate,
+        *WEEKS[20:],
     ]
 
 
 def phase_for_week(week_number: int) -> str:
-    if week_number <= 17:
+    if week_number <= 16:
         return "Phase 1 | Official 2027 Curriculum Coverage"
-    if week_number <= 19:
+    if week_number == 17:
+        return "Phase 1-2 Bridge | Coverage Close and Integration"
+    if week_number == 18:
         return "Phase 2 | Integration and Coverage Gate"
-    if week_number <= 27:
+    if week_number <= 26:
         return "Phase 3 | Mock and Repair Campaign"
     return "Phase 4 | Taper and Exam"
 
@@ -789,14 +807,14 @@ def build() -> tuple[list[dict], dict]:
 
     weeks: list[dict] = []
     session_number = 0
-    first_week_start = date(2026, 8, 16)
+    first_week_start = date(2026, 8, 23)
     record_by_id = {record["id"]: record for record in module_records}
     three_session_weeks: list[int] = []
     mock_targets = {1: 60, 2: 63, 3: 65, 4: 67, 5: 69, 6: 70, 7: 72}
 
     blueprints = scheduled_weeks()
-    if len(blueprints) != 28:
-        raise ValueError(f"Expected 28 scheduled weeks, found {len(blueprints)}")
+    if len(blueprints) != 27:
+        raise ValueError(f"Expected 27 scheduled weeks, found {len(blueprints)}")
 
     for week_number, blueprint in enumerate(blueprints, start=1):
         week_start = first_week_start + timedelta(days=(week_number - 1) * 7)
@@ -805,7 +823,7 @@ def build() -> tuple[list[dict], dict]:
         if len(sessions_blueprint) == 3:
             day_specs = [(1, "Monday intensive"), (3, "Wednesday midweek"), (6, "Saturday weekend")]
             three_session_weeks.append(week_number)
-        elif week_number == 28:
+        elif week_number == 27:
             day_specs = [(3, "Wednesday midweek"), (5, "Friday pre-exam")]
         else:
             day_specs = [(3, "Wednesday midweek"), (6, "Saturday weekend")]
@@ -863,7 +881,7 @@ def build() -> tuple[list[dict], dict]:
 
     if session_number != 68:
         raise ValueError(f"Expected 68 tutoring sessions, found {session_number}")
-    if three_session_weeks != [2, 3, 4, 6, 9, 11, 13, 14, 15, 16, 26, 27]:
+    if three_session_weeks != [2, 3, 4, 6, 9, 11, 13, 14, 15, 16, 17, 18, 25, 26]:
         raise ValueError(f"Unexpected three-session weeks: {three_session_weeks}")
     missing = [record["id"] for record in module_records if not record["sessionNumbers"]]
     if missing:

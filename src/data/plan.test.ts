@@ -6,17 +6,17 @@ import { READING_CATALOG } from "./readings";
 
 const sessions = PLAN.flatMap(getWeekSessions);
 
-describe("canonical 28-week official 2027 plan", () => {
-  it("contains exactly 28 sequential weeks", () => {
-    expect(PLAN).toHaveLength(28);
+describe("canonical 27-week official 2027 plan", () => {
+  it("contains exactly 27 sequential weeks", () => {
+    expect(PLAN).toHaveLength(27);
     expect(PLAN.map((week) => week.week)).toEqual(
-      Array.from({ length: 28 }, (_, index) => index + 1),
+      Array.from({ length: 27 }, (_, index) => index + 1),
     );
   });
 
-  it("uses the program window and begins tutoring on Wednesday 19 August", () => {
+  it("uses the program window and begins tutoring on Wednesday 26 August", () => {
     expect(program.programStart).toBe(PROGRAM_START);
-    expect(program.firstTutorSession).toBe("2026-08-19");
+    expect(program.firstTutorSession).toBe("2026-08-26");
     expect(program.examAppointment).toBe(EXAM_DATE);
     expect(program.examWindow.startDate).toBe("2027-02-22");
     expect(program.examWindow.endDate).toBe("2027-02-28");
@@ -37,7 +37,7 @@ describe("canonical 28-week official 2027 plan", () => {
     }
   });
 
-  it("uses two meetings in most weeks and three in twelve intensive weeks", () => {
+  it("uses a balanced two- and three-meeting weekly rhythm", () => {
     const threeSessionWeeks = PLAN.filter(
       (week) => getWeekSessions(week).length === 3,
     ).map((week) => week.week);
@@ -46,11 +46,11 @@ describe("canonical 28-week official 2027 plan", () => {
     ).map((week) => week.week);
 
     expect(threeSessionWeeks).toEqual([
-      2, 3, 4, 6, 9, 11, 13, 14, 15, 16, 26, 27,
+      2, 3, 4, 6, 9, 11, 13, 14, 15, 16, 17, 18, 25, 26,
     ]);
-    expect(twoSessionWeeks).toHaveLength(16);
-    expect(program.tutoringRhythm.standardWeeks).toBe(16);
-    expect(program.tutoringRhythm.intensiveWeeks).toBe(12);
+    expect(twoSessionWeeks).toHaveLength(13);
+    expect(program.tutoringRhythm.standardWeeks).toBe(13);
+    expect(program.tutoringRhythm.intensiveWeeks).toBe(14);
   });
 
   it("uses Monday-Wednesday-Saturday for intensive weeks and Wednesday-Saturday otherwise", () => {
@@ -77,6 +77,16 @@ describe("canonical 28-week official 2027 plan", () => {
       expect(session.requirement).toBe("required");
       expect(session.durationMinutes).toBeGreaterThanOrEqual(45);
     }
+  });
+
+  it("compresses only the coverage-to-integration bridge and preserves the mock calendar", () => {
+    expect(sessions[41]?.date).toBe("2026-12-12");
+    expect(sessions[42]?.date).toBe("2026-12-14");
+    expect(sessions[47]?.date).toBe("2026-12-26");
+    expect(sessions[48]?.date).toBe("2026-12-30");
+    expect(PLAN.reduce((total, week) => total + week.questionTarget, 0)).toBe(
+      6_630,
+    );
   });
 
   it("starts with official Quant Module 1 and then follows the official module sequence", () => {
@@ -116,6 +126,10 @@ describe("canonical 28-week official 2027 plan", () => {
       "Mock 6",
       "Mock 7",
     ]);
+    expect(
+      PLAN.filter((week) => /^Mock \d$/.test(week.mockMilestone?.label ?? ""))
+        .map((week) => week.week),
+    ).toEqual([19, 20, 22, 23, 24, 25, 26]);
     expect(
       PLAN.map((week) => week.mockMilestone)
         .filter((milestone) => /^Mock \d$/.test(milestone?.label ?? ""))

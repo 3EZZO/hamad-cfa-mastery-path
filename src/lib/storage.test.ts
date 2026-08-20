@@ -45,7 +45,7 @@ describe("tracker backup invariants", () => {
     const validOverrides = cascadeReschedule(
       {},
       2,
-      "2026-08-24",
+      "2026-08-31",
       "Travel",
       "2026-08-13T00:00:00.000Z",
     ).overrides;
@@ -57,7 +57,7 @@ describe("tracker backup invariants", () => {
       },
       diagnostics: [{
         id: "d1",
-        date: "2026-08-19",
+        date: "2026-08-26",
         status: "final",
         attempted: 30,
         correct: 22,
@@ -207,7 +207,7 @@ describe("tracker backup invariants", () => {
       }],
     });
     expect(normalized.sessionCompletionReviews["w1-session-1"]?.status).toBe("approved");
-    expect(normalized.mockScores[0]?.milestoneWeek).toBe(20);
+    expect(normalized.mockScores[0]?.milestoneWeek).toBe(19);
   });
 
   it("deduplicates repeated record identities before merge code sees them", () => {
