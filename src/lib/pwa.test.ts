@@ -33,13 +33,13 @@ describe("Hamad CFA Mastery PWA helpers", () => {
 
     const result = await registerProject202ServiceWorker(
       { register },
-      "/hamad-cfa-project-202/",
+      "/hamad-cfa-mastery-path/",
     );
 
     expect(result).toBe(registration);
     expect(register).toHaveBeenCalledWith(
-      "/hamad-cfa-project-202/service-worker.js",
-      { scope: "/hamad-cfa-project-202/", updateViaCache: "none" },
+      "/hamad-cfa-mastery-path/service-worker.js",
+      { scope: "/hamad-cfa-mastery-path/", updateViaCache: "none" },
     );
   });
 });

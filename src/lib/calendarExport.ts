@@ -7,7 +7,7 @@ import { effectiveSessionDate, sessionDayLabel } from "./schedule";
 
 export const PROJECT_202_CALENDAR_FILENAME = "hamad-cfa-mastery-calendar.ics";
 export const PROJECT_202_TRACKER_URL =
-  "https://3ezzo.github.io/hamad-cfa-project-202/";
+  "https://3ezzo.github.io/hamad-cfa-mastery-path/";
 export const PROJECT_202_CALENDAR_TIME_ZONE = "Asia/Riyadh";
 export const CALENDAR_PREFERENCES_STORAGE_KEY =
   "project-202-calendar-preferences-v2";

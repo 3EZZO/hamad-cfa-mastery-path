@@ -4,7 +4,7 @@ GitHub Pages is the permanent static host for **Hamad's CFA Level I Mastery Path
 
 This setup uses no server credential in the browser. The Firebase Web App configuration is public by design; access is enforced by Firebase Authentication and `firestore.rules`.
 
-The public name is independent from the infrastructure identifiers. Keep the existing `project-202-tracker` Firebase project ID, `programs/project-202/...` Firestore paths, `hamad-cfa-project-202` repository/Pages path, storage keys, and calendar UIDs unless you are deliberately carrying out a separately planned migration. Retaining them does not display the former brand in the tracker.
+The public name is independent from the infrastructure identifiers. The GitHub repository is `hamad-cfa-mastery-path`, while the existing `project-202-tracker` Firebase project ID, `programs/project-202/...` Firestore paths, package identity, storage keys, and calendar UIDs remain unchanged. Keeping those internal identifiers preserves authentication, synchronized progress, offline preferences, and stable calendar updates without displaying the former brand in the tracker.
 
 ## 1. Create the Firebase Spark project
 
@@ -87,7 +87,7 @@ notepad .env.local
 Then test the repository-path build:
 
 ```powershell
-$env:BASE_PATH = "/hamad-cfa-project-202/"
+$env:BASE_PATH = "/hamad-cfa-mastery-path/"
 npm ci
 npm test
 npm run build:pages
@@ -96,13 +96,13 @@ Remove-Item Env:BASE_PATH
 # Mount the artifact exactly as GitHub Pages will mount it. Vite's preview
 # server does not remount files copied from public/ below the configured base.
 $previewRoot = Join-Path $env:TEMP "project-202-pages-preview"
-$previewApp = Join-Path $previewRoot "hamad-cfa-project-202"
+$previewApp = Join-Path $previewRoot "hamad-cfa-mastery-path"
 New-Item -ItemType Directory -Force -Path $previewApp | Out-Null
 Copy-Item -Path "dist-pages\*" -Destination $previewApp -Recurse -Force
 python -m http.server 4175 --bind 127.0.0.1 --directory $previewRoot
 ```
 
-Open `http://127.0.0.1:4175/hamad-cfa-project-202/`, sign in, and confirm that an unlisted test account receives no Firestore access. Delete or disable the test account afterward.
+Open `http://127.0.0.1:4175/hamad-cfa-mastery-path/`, sign in, and confirm that an unlisted test account receives no Firestore access. Delete or disable the test account afterward.
 
 This repository-path mount also verifies the PWA files. Browser installation
 normally requires HTTPS; GitHub Pages supplies HTTPS automatically. Service
@@ -112,7 +112,7 @@ and **Application > Service workers** for the scoped worker.
 
 ## 6. Configure GitHub and deploy Pages
 
-1. Create an empty GitHub repository, preferably named `hamad-cfa-project-202`.
+1. Create an empty GitHub repository named `hamad-cfa-mastery-path`.
 2. In **Settings > Secrets and variables > Actions > Variables**, create these four repository variables with the Web App values:
 
    - `VITE_FIREBASE_API_KEY`
@@ -125,28 +125,27 @@ and **Application > Service workers** for the scoped worker.
 4. Connect and push the existing branch:
 
    ```powershell
-   git remote add origin https://github.com/YOUR-ACCOUNT/hamad-cfa-project-202.git
+   git remote add origin https://github.com/YOUR-ACCOUNT/hamad-cfa-mastery-path.git
    git push -u origin main
    ```
 
 5. In the **Actions** tab, wait for **Deploy tracker to GitHub Pages** to complete. For the suggested repository name, the URL is:
 
-   `https://YOUR-ACCOUNT.github.io/hamad-cfa-project-202/`
+   `https://YOUR-ACCOUNT.github.io/hamad-cfa-mastery-path/`
 
 Every later push to `main` tests, builds, and redeploys the static tracker. It does not redeploy Firestore rules.
 
 The workflow runs `actions/configure-pages` before the Vite build and uses the base path returned by GitHub Pages. This keeps scripts, styles, the manifest, and the service worker correctly scoped after a later repository rename or when a custom domain changes the site to the domain root.
 
-### Optional later repository/Pages-name change
+### If the repository/Pages name changes again later
 
-Keep the current URL for the present release. When Mohamed deliberately chooses to change the free GitHub Pages path:
-
-1. In the GitHub repository, open **Settings > General > Repository name** and enter the chosen slug, for example `hamad-cfa-mastery`.
+1. In the GitHub repository, open **Settings > General > Repository name** and enter the chosen slug.
 2. Update the local remote URL with `git remote set-url origin https://github.com/3EZZO/NEW-REPOSITORY-NAME.git`. Do not rename the Firebase project or any Firestore document.
-3. Run the **Deploy tracker to GitHub Pages** workflow again, or push the next tested commit to `main`.
-4. In **Settings > Pages**, confirm the new published address. The workflow derives the new repository base path automatically.
-5. Open the new URL, sign in as Mohamed, wait for **Synced**, and verify the same progress. Firebase Authentication needs no change because the hostname remains `3ezzo.github.io`.
-6. Re-share the new URL, update bookmarks, and reinstall the PWA from the new address. Calendar files generated from the new deployment automatically embed its current URL.
+3. Update `PROJECT_202_TRACKER_URL` in `src/lib/calendarExport.ts`, the path-specific PWA test, and the examples in this guide.
+4. Run the **Deploy tracker to GitHub Pages** workflow again, or push the next tested commit to `main`.
+5. In **Settings > Pages**, confirm the new published address. The workflow derives the new repository base path automatically.
+6. Open the new URL, sign in as Mohamed, wait for **Synced**, and verify the same progress. Firebase Authentication needs no change when the hostname remains `3ezzo.github.io`.
+7. Re-share the new URL, update bookmarks, reinstall the PWA from the new address, and import a newly generated calendar so its event links use the new URL.
 
 For a separately purchased custom domain, add it in **Settings > Pages > Custom domain**, create the DNS records GitHub shows, wait for verification, enable **Enforce HTTPS**, and add the exact custom hostname under **Firebase Authentication > Settings > Authorized domains**. No Firebase data-path migration is required.
 
