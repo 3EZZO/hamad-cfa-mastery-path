@@ -2,37 +2,38 @@ import program from "../data/program.json";
 import { getWeekSessions, PLAN } from "../data/plan";
 import { resolveReadingIds } from "../data/readings";
 import type { SessionOverride } from "../types";
-import { addDays, isValidDateOnly, parseDateOnly } from "./dates";
+import { addDays, isValidDateOnly } from "./dates";
 import { effectiveSessionDate, sessionDayLabel } from "./schedule";
 
-export const PROJECT_202_CALENDAR_FILENAME = "project-202-calendar.ics";
+export const PROJECT_202_CALENDAR_FILENAME = "hamad-cfa-mastery-calendar.ics";
 export const PROJECT_202_TRACKER_URL =
   "https://3ezzo.github.io/hamad-cfa-project-202/";
 export const PROJECT_202_CALENDAR_TIME_ZONE = "Asia/Riyadh";
 export const CALENDAR_PREFERENCES_STORAGE_KEY =
-  "project-202-calendar-preferences-v1";
+  "project-202-calendar-preferences-v2";
 
-const DEFAULT_CALENDAR_NAME = "Project 202 - Hamad's CFA Level I Plan";
+const DEFAULT_CALENDAR_NAME = "Hamad's CFA Level I Mastery Path";
 const DEFAULT_PRODUCT_ID =
-  "-//Project 202//Hamad CFA Level I Mastery System//EN";
+  "-//Hamad CFA Mastery//Level I Mastery Path//EN";
+// Keep the legacy UID namespace stable so a branded calendar re-import updates
+// the same events instead of creating a duplicate set on the user's calendar.
 const UID_DOMAIN = "project-202-tracker";
 
-export type SessionDay = "monday" | "wednesday" | "saturday" | "friday";
+function defaultTrackerUrl(): string {
+  if (typeof window === "undefined" || !window.location?.origin) {
+    return PROJECT_202_TRACKER_URL;
+  }
+  return new URL(import.meta.env.BASE_URL, window.location.origin).href;
+}
 
 export interface CalendarExportPreferences {
-  mondayTime: string;
-  wednesdayTime: string;
   saturdayTime: string;
-  fridayTime: string;
   sessionReminderMinutes: number;
   milestoneReminderDays: number;
 }
 
 export const DEFAULT_CALENDAR_EXPORT_PREFERENCES: CalendarExportPreferences = {
-  mondayTime: "",
-  wednesdayTime: "",
-  saturdayTime: "",
-  fridayTime: "",
+  saturdayTime: "09:00",
   sessionReminderMinutes: 60,
   milestoneReminderDays: 7,
 };
@@ -137,12 +138,6 @@ function slug(value: string): string {
     .slice(0, 48);
 }
 
-function isTime(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{2}:\d{2}$/.test(value)) return false;
-  const [hour, minute] = value.split(":").map(Number);
-  return hour! >= 0 && hour! <= 23 && minute! >= 0 && minute! <= 59;
-}
-
 function normalizedInteger(
   value: unknown,
   minimum: number,
@@ -164,14 +159,9 @@ export function normalizeCalendarExportPreferences(
       : {};
   const defaults = DEFAULT_CALENDAR_EXPORT_PREFERENCES;
   return {
-    mondayTime: isTime(raw.mondayTime) ? raw.mondayTime : defaults.mondayTime,
-    wednesdayTime: isTime(raw.wednesdayTime)
-      ? raw.wednesdayTime
-      : defaults.wednesdayTime,
-    saturdayTime: isTime(raw.saturdayTime)
-      ? raw.saturdayTime
-      : defaults.saturdayTime,
-    fridayTime: isTime(raw.fridayTime) ? raw.fridayTime : defaults.fridayTime,
+    // The tutoring agreement fixes every checkpoint, including an approved
+    // same-week Friday exception, at 09:00 Asia/Riyadh.
+    saturdayTime: defaults.saturdayTime,
     sessionReminderMinutes: normalizedInteger(
       raw.sessionReminderMinutes,
       0,
@@ -214,26 +204,10 @@ export function saveCalendarExportPreferences(
   return normalized;
 }
 
-function sessionDay(date: string): SessionDay {
-  const day = parseDateOnly(date).getDay();
-  if (day === 1) return "monday";
-  if (day === 3) return "wednesday";
-  if (day === 5) return "friday";
-  if (day === 6) return "saturday";
-  throw new Error(`Tutor session uses an unsupported calendar day: ${date}`);
-}
-
 function sessionStartTime(
-  date: string,
-  preferences: CalendarExportPreferences,
+  _preferences: CalendarExportPreferences,
 ): string {
-  const time = preferences[`${sessionDay(date)}Time`];
-  if (!isTime(time)) {
-    throw new Error(
-      "Choose a Riyadh start time for every tutor-session weekday before exporting the calendar.",
-    );
-  }
-  return time;
+  return DEFAULT_CALENDAR_EXPORT_PREFERENCES.saturdayTime;
 }
 
 function addMinutesToLocalDateTime(
@@ -319,7 +293,7 @@ function eventLines(
     `URL:${trackerUrl}`,
     "STATUS:CONFIRMED",
     `TRANSP:${event.transparent ? "TRANSPARENT" : "OPAQUE"}`,
-    `X-PROJECT-202-EVENT-TYPE:${event.kind.toUpperCase()}`,
+    `X-HAMAD-CFA-MASTERY-EVENT-TYPE:${event.kind.toUpperCase()}`,
     ...alarmLines(event),
     "END:VEVENT",
   ];
@@ -339,7 +313,7 @@ const RIYADH_TIMEZONE_LINES = [
 ];
 
 export function getProject202CalendarEvents(
-  trackerUrl = PROJECT_202_TRACKER_URL,
+  trackerUrl = defaultTrackerUrl(),
   sessionOverrides: Record<string, SessionOverride> = {},
   preferences: CalendarExportPreferences = DEFAULT_CALENDAR_EXPORT_PREFERENCES,
 ): Project202CalendarEvent[] {
@@ -349,7 +323,7 @@ export function getProject202CalendarEvents(
       const sessionNumber = padSessionNumber(session.number);
       const effectiveDate = effectiveSessionDate(session, sessionOverrides);
       const override = sessionOverrides[String(session.number)];
-      const startTime = sessionStartTime(effectiveDate, safePreferences);
+      const startTime = sessionStartTime(safePreferences);
       const end = addMinutesToLocalDateTime(
         effectiveDate,
         startTime,
@@ -384,10 +358,10 @@ export function getProject202CalendarEvents(
         endTime: end.time,
         timeZone: PROJECT_202_CALENDAR_TIME_ZONE,
         reminderMinutes: safePreferences.sessionReminderMinutes,
-        summary: `Project 202 - Session ${sessionNumber}: ${session.title}`,
+        summary: `Hamad CFA Mastery - Session ${sessionNumber}: ${session.title}`,
         description,
-        alarmDescription: `Project 202 Session ${sessionNumber} starts soon. Open the tracker and prepare the assigned evidence.`,
-        categories: ["Project 202", "CFA Level I", "Tutoring"],
+        alarmDescription: `Hamad CFA Mastery Session ${sessionNumber} starts soon. Open the tracker and prepare the assigned evidence.`,
+        categories: ["Hamad CFA Mastery", "CFA Level I", "Tutoring"],
         transparent: false,
       };
     }),
@@ -402,14 +376,14 @@ export function getProject202CalendarEvents(
       startDate: milestone.date,
       endDate: addDays(milestone.date, 1),
       reminderDays: safePreferences.milestoneReminderDays,
-      summary: `Project 202 - ${milestone.label}`,
+      summary: `Hamad CFA Mastery - ${milestone.label}`,
       description: [
         milestone.action,
         `Administrative milestone for ${program.brand}.`,
         `Tracker: ${trackerUrl}`,
       ].join("\n"),
-      alarmDescription: `Project 202 reminder: ${milestone.label}. ${milestone.action}`,
-      categories: ["Project 202", "CFA Level I", "Administrative milestone"],
+      alarmDescription: `Hamad CFA Mastery reminder: ${milestone.label}. ${milestone.action}`,
+      categories: ["Hamad CFA Mastery", "CFA Level I", "Administrative milestone"],
       transparent: true,
     }),
   );
@@ -430,7 +404,7 @@ export function createProject202Calendar(
   options: Project202CalendarOptions = {},
 ): string {
   const timestamp = formatUtcTimestamp(options.generatedAt ?? new Date());
-  const trackerUrl = options.trackerUrl ?? PROJECT_202_TRACKER_URL;
+  const trackerUrl = options.trackerUrl ?? defaultTrackerUrl();
   const preferences = normalizeCalendarExportPreferences(
     options.preferences ?? DEFAULT_CALENDAR_EXPORT_PREFERENCES,
   );
@@ -441,7 +415,7 @@ export function createProject202Calendar(
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escapeText(options.calendarName ?? DEFAULT_CALENDAR_NAME)}`,
-    `X-WR-CALDESC:${escapeText("Timed Project 202 tutoring sessions and all-day administrative milestones for calendar import.")}`,
+    `X-WR-CALDESC:${escapeText("Timed Hamad CFA Mastery tutoring checkpoints and all-day administrative milestones for calendar import.")}`,
     ...RIYADH_TIMEZONE_LINES,
     ...getProject202CalendarEvents(
       trackerUrl,

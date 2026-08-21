@@ -123,9 +123,9 @@ const FRIENDLY_ERROR_MESSAGES: Record<CloudErrorCode, string> = {
   "browser-required": "Cloud sync is available only in the browser.",
   "authentication-required": "Sign in before using cloud sync.",
   "invalid-cloud-data":
-    "The saved cloud record is not a valid Project 202 tracker.",
+    "The saved cloud record is not a valid Hamad CFA Mastery tracker.",
   "invalid-membership":
-    "This account's Project 202 membership record is invalid. Ask the tutor to check Firebase.",
+    "This account's Hamad CFA Mastery membership record is invalid. Ask the tutor to check Firebase.",
   "conflict-base-missing":
     "The cloud tracker changed before this device finished loading it. Refresh and try again.",
   "permission-denied":

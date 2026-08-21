@@ -27,7 +27,7 @@ describe("official 2027 curriculum map", () => {
     expect(CANONICAL_READING_COUNT).toBe(102);
     expect(RAW_ASSIGNMENT_COUNT).toBe(102);
     expect(CANONICAL_ASSIGNMENT_COUNT).toBe(102);
-    expect(ASSIGNED_SESSION_COUNT).toBe(44);
+    expect(ASSIGNED_SESSION_COUNT).toBe(17);
   });
 
   it("preserves the official module counts across all ten topics", () => {
@@ -80,7 +80,7 @@ describe("official 2027 curriculum map", () => {
     }
   });
 
-  it("maps every module bidirectionally to Sessions 01-44", () => {
+  it("maps every module bidirectionally to Checkpoints 01-17", () => {
     const catalogPairs = new Set(
       READING_CATALOG.readings.flatMap((reading) =>
         reading.sessionNumbers.map(
@@ -96,8 +96,8 @@ describe("official 2027 curriculum map", () => {
     expect(planPairs).toEqual(catalogPairs);
     expect(
       [...new Set(READING_CATALOG.readings.flatMap((reading) => reading.sessionNumbers))],
-    ).toEqual(Array.from({ length: 44 }, (_, index) => index + 1));
-    expect(sessions.slice(44).every((session) => session.readings.length === 0)).toBe(
+    ).toEqual(Array.from({ length: 17 }, (_, index) => index + 1));
+    expect(sessions.slice(17).every((session) => session.readings.length === 0)).toBe(
       true,
     );
   });

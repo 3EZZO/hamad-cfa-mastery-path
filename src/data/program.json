@@ -1,14 +1,15 @@
 {
-  "brand": "PROJECT 202 | Hamad's CFA Level I Mastery System",
+  "brand": "Hamad's CFA Level I Mastery Path",
   "programStart": "2026-08-23",
-  "firstTutorSession": "2026-08-26",
+  "firstTutorSession": "2026-08-29",
   "examAppointment": "2027-02-27",
   "tutoringRhythm": {
-    "standard": ["Wednesday midweek", "Saturday weekend"],
-    "intensive": "Monday intensive",
-    "standardWeeks": 13,
-    "intensiveWeeks": 14,
-    "totalSessions": 68
+    "standard": ["Saturday 09:00 checkpoint"],
+    "time": "09:00",
+    "timeZone": "Asia/Riyadh",
+    "checkpointWeeks": 26,
+    "independentExamWeek": 1,
+    "totalSessions": 26
   },
   "examWindow": {
     "startDate": "2027-02-22",
@@ -27,7 +28,7 @@
     },
     {
       "date": "2027-01-16",
-      "label": "Project 202 PSM deadline",
+      "label": "CFA Level I Mastery Path PSM deadline",
       "action": "If not already complete from a prior attempt, finish the selected Practical Skills Module."
     },
     {

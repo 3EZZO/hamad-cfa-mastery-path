@@ -82,7 +82,7 @@ import {
   cascadeReschedule,
   effectiveSessionDate,
   getEffectiveSessions,
-  restoreCanonicalScheduleFrom,
+  restoreCanonicalSession,
   sessionDayLabel,
 } from "./lib/schedule";
 import {
@@ -255,6 +255,7 @@ const PLANNED_SESSIONS = PLAN.flatMap((week) =>
     session,
   })),
 );
+const CHECKPOINT_TIME = program.tutoringRhythm.time;
 
 function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
@@ -503,7 +504,7 @@ function CloudLoadingScreen() {
     <main className="access-shell">
       <section className="access-card access-card-loading" aria-live="polite">
         <span className="access-mark"><Cloud size={28} /></span>
-        <p className="eyebrow">Project 202 secure workspace</p>
+        <p className="eyebrow">Hamad CFA Mastery</p>
         <h1>Loading the latest progress</h1>
         <p>Connecting this device to Hamad's shared tracker...</p>
         <span className="access-loader" aria-hidden="true" />
@@ -518,7 +519,7 @@ function CloudConfigurationScreen({ missingKeys }: { missingKeys: string[] }) {
       <section className="access-card">
         <span className="access-mark"><Cloud size={28} /></span>
         <p className="eyebrow">One-time cloud setup</p>
-        <h1>Connect Project 202 to Firebase</h1>
+        <h1>Connect the mastery tracker to Firebase</h1>
         <p>
           Live sync is built into this tracker. Add the Firebase web configuration
           before deploying so progress can load securely on every device.
@@ -549,7 +550,7 @@ function CloudAccessDeniedScreen({
     <main className="access-shell">
       <section className="access-card">
         <span className="access-mark access-mark-warning"><ShieldCheck size={28} /></span>
-        <p className="eyebrow">Private Project 202 workspace</p>
+        <p className="eyebrow">Private mastery workspace</p>
         <h1>This account has not been approved</h1>
         <p>{error ?? "Only Hamad and Mohamed can open this shared tracker."}</p>
         {email && <div className="access-notice"><strong>Signed in as</strong><span>{email}</span></div>}
@@ -586,8 +587,8 @@ function SignInScreen({
         <div className="access-brand">
           <span className="access-mark"><Target size={27} /></span>
           <div>
-            <strong>PROJECT 202</strong>
-            <span>Hamad's CFA Level I Mastery System</span>
+            <strong>HAMAD CFA MASTERY</strong>
+            <span>Level I Mastery Path</span>
           </div>
         </div>
         <p className="eyebrow">Private shared tracker</p>
@@ -916,7 +917,7 @@ function App() {
             canImport={capabilities.canImportData}
             syncStatus={syncStatus}
             syncError={syncError}
-            userEmail={user.email ?? "Approved Project 202 account"}
+            userEmail={user.email ?? "Approved mastery-path account"}
             onRetrySync={retrySync}
             role={role!}
             privateTutorNotes={privateTutorNotes}
@@ -950,8 +951,8 @@ function App() {
         <div className="brand-lockup">
           <span className="brand-mark"><Target size={24} /></span>
           <div>
-            <strong>PROJECT 202</strong>
-            <span>Hamad's Mastery System</span>
+            <strong>HAMAD CFA MASTERY</strong>
+            <span>Level I Mastery Path</span>
             <small className="creator-credit">Created by Mohamed Ali, CFA</small>
           </div>
         </div>
@@ -1004,13 +1005,13 @@ function App() {
           <div className="mobile-brand">
             <span className="brand-mark"><Target size={20} /></span>
             <div>
-              <strong>PROJECT 202</strong>
-              <span>Hamad's CFA Level I Mastery System</span>
+              <strong>HAMAD CFA MASTERY</strong>
+              <span>Level I Mastery Path</span>
               <small className="creator-credit">Created by Mohamed Ali, CFA</small>
             </div>
           </div>
           <div className="topbar-title">
-            <span>PROJECT 202 · {TAB_COPY[activeTab].eyebrow}</span>
+            <span>HAMAD CFA MASTERY · {TAB_COPY[activeTab].eyebrow}</span>
             <strong>{TAB_COPY[activeTab].title}</strong>
           </div>
           <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
@@ -1103,7 +1104,7 @@ function App() {
             onClick={(event) => event.stopPropagation()}
           >
             <header>
-              <div><span>PROJECT 202</span><strong>More tools</strong></div>
+              <div><span>HAMAD CFA MASTERY</span><strong>More tools</strong></div>
               <button className="icon-button" type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close menu"><X size={19} /></button>
             </header>
             <div className="mobile-more-grid">
@@ -1439,7 +1440,7 @@ function RoadmapView({
         <BookOpenCheck size={18} />
         <p>
           <strong>Built around the official 2027 CFA Level I curriculum.</strong>{" "}
-          Open a week to see its assigned modules, tutor sessions, independent work, practice target, and evidence gate.
+          Open a week to see its assigned modules, independent work, Saturday checkpoint, practice target, and evidence gate.
         </p>
       </div>
 
@@ -1487,7 +1488,7 @@ function RoadmapView({
                 <div className="session-plan-grid">
                   {getWeekSessions(week).map((session) => (
                     <article key={session.number} className="session-plan-card">
-                      <div><span>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}</span><strong>{formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} · {session.durationMinutes} min</strong></div>
+                      <div><span>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}</span><strong>{formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} · {CHECKPOINT_TIME} · {session.durationMinutes} min</strong></div>
                       <h4>{session.title}</h4>
                       <p>{session.objective}</p>
                       {tracker.sessionOverrides[String(session.number)] && (
@@ -1496,6 +1497,13 @@ function RoadmapView({
                       <ReadingCoverage week={week} session={session} />
                     </article>
                   ))}
+                  {!getWeekSessions(week).length && (
+                    <article className="session-plan-card">
+                      <div><span>Independent exam week</span><strong>No tutor session on exam day</strong></div>
+                      <h4>Protect the taper and execute</h4>
+                      <p>Use the frozen review list, confirm logistics, and follow the rehearsed exam-day routine.</p>
+                    </article>
+                  )}
                 </div>
                 <button className="button button-secondary" type="button" onClick={() => onNavigate("weekly", week.week)}>
                   Open Week {week.week} checklist <ChevronRight size={16} />
@@ -1574,7 +1582,7 @@ function WeeklyView({
           <div className="topic-pills">{week.topics.map((topic) => <span key={topic}>{topic}</span>)}</div>
           <div className="session-date-pills">
             {getWeekSessions(week).map((session) => (
-              <span key={session.number}><strong>S{String(session.number).padStart(2, "0")}</strong>{sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))} · {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })}</span>
+              <span key={session.number}><strong>S{String(session.number).padStart(2, "0")}</strong>{sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))} · {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} · {CHECKPOINT_TIME}</span>
             ))}
           </div>
         </div>
@@ -1611,13 +1619,16 @@ function WeeklyView({
             <p className="eyebrow">Official 2027 modules</p>
             {getWeekSessions(week).map((session) => (
               <div key={session.number}>
-                <strong>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}, {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })}</strong>
+                <strong>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}, {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} at {CHECKPOINT_TIME}</strong>
                 {tracker.sessionOverrides[String(session.number)] && (
                   <small className="reschedule-note">Rescheduled from {sessionDayLabel(session.date)}, {formatDate(session.date)}: {tracker.sessionOverrides[String(session.number)]!.reason}</small>
                 )}
                 <ReadingCoverage week={week} session={session} />
               </div>
             ))}
+            {!getWeekSessions(week).length && (
+              <p className="fine-print">All 102 modules were assigned before exam week. This week contains independent taper and exam-execution tasks only.</p>
+            )}
           </article>
         </div>
       </section>
@@ -1638,7 +1649,9 @@ function SessionLogView({
   notify: Notify;
   canManage: boolean;
 }) {
-  const initialPlannedSession = PLAN[currentWeek - 1]!.session1;
+  const initialPlannedSession =
+    getWeekSessions(PLAN[currentWeek - 1]!)[0] ??
+    PLANNED_SESSIONS.at(-1)!.session;
   const [form, setForm] = useState({
     date: effectiveSessionDate(initialPlannedSession, tracker.sessionOverrides),
     sessionNumber: initialPlannedSession.number,
@@ -1694,7 +1707,7 @@ function SessionLogView({
               type: "Tutor session",
               durationMinutes: selected.session.durationMinutes,
             });
-          }}>{PLANNED_SESSIONS.map(({ week, session }) => <option key={session.number} value={session.number}>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))} {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} · W{week.week} · {session.title}</option>)}</select></label>
+          }}>{PLANNED_SESSIONS.map(({ week, session }) => <option key={session.number} value={session.number}>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))} {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} at {CHECKPOINT_TIME} · W{week.week} · {session.title}</option>)}</select></label>
           <ReadingCoverage week={plannedSelection.week} session={plannedSelection.session} />
           <label><span>Focus</span><input required maxLength={120} placeholder="What did this session attack?" value={form.focus} onChange={(event) => setForm({ ...form, focus: event.target.value })} /></label>
           <label><span>What changed?</span><textarea required rows={3} maxLength={600} placeholder="The observable breakthrough, decision, or remaining gap." value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} /></label>
@@ -2093,7 +2106,8 @@ function TutorConsoleView({
   });
   const hasProgress = !isStateMeaningfullyEmpty(tracker);
   const scheduleIntact =
-    effectiveSessions[0]?.effectiveDate === program.firstTutorSession &&
+    (effectiveSessions[0]?.effectiveDate ?? program.examAppointment) >=
+      program.programStart &&
     (effectiveSessions.at(-1)?.effectiveDate ?? program.examAppointment) <
       program.examAppointment;
   const launchChecks = [
@@ -2110,7 +2124,9 @@ function TutorConsoleView({
     {
       label: "Schedule safety",
       detail: `${effectiveSessions.length} sessions; first ${effectiveSessions[0]?.effectiveDate}; final ${effectiveSessions.at(-1)?.effectiveDate}; exam ${program.examAppointment}.`,
-      complete: effectiveSessions.length === 68 && scheduleIntact,
+      complete:
+        effectiveSessions.length === program.tutoringRhythm.totalSessions &&
+        scheduleIntact,
     },
     {
       label: "Shared progress state",
@@ -2169,9 +2185,7 @@ function TutorConsoleView({
         newDate,
         rescheduleReason,
       );
-      const summary = result.changedSessionNumbers.length > 1
-        ? `This change will reflow ${result.changedSessionNumbers.length} sessions and keep Session 68 on ${result.finalSessionDate}. Continue?`
-        : `Move Session ${String(selectedSession).padStart(2, "0")} to ${newDate}?`;
+      const summary = `Move Session ${String(selectedSession).padStart(2, "0")} to ${newDate} at ${CHECKPOINT_TIME}?`;
       if (!window.confirm(summary)) return;
       updateTracker((current) => ({
         ...current,
@@ -2179,9 +2193,9 @@ function TutorConsoleView({
       }));
       setRescheduleReason("");
       notify(
-        result.changedSessionNumbers.length > 1
-          ? `${result.changedSessionNumbers.length} sessions safely reflowed.`
-          : `Session ${String(selectedSession).padStart(2, "0")} rescheduled.`,
+        result.changedSessionNumbers.length
+          ? `Session ${String(selectedSession).padStart(2, "0")} rescheduled.`
+          : "The selected checkpoint already uses that date.",
       );
     } catch (error) {
       notify(error instanceof Error ? error.message : "Unable to reschedule.", "warning");
@@ -2189,10 +2203,10 @@ function TutorConsoleView({
   };
 
   const restoreSchedule = () => {
-    if (!window.confirm(`Restore the canonical dates from Session ${String(selectedSession).padStart(2, "0")} onward?`)) return;
+    if (!window.confirm(`Restore Session ${String(selectedSession).padStart(2, "0")} to its canonical Saturday?`)) return;
     updateTracker((current) => ({
       ...current,
-      sessionOverrides: restoreCanonicalScheduleFrom(
+      sessionOverrides: restoreCanonicalSession(
         current.sessionOverrides,
         selectedSession,
       ),
@@ -2236,9 +2250,9 @@ function TutorConsoleView({
 
   const resetSharedProgress = async () => {
     const confirmation = window.prompt(
-      "A JSON backup will download first. To erase all shared progress on every device, type RESET PROJECT 202",
+      "A JSON backup will download first. To erase all shared progress on every device, type RESET HAMAD MASTERY",
     );
-    if (confirmation !== "RESET PROJECT 202") {
+    if (confirmation !== "RESET HAMAD MASTERY") {
       notify("Reset cancelled. The confirmation text did not match.", "warning");
       return;
     }
@@ -2278,18 +2292,18 @@ function TutorConsoleView({
 
       <section className="form-and-list tutor-tool-grid">
         <form className="panel entry-form" onSubmit={submitReschedule}>
-          <div className="panel-heading"><div><p className="eyebrow">Safe rescheduling</p><h3>Move a session and reflow collisions</h3></div><CalendarClock size={21} /></div>
+          <div className="panel-heading"><div><p className="eyebrow">Safe rescheduling</p><h3>Use a same-week Friday exception</h3></div><CalendarClock size={21} /></div>
           <label><span>Session</span><select value={selectedSession} onChange={(event) => chooseSession(Number(event.target.value))}>{effectiveSessions.map((entry) => <option value={entry.session.number} key={entry.session.number}>S{String(entry.session.number).padStart(2, "0")} · {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })} · {entry.session.title}</option>)}</select></label>
           <div className="form-grid form-grid-2">
-            <label><span>New date</span><input type="date" min={program.programStart} max="2027-02-26" required value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
+            <label><span>New date</span><input type="date" min={program.programStart} max={PLANNED_SESSIONS.at(-1)!.session.date} required value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
             <label><span>Current date</span><input type="text" readOnly value={formatDate(selected.effectiveDate)} /></label>
           </div>
           <label><span>Reason</span><textarea required rows={3} maxLength={300} placeholder="Short tutor-approved reason for the schedule record." value={rescheduleReason} onChange={(event) => setRescheduleReason(event.target.value)} /></label>
           <div className="inline-actions">
             <button className="button button-primary" type="submit"><CalendarClock size={16} /> Preview and apply</button>
-            <button className="button button-secondary" type="button" onClick={restoreSchedule}><RotateCcw size={16} /> Restore from S{String(selectedSession).padStart(2, "0")}</button>
+            <button className="button button-secondary" type="button" onClick={restoreSchedule}><RotateCcw size={16} /> Restore S{String(selectedSession).padStart(2, "0")}</button>
           </div>
-          <p className="fine-print">The tool preserves sequence, limits weeks to three sessions, retains later dates whenever possible, and refuses a plan that reaches exam day.</p>
+          <p className="fine-print">Each checkpoint stays on its planned Saturday unless Mohamed approves the immediately preceding Friday. The 09:00 Riyadh time, weekly sequence, and exam buffer remain fixed.</p>
         </form>
 
         <article className="panel override-panel">
@@ -2302,7 +2316,7 @@ function TutorConsoleView({
 
       <section className="panel diagnostic-panel">
         <div className="panel-heading"><div><p className="eyebrow">Session 01 · first 25 minutes</p><h3>Prior-attempt diagnostic and repair baseline</h3></div><Target size={21} /></div>
-        <p className="panel-intro">Capture what happened across the two prior attempts, then continue Session 01 with official 2027 Quant Module 1.</p>
+        <p className="panel-intro">Capture what happened across the two prior attempts, then test and repair official 2027 Quant Modules M001-M004.</p>
         <div className="form-grid form-grid-4">
           <label><span>Date</span><input type="date" value={diagnostic.date} onChange={(event) => setDiagnostic({ ...diagnostic, date: event.target.value })} /></label>
           <label><span>Questions attempted</span><input type="number" min="0" max="500" value={diagnostic.attempted} onChange={(event) => setDiagnostic({ ...diagnostic, attempted: Number(event.target.value) })} /></label>

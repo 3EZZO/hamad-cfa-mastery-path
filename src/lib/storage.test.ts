@@ -28,6 +28,7 @@ describe("tracker backup invariants", () => {
   it("upgrades older version 1 backups with new safe defaults", () => {
     const legacy = createDefaultState();
     const {
+      scheduleVersion: _scheduleVersion,
       sessionOverrides: _overrides,
       diagnostics: _diagnostics,
       sessionCompletionRequests: _requests,
@@ -41,11 +42,45 @@ describe("tracker backup invariants", () => {
     expect(normalized.sessionCompletionReviews).toEqual({});
   });
 
+  it("clears stale schedule-linked progress when migrating to weekly Saturdays", () => {
+    const legacy = {
+      ...createDefaultState(),
+      scheduleVersion: undefined,
+      taskCompletions: { "w1-session-1": true, "w1-independent-1": true },
+      sessionLogs: [{
+        id: "legacy-session",
+        date: "2026-08-26",
+        sessionNumber: 1,
+        week: 1,
+        type: "Tutor session",
+        durationMinutes: 90,
+        focus: "Old plan",
+        outcome: "Test data",
+        nextAction: "None",
+      }],
+      practiceLogs: [{
+        id: "independent-evidence",
+        date: "2026-08-20",
+        topic: "Quantitative Methods",
+        attempted: 20,
+        correct: 14,
+        source: "LES",
+        note: "Preserve independent evidence",
+        confidence: 3,
+      }],
+    };
+    const normalized = normalizeState(legacy);
+    expect(normalized.scheduleVersion).toBe("weekly-saturday-v1");
+    expect(normalized.taskCompletions).toEqual({});
+    expect(normalized.sessionLogs).toEqual([]);
+    expect(normalized.practiceLogs).toHaveLength(1);
+  });
+
   it("normalizes tutor-controlled schedule and diagnostic records", () => {
     const validOverrides = cascadeReschedule(
       {},
       2,
-      "2026-08-31",
+      "2026-09-04",
       "Travel",
       "2026-08-13T00:00:00.000Z",
     ).overrides;
@@ -57,7 +92,7 @@ describe("tracker backup invariants", () => {
       },
       diagnostics: [{
         id: "d1",
-        date: "2026-08-26",
+        date: "2026-08-29",
         status: "final",
         attempted: 30,
         correct: 22,
@@ -88,7 +123,7 @@ describe("tracker backup invariants", () => {
       sessionLogs: [
         {
           id: "session-1",
-          date: "2026-08-19",
+          date: "2026-08-29",
           sessionNumber: 1,
           week: 999,
           type: 42,
@@ -186,15 +221,15 @@ describe("tracker backup invariants", () => {
       sessionCompletionRequests: {
         "w1-session-1": {
           taskId: "w1-session-1",
-          requestedAt: "2026-08-19T10:00:00.000Z",
+          requestedAt: "2026-08-29T10:00:00.000Z",
         },
       },
       sessionCompletionReviews: {
         "w1-session-1": {
           taskId: "w1-session-1",
-          requestedAt: "2026-08-19T10:00:00.000Z",
+          requestedAt: "2026-08-29T10:00:00.000Z",
           status: "approved",
-          reviewedAt: "2026-08-19T11:00:00.000Z",
+          reviewedAt: "2026-08-29T11:00:00.000Z",
           note: "Ready",
         },
       },
@@ -239,27 +274,27 @@ describe("tracker backup invariants", () => {
     expect(normalized.practiceLogs[0]?.source).toBe("First");
   });
 
-  it("rejects override maps whose effective 68-session schedule is unsafe", () => {
+  it("rejects override maps outside the 26-checkpoint Friday/Saturday policy", () => {
     const invalidSchedules = [
       {
         "2": {
           sessionNumber: 2,
-          date: "2026-08-19",
-          reason: "Collision",
+          date: "2026-09-03",
+          reason: "Wrong weekday",
           updatedAt: "2026-08-13T00:00:00.000Z",
         },
       },
       {
         "2": {
           sessionNumber: 2,
-          date: "2026-08-23",
-          reason: "Wrong cadence",
+          date: "2026-09-12",
+          reason: "Wrong week",
           updatedAt: "2026-08-13T00:00:00.000Z",
         },
       },
       {
-        "68": {
-          sessionNumber: 68,
+        "26": {
+          sessionNumber: 26,
           date: "2027-02-27",
           reason: "Exam collision",
           updatedAt: "2026-08-13T00:00:00.000Z",
@@ -268,7 +303,7 @@ describe("tracker backup invariants", () => {
       {
         "2": {
           sessionNumber: 3,
-          date: "2026-08-24",
+          date: "2026-09-04",
           reason: "Mismatched identity",
           updatedAt: "2026-08-13T00:00:00.000Z",
         },

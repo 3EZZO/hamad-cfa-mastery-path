@@ -31,15 +31,11 @@ service cloud.firestore {
           !request.resource.data.state.keys().hasAny(['sessionOverrides'])
           || (
             request.resource.data.state.sessionOverrides is map
-            && request.resource.data.state.sessionOverrides.size() <= 68
+            && request.resource.data.state.sessionOverrides.size() <= 26
             && request.resource.data.state.sessionOverrides.keys().hasOnly([
               '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
               '11', '12', '13', '14', '15', '16', '17', '18', '19', '20',
-              '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
-              '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
-              '41', '42', '43', '44', '45', '46', '47', '48', '49', '50',
-              '51', '52', '53', '54', '55', '56', '57', '58', '59', '60',
-              '61', '62', '63', '64', '65', '66', '67', '68'
+              '21', '22', '23', '24', '25', '26'
             ])
           )
         )
@@ -109,6 +105,18 @@ service cloud.firestore {
         );
     }
 
+    function studentPreservesScheduleVersion() {
+      return (
+          !resource.data.state.keys().hasAny(['scheduleVersion'])
+          && request.resource.data.state.scheduleVersion == 'weekly-saturday-v1'
+        )
+        || (
+          resource.data.state.keys().hasAny(['scheduleVersion'])
+          && request.resource.data.state.scheduleVersion
+            == resource.data.state.scheduleVersion
+        );
+    }
+
     function validTrackerEnvelope() {
       return request.resource.data.keys().hasOnly([
           'state',
@@ -124,6 +132,7 @@ service cloud.firestore {
         && request.resource.data.state is map
         && request.resource.data.state.keys().hasOnly([
           'version',
+          'scheduleVersion',
           'updatedAt',
           'taskCompletions',
           'sessionCompletionRequests',
@@ -139,6 +148,7 @@ service cloud.firestore {
         ])
         && request.resource.data.state.keys().hasAll([
           'version',
+          'scheduleVersion',
           'updatedAt',
           'taskCompletions',
           'topicMastery',
@@ -149,6 +159,7 @@ service cloud.firestore {
           'notes'
         ])
         && request.resource.data.state.version == 1
+        && request.resource.data.state.scheduleVersion == 'weekly-saturday-v1'
         && request.resource.data.state.updatedAt is string
         && request.resource.data.state.updatedAt.size() <= 40
         && request.resource.data.state.updatedAt
@@ -159,14 +170,14 @@ service cloud.firestore {
           !request.resource.data.state.keys().hasAny(['sessionCompletionRequests'])
           || (
             request.resource.data.state.sessionCompletionRequests is map
-            && request.resource.data.state.sessionCompletionRequests.size() <= 68
+            && request.resource.data.state.sessionCompletionRequests.size() <= 26
           )
         )
         && (
           !request.resource.data.state.keys().hasAny(['sessionCompletionReviews'])
           || (
             request.resource.data.state.sessionCompletionReviews is map
-            && request.resource.data.state.sessionCompletionReviews.size() <= 68
+            && request.resource.data.state.sessionCompletionReviews.size() <= 26
           )
         )
         && request.resource.data.state.topicMastery is map
@@ -193,7 +204,7 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
-    // Project 202 intentionally uses one synchronized tracker document. Both
+    // Hamad CFA Mastery intentionally uses one synchronized tracker document. Both
     // active roles may read it. The tutor administers the complete state;
     // students may update only their study evidence fields.
     match /programs/project-202/tracker/current {
@@ -211,6 +222,7 @@ service cloud.firestore {
             && request.resource.data.state.diff(resource.data.state)
               .affectedKeys().hasOnly([
                 'updatedAt',
+                'scheduleVersion',
                 'taskCompletions',
                 'sessionCompletionRequests',
                 'practiceLogs',
@@ -220,6 +232,7 @@ service cloud.firestore {
                 'diagnostics'
               ])
             && studentPreservesTutorControlledState()
+            && studentPreservesScheduleVersion()
           )
         );
       allow list, delete: if false;

@@ -1,8 +1,9 @@
 import "../src/styles.css";
 
 export const metadata = {
-  title: "PROJECT 202 | Hamad's CFA Level I Mastery System",
-  description: "Project 202 — Hamad's CFA Level I Mastery System",
+  title: "Hamad's CFA Level I Mastery Path",
+  description:
+    "Hamad's private CFA Level I study, evidence, and tutoring workspace",
   authors: [{ name: "Mohamed Ali, CFA" }],
   creator: "Mohamed Ali, CFA",
   manifest: "/manifest.webmanifest",
@@ -19,10 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#10272b" />
-        <meta name="application-name" content="Project 202" />
+        <meta name="application-name" content="Hamad CFA Mastery" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Project 202" />
+        <meta name="apple-mobile-web-app-title" content="Hamad Mastery" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"

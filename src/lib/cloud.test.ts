@@ -11,6 +11,7 @@ import {
 function state(): TrackerState {
   return {
     version: 1,
+    scheduleVersion: "weekly-saturday-v1",
     updatedAt: "2026-08-03T00:00:00.000Z",
   taskCompletions: {},
   sessionCompletionRequests: {},
@@ -74,7 +75,7 @@ describe("cloud envelope validation", () => {
         updatedBy: "member-uid",
         updatedAtClient: "2026-08-03T01:00:00.000Z",
       }),
-    ).toThrow(/valid Project 202 tracker/i);
+    ).toThrow(/valid Hamad CFA Mastery tracker/i);
   });
 });
 
@@ -97,7 +98,7 @@ describe("private tutor note envelope validation", () => {
   });
 });
 
-describe("Project 202 member validation", () => {
+describe("Hamad CFA Mastery member validation", () => {
   it("accepts active tutor and student membership records", () => {
     expect(
       parseProjectMember("tutor-uid", { active: true, role: "tutor" }),

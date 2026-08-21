@@ -3316,7 +3316,7 @@ body {
   font-size: 0.65rem;
 }
 
-/* Project 202 coaching controls and reporting */
+/* Hamad CFA Mastery coaching controls and reporting */
 .role-chip {
   display: inline-flex;
   min-height: 38px;
@@ -3707,6 +3707,10 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 11px;
+}
+
+.calendar-time-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .calendar-dialog-form label {

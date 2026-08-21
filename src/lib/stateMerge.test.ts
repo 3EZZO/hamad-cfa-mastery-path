@@ -14,6 +14,7 @@ import {
 function makeState(overrides: Partial<TrackerState> = {}): TrackerState {
   return {
     version: 1,
+    scheduleVersion: "weekly-saturday-v1",
     updatedAt: "2026-08-01T00:00:00.000Z",
     taskCompletions: {},
     sessionCompletionRequests: {},

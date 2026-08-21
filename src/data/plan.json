@@ -13,9 +13,12 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 001: Returns of Financial Assets and Instruments in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 002: Types of Financial Returns in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 003: Benchmarking Returns in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 004: The Time Value of Money in Finance in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 120-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 120,
     "masteryGate": "Explain each return type, benchmark choice, and time-value step, then clear 75% on a fresh foundation set.",
@@ -25,29 +28,17 @@
       "instruction": "Explain each return type, benchmark choice, and time-value step, then clear 75% on a fresh foundation set."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "2027 Quant Module 1: returns and return types",
-      "objective": "Begin directly with the first official 2027 module and build a clean return vocabulary and calculation process.",
-      "durationMinutes": 90,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Prior-attempt diagnostic + Quant M001-M004 checkpoint",
+      "objective": "Establish the baseline from both prior attempts, test Quant Modules M001-M004, reteach the highest-value gaps, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
       "number": 1,
-      "requirement": "required",
-      "date": "2026-08-26",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m001",
-        "cfa-2027-outline-m002"
-      ]
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Benchmarking returns and time value of money",
-      "objective": "Connect benchmark construction, money-weighted and time-weighted returns, and present-value logic.",
-      "durationMinutes": 90,
-      "number": 2,
       "requirement": "required",
       "date": "2026-08-29",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m001",
+        "cfa-2027-outline-m002",
         "cfa-2027-outline-m003",
         "cfa-2027-outline-m004"
       ]
@@ -67,9 +58,13 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 005: Statistical Characteristics of Asset Returns in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 006: Statistical Distributions for Financial Asset Prices and Returns in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 007: Estimation and Hypothesis Testing in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 008: The Return and Risk of a Financial Portfolio in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 009: Simulation of Financial Asset Prices and Returns in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 190-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 190,
     "masteryGate": "Complete two separated Quant sets at 75% or better with calculator steps and error causes fully reproducible.",
@@ -79,42 +74,18 @@
       "instruction": "Complete two separated Quant sets at 75% or better with calculator steps and error causes fully reproducible."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Return statistics and distributions",
-      "objective": "Interpret central tendency, dispersion, shape, and distributions before applying them under time pressure.",
-      "durationMinutes": 90,
-      "number": 3,
-      "requirement": "required",
-      "date": "2026-08-31",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m005",
-        "cfa-2027-outline-m006"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Estimation and hypothesis testing",
-      "objective": "Choose the correct estimator or test, state hypotheses correctly, and interpret statistical evidence.",
-      "durationMinutes": 90,
-      "number": 4,
-      "requirement": "required",
-      "date": "2026-09-02",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m007"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Portfolio return, risk, and simulation",
-      "objective": "Calculate portfolio risk and understand historical simulation, bootstrapping, and Monte Carlo logic.",
-      "durationMinutes": 90,
-      "number": 5,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Quantitative Methods II: distributions, inference, portfolio risk, and simulation",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 2,
       "requirement": "required",
       "date": "2026-09-05",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m005",
+        "cfa-2027-outline-m006",
+        "cfa-2027-outline-m007",
         "cfa-2027-outline-m008",
         "cfa-2027-outline-m009"
       ]
@@ -135,9 +106,15 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 010: Applications of Simple Linear Regression in Finance in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 011: Introduction to Financial Data Science in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 012: The Firm and Market Structures in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 013: Understanding Business Cycles in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 014: Fiscal Policy in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 015: Monetary Policy in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 016: Introduction to Geopolitics in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 190-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 190,
     "masteryGate": "Interpret the regression and data-science vocabulary, explain the policy-to-market chain, and clear 72% on fresh mixed questions.",
@@ -147,43 +124,19 @@
       "instruction": "Interpret the regression and data-science vocabulary, explain the policy-to-market chain, and clear 72% on fresh mixed questions."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Regression and financial data science",
-      "objective": "Interpret simple regression and build the 2027 vocabulary for data, machine learning, AI, and large language models.",
-      "durationMinutes": 90,
-      "number": 6,
-      "requirement": "required",
-      "date": "2026-09-07",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m010",
-        "cfa-2027-outline-m011"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Market structures and business cycles",
-      "objective": "Link firm behavior, market structure, cycle phases, and indicator interpretation.",
-      "durationMinutes": 90,
-      "number": 7,
-      "requirement": "required",
-      "date": "2026-09-09",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m012",
-        "cfa-2027-outline-m013"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Fiscal policy, monetary policy, and geopolitics",
-      "objective": "Separate policy tools and transmission channels while integrating geopolitical risk.",
-      "durationMinutes": 90,
-      "number": 8,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Quantitative Methods III and Economics I: data science, firms, cycles, policy, and geopolitics",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 3,
       "requirement": "required",
       "date": "2026-09-12",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m010",
+        "cfa-2027-outline-m011",
+        "cfa-2027-outline-m012",
+        "cfa-2027-outline-m013",
         "cfa-2027-outline-m014",
         "cfa-2027-outline-m015",
         "cfa-2027-outline-m016"
@@ -205,9 +158,18 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 017: International Trade in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 018: Capital Flows and the FX Market in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 019: Exchange Rate Calculations in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 020: Organizational Forms, Corporate Issuer Features, and Ownership in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 021: Investors and Other Stakeholders in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 022: Corporate Governance: Conflicts, Mechanisms, Risks, and Benefits in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 023: Working Capital and Liquidity in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 024: Capital Investments and Capital Allocation in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 025: Capital Structure in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 026: Business Models in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 220-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 220,
     "masteryGate": "Complete the exchange-rate process, produce a one-page corporate decision map, and clear 72% on fresh questions.",
@@ -217,45 +179,21 @@
       "instruction": "Complete the exchange-rate process, produce a one-page corporate decision map, and clear 72% on fresh questions."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Trade, capital flows, and exchange rates",
-      "objective": "Work from international trade through FX markets to cross-rate and forward-rate calculations.",
-      "durationMinutes": 90,
-      "number": 9,
-      "requirement": "required",
-      "date": "2026-09-14",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m017",
-        "cfa-2027-outline-m018",
-        "cfa-2027-outline-m019"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Issuer forms, stakeholders, and governance",
-      "objective": "Map ownership structures, stakeholder claims, conflicts, controls, and governance outcomes.",
-      "durationMinutes": 90,
-      "number": 10,
-      "requirement": "required",
-      "date": "2026-09-16",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m020",
-        "cfa-2027-outline-m021",
-        "cfa-2027-outline-m022"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Liquidity, capital allocation, structure, and business models",
-      "objective": "Connect operating liquidity, investment decisions, financing choices, and value creation.",
-      "durationMinutes": 90,
-      "number": 11,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Economics II and Corporate Issuers: trade, currencies, governance, liquidity, and capital allocation",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 4,
       "requirement": "required",
       "date": "2026-09-19",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m017",
+        "cfa-2027-outline-m018",
+        "cfa-2027-outline-m019",
+        "cfa-2027-outline-m020",
+        "cfa-2027-outline-m021",
+        "cfa-2027-outline-m022",
         "cfa-2027-outline-m023",
         "cfa-2027-outline-m024",
         "cfa-2027-outline-m025",
@@ -277,9 +215,13 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 027: Introduction to Financial Statement Analysis in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 028: Analyzing Income Statements in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 029: Analyzing Balance Sheets in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 030: Analyzing Statements of Cash Flows I in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 031: Analyzing Statements of Cash Flows II in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 200-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 200,
     "masteryGate": "Reconstruct statement links without notes and score 75% on a fresh FSA set.",
@@ -289,29 +231,17 @@
       "instruction": "Reconstruct statement links without notes and score 75% on a fresh FSA set."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "FSA framework and income statements",
-      "objective": "Apply the analysis framework and trace recognition choices through earnings quality.",
-      "durationMinutes": 90,
-      "number": 12,
-      "requirement": "required",
-      "date": "2026-09-23",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m027",
-        "cfa-2027-outline-m028"
-      ]
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Balance sheets and cash-flow statements",
-      "objective": "Reconcile the three statements and classify cash flows consistently.",
-      "durationMinutes": 90,
-      "number": 13,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Financial Statement Analysis I: statements and cash-flow linkage",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 5,
       "requirement": "required",
       "date": "2026-09-26",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m027",
+        "cfa-2027-outline-m028",
         "cfa-2027-outline-m029",
         "cfa-2027-outline-m030",
         "cfa-2027-outline-m031"
@@ -332,9 +262,13 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 032: Analysis of Inventories in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 033: Analysis of Long-Term Assets in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 034: Topics in Long-Term Liabilities and Equity in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 035: Analysis of Income Taxes in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 036: Financial Reporting Quality in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 220-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 220,
     "masteryGate": "No repeated classification error across inventory, assets, liabilities, tax, or reporting quality.",
@@ -344,43 +278,19 @@
       "instruction": "No repeated classification error across inventory, assets, liabilities, tax, or reporting quality."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Inventories and long-term assets",
-      "objective": "Normalize accounting choices and explain their ratio and cash-flow effects.",
-      "durationMinutes": 90,
-      "number": 14,
-      "requirement": "required",
-      "date": "2026-09-28",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m032",
-        "cfa-2027-outline-m033"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Long-term obligations, equity, and income taxes",
-      "objective": "Analyze financing obligations, equity effects, and deferred-tax relationships.",
-      "durationMinutes": 90,
-      "number": 15,
-      "requirement": "required",
-      "date": "2026-09-30",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m034",
-        "cfa-2027-outline-m035"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Financial reporting quality",
-      "objective": "Distinguish reporting quality, earnings quality, bias, warning signs, and corrective adjustments.",
-      "durationMinutes": 90,
-      "number": 16,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Financial Statement Analysis II: assets, liabilities, tax, and reporting quality",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 6,
       "requirement": "required",
       "date": "2026-10-03",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m032",
+        "cfa-2027-outline-m033",
+        "cfa-2027-outline-m034",
+        "cfa-2027-outline-m035",
         "cfa-2027-outline-m036"
       ]
     }
@@ -399,9 +309,10 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 037: Financial Analysis Techniques in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 038: Introduction to Financial Statement Modeling in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 200-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 200,
     "masteryGate": "Complete the cumulative FSA assessment at 75% or better and repair every material miss.",
@@ -411,28 +322,16 @@
       "instruction": "Complete the cumulative FSA assessment at 75% or better and repair every material miss."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Financial analysis techniques",
-      "objective": "Select, calculate, interpret, and connect activity, liquidity, solvency, and profitability measures.",
-      "durationMinutes": 90,
-      "number": 17,
-      "requirement": "required",
-      "date": "2026-10-07",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m037"
-      ]
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Financial statement modeling and FSA integration",
-      "objective": "Build a sales-based pro forma model and integrate forecasting judgments with the full FSA framework.",
-      "durationMinutes": 90,
-      "number": 18,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Financial Statement Analysis III: techniques and modeling",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 7,
       "requirement": "required",
       "date": "2026-10-10",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m037",
         "cfa-2027-outline-m038"
       ]
     }
@@ -451,9 +350,12 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 039: Equity Instrument Features in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 040: Equity Jurisdictions, Classes, and the Voting Process in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 041: Equity Issuance and Trading in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 042: Sources of Equity Returns in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 180-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 180,
     "masteryGate": "Explain the path from issuance to investor return and clear 72% on fresh questions.",
@@ -463,29 +365,17 @@
       "instruction": "Explain the path from issuance to investor return and clear 72% on fresh questions."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Equity instruments, jurisdictions, classes, and voting",
-      "objective": "Differentiate economic and voting rights across public, private, jurisdictional, and class structures.",
-      "durationMinutes": 90,
-      "number": 19,
-      "requirement": "required",
-      "date": "2026-10-14",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m039",
-        "cfa-2027-outline-m040"
-      ]
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Equity issuance, trading, indexes, and return sources",
-      "objective": "Connect primary and secondary markets, liquidity, index structure, and drivers of equity return.",
-      "durationMinutes": 90,
-      "number": 20,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Equity Investments I: instruments, rights, trading, and return sources",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 8,
       "requirement": "required",
       "date": "2026-10-17",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m039",
+        "cfa-2027-outline-m040",
         "cfa-2027-outline-m041",
         "cfa-2027-outline-m042"
       ]
@@ -505,9 +395,13 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 043: Introduction to Equity Valuation in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 044: Discounted Cash Flow (DCF) and Growth Models in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 045: Relative Value Equity Valuation Approaches in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 046: Financial Statement Forecasting in Equity Valuation in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 047: Industry and Competitive Analysis in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 220-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 220,
     "masteryGate": "Build and defend one concise valuation bridge, then score 75% on a fresh Equity set.",
@@ -517,43 +411,19 @@
       "instruction": "Build and defend one concise valuation bridge, then score 75% on a fresh Equity set."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Equity valuation and DCF growth models",
-      "objective": "Anchor valuation in cash flows, growth, required return, and explicit model assumptions.",
-      "durationMinutes": 90,
-      "number": 21,
-      "requirement": "required",
-      "date": "2026-10-19",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m043",
-        "cfa-2027-outline-m044"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Relative valuation and financial statement forecasting",
-      "objective": "Choose comparables and connect disaggregated forecasts to valuation outputs and scenarios.",
-      "durationMinutes": 90,
-      "number": 22,
-      "requirement": "required",
-      "date": "2026-10-21",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m045",
-        "cfa-2027-outline-m046"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Industry and competitive analysis",
-      "objective": "Use industry structure, Porter analysis, and PESTLE evidence to support a valuation narrative.",
-      "durationMinutes": 90,
-      "number": 23,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Equity Investments II: valuation and forecasting",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 9,
       "requirement": "required",
       "date": "2026-10-24",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m043",
+        "cfa-2027-outline-m044",
+        "cfa-2027-outline-m045",
+        "cfa-2027-outline-m046",
         "cfa-2027-outline-m047"
       ]
     }
@@ -572,9 +442,11 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 048: Company Analysis: Past, Present, and Future in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 049: Equity Analyst Research Reports in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 050: The Capital Asset Pricing Model, Market Model, and Other Factor-Based Equity Models in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 220-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 220,
     "masteryGate": "Complete the cumulative Equity assessment at 75% or better with a written repair plan.",
@@ -584,29 +456,17 @@
       "instruction": "Complete the cumulative Equity assessment at 75% or better with a written repair plan."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Company analysis and equity research reports",
-      "objective": "Turn historical evidence and forecasts into an investment thesis and structured research report.",
-      "durationMinutes": 90,
-      "number": 24,
-      "requirement": "required",
-      "date": "2026-10-28",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m048",
-        "cfa-2027-outline-m049"
-      ]
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "CAPM, market model, factor models, and Equity integration",
-      "objective": "Estimate cost of equity, interpret factor exposures, and connect the result to valuation.",
-      "durationMinutes": 90,
-      "number": 25,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Equity Investments III: company analysis, research reports, and factor models",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 10,
       "requirement": "required",
       "date": "2026-10-31",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m048",
+        "cfa-2027-outline-m049",
         "cfa-2027-outline-m050"
       ]
     }
@@ -625,9 +485,15 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 051: Fixed-Income Instrument Features in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 052: Fixed-Income Cash Flows and Types in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 053: Fixed-Income Issuance and Trading in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 054: Fixed-Income Markets for Corporate Issuers in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 055: Fixed-Income Markets for Government Issuers in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 056: Fixed-Income Bond Valuation: Prices and Yields in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 057: Yield and Yield Spread Measures for Fixed-Rate Bonds in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 220-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 220,
     "masteryGate": "Price and interpret a bond cleanly from a timeline and clear 75% on fresh questions.",
@@ -637,44 +503,20 @@
       "instruction": "Price and interpret a bond cleanly from a timeline and clear 75% on fresh questions."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Fixed-income features and cash flows",
-      "objective": "Read indentures, classify structures, and model promised and contingent cash flows.",
-      "durationMinutes": 90,
-      "number": 26,
-      "requirement": "required",
-      "date": "2026-11-02",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m051",
-        "cfa-2027-outline-m052"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Issuance and corporate and government markets",
-      "objective": "Compare issuance, trading, funding, and market structures across issuer types.",
-      "durationMinutes": 90,
-      "number": 27,
-      "requirement": "required",
-      "date": "2026-11-04",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m053",
-        "cfa-2027-outline-m054",
-        "cfa-2027-outline-m055"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Bond valuation and fixed-rate yield spreads",
-      "objective": "Calculate prices, yields, and spreads and explain their economic meaning.",
-      "durationMinutes": 90,
-      "number": 28,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Fixed Income I: instruments, markets, valuation, and yields",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 11,
       "requirement": "required",
       "date": "2026-11-07",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m051",
+        "cfa-2027-outline-m052",
+        "cfa-2027-outline-m053",
+        "cfa-2027-outline-m054",
+        "cfa-2027-outline-m055",
         "cfa-2027-outline-m056",
         "cfa-2027-outline-m057"
       ]
@@ -694,9 +536,13 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 058: Yield and Yield Spread Measures for Floating-Rate Instruments in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 059: The Term Structure of Interest Rates: Spot, Par, and Forward Curves in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 060: Interest Rate Risk and Return in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 061: Yield-Based Bond Duration Measures and Properties in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 062: Yield-Based Bond Convexity and Portfolio Properties in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 220-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 220,
     "masteryGate": "Explain curve and sensitivity effects before calculating them, with 75% fresh-set accuracy.",
@@ -706,29 +552,17 @@
       "instruction": "Explain curve and sensitivity effects before calculating them, with 75% fresh-set accuracy."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Floating-rate yields and the term structure",
-      "objective": "Interpret floating-rate margins and construct spot, par, and forward relationships.",
-      "durationMinutes": 90,
-      "number": 29,
-      "requirement": "required",
-      "date": "2026-11-11",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m058",
-        "cfa-2027-outline-m059"
-      ]
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Interest-rate risk, duration, and convexity",
-      "objective": "Translate yield changes into price risk using duration and convexity at instrument and portfolio level.",
-      "durationMinutes": 90,
-      "number": 30,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Fixed Income II: curves, floating-rate instruments, duration, and convexity",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 12,
       "requirement": "required",
       "date": "2026-11-14",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m058",
+        "cfa-2027-outline-m059",
         "cfa-2027-outline-m060",
         "cfa-2027-outline-m061",
         "cfa-2027-outline-m062"
@@ -749,9 +583,15 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 063: Curve-Based and Empirical Fixed-Income Risk Measures in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 064: Credit Risk in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 065: Credit Analysis for Government Issuers in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 066: Credit Analysis for Corporate Issuers in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 067: Fixed-Income Securitization in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 068: Asset-Backed Security (ABS) Instrument and Market Features in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 069: Mortgage-Backed Security (MBS) Instrument and Market Features in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 240-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 240,
     "masteryGate": "Complete the cumulative Fixed Income assessment at 75% or better and verify every repair.",
@@ -761,44 +601,20 @@
       "instruction": "Complete the cumulative Fixed Income assessment at 75% or better and verify every repair."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Curve-based risk and credit risk",
-      "objective": "Compare empirical and analytical rate-risk measures and identify sources of credit loss.",
-      "durationMinutes": 90,
-      "number": 31,
-      "requirement": "required",
-      "date": "2026-11-16",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m063",
-        "cfa-2027-outline-m064"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Credit analysis and securitization",
-      "objective": "Apply sovereign and corporate credit frameworks and trace assets through a securitization structure.",
-      "durationMinutes": 90,
-      "number": 32,
-      "requirement": "required",
-      "date": "2026-11-18",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m065",
-        "cfa-2027-outline-m066",
-        "cfa-2027-outline-m067"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "ABS and MBS instruments",
-      "objective": "Map collateral, tranching, prepayment, extension, contraction, and cash-flow risk.",
-      "durationMinutes": 90,
-      "number": 33,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Fixed Income III: empirical risk, credit, securitization, ABS, and MBS",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 13,
       "requirement": "required",
       "date": "2026-11-21",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m063",
+        "cfa-2027-outline-m064",
+        "cfa-2027-outline-m065",
+        "cfa-2027-outline-m066",
+        "cfa-2027-outline-m067",
         "cfa-2027-outline-m068",
         "cfa-2027-outline-m069"
       ]
@@ -818,9 +634,18 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 070: Derivative Instrument and Derivative Market Features in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 071: Forward Commitment and Contingent Claim Features and Instruments in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 072: Derivative Benefits, Risks, and Issuer and Investor Uses in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 073: Arbitrage, Replication, and the Cost of Carry in Pricing Derivatives in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 074: Pricing and Valuation of Forward Contracts and for an Underlying with Varying Maturities in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 075: Pricing and Valuation of Futures Contracts in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 076: Pricing and Valuation of Interest Rate and Other Swaps in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 077: Pricing and Valuation of Options in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 078: Option Replication Using Put-Call Parity in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 079: Valuing a Derivative Using a One-Period Binomial Model in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 190-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 190,
     "masteryGate": "Draw the payoff or cash-flow logic before calculation and clear 72% on fresh Derivatives questions.",
@@ -830,45 +655,21 @@
       "instruction": "Draw the payoff or cash-flow logic before calculation and clear 72% on fresh Derivatives questions."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Derivative markets, instruments, benefits, and risks",
-      "objective": "Classify derivatives, compare market structures, and identify issuer and investor uses.",
-      "durationMinutes": 90,
-      "number": 34,
-      "requirement": "required",
-      "date": "2026-11-23",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m070",
-        "cfa-2027-outline-m071",
-        "cfa-2027-outline-m072"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Arbitrage, carry, forwards, and futures",
-      "objective": "Use replication and cost-of-carry logic to price and value forward commitments.",
-      "durationMinutes": 90,
-      "number": 35,
-      "requirement": "required",
-      "date": "2026-11-25",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m073",
-        "cfa-2027-outline-m074",
-        "cfa-2027-outline-m075"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Swaps, options, put-call parity, and binomial valuation",
-      "objective": "Price and value swaps and options, apply parity, and solve a one-period binomial tree.",
-      "durationMinutes": 90,
-      "number": 36,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Derivatives: instruments, pricing, valuation, parity, and binomial logic",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 14,
       "requirement": "required",
       "date": "2026-11-28",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m070",
+        "cfa-2027-outline-m071",
+        "cfa-2027-outline-m072",
+        "cfa-2027-outline-m073",
+        "cfa-2027-outline-m074",
+        "cfa-2027-outline-m075",
         "cfa-2027-outline-m076",
         "cfa-2027-outline-m077",
         "cfa-2027-outline-m078",
@@ -891,9 +692,17 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 080: Alternative Investment Features, Methods, and Structures in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 081: Alternative Investment Performance and Returns in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 082: Investments in Private Capital: Equity and Debt in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 083: Real Estate and Infrastructure in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 084: Natural Resources in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 085: Hedge Funds in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 086: Introduction to Digital Assets in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 087: Portfolio Risk and Return: Part I in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 088: Portfolio Risk and Return: Part II in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 250-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 250,
     "masteryGate": "Clear fresh Alternative Investments and portfolio-risk sets, with every diversification and risk calculation explained from first principles.",
@@ -903,46 +712,22 @@
       "instruction": "Clear fresh Alternative Investments and portfolio-risk sets, with every diversification and risk calculation explained from first principles."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Alternative structures, performance, and private capital",
-      "objective": "Compare ownership and fee structures, calculate returns, and distinguish private equity and debt.",
-      "durationMinutes": 90,
-      "number": 37,
-      "requirement": "required",
-      "date": "2026-11-30",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m080",
-        "cfa-2027-outline-m081",
-        "cfa-2027-outline-m082"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Real assets, hedge funds, and digital assets",
-      "objective": "Compare the return, risk, liquidity, diversification, and vehicle features of alternative categories.",
-      "durationMinutes": 90,
-      "number": 38,
-      "requirement": "required",
-      "date": "2026-12-02",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m083",
-        "cfa-2027-outline-m084",
-        "cfa-2027-outline-m085",
-        "cfa-2027-outline-m086"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Portfolio risk and return I and II",
-      "objective": "Build portfolios from covariance through the efficient frontier, CAL, CML, beta, and CAPM.",
-      "durationMinutes": 90,
-      "number": 39,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Alternative Investments and Portfolio Management I: structures, returns, diversifiers, and portfolio risk",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 15,
       "requirement": "required",
       "date": "2026-12-05",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m080",
+        "cfa-2027-outline-m081",
+        "cfa-2027-outline-m082",
+        "cfa-2027-outline-m083",
+        "cfa-2027-outline-m084",
+        "cfa-2027-outline-m085",
+        "cfa-2027-outline-m086",
         "cfa-2027-outline-m087",
         "cfa-2027-outline-m088"
       ]
@@ -963,9 +748,16 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 089: Portfolio Management: An Overview in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 090: Basics of Portfolio Planning and Construction in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 091: The Behavioral Biases of Individuals in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 092: Introduction to Risk Management in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 093: Ethics and Trust in the Investment Profession in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 094: Code of Ethics and Standards of Professional Conduct in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 095: Guidance for Standard I: Professionalism in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 096: Guidance for Standard II: Integrity of Capital Markets in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 270-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 270,
     "masteryGate": "Complete the portfolio decision map and apply the controlling ethical duty before selecting an answer on fresh cases.",
@@ -975,45 +767,21 @@
       "instruction": "Complete the portfolio decision map and apply the controlling ethical duty before selecting an answer on fresh cases."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Portfolio process, planning, behavioral biases, and risk management",
-      "objective": "Connect investor objectives and constraints to construction, behavioral risk, and governance.",
-      "durationMinutes": 90,
-      "number": 40,
-      "requirement": "required",
-      "date": "2026-12-07",
-      "day": "Monday",
-      "readings": [
-        "cfa-2027-outline-m089",
-        "cfa-2027-outline-m090",
-        "cfa-2027-outline-m091",
-        "cfa-2027-outline-m092"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Ethics, trust, and the Code and Standards",
-      "objective": "Use a fact-duty-action framework and master the structure of the Code and Standards.",
-      "durationMinutes": 90,
-      "number": 41,
-      "requirement": "required",
-      "date": "2026-12-09",
-      "day": "Wednesday",
-      "readings": [
-        "cfa-2027-outline-m093",
-        "cfa-2027-outline-m094"
-      ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Standards I and II",
-      "objective": "Apply the updated 2027 guidance for Professionalism and Integrity of Capital Markets.",
-      "durationMinutes": 90,
-      "number": 42,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Portfolio Management II and Ethics I: construction, behavior, trust, professionalism, and market integrity",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 16,
       "requirement": "required",
       "date": "2026-12-12",
       "day": "Saturday",
       "readings": [
+        "cfa-2027-outline-m089",
+        "cfa-2027-outline-m090",
+        "cfa-2027-outline-m091",
+        "cfa-2027-outline-m092",
+        "cfa-2027-outline-m093",
+        "cfa-2027-outline-m094",
         "cfa-2027-outline-m095",
         "cfa-2027-outline-m096"
       ]
@@ -1034,9 +802,14 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Study official 2027 Module 097: Guidance for Standard III: Duties to Clients in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 098: Guidance for Standard IV: Duties to Employers in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 099: Guidance for Standard V: Investment Analysis, Recommendations, and Actions in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 100: Guidance for Standard VI: Conflicts of Interest in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 101: Guidance for Standard VII: Responsibilities as a CFA Institute Member or CFA Candidate in the Learning Ecosystem, then write a concise recall note.",
+      "Study official 2027 Module 102: Application of the Code and Standards: Level I in the Learning Ecosystem, then write a concise recall note.",
+      "Complete the week's 440-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 440,
     "masteryGate": "Clear the cumulative Ethics gate, explain every corrected answer, and complete the first integrated decision maps without adding new gaps.",
@@ -1046,45 +819,22 @@
       "instruction": "Clear the cumulative Ethics gate, explain every corrected answer, and complete the first integrated decision maps without adding new gaps."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Standards III, IV, and V",
-      "objective": "Apply duties to clients and employers and the requirements for investment analysis and communication.",
-      "durationMinutes": 90,
-      "number": 43,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Ethics II and integration I: duties, conflicts, candidate responsibilities, application, and decision maps",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 17,
       "requirement": "required",
-      "date": "2026-12-14",
-      "day": "Monday",
+      "date": "2026-12-19",
+      "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m097",
         "cfa-2027-outline-m098",
-        "cfa-2027-outline-m099"
-      ]
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Standards VI and VII and Level I application",
-      "objective": "Resolve conflicts, member and candidate responsibilities, and integrated cases using the updated guidance.",
-      "durationMinutes": 90,
-      "number": 44,
-      "requirement": "required",
-      "date": "2026-12-16",
-      "day": "Wednesday",
-      "readings": [
+        "cfa-2027-outline-m099",
         "cfa-2027-outline-m100",
         "cfa-2027-outline-m101",
         "cfa-2027-outline-m102"
       ]
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Integrated decision maps",
-      "objective": "Connect Quant, FSA, Equity, Fixed Income, Portfolio, and Ethics into reusable decision processes.",
-      "durationMinutes": 90,
-      "number": 45,
-      "requirement": "required",
-      "date": "2026-12-19",
-      "day": "Saturday",
-      "readings": []
     }
   },
   {
@@ -1101,9 +851,9 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete the assigned timed mixed assessment or repair set before Saturday's checkpoint.",
+      "Complete the week's 440-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 440,
     "masteryGate": "Verify all 102 official modules, clear the mixed switching set, and convert every remaining weakness into a narrow active-repair item before Mock 1.",
@@ -1113,33 +863,11 @@
       "instruction": "Verify all 102 official modules, clear the mixed switching set, and convert every remaining weakness into a narrow active-repair item before Mock 1."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Ninety-question switching debrief",
-      "objective": "Review timing, confidence, and topic-switching evidence from a timed mixed assessment.",
-      "durationMinutes": 90,
-      "number": 46,
-      "requirement": "required",
-      "date": "2026-12-21",
-      "day": "Monday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "102-module coverage audit",
-      "objective": "Verify that every official 2027 module has learning, practice, review, and recall evidence.",
-      "durationMinutes": 90,
-      "number": 47,
-      "requirement": "required",
-      "date": "2026-12-23",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Coverage gate and repair release",
-      "objective": "Test the three weakest clusters and approve the mock campaign only after evidence closes the gaps.",
-      "durationMinutes": 90,
-      "number": 48,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Full-curriculum switching, 102-module audit, and coverage gate",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 18,
       "requirement": "required",
       "date": "2026-12-26",
       "day": "Saturday",
@@ -1160,34 +888,24 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
+      "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
+      "Complete the week's 300-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 300,
     "masteryGate": "Mock 1 is fully debriefed; every material miss has a cause, correction rule, and retest date.",
     "mockMilestone": {
       "label": "Mock 1",
       "targetScore": 60,
-      "instruction": "Complete the full mock independently under two-session exam conditions."
+      "instruction": "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Mock 1 preparation and execution brief",
-      "objective": "Lock conditions, pacing, skip-return rules, confidence capture, and the independent mock appointment.",
-      "durationMinutes": 75,
-      "number": 49,
-      "requirement": "required",
-      "date": "2026-12-30",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Mock 1 forensic debrief",
-      "objective": "Reconstruct decisions, classify lost points, and prescribe the highest-value repairs.",
-      "durationMinutes": 105,
-      "number": 50,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Mock 1 checkpoint and forensic repair",
+      "objective": "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment.",
+      "durationMinutes": 120,
+      "number": 19,
       "requirement": "required",
       "date": "2027-01-02",
       "day": "Saturday",
@@ -1208,34 +926,24 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
+      "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
+      "Complete the week's 300-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 300,
     "masteryGate": "No unexamined repeated error; recurring clusters move into the deep-repair week.",
     "mockMilestone": {
       "label": "Mock 2",
       "targetScore": 63,
-      "instruction": "Complete the full mock independently under two-session exam conditions."
+      "instruction": "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Mock 2 preparation and execution brief",
-      "objective": "Run the corrected pacing and decision rules under independent exam conditions.",
-      "durationMinutes": 75,
-      "number": 51,
-      "requirement": "required",
-      "date": "2027-01-06",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Mock 2 forensic debrief",
-      "objective": "Measure recurrence, timing, confidence calibration, and transfer from Mock 1 repairs.",
-      "durationMinutes": 105,
-      "number": 52,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Mock 2 checkpoint and forensic repair",
+      "objective": "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment.",
+      "durationMinutes": 120,
+      "number": 20,
       "requirement": "required",
       "date": "2027-01-09",
       "day": "Saturday",
@@ -1256,9 +964,9 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete the assigned timed mixed assessment or repair set before Saturday's checkpoint.",
+      "Complete the week's 240-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 240,
     "masteryGate": "The top recurring clusters pass delayed retests and no topic floor is below 65%.",
@@ -1268,22 +976,11 @@
       "instruction": "The top recurring clusters pass delayed retests and no topic floor is below 65%."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Two-mock pattern synthesis",
-      "objective": "Rank recurring errors by frequency, value, confidence, and repairability.",
-      "durationMinutes": 90,
-      "number": 53,
-      "requirement": "required",
-      "date": "2027-01-13",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Deep repair and transfer verification",
-      "objective": "Re-teach the highest-value clusters and verify transfer on fresh mixed questions.",
-      "durationMinutes": 105,
-      "number": 54,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Weekly checkpoint: Deep repair: convert Mock 1 and 2 evidence into a stronger floor",
+      "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
+      "durationMinutes": 120,
+      "number": 21,
       "requirement": "required",
       "date": "2027-01-16",
       "day": "Saturday",
@@ -1304,34 +1001,24 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
+      "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
+      "Complete the week's 300-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 300,
     "masteryGate": "Overall evidence and topic floors improve without a new repeated-error cluster.",
     "mockMilestone": {
       "label": "Mock 3",
       "targetScore": 65,
-      "instruction": "Complete the full mock independently under two-session exam conditions."
+      "instruction": "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Mock 3 preparation and execution brief",
-      "objective": "Protect routine and test whether the rebuilt topic floor survives time pressure.",
-      "durationMinutes": 75,
-      "number": 55,
-      "requirement": "required",
-      "date": "2027-01-20",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Mock 3 forensic debrief",
-      "objective": "Separate knowledge, process, timing, and confidence losses and assign focused repairs.",
-      "durationMinutes": 105,
-      "number": 56,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Mock 3 checkpoint and forensic repair",
+      "objective": "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment.",
+      "durationMinutes": 120,
+      "number": 22,
       "requirement": "required",
       "date": "2027-01-23",
       "day": "Saturday",
@@ -1352,34 +1039,24 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
+      "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
+      "Complete the week's 300-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 300,
     "masteryGate": "Pacing is stable and the result is supported by explainable, repeatable decisions.",
     "mockMilestone": {
       "label": "Mock 4",
       "targetScore": 67,
-      "instruction": "Complete the full mock independently under two-session exam conditions."
+      "instruction": "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Mock 4 preparation and execution brief",
-      "objective": "Use the settled two-session exam routine with strict pacing and break discipline.",
-      "durationMinutes": 75,
-      "number": 57,
-      "requirement": "required",
-      "date": "2027-01-27",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Mock 4 forensic debrief",
-      "objective": "Audit time allocation, changed answers, low-confidence wins, and avoidable losses.",
-      "durationMinutes": 105,
-      "number": 58,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Mock 4 checkpoint and forensic repair",
+      "objective": "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment.",
+      "durationMinutes": 120,
+      "number": 23,
       "requirement": "required",
       "date": "2027-01-30",
       "day": "Saturday",
@@ -1400,34 +1077,24 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
+      "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
+      "Complete the week's 300-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 300,
     "masteryGate": "Readiness is supported across overall score, topic floors, timing, and confidence calibration.",
     "mockMilestone": {
       "label": "Mock 5",
       "targetScore": 69,
-      "instruction": "Complete the full mock independently under two-session exam conditions."
+      "instruction": "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint."
     },
     "session1": {
-      "label": "Wednesday midweek",
-      "title": "Mock 5 preparation and execution brief",
-      "objective": "Simulate the appointment routine, nutrition, break, and second-session reset.",
-      "durationMinutes": 75,
-      "number": 59,
-      "requirement": "required",
-      "date": "2027-02-03",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Saturday weekend",
-      "title": "Mock 5 forensic debrief",
-      "objective": "Test the stability of high-weight topics and close the smallest set of decisive gaps.",
-      "durationMinutes": 105,
-      "number": 60,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Mock 5 checkpoint and forensic repair",
+      "objective": "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment.",
+      "durationMinutes": 120,
+      "number": 24,
       "requirement": "required",
       "date": "2027-02-06",
       "day": "Saturday",
@@ -1448,45 +1115,24 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
+      "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
+      "Complete the week's 300-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 300,
     "masteryGate": "Two recent mocks show a stable readiness range and no critical topic floor remains hidden.",
     "mockMilestone": {
       "label": "Mock 6",
       "targetScore": 70,
-      "instruction": "Complete the full mock independently under two-session exam conditions."
+      "instruction": "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Mock 6 launch and final-condition checklist",
-      "objective": "Confirm exact conditions and select the few behaviors that must remain automatic.",
-      "durationMinutes": 75,
-      "number": 61,
-      "requirement": "required",
-      "date": "2027-02-08",
-      "day": "Monday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Mock 6 forensic debrief",
-      "objective": "Compare the result with the prior three mocks and isolate only evidence-backed repairs.",
-      "durationMinutes": 105,
-      "number": 62,
-      "requirement": "required",
-      "date": "2027-02-10",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Mock 6 repair verification",
-      "objective": "Retest decisive weaknesses and freeze any topic that has earned release.",
-      "durationMinutes": 75,
-      "number": 63,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Mock 6 checkpoint and forensic repair",
+      "objective": "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment.",
+      "durationMinutes": 120,
+      "number": 25,
       "requirement": "required",
       "date": "2027-02-13",
       "day": "Saturday",
@@ -1507,45 +1153,24 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
+      "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
+      "Complete the week's 300-question target and log each reviewed block in the tracker.",
+      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
     "questionTarget": 300,
     "masteryGate": "The final evidence supports taper; unresolved items are narrow, explicit, and low-risk.",
     "mockMilestone": {
       "label": "Mock 7",
       "targetScore": 72,
-      "instruction": "Complete the full mock independently under two-session exam conditions."
+      "instruction": "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint."
     },
     "session1": {
-      "label": "Monday intensive",
-      "title": "Mock 7 launch and calm-execution brief",
-      "objective": "Run the final full rehearsal without introducing a new strategy.",
-      "durationMinutes": 75,
-      "number": 64,
-      "requirement": "required",
-      "date": "2027-02-15",
-      "day": "Monday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Wednesday midweek",
-      "title": "Mock 7 forensic debrief",
-      "objective": "Extract only high-value lessons and reject low-value panic repairs.",
-      "durationMinutes": 105,
-      "number": 65,
-      "requirement": "required",
-      "date": "2027-02-17",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session3": {
-      "label": "Saturday weekend",
-      "title": "Final containment and taper handoff",
-      "objective": "Freeze the plan, define the light-review list, and protect confidence, sleep, and logistics.",
-      "durationMinutes": 75,
-      "number": 66,
+      "label": "Saturday 09:00 checkpoint",
+      "title": "Mock 7 checkpoint and forensic repair",
+      "objective": "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment.",
+      "durationMinutes": 120,
+      "number": 26,
       "requirement": "required",
       "date": "2027-02-20",
       "day": "Saturday",
@@ -1567,38 +1192,16 @@
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
-      "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-      "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-      "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor."
+      "Complete only light retrieval from the frozen review list; do not reopen the curriculum.",
+      "Confirm identification, calculator, route, arrival time, food, sleep, and break logistics.",
+      "Execute the rehearsed exam-day routine on Saturday 27 February 2027."
     ],
     "questionTarget": 60,
     "masteryGate": "Stop heavy work, preserve sleep, and arrive with the rehearsed plan intact.",
     "mockMilestone": {
-      "label": "Weekly evidence gate",
+      "label": "Exam execution gate",
       "targetScore": null,
       "instruction": "Stop heavy work, preserve sleep, and arrive with the rehearsed plan intact."
-    },
-    "session1": {
-      "label": "Wednesday midweek",
-      "title": "Confidence review and final decision rules",
-      "objective": "Use light retrieval to confirm high-value rules without reopening the curriculum.",
-      "durationMinutes": 60,
-      "number": 67,
-      "requirement": "required",
-      "date": "2027-02-24",
-      "day": "Wednesday",
-      "readings": []
-    },
-    "session2": {
-      "label": "Friday pre-exam",
-      "title": "Pre-exam logistics and calm-execution check",
-      "objective": "Confirm documents, travel, sleep, food, break plan, and the first-minute routine for exam day.",
-      "durationMinutes": 45,
-      "number": 68,
-      "requirement": "required",
-      "date": "2027-02-26",
-      "day": "Friday",
-      "readings": []
     }
   }
 ]

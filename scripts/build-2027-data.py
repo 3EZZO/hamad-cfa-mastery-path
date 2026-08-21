@@ -684,12 +684,12 @@ WEEKS: list[dict] = [
 
 
 def scheduled_weeks() -> list[dict]:
-    """Reflow the curriculum sequence into the revised 27-week window.
+    """Reflow the topical blueprint into the fixed 27-week program window.
 
-    The 26 August launch removes one further calendar week but not any
-    tutoring session or official module. Sessions remain in their original
-    order. The additional compression is placed in the coverage-to-integration
-    bridge so the seven-mock campaign and final taper retain their dates.
+    All official modules remain in published order as independent study. The
+    first 26 weeks each end with one Saturday checkpoint; Week 27 is a
+    session-free taper and exam-execution week. The seven-mock campaign and
+    final taper retain their intended dates.
     """
 
     opening = [
@@ -809,7 +809,6 @@ def build() -> tuple[list[dict], dict]:
     session_number = 0
     first_week_start = date(2026, 8, 23)
     record_by_id = {record["id"]: record for record in module_records}
-    three_session_weeks: list[int] = []
     mock_targets = {1: 60, 2: 63, 3: 65, 4: 67, 5: 69, 6: 70, 7: 72}
 
     blueprints = scheduled_weeks()
@@ -819,14 +818,47 @@ def build() -> tuple[list[dict], dict]:
     for week_number, blueprint in enumerate(blueprints, start=1):
         week_start = first_week_start + timedelta(days=(week_number - 1) * 7)
         week_end = week_start + timedelta(days=6)
-        sessions_blueprint = blueprint["sessions"]
-        if len(sessions_blueprint) == 3:
-            day_specs = [(1, "Monday intensive"), (3, "Wednesday midweek"), (6, "Saturday weekend")]
-            three_session_weeks.append(week_number)
+        assigned_titles = [
+            title
+            for session_blueprint in blueprint["sessions"]
+            for title in session_blueprint["modules"]
+        ]
+        assigned_reading_ids = [title_to_id[title] for title in assigned_titles]
+
+        independent_study = [
+            (
+                f"Study official 2027 Module {record_by_id[reading_id]['number']:03d}: "
+                f"{record_by_id[reading_id]['title']} in the Learning Ecosystem, "
+                "then write a concise recall note."
+            )
+            for reading_id in assigned_reading_ids
+        ]
+        if blueprint.get("mock"):
+            independent_study.extend(
+                [
+                    "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
+                    "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
+                ]
+            )
         elif week_number == 27:
-            day_specs = [(3, "Wednesday midweek"), (5, "Friday pre-exam")]
-        else:
-            day_specs = [(3, "Wednesday midweek"), (6, "Saturday weekend")]
+            independent_study.extend(
+                [
+                    "Complete only light retrieval from the frozen review list; do not reopen the curriculum.",
+                    "Confirm identification, calculator, route, arrival time, food, sleep, and break logistics.",
+                    "Execute the rehearsed exam-day routine on Saturday 27 February 2027.",
+                ]
+            )
+        elif not assigned_reading_ids:
+            independent_study.append(
+                "Complete the assigned timed mixed assessment or repair set before Saturday's checkpoint."
+            )
+        if week_number < 27:
+            independent_study.extend(
+                [
+                    f"Complete the week's {blueprint['questionTarget']}-question target and log each reviewed block in the tracker.",
+                    "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint.",
+                ]
+            )
 
         week: dict = {
             "phase": phase_for_week(week_number),
@@ -839,50 +871,62 @@ def build() -> tuple[list[dict], dict]:
                 blueprint["masteryGate"],
                 "Keep the tracker, error log, and delayed-retest queue current.",
             ],
-            "independentStudy": [
-                "Complete each assigned official 2027 Learning Ecosystem module before its tutoring session.",
-                "Complete the assigned practice, classify every material miss, and write one correction rule per error.",
-                "Run delayed retrieval before the next meeting and bring unresolved questions to the tutor.",
-            ],
+            "independentStudy": independent_study,
             "questionTarget": blueprint["questionTarget"],
             "masteryGate": blueprint["masteryGate"],
             "mockMilestone": {
-                "label": f"Mock {blueprint['mock']}" if blueprint.get("mock") else "Weekly evidence gate",
+                "label": (
+                    f"Mock {blueprint['mock']}"
+                    if blueprint.get("mock")
+                    else "Exam execution gate"
+                    if week_number == 27
+                    else "Weekly evidence gate"
+                ),
                 "targetScore": mock_targets.get(blueprint.get("mock")),
                 "instruction": (
-                    "Complete the full mock independently under two-session exam conditions."
+                    "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint."
                     if blueprint.get("mock")
                     else blueprint["masteryGate"]
                 ),
             },
         }
 
-        for index, (session_blueprint, (offset, rhythm_label)) in enumerate(
-            zip(sessions_blueprint, day_specs, strict=True),
-            start=1,
-        ):
+        # The first 26 weeks end with one fixed Saturday checkpoint. Week 27 is
+        # reserved for independent taper and the Saturday exam appointment, so
+        # no tutoring session is placed on exam day.
+        if week_number <= 26:
             session_number += 1
-            reading_ids = [title_to_id[title] for title in session_blueprint["modules"]]
-            for reading_id in reading_ids:
+            for reading_id in assigned_reading_ids:
                 record_by_id[reading_id]["sessionNumbers"].append(session_number)
-            session_date = week_start + timedelta(days=offset)
-            week[f"session{index}"] = {
-                "label": rhythm_label,
-                "title": session_blueprint["title"],
-                "objective": session_blueprint["objective"],
-                "durationMinutes": session_blueprint["durationMinutes"],
+            checkpoint_kind = (
+                "Prior-attempt diagnostic + Quant M001-M004 checkpoint"
+                if week_number == 1
+                else f"Mock {blueprint['mock']} checkpoint and forensic repair"
+                if blueprint.get("mock")
+                else f"Weekly checkpoint: {blueprint['focus']}"
+            )
+            checkpoint_objective = (
+                "Establish the baseline from both prior attempts, test Quant Modules M001-M004, reteach the highest-value gaps, and issue the next independent-study assignment."
+                if week_number == 1
+                else "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment."
+                if blueprint.get("mock")
+                else "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment."
+            )
+            week["session1"] = {
+                "label": "Saturday 09:00 checkpoint",
+                "title": checkpoint_kind,
+                "objective": checkpoint_objective,
+                "durationMinutes": 120,
                 "number": session_number,
                 "requirement": "required",
-                "date": session_date.isoformat(),
-                "day": rhythm_label.split()[0],
-                "readings": reading_ids,
+                "date": week_end.isoformat(),
+                "day": "Saturday",
+                "readings": assigned_reading_ids,
             }
         weeks.append(week)
 
-    if session_number != 68:
-        raise ValueError(f"Expected 68 tutoring sessions, found {session_number}")
-    if three_session_weeks != [2, 3, 4, 6, 9, 11, 13, 14, 15, 16, 17, 18, 25, 26]:
-        raise ValueError(f"Unexpected three-session weeks: {three_session_weeks}")
+    if session_number != 26:
+        raise ValueError(f"Expected 26 tutoring checkpoints, found {session_number}")
     missing = [record["id"] for record in module_records if not record["sessionNumbers"]]
     if missing:
         raise ValueError(f"Unassigned official modules: {missing}")
@@ -902,7 +946,7 @@ def build() -> tuple[list[dict], dict]:
             }
         ],
         "coverageNotes": [
-            "All 102 publicly listed 2027 Level I learning modules are mapped to Sessions 01-44 in official topic order.",
+            "All 102 publicly listed 2027 Level I learning modules are assigned for independent study in official topic order and mapped to Weekly Checkpoints 01-17.",
             "The candidate's registered 2027 Learning Ecosystem supplies the full lessons, examples, practice questions, and interactive tools.",
             "The Learning Ecosystem and current CFA Institute errata remain authoritative if any wording or curriculum detail changes.",
             f"Check current errata regularly: {ERRATA_URL}",
@@ -934,7 +978,7 @@ def main() -> None:
                     if key in week
                 ),
                 "officialModules": len(catalog["readings"]),
-                "coverageSessionRange": "S01-S44",
+                "coverageSessionRange": "S01-S17",
             },
             indent=2,
         )

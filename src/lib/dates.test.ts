@@ -9,7 +9,7 @@ import {
   parseDateOnly,
 } from "./dates";
 
-describe("Project 202 calendar", () => {
+describe("Hamad CFA Mastery calendar", () => {
   it("distinguishes real date-only values from JavaScript rollover dates", () => {
     expect(isValidDateOnly("2026-08-19")).toBe(true);
     expect(isValidDateOnly("2026-02-30")).toBe(false);

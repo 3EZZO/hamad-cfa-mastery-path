@@ -15,7 +15,7 @@ createRoot(document.getElementById("root")!).render(
 if (import.meta.env.PROD) {
   window.addEventListener("load", () => {
     void registerProject202ServiceWorker().catch((error: unknown) => {
-      console.warn("Project 202 offline shell could not be registered.", error);
+      console.warn("The mastery tracker offline shell could not be registered.", error);
     });
   });
 }

@@ -44,13 +44,20 @@ export function getPlanTasks(
 ): PlanTask[] {
   const weekPrefix = `w${week.week}`;
   const sessions = getWeekSessions(week).map(
-    (session, index): PlanTask => ({
-      id: `${weekPrefix}-session-${index + 1}`,
-      label: session.title,
-      detail: `Session ${String(session.number).padStart(2, "0")} | ${session.label} | ${sessionOverrides[String(session.number)]?.date ?? session.date} | ${session.durationMinutes} minutes`,
-      kind: "session",
-      optional: false,
-    }),
+    (session, index): PlanTask => {
+      const override = sessionOverrides[String(session.number)];
+      const isFridayException = override && override.date !== session.date;
+      const cadenceLabel = isFridayException
+        ? "Friday 09:00 exception"
+        : session.label;
+      return {
+        id: `${weekPrefix}-session-${index + 1}`,
+        label: session.title,
+        detail: `Session ${String(session.number).padStart(2, "0")} | ${cadenceLabel} | ${override?.date ?? session.date} | ${session.durationMinutes} minutes`,
+        kind: "session",
+        optional: false,
+      };
+    },
   );
 
   const independent = week.independentStudy.map(
@@ -64,8 +71,8 @@ export function getPlanTasks(
   );
 
   return [
-    ...sessions,
     ...independent,
+    ...sessions,
     {
       id: `${weekPrefix}-evidence-gate`,
       label: week.masteryGate,

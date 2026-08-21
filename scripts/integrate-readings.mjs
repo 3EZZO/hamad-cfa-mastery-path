@@ -24,7 +24,7 @@ const sessions = plan.flatMap((week) => [
   week.session1,
   week.session2,
   week.session3,
-]);
+]).filter(Boolean);
 const sessionByNumber = new Map(sessions.map((session) => [session.number, session]));
 const readingIds = new Set();
 

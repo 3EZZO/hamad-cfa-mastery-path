@@ -17,6 +17,7 @@ import { validateEffectiveSessionSchedule } from "./schedule";
 
 export const STORAGE_KEY = "project-202-tracker-v1";
 export const PENDING_SYNC_KEY = "project-202-pending-sync-v1";
+export const TRACKER_SCHEDULE_VERSION = "weekly-saturday-v1" as const;
 
 export interface PendingSync {
   version: 1;
@@ -30,6 +31,7 @@ export interface PendingSync {
 export function createDefaultState(): TrackerState {
   return {
     version: 1,
+    scheduleVersion: TRACKER_SCHEDULE_VERSION,
     updatedAt: new Date().toISOString(),
     taskCompletions: {},
     sessionCompletionRequests: {},
@@ -74,6 +76,7 @@ const SESSION_INDEX = new Map(
     ] as const),
   ),
 );
+const SESSION_COUNT = SESSION_INDEX.size;
 
 function clippedText(
   value: unknown,
@@ -140,7 +143,7 @@ function normalizedRecords<T extends { id: string }>(
 function normalizeSessionLogs(value: unknown): SessionLog[] {
   return normalizedRecords(value, 300, (raw) => {
     const id = recordId(raw.id);
-    const sessionNumber = boundedInteger(raw.sessionNumber, 1, 68, 0);
+    const sessionNumber = boundedInteger(raw.sessionNumber, 1, SESSION_COUNT, 0);
     const planned = SESSION_INDEX.get(sessionNumber);
     if (!id || !isValidDateOnly(raw.date) || !planned) return null;
     return {
@@ -228,7 +231,7 @@ function normalizeSessionCompletionRequests(
 ): Record<string, SessionCompletionRequest> {
   if (!isRecord(value)) return {};
   const result: Record<string, SessionCompletionRequest> = {};
-  for (const [key, raw] of Object.entries(value).slice(0, 68)) {
+  for (const [key, raw] of Object.entries(value).slice(0, SESSION_COUNT)) {
     if (!isRecord(raw) || key.length > 120 || raw.taskId !== key) continue;
     const requestedAt = validTimestamp(raw.requestedAt, "");
     if (!requestedAt) continue;
@@ -242,7 +245,7 @@ function normalizeSessionCompletionReviews(
 ): Record<string, SessionCompletionReview> {
   if (!isRecord(value)) return {};
   const result: Record<string, SessionCompletionReview> = {};
-  for (const [key, raw] of Object.entries(value).slice(0, 68)) {
+  for (const [key, raw] of Object.entries(value).slice(0, SESSION_COUNT)) {
     if (
       !isRecord(raw) ||
       key.length > 120 ||
@@ -333,7 +336,7 @@ function normalizeSessionOverrides(
   const overrides: Record<string, SessionOverride> = {};
   for (const [key, raw] of Object.entries(value)) {
     const keyNumber = Number(key);
-    if (!Number.isInteger(keyNumber) || keyNumber < 1 || keyNumber > 68) {
+    if (!Number.isInteger(keyNumber) || !SESSION_INDEX.has(keyNumber)) {
       continue;
     }
     if (!isRecord(raw)) {
@@ -398,10 +401,12 @@ function normalizeDiagnostics(value: unknown): DiagnosticEntry[] {
 
 export function normalizeState(value: unknown): TrackerState {
   if (!isRecord(value) || value.version !== 1) {
-    throw new Error("This is not a valid Project 202 version 1 backup.");
+    throw new Error("This is not a valid Hamad CFA Mastery version 1 backup.");
   }
 
   const defaults = createDefaultState();
+  const usesCurrentSchedule =
+    value.scheduleVersion === TRACKER_SCHEDULE_VERSION;
   const rawMastery = isRecord(value.topicMastery) ? value.topicMastery : {};
   const topicMastery = Object.fromEntries(
     TOPICS.map((topic) => {
@@ -410,7 +415,7 @@ export function normalizeState(value: unknown): TrackerState {
     }),
   );
 
-  const taskCompletions: Record<string, boolean> = isRecord(
+  const taskCompletions: Record<string, boolean> = usesCurrentSchedule && isRecord(
     value.taskCompletions,
   )
     ? Object.fromEntries(
@@ -431,25 +436,25 @@ export function normalizeState(value: unknown): TrackerState {
 
   return {
     ...defaults,
+    scheduleVersion: TRACKER_SCHEDULE_VERSION,
     updatedAt: normalizedUpdatedAt,
     taskCompletions,
-    sessionCompletionRequests: normalizeSessionCompletionRequests(
-      value.sessionCompletionRequests,
-    ),
-    sessionCompletionReviews: normalizeSessionCompletionReviews(
-      value.sessionCompletionReviews,
-    ),
+    sessionCompletionRequests: usesCurrentSchedule
+      ? normalizeSessionCompletionRequests(value.sessionCompletionRequests)
+      : {},
+    sessionCompletionReviews: usesCurrentSchedule
+      ? normalizeSessionCompletionReviews(value.sessionCompletionReviews)
+      : {},
     topicMastery,
-    sessionLogs: normalizeSessionLogs(value.sessionLogs),
+    sessionLogs: usesCurrentSchedule ? normalizeSessionLogs(value.sessionLogs) : [],
     practiceLogs: normalizePracticeLogs(value.practiceLogs),
     mockScores: normalizeMockScores(value.mockScores),
     errorEntries: normalizeErrorEntries(value.errorEntries),
     notes: normalizeNotes(value.notes),
-    sessionOverrides: normalizeSessionOverrides(
-      value.sessionOverrides,
-      normalizedUpdatedAt,
-    ),
-    diagnostics: normalizeDiagnostics(value.diagnostics),
+    sessionOverrides: usesCurrentSchedule
+      ? normalizeSessionOverrides(value.sessionOverrides, normalizedUpdatedAt)
+      : {},
+    diagnostics: usesCurrentSchedule ? normalizeDiagnostics(value.diagnostics) : [],
   };
 }
 
@@ -524,7 +529,7 @@ export function downloadBackup(state: TrackerState): void {
   const anchor = document.createElement("a");
   const date = new Date().toISOString().slice(0, 10);
   anchor.href = url;
-  anchor.download = `project-202-backup-${date}.json`;
+  anchor.download = `hamad-cfa-mastery-backup-${date}.json`;
   anchor.style.display = "none";
   document.body.appendChild(anchor);
   anchor.click();

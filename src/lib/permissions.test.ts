@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { capabilitiesForRole } from "./permissions";
 
-describe("Project 202 role capabilities", () => {
+describe("Hamad CFA Mastery role capabilities", () => {
   it("grants the tutor every tracker capability", () => {
     expect(Object.values(capabilitiesForRole("tutor")).every(Boolean)).toBe(true);
   });

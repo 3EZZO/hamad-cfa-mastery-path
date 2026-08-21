@@ -6,7 +6,7 @@ import {
   shouldShowIosInstallGuide,
 } from "./pwa";
 
-describe("Project 202 PWA helpers", () => {
+describe("Hamad CFA Mastery PWA helpers", () => {
   it("recognizes iPhone and iPad user agents", () => {
     expect(isIosDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"))
       .toBe(true);

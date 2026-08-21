@@ -319,7 +319,7 @@ export function useTrackerSync(): TrackerSyncController {
           setAccessDenied(true);
           setTrackerReady(false);
           setSyncError(
-            "This account is not an active Project 202 member. Ask the tutor to check Firebase.",
+            "This account is not an active Hamad CFA Mastery member. Ask the tutor to check Firebase.",
           );
           setSyncStatus("error");
           return;
@@ -521,7 +521,7 @@ export function useTrackerSync(): TrackerSyncController {
   const replaceTrackerAuthoritatively = useCallback(
     async (state: TrackerState) => {
       if (!member?.active || member.role !== "tutor") {
-        throw new Error("Only the Project 202 tutor can replace shared progress.");
+        throw new Error("Only the Hamad CFA Mastery tutor can replace shared progress.");
       }
 
       setAuthoritativeReplaceBusy(true);
@@ -617,7 +617,7 @@ export function useTrackerSync(): TrackerSyncController {
   const updatePrivateTutorNotes = useCallback(
     async (recipe: (notes: PrivateTutorNote[]) => PrivateTutorNote[]) => {
       if (!member?.active || member.role !== "tutor") {
-        throw new Error("Only the Project 202 tutor can access private notes.");
+        throw new Error("Only the Hamad CFA Mastery tutor can access private notes.");
       }
       setPrivateNotesBusy(true);
       setPrivateNotesError(null);

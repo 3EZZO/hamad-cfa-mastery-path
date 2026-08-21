@@ -18,12 +18,12 @@ describe("weekly report generator", () => {
     const state = createDefaultState();
     state.sessionCompletionRequests["w1-session-1"] = {
       taskId: "w1-session-1",
-      requestedAt: "2026-08-26T08:00:00.000Z",
+      requestedAt: "2026-08-29T08:00:00.000Z",
     };
     state.sessionCompletionReviews["w1-session-1"] = {
       taskId: "w1-session-1",
-      requestedAt: "2026-08-26T08:00:00.000Z",
-      reviewedAt: "2026-08-26T09:00:00.000Z",
+      requestedAt: "2026-08-29T08:00:00.000Z",
+      reviewedAt: "2026-08-29T09:00:00.000Z",
       status: "approved",
       note: "Evidence reviewed.",
     };
@@ -40,7 +40,9 @@ describe("weekly report generator", () => {
 
   it("formats a WhatsApp-friendly summary and printable one-page document", () => {
     const report = buildWeeklyReport(PLAN[0], createDefaultState(), "2026-08-13");
-    expect(formatWeeklyReportText(report)).toContain("PROJECT 202 - WEEK 01 REPORT");
+    expect(formatWeeklyReportText(report)).toContain(
+      "HAMAD CFA MASTERY - WEEK 01 REPORT",
+    );
     const html = createWeeklyReportHtml(report);
     expect(html).toContain("<!doctype html>");
     expect(html).toContain("Prepared for Hamad Al Sagheer");

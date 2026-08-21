@@ -101,7 +101,7 @@ export function buildWeeklyReport(
 
 export function formatWeeklyReportText(report: WeeklyReport): string {
   return [
-    `PROJECT 202 - WEEK ${String(report.week).padStart(2, "0")} REPORT`,
+    `HAMAD CFA MASTERY - WEEK ${String(report.week).padStart(2, "0")} REPORT`,
     report.period,
     `Focus: ${report.focus}`,
     "",
@@ -137,9 +137,9 @@ export function createWeeklyReportHtml(report: WeeklyReport): string {
     `<li class="${risk.tone}"><strong>${escapeHtml(risk.title)}</strong><span>${escapeHtml(risk.detail)}</span><em>${escapeHtml(risk.action)}</em></li>`,
   ).join("");
   const priorities = report.priorities.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Project 202 Week ${report.week} Report</title><style>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Hamad CFA Mastery Week ${report.week} Report</title><style>
   @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#102945;margin:0;font-size:11px}header{background:#09233d;color:white;padding:22px;border-radius:10px}header small{color:#1bc5bd;text-transform:uppercase;letter-spacing:1.5px;font-weight:700}h1{margin:7px 0 3px;font-size:25px}header p{margin:0;color:#d9e6ef}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.metric{border:1px solid #cfdae5;border-radius:8px;padding:11px}.metric strong{font-size:22px;display:block}.metric span{color:#61758b}.section{margin-top:14px}h2{font-size:14px;border-bottom:2px solid #1bc5bd;padding-bottom:5px}.signals{list-style:none;padding:0}.signals li{border-left:5px solid #53a879;background:#eff8f2;margin:6px 0;padding:8px}.signals li.amber{border-color:#e4ad3a;background:#fff7e6}.signals li.red{border-color:#c95252;background:#fff0f0}.signals span,.signals em{display:block;margin-top:3px}.signals em{font-style:normal;color:#43586e}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}footer{margin-top:20px;border-top:1px solid #cfdae5;padding-top:8px;color:#61758b}</style></head><body>
-  <header><small>PROJECT 202 - WEEK ${String(report.week).padStart(2, "0")}</small><h1>${escapeHtml(report.focus)}</h1><p>${escapeHtml(report.period)}</p></header>
+  <header><small>HAMAD CFA MASTERY - WEEK ${String(report.week).padStart(2, "0")}</small><h1>${escapeHtml(report.focus)}</h1><p>${escapeHtml(report.period)}</p></header>
   <section class="grid"><div class="metric"><strong>${report.completionPercent}%</strong><span>execution</span></div><div class="metric"><strong>${report.sessionsCompleted}/${report.plannedSessions}</strong><span>sessions</span></div><div class="metric"><strong>${report.practiceAccuracy == null ? "-" : `${report.practiceAccuracy}%`}</strong><span>${report.practiceAttempted} questions</span></div><div class="metric"><strong>${report.openMistakes}</strong><span>open mistakes</span></div></section>
   <div class="two"><section class="section"><h2>Evidence summary</h2><p><strong>Tutor time:</strong> ${report.tutorMinutes} minutes</p><p><strong>Practice:</strong> ${report.practiceCorrect}/${report.practiceAttempted || 0} correct</p><p><strong>Mock:</strong> ${escapeHtml(report.mockSummary)}</p><p><strong>Topic snapshot:</strong> ${escapeHtml(report.topicSnapshot.map((item) => `${item.topic} ${item.mastery}%`).join("; "))}</p></section><section class="section"><h2>Next priorities</h2><ol>${priorities}</ol>${report.nextWeekFocus ? `<p><strong>Next week:</strong> ${escapeHtml(report.nextWeekFocus)}</p>` : ""}</section></div>
   <section class="section"><h2>Automatic coaching signals</h2><ul class="signals">${riskRows}</ul></section>
@@ -155,7 +155,7 @@ export function printWeeklyReport(report: WeeklyReport): void {
   // avoids popup blockers and keeps the tracker page in place while the browser
   // opens its native print dialog.
   const frame = document.createElement("iframe");
-  frame.title = `Project 202 Week ${report.week} printable report`;
+  frame.title = `Hamad CFA Mastery Week ${report.week} printable report`;
   frame.setAttribute("aria-hidden", "true");
   frame.style.cssText =
     "position:fixed;width:0;height:0;border:0;visibility:hidden;pointer-events:none;";

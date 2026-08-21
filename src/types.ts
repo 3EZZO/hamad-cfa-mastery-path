@@ -24,8 +24,8 @@ export interface PlanWeek {
   focus: string;
   topics: string[];
   outcomes: string[];
-  session1: PlanSession;
-  session2: PlanSession;
+  session1?: PlanSession;
+  session2?: PlanSession;
   session3?: PlanSession;
   independentStudy: string[];
   questionTarget: number;
@@ -140,6 +140,7 @@ export interface DiagnosticEntry {
 
 export interface TrackerState {
   version: 1;
+  scheduleVersion: "weekly-saturday-v1";
   updatedAt: string;
   taskCompletions: Record<string, boolean>;
   sessionCompletionRequests: Record<string, SessionCompletionRequest>;

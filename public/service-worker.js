@@ -1,4 +1,4 @@
-const VERSION = "project-202-pwa-v3";
+const VERSION = "project-202-pwa-v5";
 const APP_SCOPE = new URL(self.registration.scope);
 const APP_BASE = APP_SCOPE.pathname.endsWith("/")
   ? APP_SCOPE.pathname
@@ -101,7 +101,7 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   // Firebase Authentication and Firestore remain network-managed. This worker
-  // only handles files under the Project 202 hosting scope.
+  // only handles files under the tracker's current GitHub Pages scope.
   if (!isAppRequest(url)) return;
 
   if (isNavigation(request)) {

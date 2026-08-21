@@ -79,12 +79,12 @@ export default function PwaInstallPrompt() {
   if (!installAvailable) return null;
 
   return (
-    <aside className="pwa-install-card" aria-label="Install Project 202">
+    <aside className="pwa-install-card" aria-label="Install Hamad CFA Mastery">
       <div className="pwa-install-icon">
         <Smartphone size={20} />
       </div>
       <div className="pwa-install-copy">
-        <strong>Keep Project 202 on your home screen</strong>
+        <strong>Keep Hamad CFA Mastery on your home screen</strong>
         <span>
           Open the tracker like an app. Progress still synchronizes through
           Firebase whenever you are online.

@@ -60,15 +60,6 @@ export default function CalendarExportDialog({
 
   if (!open) return null;
 
-  const setTime = (
-    field:
-      | "mondayTime"
-      | "wednesdayTime"
-      | "saturdayTime"
-      | "fridayTime",
-    value: string,
-  ) => setPreferences((current) => ({ ...current, [field]: value }));
-
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const saved = saveCalendarExportPreferences(preferences);
@@ -89,7 +80,7 @@ export default function CalendarExportDialog({
           <span className="calendar-dialog-mark"><CalendarPlus size={22} /></span>
           <div>
             <p className="eyebrow">Calendar import settings</p>
-            <h2 id="calendar-export-title">Choose the tutor-session times</h2>
+            <h2 id="calendar-export-title">Confirm the weekly checkpoint</h2>
           </div>
           <button
             aria-label="Close calendar settings"
@@ -102,50 +93,23 @@ export default function CalendarExportDialog({
         </header>
 
         <p className="calendar-dialog-intro">
-          Times were never fixed in the study plan. Choose the defaults you and
-          Hamad will use before creating the calendar import file. All times are
-          in Riyadh (Asia/Riyadh); these preferences stay only in this browser.
+          The plan uses one weekly checkpoint every Saturday at 09:00 Riyadh
+          time. Choose the reminder settings before creating the calendar
+          import file. Reminder preferences stay only in this browser.
         </p>
 
         <form className="calendar-dialog-form" onSubmit={submit}>
           <fieldset>
-            <legend><Clock3 size={15} /> Session start times</legend>
+            <legend><Clock3 size={15} /> Weekly checkpoint time</legend>
             <div className="calendar-time-grid">
               <label>
-                <span>Monday intensive</span>
+                <span>Saturday checkpoint · Asia/Riyadh</span>
                 <input
                   ref={firstFieldRef}
-                  required
-                  type="time"
-                  value={preferences.mondayTime}
-                  onChange={(event) => setTime("mondayTime", event.target.value)}
-                />
-              </label>
-              <label>
-                <span>Wednesday midweek</span>
-                <input
-                  required
-                  type="time"
-                  value={preferences.wednesdayTime}
-                  onChange={(event) => setTime("wednesdayTime", event.target.value)}
-                />
-              </label>
-              <label>
-                <span>Saturday weekend</span>
-                <input
-                  required
+                  aria-readonly="true"
+                  readOnly
                   type="time"
                   value={preferences.saturdayTime}
-                  onChange={(event) => setTime("saturdayTime", event.target.value)}
-                />
-              </label>
-              <label>
-                <span>Friday pre-exam</span>
-                <input
-                  required
-                  type="time"
-                  value={preferences.fridayTime}
-                  onChange={(event) => setTime("fridayTime", event.target.value)}
                 />
               </label>
             </div>

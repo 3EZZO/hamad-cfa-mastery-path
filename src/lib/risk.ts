@@ -1,7 +1,7 @@
 import { getPlanTasks, getWeekSessions, PLAN } from "../data/plan";
 import type { TrackerState } from "../types";
 import { differenceInCalendarDays, getProgramWeek, parseDateOnly } from "./dates";
-import { effectiveSessionDate } from "./schedule";
+import { effectiveSessionDate, getEffectiveSessions } from "./schedule";
 import { isTaskComplete } from "./taskStatus";
 
 export type RiskTone = "green" | "amber" | "red";
@@ -92,10 +92,9 @@ export function buildRiskIndicators(
   tracker: TrackerState,
   today: string,
 ): RiskIndicator[] {
-  const firstSession = effectiveSessionDate(
-    PLAN[0].session1,
-    tracker.sessionOverrides,
-  );
+  const firstSession =
+    getEffectiveSessions(tracker.sessionOverrides)[0]?.effectiveDate ??
+    PLAN[0]!.startDate;
   if (today < firstSession) {
     return [{
       id: "prelaunch",

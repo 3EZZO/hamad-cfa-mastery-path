@@ -34,7 +34,7 @@ describe("automatic coaching risks", () => {
 
     let indicator = buildRiskIndicators(state, "2026-08-30")
       .find((item) => item.id === "overdue-work");
-    expect(indicator?.title).toContain("2 overdue required items");
+    expect(indicator?.title).toContain("1 overdue required item");
 
     for (const task of tasks.filter((candidate) => candidate.kind === "session")) {
       state.sessionCompletionReviews[task.id] = {
@@ -54,7 +54,7 @@ describe("automatic coaching risks", () => {
     const state = createDefaultState();
     state.practiceLogs.push({
       id: "p1",
-      date: "2026-08-25",
+      date: "2026-08-28",
       topic: "Quantitative Methods",
       attempted: 40,
       correct: 22,
@@ -62,7 +62,7 @@ describe("automatic coaching risks", () => {
       note: "Baseline",
       confidence: 3,
     });
-    const indicators = buildRiskIndicators(state, "2026-08-26");
+    const indicators = buildRiskIndicators(state, "2026-08-29");
     expect(indicators.find((item) => item.id === "practice-accuracy")?.tone).toBe("red");
   });
 
