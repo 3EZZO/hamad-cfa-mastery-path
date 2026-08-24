@@ -70,7 +70,7 @@ describe("tracker backup invariants", () => {
       }],
     };
     const normalized = normalizeState(legacy);
-    expect(normalized.scheduleVersion).toBe("weekly-saturday-v1");
+    expect(normalized.scheduleVersion).toBe("weekly-saturday-v2");
     expect(normalized.taskCompletions).toEqual({});
     expect(normalized.sessionLogs).toEqual([]);
     expect(normalized.practiceLogs).toHaveLength(1);
@@ -80,7 +80,7 @@ describe("tracker backup invariants", () => {
     const validOverrides = cascadeReschedule(
       {},
       2,
-      "2026-09-04",
+      "2026-09-11",
       "Travel",
       "2026-08-13T00:00:00.000Z",
     ).overrides;
@@ -92,7 +92,7 @@ describe("tracker backup invariants", () => {
       },
       diagnostics: [{
         id: "d1",
-        date: "2026-08-29",
+        date: "2026-09-05",
         status: "final",
         attempted: 30,
         correct: 22,
@@ -123,7 +123,7 @@ describe("tracker backup invariants", () => {
       sessionLogs: [
         {
           id: "session-1",
-          date: "2026-08-29",
+          date: "2026-09-05",
           sessionNumber: 1,
           week: 999,
           type: 42,
@@ -221,15 +221,15 @@ describe("tracker backup invariants", () => {
       sessionCompletionRequests: {
         "w1-session-1": {
           taskId: "w1-session-1",
-          requestedAt: "2026-08-29T10:00:00.000Z",
+          requestedAt: "2026-09-05T10:00:00.000Z",
         },
       },
       sessionCompletionReviews: {
         "w1-session-1": {
           taskId: "w1-session-1",
-          requestedAt: "2026-08-29T10:00:00.000Z",
+          requestedAt: "2026-09-05T10:00:00.000Z",
           status: "approved",
-          reviewedAt: "2026-08-29T11:00:00.000Z",
+          reviewedAt: "2026-09-05T11:00:00.000Z",
           note: "Ready",
         },
       },
@@ -242,7 +242,7 @@ describe("tracker backup invariants", () => {
       }],
     });
     expect(normalized.sessionCompletionReviews["w1-session-1"]?.status).toBe("approved");
-    expect(normalized.mockScores[0]?.milestoneWeek).toBe(19);
+    expect(normalized.mockScores[0]?.milestoneWeek).toBe(18);
   });
 
   it("deduplicates repeated record identities before merge code sees them", () => {
@@ -274,12 +274,12 @@ describe("tracker backup invariants", () => {
     expect(normalized.practiceLogs[0]?.source).toBe("First");
   });
 
-  it("rejects override maps outside the 26-checkpoint Friday/Saturday policy", () => {
+  it("rejects override maps outside the 25-checkpoint Friday/Saturday policy", () => {
     const invalidSchedules = [
       {
         "2": {
           sessionNumber: 2,
-          date: "2026-09-03",
+          date: "2026-09-10",
           reason: "Wrong weekday",
           updatedAt: "2026-08-13T00:00:00.000Z",
         },
@@ -287,14 +287,14 @@ describe("tracker backup invariants", () => {
       {
         "2": {
           sessionNumber: 2,
-          date: "2026-09-12",
+          date: "2026-09-19",
           reason: "Wrong week",
           updatedAt: "2026-08-13T00:00:00.000Z",
         },
       },
       {
-        "26": {
-          sessionNumber: 26,
+        "25": {
+          sessionNumber: 25,
           date: "2027-02-27",
           reason: "Exam collision",
           updatedAt: "2026-08-13T00:00:00.000Z",
@@ -303,7 +303,7 @@ describe("tracker backup invariants", () => {
       {
         "2": {
           sessionNumber: 3,
-          date: "2026-09-04",
+          date: "2026-09-11",
           reason: "Mismatched identity",
           updatedAt: "2026-08-13T00:00:00.000Z",
         },

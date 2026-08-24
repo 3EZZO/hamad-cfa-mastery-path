@@ -6,11 +6,11 @@ import { READING_CATALOG } from "./readings";
 
 const sessions = PLAN.flatMap(getWeekSessions);
 
-describe("canonical 27-week official 2027 plan", () => {
-  it("contains exactly 27 sequential Sunday-Saturday weeks", () => {
-    expect(PLAN).toHaveLength(27);
+describe("canonical 26-week official 2027 plan", () => {
+  it("contains exactly 26 sequential Sunday-Saturday weeks", () => {
+    expect(PLAN).toHaveLength(26);
     expect(PLAN.map((week) => week.week)).toEqual(
-      Array.from({ length: 27 }, (_, index) => index + 1),
+      Array.from({ length: 26 }, (_, index) => index + 1),
     );
     expect(PLAN[0]?.startDate).toBe(PROGRAM_START);
     expect(PLAN.at(-1)?.endDate).toBe(EXAM_DATE);
@@ -21,21 +21,21 @@ describe("canonical 27-week official 2027 plan", () => {
     }
   });
 
-  it("begins tutoring Saturday 29 August and preserves exam day", () => {
-    expect(program.programStart).toBe("2026-08-23");
-    expect(program.firstTutorSession).toBe("2026-08-29");
+  it("begins tutoring Saturday 5 September and preserves exam day", () => {
+    expect(program.programStart).toBe("2026-08-30");
+    expect(program.firstTutorSession).toBe("2026-09-05");
     expect(program.examAppointment).toBe("2027-02-27");
     expect(sessions[0]?.date).toBe(program.firstTutorSession);
     expect(sessions.at(-1)?.date).toBe("2027-02-20");
     expect(PLAN.at(-1)?.session1).toBeUndefined();
   });
 
-  it("uses one 120-minute Saturday checkpoint in Weeks 1-26", () => {
-    expect(sessions).toHaveLength(26);
+  it("uses one 120-minute Saturday checkpoint in Weeks 1-25", () => {
+    expect(sessions).toHaveLength(25);
     expect(sessions.map((session) => session.number)).toEqual(
-      Array.from({ length: 26 }, (_, index) => index + 1),
+      Array.from({ length: 25 }, (_, index) => index + 1),
     );
-    for (const week of PLAN.slice(0, 26)) {
+    for (const week of PLAN.slice(0, 25)) {
       const weekSessions = getWeekSessions(week);
       expect(weekSessions).toHaveLength(1);
       expect(weekSessions[0]).toMatchObject({
@@ -46,13 +46,13 @@ describe("canonical 27-week official 2027 plan", () => {
         date: week.endDate,
       });
     }
-    expect(getWeekSessions(PLAN[26]!)).toHaveLength(0);
+    expect(getWeekSessions(PLAN[25]!)).toHaveLength(0);
     expect(program.tutoringRhythm).toMatchObject({
       time: "09:00",
       timeZone: "Asia/Riyadh",
-      checkpointWeeks: 26,
+      checkpointWeeks: 25,
       independentExamWeek: 1,
-      totalSessions: 26,
+      totalSessions: 25,
     });
   });
 
@@ -87,7 +87,7 @@ describe("canonical 27-week official 2027 plan", () => {
       (task) => task.id,
     );
     expect(new Set(ids).size).toBe(ids.length);
-    expect(getPlanTasks(PLAN[26]!).some((task) => task.kind === "session")).toBe(
+    expect(getPlanTasks(PLAN[25]!).some((task) => task.kind === "session")).toBe(
       false,
     );
     expect(getPlanTasks(PLAN[0]!)[0]?.kind).toBe("independent");
@@ -115,12 +115,17 @@ describe("canonical 27-week official 2027 plan", () => {
       "Mock 7",
     ]);
     expect(mockWeeks.map((week) => week.week)).toEqual([
-      19, 20, 22, 23, 24, 25, 26,
+      18, 19, 21, 22, 23, 24, 25,
     ]);
     expect(mockWeeks.map((week) => week.mockMilestone?.targetScore)).toEqual([
       60, 63, 65, 67, 69, 70, 72,
     ]);
     expect(PLAN.at(-1)?.mockMilestone?.label).toBe("Exam execution gate");
+    expect(program.examDayChecklist).toHaveLength(3);
+    expect(program.administrativeMilestones.at(-1)).toMatchObject({
+      date: "2027-02-27",
+      label: "Hamad's exam appointment",
+    });
     expect(PLAN.at(-1)?.independentStudy.join(" ")).not.toContain(
       "next checkpoint",
     );

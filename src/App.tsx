@@ -1499,9 +1499,11 @@ function RoadmapView({
                   ))}
                   {!getWeekSessions(week).length && (
                     <article className="session-plan-card">
-                      <div><span>Independent exam week</span><strong>No tutor session on exam day</strong></div>
-                      <h4>Protect the taper and execute</h4>
-                      <p>Use the frozen review list, confirm logistics, and follow the rehearsed exam-day routine.</p>
+                      <div><span>Exam-day milestone - 27 February</span><strong>No tutor session on exam day</strong></div>
+                      <h4>Final checklist: protect the taper and execute</h4>
+                      <ul className="outcome-list">
+                        {program.examDayChecklist.map((item) => <li key={item}><Check size={15} />{item}</li>)}
+                      </ul>
                     </article>
                   )}
                 </div>

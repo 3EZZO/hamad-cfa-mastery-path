@@ -18,28 +18,28 @@ describe("Hamad CFA Mastery calendar", () => {
   });
 
   it("uses the agreed launch and exam dates", () => {
-    expect(PROGRAM_START).toBe("2026-08-23");
+    expect(PROGRAM_START).toBe("2026-08-30");
     expect(EXAM_DATE).toBe("2027-02-27");
   });
 
   it("creates exact first and final week boundaries", () => {
     expect(getWeekDates(1)).toEqual({
-      startDate: "2026-08-23",
-      endDate: "2026-08-29",
+      startDate: "2026-08-30",
+      endDate: "2026-09-05",
     });
-    expect(getWeekDates(27)).toEqual({
+    expect(getWeekDates(26)).toEqual({
       startDate: "2027-02-21",
       endDate: "2027-02-27",
     });
   });
 
   it("assigns boundary dates to the correct program week", () => {
-    expect(getProgramWeek(parseDateOnly("2026-08-22"))).toBe(0);
-    expect(getProgramWeek(parseDateOnly("2026-08-23"))).toBe(1);
-    expect(getProgramWeek(parseDateOnly("2026-08-29"))).toBe(1);
-    expect(getProgramWeek(parseDateOnly("2026-08-30"))).toBe(2);
-    expect(getProgramWeek(parseDateOnly("2027-02-27"))).toBe(27);
-    expect(getProgramWeek(parseDateOnly("2027-02-28"))).toBe(28);
+    expect(getProgramWeek(parseDateOnly("2026-08-29"))).toBe(0);
+    expect(getProgramWeek(parseDateOnly("2026-08-30"))).toBe(1);
+    expect(getProgramWeek(parseDateOnly("2026-09-05"))).toBe(1);
+    expect(getProgramWeek(parseDateOnly("2026-09-06"))).toBe(2);
+    expect(getProgramWeek(parseDateOnly("2027-02-27"))).toBe(26);
+    expect(getProgramWeek(parseDateOnly("2027-02-28"))).toBe(27);
   });
 
   it("counts calendar days without time-of-day drift", () => {

@@ -18,20 +18,20 @@ describe("weekly report generator", () => {
     const state = createDefaultState();
     state.sessionCompletionRequests["w1-session-1"] = {
       taskId: "w1-session-1",
-      requestedAt: "2026-08-29T08:00:00.000Z",
+      requestedAt: "2026-09-05T08:00:00.000Z",
     };
     state.sessionCompletionReviews["w1-session-1"] = {
       taskId: "w1-session-1",
-      requestedAt: "2026-08-29T08:00:00.000Z",
-      reviewedAt: "2026-08-29T09:00:00.000Z",
+      requestedAt: "2026-09-05T08:00:00.000Z",
+      reviewedAt: "2026-09-05T09:00:00.000Z",
       status: "approved",
       note: "Evidence reviewed.",
     };
     state.practiceLogs.push({
-      id: "p1", date: "2026-08-27", topic: "Quantitative Methods",
+      id: "p1", date: "2026-09-03", topic: "Quantitative Methods",
       attempted: 40, correct: 30, source: "LES", note: "Baseline", confidence: 3,
     });
-    const report = buildWeeklyReport(PLAN[0], state, "2026-08-29");
+    const report = buildWeeklyReport(PLAN[0], state, "2026-09-05");
     expect(report.week).toBe(1);
     expect(report.completedTasks).toBe(1);
     expect(report.practiceAttempted).toBe(40);

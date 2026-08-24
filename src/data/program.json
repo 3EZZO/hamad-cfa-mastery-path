@@ -1,31 +1,21 @@
 {
   "brand": "Hamad's CFA Level I Mastery Path",
-  "programStart": "2026-08-23",
-  "firstTutorSession": "2026-08-29",
+  "programStart": "2026-08-30",
+  "firstTutorSession": "2026-09-05",
   "examAppointment": "2027-02-27",
   "tutoringRhythm": {
     "standard": ["Saturday 09:00 checkpoint"],
     "time": "09:00",
     "timeZone": "Asia/Riyadh",
-    "checkpointWeeks": 26,
+    "checkpointWeeks": 25,
     "independentExamWeek": 1,
-    "totalSessions": 26
+    "totalSessions": 25
   },
   "examWindow": {
     "startDate": "2027-02-22",
     "endDate": "2027-02-28"
   },
   "administrativeMilestones": [
-    {
-      "date": "2026-11-05",
-      "label": "Registration deadline",
-      "action": "Confirm registration is complete."
-    },
-    {
-      "date": "2026-11-10",
-      "label": "Scheduling deadline",
-      "action": "Confirm the 27 February appointment and test-centre details."
-    },
     {
       "date": "2027-01-16",
       "label": "CFA Level I Mastery Path PSM deadline",
@@ -39,8 +29,13 @@
     {
       "date": "2027-02-27",
       "label": "Hamad's exam appointment",
-      "action": "Execute the rehearsed exam-day system."
+      "action": "Bring identification and approved calculators, arrive on the confirmed route and time, follow the rehearsed pacing and break plan, and execute the exam-day system."
     }
+  ],
+  "examDayChecklist": [
+    "Confirm identification, approved calculators, batteries, appointment details, route, and arrival time.",
+    "Protect sleep, food, hydration, and the planned break routine; do not reopen heavy study.",
+    "Use the rehearsed pacing, skip-return, confidence, and second-session reset rules."
   ],
   "practicalSkillsModules": ["Financial Modeling", "Python Programming Fundamentals"],
   "mockGuidance": "Official mocks are expected around sixty days before the exam window. Use a licensed provider mock for the earliest rehearsal if an official mock is not yet available.",

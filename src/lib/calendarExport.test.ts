@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 describe("Hamad CFA Mastery calendar export", () => {
-  it("exports all 26 checkpoints and every milestone", () => {
+  it("exports all 25 checkpoints and every milestone", () => {
     const events = getProject202CalendarEvents(undefined, {}, PREFERENCES);
     const sessions = events.filter((event) => event.kind === "tutor-session");
     const milestones = events.filter(
@@ -51,14 +51,14 @@ describe("Hamad CFA Mastery calendar export", () => {
     expect(milestones).toHaveLength(program.administrativeMilestones.length);
     expect(sessions[0]).toMatchObject({
       uid: "project-202-session-01@project-202-tracker",
-      startDate: "2026-08-29",
+      startDate: "2026-09-05",
       startTime: "09:00",
       endTime: "11:00",
       timeZone: "Asia/Riyadh",
       reminderMinutes: 90,
     });
     expect(sessions.at(-1)).toMatchObject({
-      uid: "project-202-session-26@project-202-tracker",
+      uid: "project-202-session-25@project-202-tracker",
       startDate: "2027-02-20",
       startTime: "09:00",
       endTime: "11:00",
@@ -82,10 +82,10 @@ describe("Hamad CFA Mastery calendar export", () => {
     expect(unfolded.match(/BEGIN:VEVENT/g)).toHaveLength(expectedEvents);
     expect(unfolded.match(/BEGIN:VALARM/g)).toHaveLength(expectedEvents);
     expect(unfolded).toContain("TZID:Asia/Riyadh");
-    expect(unfolded).toContain("DTSTART;TZID=Asia/Riyadh:20260829T090000");
-    expect(unfolded).toContain("DTEND;TZID=Asia/Riyadh:20260829T110000");
+    expect(unfolded).toContain("DTSTART;TZID=Asia/Riyadh:20260905T090000");
+    expect(unfolded).toContain("DTEND;TZID=Asia/Riyadh:20260905T110000");
     expect(unfolded).toContain("TRIGGER:-PT90M");
-    expect(unfolded).toContain("DTSTART;VALUE=DATE:20261105");
+    expect(unfolded).toContain("DTSTART;VALUE=DATE:20270116");
     expect(unfolded).not.toContain("ATTENDEE");
   });
 
@@ -93,16 +93,16 @@ describe("Hamad CFA Mastery calendar export", () => {
     const overrides = cascadeReschedule(
       {},
       2,
-      "2026-09-04",
+      "2026-09-11",
       "Travel",
       "2026-08-21T00:00:00.000Z",
     ).overrides;
     const event = getProject202CalendarEvents(undefined, overrides, PREFERENCES)
       .find((item) => item.uid.includes("session-02"));
     expect(event).toMatchObject({
-      startDate: "2026-09-04",
+      startDate: "2026-09-11",
       startTime: "09:00",
-      endDate: "2026-09-04",
+      endDate: "2026-09-11",
       endTime: "11:00",
     });
   });
@@ -110,7 +110,7 @@ describe("Hamad CFA Mastery calendar export", () => {
   it("keeps stable UIDs when a checkpoint uses the Friday exception", () => {
     const canonical = getProject202CalendarEvents(undefined, {}, PREFERENCES)
       .find((event) => event.uid.includes("session-02"));
-    const overrides = cascadeReschedule({}, 2, "2026-09-04", "Travel").overrides;
+    const overrides = cascadeReschedule({}, 2, "2026-09-11", "Travel").overrides;
     const changed = getProject202CalendarEvents(undefined, overrides, PREFERENCES)
       .find((event) => event.uid.includes("session-02"));
     expect(changed?.uid).toBe(canonical?.uid);
@@ -139,7 +139,7 @@ describe("Hamad CFA Mastery calendar export", () => {
       "SUMMARY:Hamad CFA Mastery - Session 01: Prior-attempt diagnostic + Quant M001-M004 checkpoint",
     );
     expect(unfolded).toMatch(
-      /DESCRIPTION:Session 01 of 26\\nWeek 01 - .*\\nRhythm: Saturday checkpoint/,
+      /DESCRIPTION:Session 01 of 25\\nWeek 01 - .*\\nRhythm: Saturday checkpoint/,
     );
   });
 

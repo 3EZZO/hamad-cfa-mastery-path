@@ -17,7 +17,7 @@ import { validateEffectiveSessionSchedule } from "./schedule";
 
 export const STORAGE_KEY = "project-202-tracker-v1";
 export const PENDING_SYNC_KEY = "project-202-pending-sync-v1";
-export const TRACKER_SCHEDULE_VERSION = "weekly-saturday-v1" as const;
+export const TRACKER_SCHEDULE_VERSION = "weekly-saturday-v2" as const;
 
 export interface PendingSync {
   version: 1;

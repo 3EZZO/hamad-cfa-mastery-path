@@ -73,7 +73,7 @@ The rules intentionally allow:
 
 Repeat the deploy command after every intentional change to `firestore.rules`. Rules are not deployed by the GitHub Pages workflow. For this release, deploy the backward-compatible rules before publishing the new Pages build so the new session-approval fields and private-note path are authorized when the client becomes live.
 
-When a release changes both rules and the web client, deploy the rules first, then deploy Pages. The weekly-plan rules require `scheduleVersion = weekly-saturday-v1` on the next write. Sign in as Mohamed first after the Pages deployment so the tutor account can publish the migrated or reset baseline before Hamad uses the updated tracker.
+When a release changes both rules and the web client, deploy the rules first, then deploy Pages. The confirmed 5 September plan requires `scheduleVersion = weekly-saturday-v2` on the next write. Sign in as Mohamed first after the Pages deployment so the tutor account can publish the migrated or reset baseline before Hamad uses the updated tracker.
 
 ## 5. Configure and verify locally
 
@@ -170,9 +170,9 @@ Data belongs to a browser origin, so the old hosted tracker and the new GitHub P
 
 Do not import the same legacy backup independently from both accounts. The first verified import becomes the shared cloud baseline.
 
-### Weekly-plan reset for the August 2026 launch
+### Weekly-plan reset for the September 2026 launch
 
-The previous build used a materially different 68-session schedule. The new client marks the fixed Saturday plan as `weekly-saturday-v1`. When it reads an older snapshot, it keeps independent evidence such as practice, mistakes, mocks, shared notes, and topic mastery, but clears schedule-bound task completion, session logs, approvals, diagnostics, and overrides so old session IDs cannot be mistaken for new checkpoints.
+The confirmed client marks the 25-checkpoint Saturday plan as `weekly-saturday-v2`. When it reads an older snapshot, including the provisional `weekly-saturday-v1` plan, it keeps independent evidence such as practice, mistakes, mocks, shared notes, and topic mastery, but clears schedule-bound task completion, session logs, approvals, diagnostics, and overrides so old session IDs or dates cannot be mistaken for the agreed checkpoints.
 
 No genuine course work has begun for this launch, so use the clean authoritative path:
 
@@ -180,7 +180,7 @@ No genuine course work has begun for this launch, so use the clean authoritative
 2. Deploy Pages, then open the updated URL as Mohamed; do not ask Hamad to open it yet.
 3. Wait for **Synced**, open **Tutor Console**, and select **Export and reset**.
 4. Enter `RESET HAMAD MASTERY` exactly. The tracker downloads a JSON recovery copy before replacing the shared state.
-5. Wait for **Synced** again, refresh, and confirm Session 01 is Saturday 29 August 2026 and the plan shows 26 checkpoints.
+5. Wait for **Synced** again, refresh, and confirm Session 01 is Saturday 5 September 2026, Session 25 is Saturday 20 February 2027, and the 27 February exam is a separate session-free milestone.
 6. Only then ask Hamad to sign in. Confirm his second device shows the same clean baseline.
 
 Delete any previously imported legacy Project 202 calendar events before importing the newly generated `hamad-cfa-mastery-calendar.ics` file, otherwise obsolete sessions from the old schedule may remain.
@@ -192,8 +192,8 @@ Delete any previously imported legacy Project 202 calendar events before importi
 - The `members` allowlist is the access boundary. An authenticated but unlisted Firebase user cannot read or change tracker data.
 - Membership `role` is also enforced by Firestore Rules, not only hidden or disabled in the interface. Keep Mohamed's role exactly `tutor` and Hamad's exactly `student`.
 - Import, reset, session scheduling, tutor-session records, session approval, diagnostic administration, topic mastery, mock administration, and private tutor notes are tutor-controlled. Hamad may complete independent/evidence tasks, request or withdraw session completion, record confidence-rated practice and mistakes, and manage shared notes.
-- Every cloud snapshot and imported backup is normalized before rendering. Malformed evidence records are discarded, numeric/text fields are bounded, duplicate record IDs are removed, and schedule overrides are accepted only when all 26 checkpoints remain in their original program week and before the exam. The only valid exception is the Friday immediately before that checkpoint's canonical Saturday, still at 09:00 and with a tutor reason.
-- Firestore Rules enforce roles, top-level types, collection limits, revision/timestamp consistency, the `weekly-saturday-v1` schedule version, and the fixed Session 01-26 override-key space. Because the tracker intentionally remains one Firestore document, Rules cannot iterate through every object in its large evidence arrays; the application normalizer is the detailed record-shape boundary and JSON export remains the recovery path.
+- Every cloud snapshot and imported backup is normalized before rendering. Malformed evidence records are discarded, numeric/text fields are bounded, duplicate record IDs are removed, and schedule overrides are accepted only when all 25 checkpoints remain in their original program week and before the exam. The only valid exception is the Friday immediately before that checkpoint's canonical Saturday, still at 09:00 and with a tutor reason.
+- Firestore Rules enforce roles, top-level types, collection limits, revision/timestamp consistency, the `weekly-saturday-v2` schedule version, and the fixed Session 01-25 override-key space. Because the tracker intentionally remains one Firestore document, Rules cannot iterate through every object in its large evidence arrays; the application normalizer is the detailed record-shape boundary and JSON export remains the recovery path.
 - Keep the database in Spark limits by synchronizing the single tracker document only when state changes, not on a timer.
 - JSON export remains the recovery path for accidental edits or service disruption.
 - Calendar reminder preferences use browser `localStorage` only; they are not written to Firestore or shared between Mohamed and Hamad. Checkpoint time is fixed at 09:00 Asia/Riyadh. The generated `.ics` is a published calendar import with stable event IDs, not an email invitation.

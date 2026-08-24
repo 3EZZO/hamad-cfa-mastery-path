@@ -1,4 +1,4 @@
-"""Build the official 2027 curriculum catalog and 27-week tutoring plan.
+"""Build the official 2027 curriculum catalog and 26-week tutoring plan.
 
 The public CFA Institute 2027 Level I Topic Outlines are the module-title
 authority. Full curriculum lessons, examples, questions, and Equation
@@ -684,12 +684,12 @@ WEEKS: list[dict] = [
 
 
 def scheduled_weeks() -> list[dict]:
-    """Reflow the topical blueprint into the fixed 27-week program window.
+    """Reflow the topical blueprint into the fixed 26-week program window.
 
     All official modules remain in published order as independent study. The
-    first 26 weeks each end with one Saturday checkpoint; Week 27 is a
-    session-free taper and exam-execution week. The seven-mock campaign and
-    final taper retain their intended dates.
+    first 25 weeks each end with one Saturday checkpoint; Week 26 is a
+    session-free taper and exam-execution week. Coverage closes in Session 17,
+    followed by seven full-mock cycles and one dedicated repair checkpoint.
     """
 
     opening = [
@@ -738,29 +738,44 @@ def scheduled_weeks() -> list[dict]:
         "masteryGate": "Complete the portfolio decision map and apply the controlling ethical duty before selecting an answer on fresh cases.",
     }
 
-    ethics_and_integration = {
-        "focus": "Ethics II and integration I: duties, conflicts, candidate responsibilities, application, and decision maps",
+    coverage_close_and_integration = {
+        "focus": "Ethics II, full-curriculum integration, and the 102-module coverage gate",
         "topics": ["Ethical and Professional Standards", "Mixed Curriculum"],
-        "sessions": [*WEEKS[17]["sessions"], WEEKS[18]["sessions"][0]],
-        "questionTarget": 440,
-        "masteryGate": "Clear the cumulative Ethics gate, explain every corrected answer, and complete the first integrated decision maps without adding new gaps.",
+        "sessions": [
+            *WEEKS[17]["sessions"],
+            *WEEKS[18]["sessions"],
+            *WEEKS[19]["sessions"],
+        ],
+        "questionTarget": 500,
+        "masteryGate": "Clear the cumulative Ethics and mixed switching gates, verify evidence for all 102 official modules, and convert every remaining weakness into a narrow active-repair item before Mock 1.",
     }
-    integration_and_gate = {
-        "focus": "Full-curriculum switching, 102-module audit, and coverage gate",
-        "topics": ["Mixed Curriculum"],
-        "sessions": [WEEKS[18]["sessions"][1], *WEEKS[19]["sessions"]],
-        "questionTarget": 440,
-        "masteryGate": "Verify all 102 official modules, clear the mixed switching set, and convert every remaining weakness into a narrow active-repair item before Mock 1.",
-    }
+
+    # With the confirmed 5 September start, eight Saturday checkpoints remain
+    # after the coverage gate: seven mock cycles plus one deep-repair week.
+    # The mock-week target includes the 180-question full mock and reviewed
+    # repair work. This keeps the original 6,630-attempt evidence target intact
+    # without placing a tutoring session on the 27 February exam appointment.
+    mock_and_taper = [
+        {
+            **blueprint,
+            "questionTarget": (
+                350
+                if blueprint.get("mock")
+                else 270
+                if blueprint["focus"].startswith("Deep repair")
+                else blueprint["questionTarget"]
+            ),
+        }
+        for blueprint in WEEKS[20:]
+    ]
 
     return [
         *opening,
         *WEEKS[4:14],
         alternatives_and_portfolio,
         portfolio_and_ethics,
-        ethics_and_integration,
-        integration_and_gate,
-        *WEEKS[20:],
+        coverage_close_and_integration,
+        *mock_and_taper,
     ]
 
 
@@ -768,10 +783,8 @@ def phase_for_week(week_number: int) -> str:
     if week_number <= 16:
         return "Phase 1 | Official 2027 Curriculum Coverage"
     if week_number == 17:
-        return "Phase 1-2 Bridge | Coverage Close and Integration"
-    if week_number == 18:
-        return "Phase 2 | Integration and Coverage Gate"
-    if week_number <= 26:
+        return "Phase 2 | Coverage Close and Integration Gate"
+    if week_number <= 25:
         return "Phase 3 | Mock and Repair Campaign"
     return "Phase 4 | Taper and Exam"
 
@@ -807,13 +820,13 @@ def build() -> tuple[list[dict], dict]:
 
     weeks: list[dict] = []
     session_number = 0
-    first_week_start = date(2026, 8, 23)
+    first_week_start = date(2026, 8, 30)
     record_by_id = {record["id"]: record for record in module_records}
     mock_targets = {1: 60, 2: 63, 3: 65, 4: 67, 5: 69, 6: 70, 7: 72}
 
     blueprints = scheduled_weeks()
-    if len(blueprints) != 27:
-        raise ValueError(f"Expected 27 scheduled weeks, found {len(blueprints)}")
+    if len(blueprints) != 26:
+        raise ValueError(f"Expected 26 scheduled weeks, found {len(blueprints)}")
 
     for week_number, blueprint in enumerate(blueprints, start=1):
         week_start = first_week_start + timedelta(days=(week_number - 1) * 7)
@@ -840,7 +853,7 @@ def build() -> tuple[list[dict], dict]:
                     "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
                 ]
             )
-        elif week_number == 27:
+        elif week_number == 26:
             independent_study.extend(
                 [
                     "Complete only light retrieval from the frozen review list; do not reopen the curriculum.",
@@ -852,7 +865,7 @@ def build() -> tuple[list[dict], dict]:
             independent_study.append(
                 "Complete the assigned timed mixed assessment or repair set before Saturday's checkpoint."
             )
-        if week_number < 27:
+        if week_number < 26:
             independent_study.extend(
                 [
                     f"Complete the week's {blueprint['questionTarget']}-question target and log each reviewed block in the tracker.",
@@ -879,7 +892,7 @@ def build() -> tuple[list[dict], dict]:
                     f"Mock {blueprint['mock']}"
                     if blueprint.get("mock")
                     else "Exam execution gate"
-                    if week_number == 27
+                    if week_number == 26
                     else "Weekly evidence gate"
                 ),
                 "targetScore": mock_targets.get(blueprint.get("mock")),
@@ -891,10 +904,10 @@ def build() -> tuple[list[dict], dict]:
             },
         }
 
-        # The first 26 weeks end with one fixed Saturday checkpoint. Week 27 is
+        # The first 25 weeks end with one fixed Saturday checkpoint. Week 26 is
         # reserved for independent taper and the Saturday exam appointment, so
         # no tutoring session is placed on exam day.
-        if week_number <= 26:
+        if week_number <= 25:
             session_number += 1
             for reading_id in assigned_reading_ids:
                 record_by_id[reading_id]["sessionNumbers"].append(session_number)
@@ -925,8 +938,8 @@ def build() -> tuple[list[dict], dict]:
             }
         weeks.append(week)
 
-    if session_number != 26:
-        raise ValueError(f"Expected 26 tutoring checkpoints, found {session_number}")
+    if session_number != 25:
+        raise ValueError(f"Expected 25 tutoring checkpoints, found {session_number}")
     missing = [record["id"] for record in module_records if not record["sessionNumbers"]]
     if missing:
         raise ValueError(f"Unassigned official modules: {missing}")

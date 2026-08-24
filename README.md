@@ -1,6 +1,6 @@
 # Hamad's CFA Level I Mastery Path
 
-**Hamad's CFA Level I Mastery Path** is a mobile-first study tracker for a 27-week private coaching program running from 23 August 2026 through the 27 February 2027 CFA Level I exam appointment. The first tutor checkpoint is Saturday, 29 August 2026 at 09:00 Asia/Riyadh.
+**Hamad's CFA Level I Mastery Path** is a mobile-first study tracker for a 26-week private coaching program running from 30 August 2026 through the 27 February 2027 CFA Level I exam appointment. The first tutor checkpoint is Saturday, 5 September 2026 at 09:00 Asia/Riyadh.
 
 Created by Mohamed Ali, CFA.
 
@@ -9,8 +9,8 @@ The application is isolated from the surrounding HN3 projects. It has its own de
 ## Program design
 
 - All 102 learning modules in the official public 2027 CFA Level I topic outline, assigned once in published order as independent study
-- 26 consecutively numbered, 120-minute tutor checkpoints: one every Saturday at 09:00 Asia/Riyadh from 29 August 2026 through 20 February 2027
-- Week 27 is a protected independent taper and exam-execution week, with no tutor session on the 27 February exam day
+- 25 consecutively numbered, 120-minute tutor checkpoints: one every Saturday at 09:00 Asia/Riyadh from 5 September 2026 through 20 February 2027
+- Week 26 is a protected independent taper and exam-execution week, with a separate checklist and no tutor session on the 27 February exam day
 - Session 01 combines a structured prior-attempt diagnostic with testing and remediation of Quantitative Methods Modules M001-M004
 - Curriculum coverage is assigned through Session 17, followed by integration, seven independent mock-and-repair cycles, and the final taper
 - Weekly completion checklists, evidence gates, independent work, and question targets
@@ -21,7 +21,7 @@ The application is isolated from the surrounding HN3 projects. It has its own de
 - Tutor-only launch checks, structured Session 01 diagnostic, and safe schedule overrides
 - Automatic coaching-risk signals derived from due work, practice evidence, mistakes, and mocks
 - Weekly WhatsApp-ready summaries plus print-to-PDF progress reports
-- Calendar import for all 26 timed tutor checkpoints and administrative milestones, with the fixed 09:00 Riyadh start time and selectable reminders
+- Calendar import for all 25 timed tutor checkpoints and administrative milestones, including the separate 27 February exam appointment, with the fixed 09:00 Riyadh start time and selectable reminders
 - Installable Hamad CFA Mastery web app with branded Android, maskable, and iPhone icons
 - Repository-path-aware offline app shell; Firebase resumes synchronization when connectivity returns
 - Authenticated Firestore synchronization between Mohamed and Hamad
@@ -37,7 +37,7 @@ The Home view focuses on the next required action. Quick logging supports practi
 
 When the four `VITE_FIREBASE_*` values are configured, the application synchronizes shared work at `programs/project-202/tracker/current`. Only authenticated users with an active `tutor` or `student` membership may access it. Private tutor notes use the separate `programs/project-202/tutorPrivate/notes` document, which Firestore rules deny to the student account even when the path is known. Rules also keep schedule, mastery, mock results, diagnostics, and session approvals tutor-controlled.
 
-The public brand is **Hamad's CFA Level I Mastery Path**. The existing repository slug, GitHub Pages path, Firebase project ID, Firestore document paths, browser storage keys, calendar event UIDs, package identifiers, and asset filenames retain their legacy `project-202` values intentionally. Changing those infrastructure identifiers during a visual rename would break links, authentication continuity, synchronized progress, installed-app scope, or calendar deduplication.
+The public brand is **Hamad's CFA Level I Mastery Path**, and the repository plus GitHub Pages path use `hamad-cfa-mastery-path`. The Firebase project ID, Firestore document paths, browser storage keys, calendar event UIDs, package identifiers, and some asset filenames retain their internal legacy `project-202` values intentionally. Changing those remaining infrastructure identifiers would break authentication continuity, synchronized progress, installed-app scope, or calendar deduplication.
 
 The browser retains local state for continuity, but Firestore is the cross-device copy shared by Mohamed and Hamad. JSON export remains the independent recovery format. A deployment without Firebase configuration displays a setup screen instead of opening an unsafe browser-only production tracker.
 
@@ -47,7 +47,7 @@ Progress from an older hosting origin does not migrate automatically. Export JSO
 
 ## Canonical data
 
-- `src/data/plan.json` is the source of truth for all 27 weeks and 26 tutor checkpoints. Each week includes its phase, dates, outcomes, checkpoint schedule when applicable, independent work, question target, mastery gate, and mock milestone.
+- `src/data/plan.json` is the source of truth for all 26 weeks and 25 tutor checkpoints. Each week includes its phase, dates, outcomes, checkpoint schedule when applicable, independent work, question target, mastery gate, and mock milestone.
 - `src/data/readings.json` contains the 102-module official 2027 outline catalog and its session assignments.
 - `src/data/program.json` contains the exam appointment, cadence, Practical Skills Module, and administrative milestone metadata.
 - `scripts/build-2027-data.py` reproducibly generates the plan and reading data.
@@ -57,11 +57,11 @@ Progress from an older hosting origin does not migrate automatically. Export JSO
 
 When updating the schedule, preserve these invariants:
 
-1. Exactly 27 consecutive Sunday-to-Saturday weeks, beginning 23 August 2026 and ending 27 February 2027.
-2. Exactly 26 consecutively numbered required tutor checkpoints, one in each of Weeks 1-26.
+1. Exactly 26 consecutive Sunday-to-Saturday weeks, beginning 30 August 2026 and ending 27 February 2027.
+2. Exactly 25 consecutively numbered required tutor checkpoints, one in each of Weeks 1-25.
 3. Canonical checkpoints are Saturdays at 09:00 Asia/Riyadh and last 120 minutes.
 4. A tutor-approved exception may move one checkpoint only to the immediately preceding Friday at the same 09:00 time; it never cascades later sessions.
-5. Week 27 has no tutor checkpoint, protects taper and logistics, and reserves Saturday 27 February for the exam.
+5. Week 26 has no tutor checkpoint, protects taper and logistics, and presents Saturday 27 February as a separate exam-day milestone and checklist.
 6. All 102 official modules appear exactly once and in published order, beginning with Quantitative Methods Module 1.
 7. Full-length mocks are independent tasks; numbered tutor checkpoints prepare, debrief, and repair them.
 

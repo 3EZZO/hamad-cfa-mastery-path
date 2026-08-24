@@ -11,7 +11,7 @@ import {
 function state(): TrackerState {
   return {
     version: 1,
-    scheduleVersion: "weekly-saturday-v1",
+    scheduleVersion: "weekly-saturday-v2",
     updatedAt: "2026-08-03T00:00:00.000Z",
   taskCompletions: {},
   sessionCompletionRequests: {},
