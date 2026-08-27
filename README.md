@@ -2,7 +2,7 @@
 
 **Hamad's CFA Level I Mastery Path** is a mobile-first study tracker for a 26-week private coaching program running from 30 August 2026 through the 27 February 2027 CFA Level I exam appointment. The first tutor checkpoint is Saturday, 5 September 2026 at 09:00 Asia/Riyadh.
 
-Created by Mohamed Ali, CFA.
+Created by Mohamed, CFA.
 
 The application is isolated from the surrounding HN3 projects. It has its own dependencies, TypeScript configuration, tests, and production builds.
 
