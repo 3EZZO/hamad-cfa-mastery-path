@@ -29,9 +29,9 @@
     },
     "session1": {
       "label": "Saturday 09:00 checkpoint",
-      "title": "Prior-attempt diagnostic + Quant M001-M004 checkpoint",
-      "objective": "Establish the baseline from both prior attempts, test Quant Modules M001-M004, reteach the highest-value gaps, and issue the next independent-study assignment.",
-      "durationMinutes": 120,
+      "title": "Quant Masterclass I: returns, benchmarking, and time value",
+      "objective": "Teach Quant Modules M001-M004 immediately through modelled examples, guided reconstruction, independent proof, adaptive repair, and a focused closing assignment.",
+      "durationMinutes": 150,
       "number": 1,
       "requirement": "required",
       "date": "2026-09-05",

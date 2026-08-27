@@ -101,7 +101,7 @@ export function buildRiskIndicators(
       tone: "green",
       title: "Pre-launch window",
       detail: `Session 01 begins ${firstSession}; no study-performance warning is active yet.`,
-      action: "Complete the account, calendar, and diagnostic-readiness checks.",
+      action: "Complete the account, calendar, calculator, and Live Session readiness checks.",
     }];
   }
 
@@ -228,19 +228,6 @@ export function buildRiskIndicators(
       action: unscheduled
         ? "Assign a retest date and a reproducible correction rule to every open mistake."
         : "Complete each delayed retest on its scheduled date and record the result.",
-    });
-  }
-
-  const diagnosticComplete = tracker.diagnostics.some(
-    (entry) => entry.sessionNumber === 1 && entry.status === "final",
-  );
-  if (today > firstSession && !diagnosticComplete) {
-    indicators.push({
-      id: "diagnostic-missing",
-      tone: "amber",
-      title: "Session 01 diagnostic is not finalized",
-      detail: "The baseline from the two prior attempts has not been secured in the tracker.",
-      action: "Tutor: finalize the 25-minute baseline and record the repair priorities.",
     });
   }
 

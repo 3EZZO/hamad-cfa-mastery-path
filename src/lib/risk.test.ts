@@ -11,11 +11,11 @@ describe("automatic coaching risks", () => {
     expect(indicators[0].id).toBe("prelaunch");
   });
 
-  it("detects overdue work, missing practice, and a missing baseline", () => {
+  it("detects overdue work and missing practice after launch", () => {
     const indicators = buildRiskIndicators(createDefaultState(), "2026-09-13");
     expect(indicators.some((item) => item.id === "overdue-work" && item.tone === "red")).toBe(true);
     expect(indicators.some((item) => item.id === "practice-gap")).toBe(true);
-    expect(indicators.some((item) => item.id === "diagnostic-missing")).toBe(true);
+    expect(indicators.some((item) => item.id === "diagnostic-missing")).toBe(false);
   });
 
   it("treats a student session request as incomplete until the tutor approves it", () => {

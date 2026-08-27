@@ -22,6 +22,8 @@ describe("Hamad CFA Mastery role capabilities", () => {
       canManageDiagnostics: false,
       canImportData: false,
       canResetTracker: false,
+      canUseLiveSession: false,
+      canManageTutorPlaybooks: false,
     });
   });
 

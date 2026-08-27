@@ -4037,3 +4037,65 @@ body {
     grid-column: auto;
   }
 }
+
+/* On-demand bridge into the private tutor-only Session Mode chunk. */
+.session-mode-loader {
+  display: grid;
+  min-height: 100vh;
+  padding: 24px;
+  place-items: center;
+  color: #071e33;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(23, 105, 224, 0.15), transparent 28rem),
+    radial-gradient(circle at 86% 82%, rgba(11, 142, 138, 0.13), transparent 25rem),
+    #edf6fc;
+}
+
+.session-mode-loader > section {
+  width: min(520px, 100%);
+  padding: 38px;
+  text-align: center;
+  border: 1px solid #cbdceb;
+  border-radius: 22px;
+  background: #f8fbff;
+  box-shadow: 0 24px 70px rgba(7, 30, 51, 0.14);
+}
+
+.session-mode-loader-mark {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0 auto 18px;
+  border: 4px solid #b8dcfa;
+  border-top-color: #1769e0;
+  border-radius: 50%;
+  animation: session-mode-loader-spin 0.8s linear infinite;
+}
+
+.session-mode-loader p {
+  margin: 0 0 7px;
+  color: #1769e0;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.session-mode-loader h1 {
+  margin: 0 0 8px;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: clamp(1.8rem, 7vw, 2.8rem);
+  letter-spacing: -0.035em;
+}
+
+.session-mode-loader small {
+  color: #456078;
+}
+
+@keyframes session-mode-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-mode-loader-mark { animation: none; }
+}

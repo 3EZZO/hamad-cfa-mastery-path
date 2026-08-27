@@ -15,16 +15,38 @@ import {
   type User,
 } from "firebase/auth";
 import {
+  deleteDoc,
   doc,
+  getDoc,
   getFirestore,
   onSnapshot,
   runTransaction,
+  writeBatch,
   type Firestore,
 } from "firebase/firestore";
 import type { PrivateTutorNote, TrackerState } from "../types";
 import { mergeTrackerStates } from "./stateMerge";
 import { normalizePrivateTutorNotes, normalizeState } from "./storage";
 import type { ProjectRole } from "./permissions";
+import {
+  applyTutorLiveRunAction,
+  buildTutorPlaybookChunkStorageId,
+  parseTutorLiveRun,
+  parseTutorLiveRunSaveRequest,
+  parseTutorContentId,
+  parseTutorPlaybookChunk,
+  parseTutorPlaybookManifest,
+  TutorContentValidationError,
+  TutorLiveRunConflictError,
+  tutorPlaybookPackageToDraft,
+  validateTutorPlaybookPackage,
+  verifyTutorPlaybookPackageIntegrity,
+  type TutorLiveRun,
+  type TutorLiveRunSaveRequest,
+  type TutorPlaybookChunk,
+  type TutorPlaybookManifest,
+  type TutorPlaybookPackage,
+} from "./tutorContent";
 
 const FIREBASE_APP_NAME = "project-202-cloud";
 const PROGRAM_ID = "project-202";
@@ -33,6 +55,10 @@ export const CLOUD_TRACKER_DOCUMENT_PATH =
   "programs/project-202/tracker/current" as const;
 export const PRIVATE_TUTOR_NOTES_DOCUMENT_PATH =
   "programs/project-202/tutorPrivate/notes" as const;
+export const TUTOR_PLAYBOOK_COLLECTION_PATH =
+  "programs/project-202/tutorPlaybooks" as const;
+export const TUTOR_LIVE_RUN_COLLECTION_PATH =
+  "programs/project-202/tutorRuns" as const;
 
 export const REQUIRED_FIREBASE_ENV_KEYS = [
   "VITE_FIREBASE_API_KEY",
@@ -104,6 +130,8 @@ export type CloudErrorCode =
   | "authentication-required"
   | "invalid-cloud-data"
   | "invalid-membership"
+  | "invalid-tutor-content"
+  | "tutor-live-run-conflict"
   | "conflict-base-missing"
   | "permission-denied"
   | "popup-blocked"
@@ -126,6 +154,10 @@ const FRIENDLY_ERROR_MESSAGES: Record<CloudErrorCode, string> = {
     "The saved cloud record is not a valid Hamad CFA Mastery tracker.",
   "invalid-membership":
     "This account's Hamad CFA Mastery membership record is invalid. Ask the tutor to check Firebase.",
+  "invalid-tutor-content":
+    "The tutor playbook or live-session record is invalid and was not saved.",
+  "tutor-live-run-conflict":
+    "The live session changed on another device. Reload it before saving the next action.",
   "conflict-base-missing":
     "The cloud tracker changed before this device finished loading it. Refresh and try again.",
   "permission-denied":
@@ -390,6 +422,30 @@ function privateTutorNotesDocument(firestore: Firestore) {
   return doc(firestore, "programs", PROGRAM_ID, "tutorPrivate", "notes");
 }
 
+function tutorPlaybookDocument(firestore: Firestore, playbookId: string) {
+  return doc(firestore, "programs", PROGRAM_ID, "tutorPlaybooks", playbookId);
+}
+
+function tutorPlaybookChunkDocument(
+  firestore: Firestore,
+  playbookId: string,
+  storageId: string,
+) {
+  return doc(
+    firestore,
+    "programs",
+    PROGRAM_ID,
+    "tutorPlaybooks",
+    playbookId,
+    "chunks",
+    storageId,
+  );
+}
+
+function tutorLiveRunDocument(firestore: Firestore, runId: string) {
+  return doc(firestore, "programs", PROGRAM_ID, "tutorRuns", runId);
+}
+
 export function subscribeToPrivateTutorNotes(
   onEnvelope: (envelope: PrivateTutorNotesEnvelope | null) => void,
   onError?: (error: CloudClientError) => void,
@@ -607,6 +663,336 @@ export async function replaceCloudTracker(
     });
   } catch (error) {
     throw mapCloudError(error);
+  }
+}
+
+function mapTutorCloudError(error: unknown): CloudClientError {
+  if (error instanceof TutorContentValidationError) {
+    return new CloudClientError("invalid-tutor-content", error);
+  }
+  if (error instanceof TutorLiveRunConflictError) {
+    return new CloudClientError("tutor-live-run-conflict", error);
+  }
+  return mapCloudError(error);
+}
+
+/**
+ * Reads the active tutor-only manifest. Firestore Rules are the authorization
+ * boundary: Hamad's student account cannot read this path even when it knows
+ * the document ID.
+ */
+export async function getTutorPlaybookManifest(
+  playbookIdValue: string,
+): Promise<TutorPlaybookManifest | null> {
+  try {
+    const playbookId = parseTutorContentId(playbookIdValue, "playbookId");
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    const snapshot = await getDoc(tutorPlaybookDocument(firestore, playbookId));
+    return snapshot.exists() ? parseTutorPlaybookManifest(snapshot.data()) : null;
+  } catch (error) {
+    throw mapTutorCloudError(error);
+  }
+}
+
+/** Reads one immutable, versioned tutor-only playbook chunk. */
+export async function getTutorPlaybookChunk(
+  playbookIdValue: string,
+  versionValue: string,
+  chunkIdValue: string,
+): Promise<TutorPlaybookChunk | null> {
+  try {
+    const playbookId = parseTutorContentId(playbookIdValue, "playbookId");
+    const version = parseTutorContentId(versionValue, "version");
+    const chunkId = parseTutorContentId(chunkIdValue, "chunkId");
+    const storageId = buildTutorPlaybookChunkStorageId(
+      playbookId,
+      version,
+      chunkId,
+    );
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    const snapshot = await getDoc(
+      tutorPlaybookChunkDocument(firestore, playbookId, storageId),
+    );
+    if (!snapshot.exists()) return null;
+    const chunk = parseTutorPlaybookChunk(snapshot.data());
+    if (
+      chunk.playbookId !== playbookId ||
+      chunk.version !== version ||
+      chunk.id !== chunkId
+    ) {
+      throw new TutorContentValidationError(
+        "The stored tutor chunk does not match its requested path.",
+      );
+    }
+    return chunk;
+  } catch (error) {
+    throw mapTutorCloudError(error);
+  }
+}
+
+/**
+ * Loads and cross-validates the complete active playbook. Reads are issued in
+ * small groups so a large Tutor Bible does not create a request spike.
+ */
+export async function loadTutorPlaybookPackage(
+  playbookIdValue: string,
+): Promise<TutorPlaybookPackage | null> {
+  try {
+    const manifest = await getTutorPlaybookManifest(playbookIdValue);
+    if (!manifest) return null;
+    const chunks: TutorPlaybookChunk[] = [];
+    const readGroupSize = 10;
+    for (let start = 0; start < manifest.chunkIds.length; start += readGroupSize) {
+      const ids = manifest.chunkIds.slice(start, start + readGroupSize);
+      const group = await Promise.all(
+        ids.map((chunkId) =>
+          getTutorPlaybookChunk(manifest.id, manifest.version, chunkId),
+        ),
+      );
+      group.forEach((chunk, index) => {
+        if (!chunk) {
+          throw new TutorContentValidationError(
+            `Missing published chunk ${ids[index]} for ${manifest.id}.`,
+          );
+        }
+        chunks.push(chunk);
+      });
+    }
+    const validated = validateTutorPlaybookPackage(manifest, chunks);
+    await verifyTutorPlaybookPackageIntegrity(
+      tutorPlaybookPackageToDraft(validated.manifest, validated.chunks),
+    );
+    return validated;
+  } catch (error) {
+    throw mapTutorCloudError(error);
+  }
+}
+
+/**
+ * Publishes a private JSON package from Mohamed's device. Chunk documents are
+ * immutable and versioned. The active manifest changes only after every chunk
+ * has been safely written, so a failed import cannot replace a working Bible.
+ */
+export async function importTutorPlaybookPackage(
+  packageValue: unknown,
+): Promise<TutorPlaybookPackage> {
+  try {
+    const draft = await verifyTutorPlaybookPackageIntegrity(packageValue);
+    const { auth, firestore } = getFirebaseServices();
+    const user = requireAuthenticatedUser(auth);
+    const manifestReference = tutorPlaybookDocument(
+      firestore,
+      draft.manifest.id,
+    );
+    const initialManifestSnapshot = await getDoc(manifestReference);
+    const initialManifest = initialManifestSnapshot.exists()
+      ? parseTutorPlaybookManifest(initialManifestSnapshot.data())
+      : null;
+
+    if (
+      initialManifest?.version === draft.manifest.version &&
+      initialManifest.contentHash !== draft.manifest.contentHash
+    ) {
+      throw new TutorContentValidationError(
+        "A published version is immutable. Change the playbook version before republishing changed content.",
+      );
+    }
+    if (
+      initialManifest?.version === draft.manifest.version &&
+      initialManifest.contentHash === draft.manifest.contentHash
+    ) {
+      const existing = await loadTutorPlaybookPackage(draft.manifest.id);
+      if (!existing) {
+        throw new TutorContentValidationError(
+          "The active playbook manifest exists but its chunks could not be loaded.",
+        );
+      }
+      return existing;
+    }
+
+    const publishedAtClient = new Date().toISOString();
+    const publishedChunks: TutorPlaybookChunk[] = draft.chunks.map((chunk) =>
+      parseTutorPlaybookChunk({
+        ...chunk,
+        playbookId: draft.manifest.id,
+        version: draft.manifest.version,
+        storageId: buildTutorPlaybookChunkStorageId(
+          draft.manifest.id,
+          draft.manifest.version,
+          chunk.id,
+        ),
+        publishedBy: user.uid,
+        publishedAtClient,
+      }),
+    );
+
+    const chunksToCreate: TutorPlaybookChunk[] = [];
+    for (let start = 0; start < publishedChunks.length; start += 10) {
+      const group = publishedChunks.slice(start, start + 10);
+      const snapshots = await Promise.all(
+        group.map((chunk) =>
+          getDoc(
+            tutorPlaybookChunkDocument(
+              firestore,
+              draft.manifest.id,
+              chunk.storageId,
+            ),
+          ),
+        ),
+      );
+      snapshots.forEach((snapshot, index) => {
+        const candidate = group[index]!;
+        if (!snapshot.exists()) {
+          chunksToCreate.push(candidate);
+          return;
+        }
+        const existing = parseTutorPlaybookChunk(snapshot.data());
+        if (
+          existing.playbookId !== candidate.playbookId ||
+          existing.version !== candidate.version ||
+          existing.id !== candidate.id ||
+          existing.contentHash !== candidate.contentHash
+        ) {
+          throw new TutorContentValidationError(
+            `Published chunk ${candidate.storageId} conflicts with an existing immutable chunk.`,
+          );
+        }
+      });
+    }
+
+    // Ten 450 KB chunks remain comfortably below Firestore's 10 MiB request
+    // ceiling. A partially completed retry is safe because existing immutable
+    // chunks are verified and skipped above.
+    for (let start = 0; start < chunksToCreate.length; start += 10) {
+      const batch = writeBatch(firestore);
+      chunksToCreate.slice(start, start + 10).forEach((chunk) => {
+        batch.set(
+          tutorPlaybookChunkDocument(
+            firestore,
+            draft.manifest.id,
+            chunk.storageId,
+          ),
+          chunk,
+        );
+      });
+      await batch.commit();
+    }
+
+    const manifest = await runTransaction(firestore, async (transaction) => {
+      const snapshot = await transaction.get(manifestReference);
+      const current = snapshot.exists()
+        ? parseTutorPlaybookManifest(snapshot.data())
+        : null;
+      const manifestChangedDuringUpload = initialManifest
+        ? !current || current.revision !== initialManifest.revision
+        : Boolean(current);
+      if (
+        manifestChangedDuringUpload &&
+        !(
+          current?.version === draft.manifest.version &&
+          current.contentHash === draft.manifest.contentHash
+        )
+      ) {
+        throw new TutorLiveRunConflictError(
+          "The active Tutor Bible changed while this version was uploading.",
+        );
+      }
+      if (
+        current?.version === draft.manifest.version &&
+        current.contentHash === draft.manifest.contentHash
+      ) {
+        return current;
+      }
+      if (
+        current?.version === draft.manifest.version &&
+        current.contentHash !== draft.manifest.contentHash
+      ) {
+        throw new TutorContentValidationError(
+          "A published version is immutable. Use a new playbook version.",
+        );
+      }
+      const next = parseTutorPlaybookManifest({
+        ...draft.manifest,
+        revision: (current?.revision ?? 0) + 1,
+        publishedBy: user.uid,
+        publishedAtClient,
+      });
+      transaction.set(manifestReference, next);
+      return next;
+    });
+
+    const activeChunks = await Promise.all(
+      manifest.chunkIds.map((chunkId) =>
+        getTutorPlaybookChunk(manifest.id, manifest.version, chunkId),
+      ),
+    );
+    if (activeChunks.some((chunk) => !chunk)) {
+      throw new TutorContentValidationError(
+        "The manifest was published, but a protected chunk could not be verified.",
+      );
+    }
+    return validateTutorPlaybookPackage(
+      manifest,
+      activeChunks as TutorPlaybookChunk[],
+    );
+  } catch (error) {
+    throw mapTutorCloudError(error);
+  }
+}
+
+/** Returns one private live-session run by its deterministic ID. */
+export async function getTutorLiveRun(
+  runIdValue: string,
+): Promise<TutorLiveRun | null> {
+  try {
+    const runId = parseTutorContentId(runIdValue, "runId");
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    const snapshot = await getDoc(tutorLiveRunDocument(firestore, runId));
+    return snapshot.exists() ? parseTutorLiveRun(snapshot.data()) : null;
+  } catch (error) {
+    throw mapTutorCloudError(error);
+  }
+}
+
+/**
+ * Persists exactly one meaningful tutor action. There is intentionally no
+ * timer-tick action: the UI keeps the clock locally and saves starts, pauses,
+ * navigation, assessments, repairs, notes, and terminal actions only.
+ */
+export async function saveTutorLiveRun(
+  requestValue: TutorLiveRunSaveRequest,
+): Promise<TutorLiveRun> {
+  try {
+    const request = parseTutorLiveRunSaveRequest(requestValue);
+    const { auth, firestore } = getFirebaseServices();
+    const user = requireAuthenticatedUser(auth);
+    const reference = tutorLiveRunDocument(firestore, request.runId);
+    return await runTransaction(firestore, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const current = snapshot.exists()
+        ? parseTutorLiveRun(snapshot.data())
+        : null;
+      const next = applyTutorLiveRunAction(current, request, user.uid);
+      transaction.set(reference, next);
+      return next;
+    });
+  } catch (error) {
+    throw mapTutorCloudError(error);
+  }
+}
+
+/** Deletes a private live run. Firestore Rules restrict deletion to the tutor. */
+export async function deleteTutorLiveRun(runIdValue: string): Promise<void> {
+  try {
+    const runId = parseTutorContentId(runIdValue, "runId");
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    await deleteDoc(tutorLiveRunDocument(firestore, runId));
+  } catch (error) {
+    throw mapTutorCloudError(error);
   }
 }
 

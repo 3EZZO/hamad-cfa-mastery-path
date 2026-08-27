@@ -251,6 +251,470 @@ service cloud.firestore {
         && request.resource.data.updatedAtClient.size() <= 40;
     }
 
+    function validTutorPlaybookManifest(playbookId) {
+      return request.resource.data.keys().hasOnly([
+          'schemaVersion',
+          'id',
+          'sessionNumber',
+          'title',
+          'version',
+          'contentHash',
+          'defaultRouteId',
+          'routes',
+          'chunkIds',
+          'revision',
+          'publishedBy',
+          'publishedAtClient'
+        ])
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.id == playbookId
+        && request.resource.data.sessionNumber is int
+        && request.resource.data.sessionNumber >= 1
+        && request.resource.data.sessionNumber <= 25
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 240
+        && request.resource.data.version is string
+        && request.resource.data.version.size() > 0
+        && request.resource.data.version.size() <= 80
+        && request.resource.data.contentHash is string
+        && request.resource.data.contentHash.size() == 64
+        && request.resource.data.defaultRouteId is string
+        && request.resource.data.defaultRouteId.size() > 0
+        && request.resource.data.defaultRouteId.size() <= 80
+        && request.resource.data.routes is list
+        && request.resource.data.routes.size() >= 1
+        && request.resource.data.routes.size() <= 4
+        && request.resource.data.chunkIds is list
+        && request.resource.data.chunkIds.size() >= 1
+        && request.resource.data.chunkIds.size() <= 200
+        && request.resource.data.revision is int
+        && request.resource.data.revision > 0
+        && request.resource.data.publishedBy == request.auth.uid
+        && request.resource.data.publishedAtClient is string
+        && request.resource.data.publishedAtClient.size() <= 40;
+    }
+
+    function validTutorPlaybookManifestUpdate() {
+      return request.resource.data.id == resource.data.id
+        && request.resource.data.sessionNumber == resource.data.sessionNumber
+        // A published version is immutable. Changed content is activated under
+        // a new version only after all of its immutable chunks exist.
+        && request.resource.data.version != resource.data.version;
+    }
+
+    function validTutorPlaybookChunk(playbookId, chunkStorageId) {
+      return request.resource.data.keys().hasOnly([
+          'schemaVersion',
+          'id',
+          'order',
+          'kind',
+          'title',
+          'contentHash',
+          'stages',
+          'playbookId',
+          'version',
+          'storageId',
+          'publishedBy',
+          'publishedAtClient'
+        ])
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.playbookId == playbookId
+        && request.resource.data.storageId == chunkStorageId
+        && request.resource.data.id is string
+        && request.resource.data.id.size() > 0
+        && request.resource.data.id.size() <= 80
+        && request.resource.data.order is int
+        && request.resource.data.order >= 0
+        && request.resource.data.order < 200
+        && request.resource.data.kind in [
+          'route',
+          'stage',
+          'reference',
+          'questions',
+          'solutions',
+          'repair',
+          'appendix'
+        ]
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 240
+        && request.resource.data.contentHash is string
+        && request.resource.data.contentHash.size() == 64
+        && request.resource.data.stages is list
+        && request.resource.data.stages.size() >= 1
+        && request.resource.data.stages.size() <= 50
+        && request.resource.data.version is string
+        && request.resource.data.version.size() > 0
+        && request.resource.data.version.size() <= 80
+        && request.resource.data.publishedBy == request.auth.uid
+        && request.resource.data.publishedAtClient is string
+        && request.resource.data.publishedAtClient.size() <= 40;
+    }
+
+    function validTutorLiveRun(runId) {
+      return request.resource.data.keys().hasOnly([
+          'schemaVersion',
+          'id',
+          'playbookId',
+          'playbookVersion',
+          'sessionNumber',
+          'routeId',
+          'status',
+          'currentStageId',
+          'currentCardId',
+          'elapsedSeconds',
+          'startedAtClient',
+          'endedAtClient',
+          'events',
+          'revision',
+          'updatedBy',
+          'updatedAtClient'
+        ])
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.id == runId
+        && request.resource.data.playbookId is string
+        && request.resource.data.playbookId.size() > 0
+        && request.resource.data.playbookId.size() <= 80
+        && request.resource.data.playbookVersion is string
+        && request.resource.data.playbookVersion.size() > 0
+        && request.resource.data.playbookVersion.size() <= 80
+        && request.resource.data.sessionNumber is int
+        && request.resource.data.sessionNumber >= 1
+        && request.resource.data.sessionNumber <= 25
+        && request.resource.data.routeId is string
+        && request.resource.data.routeId.size() > 0
+        && request.resource.data.routeId.size() <= 80
+        && request.resource.data.status in [
+          'running', 'paused', 'completed', 'abandoned'
+        ]
+        && request.resource.data.currentStageId is string
+        && request.resource.data.currentStageId.size() > 0
+        && request.resource.data.currentStageId.size() <= 80
+        && (
+          request.resource.data.currentCardId == null
+          || (
+            request.resource.data.currentCardId is string
+            && request.resource.data.currentCardId.size() > 0
+            && request.resource.data.currentCardId.size() <= 80
+          )
+        )
+        && request.resource.data.elapsedSeconds is int
+        && request.resource.data.elapsedSeconds >= 0
+        && request.resource.data.elapsedSeconds <= 28800
+        && request.resource.data.startedAtClient is string
+        && request.resource.data.startedAtClient.size() <= 40
+        && (
+          request.resource.data.endedAtClient == null
+          || (
+            request.resource.data.endedAtClient is string
+            && request.resource.data.endedAtClient.size() <= 40
+          )
+        )
+        && request.resource.data.events is list
+        && request.resource.data.events.size() >= 1
+        && request.resource.data.events.size() <= 1000
+        && request.resource.data.revision is int
+        && request.resource.data.revision > 0
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAtClient is string
+        && request.resource.data.updatedAtClient.size() <= 40
+        && (
+          (
+            request.resource.data.status in ['completed', 'abandoned']
+            && request.resource.data.endedAtClient is string
+          )
+          || (
+            request.resource.data.status in ['running', 'paused']
+            && request.resource.data.endedAtClient == null
+          )
+        );
+    }
+
+    function validTutorLiveRunCloseout(closeout) {
+      return closeout is map
+        && closeout.keys().hasAll([
+          'mastery',
+          'outcome',
+          'nextAction',
+          'homework',
+          'delayedRetest',
+          'privateTutorNote'
+        ])
+        && closeout.keys().hasOnly([
+          'mastery',
+          'outcome',
+          'nextAction',
+          'homework',
+          'delayedRetest',
+          'privateTutorNote'
+        ])
+        && closeout.mastery is list
+        && closeout.mastery.size() >= 1
+        && closeout.mastery.size() <= 100
+        && closeout.outcome is string
+        && closeout.outcome.size() > 0
+        && closeout.outcome.size() <= 2000
+        && closeout.nextAction is string
+        && closeout.nextAction.size() > 0
+        && closeout.nextAction.size() <= 2000
+        && closeout.homework is string
+        && closeout.homework.size() > 0
+        && closeout.homework.size() <= 4000
+        && closeout.delayedRetest is string
+        && closeout.delayedRetest.size() > 0
+        && closeout.delayedRetest.size() <= 4000
+        && closeout.privateTutorNote is string
+        && closeout.privateTutorNote.size() <= 4000;
+    }
+
+    function validTutorLiveRunEvent(event) {
+      return event is map
+        && event.keys().hasAll([
+          'id', 'type', 'atClient', 'elapsedSeconds'
+        ])
+        && event.keys().hasOnly([
+          'id',
+          'type',
+          'atClient',
+          'elapsedSeconds',
+          'stageId',
+          'cardId',
+          'result',
+          'confidence',
+          'errorCodes',
+          'note',
+          'closeout'
+        ])
+        && event.id is string
+        && event.id.size() > 0
+        && event.id.size() <= 80
+        && event.type in [
+          'start',
+          'pause',
+          'resume',
+          'navigate',
+          'assessment',
+          'repair',
+          'note',
+          'complete',
+          'abandon'
+        ]
+        && event.atClient is string
+        && event.atClient.size() > 0
+        && event.atClient.size() <= 40
+        && event.elapsedSeconds is int
+        && event.elapsedSeconds >= 0
+        && event.elapsedSeconds <= 28800
+        && (
+          !event.keys().hasAny(['stageId'])
+          || (
+            event.stageId is string
+            && event.stageId.size() > 0
+            && event.stageId.size() <= 80
+          )
+        )
+        && (
+          !event.keys().hasAny(['cardId'])
+          || event.cardId == null
+          || (
+            event.cardId is string
+            && event.cardId.size() > 0
+            && event.cardId.size() <= 80
+          )
+        )
+        && (
+          !event.keys().hasAny(['result'])
+          || event.result in ['correct', 'partial', 'repair', 'parked']
+        )
+        && (
+          !event.keys().hasAny(['confidence'])
+          || (
+            event.confidence is int
+            && event.confidence >= 1
+            && event.confidence <= 5
+          )
+        )
+        && (
+          !event.keys().hasAny(['errorCodes'])
+          || (
+            event.errorCodes is list
+            && event.errorCodes.size() <= 8
+            && event.errorCodes.hasOnly([
+              'D', 'T', 'P', 'S', 'A', 'I', 'C', 'OTHER'
+            ])
+          )
+        )
+        && (
+          !event.keys().hasAny(['note'])
+          || (
+            event.note is string
+            && event.note.size() > 0
+            && event.note.size() <= 1000
+          )
+        )
+        && (
+          !event.keys().hasAny(['closeout'])
+          || validTutorLiveRunCloseout(event.closeout)
+        )
+        && (
+          !(event.type in ['start', 'navigate'])
+          || event.keys().hasAll(['stageId'])
+        )
+        && (
+          !(event.type in ['assessment', 'repair'])
+          || event.keys().hasAll(['stageId', 'cardId'])
+        )
+        && (
+          event.type == 'assessment'
+          || !event.keys().hasAny(['result', 'confidence'])
+        )
+        && (
+          event.type != 'assessment'
+          || event.keys().hasAll(['result', 'confidence', 'errorCodes'])
+        )
+        && (
+          event.type in ['assessment', 'repair']
+          || !event.keys().hasAny(['errorCodes'])
+        )
+        && (
+          event.type != 'repair'
+          || (
+            event.keys().hasAll(['errorCodes'])
+            && event.errorCodes.size() >= 1
+          )
+        )
+        && (
+          event.type != 'assessment'
+          || event.result != 'correct'
+          || event.errorCodes.size() == 0
+        )
+        && (
+          event.type != 'assessment'
+          || event.result != 'repair'
+          || event.errorCodes.size() >= 1
+        )
+        && (
+          event.type != 'assessment'
+          || event.result != 'parked'
+          || event.keys().hasAll(['note'])
+        )
+        && (
+          event.type != 'note'
+          || event.keys().hasAll(['note'])
+        )
+        && (
+          event.type == 'complete'
+          || !event.keys().hasAny(['closeout'])
+        )
+        && (
+          event.type != 'complete'
+          || event.keys().hasAll(['closeout'])
+        );
+    }
+
+    function validTutorLiveRunCreateEvent() {
+      return validTutorLiveRunEvent(request.resource.data.events[0])
+        && request.resource.data.events[0].type == 'start'
+        && request.resource.data.events[0].elapsedSeconds == 0
+        && request.resource.data.elapsedSeconds == 0
+        && request.resource.data.currentStageId
+          == request.resource.data.events[0].stageId
+        && (
+          (
+            request.resource.data.events[0].keys().hasAny(['cardId'])
+            && request.resource.data.currentCardId
+              == request.resource.data.events[0].cardId
+          )
+          || (
+            !request.resource.data.events[0].keys().hasAny(['cardId'])
+            && request.resource.data.currentCardId == null
+          )
+        )
+        && request.resource.data.startedAtClient
+          == request.resource.data.events[0].atClient
+        && request.resource.data.updatedAtClient
+          == request.resource.data.events[0].atClient;
+    }
+
+    function validTutorLiveRunLatestEvent() {
+      let event = request.resource.data.events[
+        request.resource.data.events.size() - 1
+      ];
+      return validTutorLiveRunEvent(event)
+        && event.type != 'start'
+        && event.elapsedSeconds == request.resource.data.elapsedSeconds
+        && event.atClient == request.resource.data.updatedAtClient
+        && (
+          !event.keys().hasAny(['stageId'])
+          || request.resource.data.currentStageId == event.stageId
+        )
+        && (
+          event.keys().hasAny(['stageId'])
+          || request.resource.data.currentStageId == resource.data.currentStageId
+        )
+        && (
+          !event.keys().hasAny(['cardId'])
+          || request.resource.data.currentCardId == event.cardId
+        )
+        && (
+          event.keys().hasAny(['cardId'])
+          || request.resource.data.currentCardId == resource.data.currentCardId
+        )
+        && (
+          (
+            event.type == 'pause'
+            && resource.data.status == 'running'
+            && request.resource.data.status == 'paused'
+            && request.resource.data.endedAtClient == null
+          )
+          || (
+            event.type == 'resume'
+            && resource.data.status == 'paused'
+            && request.resource.data.status == 'running'
+            && request.resource.data.endedAtClient == null
+          )
+          || (
+            event.type == 'complete'
+            && request.resource.data.status == 'completed'
+            && request.resource.data.endedAtClient == event.atClient
+          )
+          || (
+            event.type == 'abandon'
+            && request.resource.data.status == 'abandoned'
+            && request.resource.data.endedAtClient == event.atClient
+          )
+          || (
+            event.type == 'note'
+            && request.resource.data.status == resource.data.status
+            && request.resource.data.endedAtClient == null
+          )
+          || (
+            event.type in [
+              'navigate', 'assessment', 'repair'
+            ]
+            && resource.data.status == 'running'
+            && request.resource.data.status == 'running'
+            && request.resource.data.endedAtClient == null
+          )
+        );
+    }
+
+    function validTutorLiveRunUpdate() {
+      return request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.playbookId == resource.data.playbookId
+        && request.resource.data.playbookVersion == resource.data.playbookVersion
+        && request.resource.data.sessionNumber == resource.data.sessionNumber
+        && request.resource.data.routeId == resource.data.routeId
+        && request.resource.data.startedAtClient == resource.data.startedAtClient
+        && request.resource.data.elapsedSeconds >= resource.data.elapsedSeconds
+        // Every cloud save must append exactly one meaningful event. Timer
+        // ticks alone therefore cannot write or consume the free quota.
+        && request.resource.data.events.size() == resource.data.events.size() + 1
+        && resource.data.status in ['running', 'paused'];
+    }
+
     match /programs/project-202/tutorPrivate/notes {
       allow get: if activeProject202Role('tutor');
       allow create: if activeProject202Role('tutor')
@@ -260,6 +724,48 @@ service cloud.firestore {
         && validPrivateTutorNotesEnvelope()
         && request.resource.data.revision == resource.data.revision + 1;
       allow list, delete: if false;
+    }
+
+    // Tutor Bible content is never bundled into the public GitHub Pages app or
+    // the student-readable tracker. Chunks are immutable and versioned; the
+    // manifest is activated only after all chunks have uploaded.
+    match /programs/project-202/tutorPlaybooks/{playbookId} {
+      allow get: if activeProject202Role('tutor');
+      allow list: if false;
+      allow create: if activeProject202Role('tutor')
+        && validTutorPlaybookManifest(playbookId)
+        && request.resource.data.revision == 1;
+      allow update: if activeProject202Role('tutor')
+        && validTutorPlaybookManifest(playbookId)
+        && validTutorPlaybookManifestUpdate()
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+
+      match /chunks/{chunkStorageId} {
+        allow get: if activeProject202Role('tutor');
+        allow list: if false;
+        allow create: if activeProject202Role('tutor')
+          && validTutorPlaybookChunk(playbookId, chunkStorageId);
+        allow update, delete: if false;
+      }
+    }
+
+    // Detailed live-teaching evidence remains private to Mohamed. Only a safe
+    // aggregate is later copied into the shared tracker by the UI.
+    match /programs/project-202/tutorRuns/{runId} {
+      allow get: if activeProject202Role('tutor');
+      allow list: if false;
+      allow create: if activeProject202Role('tutor')
+        && validTutorLiveRun(runId)
+        && request.resource.data.revision == 1
+        && request.resource.data.status == 'running'
+        && request.resource.data.events.size() == 1
+        && validTutorLiveRunCreateEvent();
+      allow update: if activeProject202Role('tutor')
+        && validTutorLiveRun(runId)
+        && validTutorLiveRunUpdate()
+        && validTutorLiveRunLatestEvent();
+      allow delete: if activeProject202Role('tutor');
     }
 
     // Everything not explicitly listed above is denied.

@@ -15,6 +15,8 @@ export interface ProjectCapabilities {
   canManageDiagnostics: boolean;
   canImportData: boolean;
   canResetTracker: boolean;
+  canUseLiveSession: boolean;
+  canManageTutorPlaybooks: boolean;
 }
 
 const NO_CAPABILITIES: ProjectCapabilities = {
@@ -32,6 +34,8 @@ const NO_CAPABILITIES: ProjectCapabilities = {
   canManageDiagnostics: false,
   canImportData: false,
   canResetTracker: false,
+  canUseLiveSession: false,
+  canManageTutorPlaybooks: false,
 };
 
 const STUDENT_CAPABILITIES: ProjectCapabilities = {
@@ -60,6 +64,8 @@ const TUTOR_CAPABILITIES: ProjectCapabilities = {
   canManageDiagnostics: true,
   canImportData: true,
   canResetTracker: true,
+  canUseLiveSession: true,
+  canManageTutorPlaybooks: true,
 };
 
 export function capabilitiesForRole(

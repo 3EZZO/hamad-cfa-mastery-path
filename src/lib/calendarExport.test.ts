@@ -53,7 +53,7 @@ describe("Hamad CFA Mastery calendar export", () => {
       uid: "project-202-session-01@project-202-tracker",
       startDate: "2026-09-05",
       startTime: "09:00",
-      endTime: "11:00",
+      endTime: "11:30",
       timeZone: "Asia/Riyadh",
       reminderMinutes: 90,
     });
@@ -83,7 +83,7 @@ describe("Hamad CFA Mastery calendar export", () => {
     expect(unfolded.match(/BEGIN:VALARM/g)).toHaveLength(expectedEvents);
     expect(unfolded).toContain("TZID:Asia/Riyadh");
     expect(unfolded).toContain("DTSTART;TZID=Asia/Riyadh:20260905T090000");
-    expect(unfolded).toContain("DTEND;TZID=Asia/Riyadh:20260905T110000");
+    expect(unfolded).toContain("DTEND;TZID=Asia/Riyadh:20260905T113000");
     expect(unfolded).toContain("TRIGGER:-PT90M");
     expect(unfolded).toContain("DTSTART;VALUE=DATE:20270116");
     expect(unfolded).not.toContain("ATTENDEE");
@@ -136,7 +136,7 @@ describe("Hamad CFA Mastery calendar export", () => {
       }),
     );
     expect(unfolded).toContain(
-      "SUMMARY:Hamad CFA Mastery - Session 01: Prior-attempt diagnostic + Quant M001-M004 checkpoint",
+      "SUMMARY:Hamad CFA Mastery - Session 01: Quant Masterclass I: returns\\, benchmarking\\, and time value",
     );
     expect(unfolded).toMatch(
       /DESCRIPTION:Session 01 of 25\\nWeek 01 - .*\\nRhythm: Saturday checkpoint/,

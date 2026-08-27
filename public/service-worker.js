@@ -1,6 +1,6 @@
 // A new cache namespace prevents the renamed GitHub Pages scope from retaining
 // app-shell files that belonged to the former repository path.
-const VERSION = "project-202-pwa-v7";
+const VERSION = "hamad-mastery-pwa-v8";
 const APP_SCOPE = new URL(self.registration.scope);
 const APP_BASE = APP_SCOPE.pathname.endsWith("/")
   ? APP_SCOPE.pathname

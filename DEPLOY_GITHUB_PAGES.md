@@ -1,6 +1,6 @@
 # Hamad CFA Mastery: GitHub Pages and Firebase deployment
 
-GitHub Pages is the permanent static host for **Hamad's CFA Level I Mastery Path**. Firebase Spark supplies the two capabilities a static host cannot provide: authenticated access and synchronized Firestore data for Mohamed and Hamad.
+GitHub Pages is the permanent static host for **Hamad's CFA Level I Mastery Path**. Firebase Spark supplies the two capabilities a static host cannot provide: authenticated access and synchronized Firestore data for Mohamed and Hamad. The tutor-only Session Mode interface is public application code, but its lesson explanations, questions, spoken answers, and live-run evidence are not part of the repository or Pages artifact.
 
 This setup uses no server credential in the browser. The Firebase Web App configuration is public by design; access is enforced by Firebase Authentication and `firestore.rules`.
 
@@ -51,6 +51,12 @@ The client reads only its own membership record so the interface can apply the c
 
 The synchronized tracker document is `programs/project-202/tracker/current`. The tutor account creates it through the first cloud save, confirmed import, or pre-launch reset. The student account cannot initialize or administratively replace the shared document.
 
+Do not manually create playbook or run data in the console. The signed-in tutor interface validates and writes these private records after the rules in step 4 are deployed:
+
+- manifest: `programs/project-202/tutorPlaybooks/{playbookId}`;
+- immutable versioned chunks: `programs/project-202/tutorPlaybooks/{playbookId}/chunks/{chunkStorageId}`; and
+- private live runs: `programs/project-202/tutorRuns/{runId}`.
+
 ## 4. Deploy the Firestore rules
 
 From this project directory, authenticate the Firebase CLI and deploy only the checked-in rules:
@@ -67,11 +73,14 @@ The rules intentionally allow:
 - the tutor role to create and administer the complete shared tracker state and approve session completion;
 - the student role to update independent/evidence completion, session approval requests, confidence-rated practice, mistakes, and shared notes;
 - only the tutor role to read or write `programs/project-202/tutorPrivate/notes`;
+- only the tutor role to get or publish a playbook manifest and its immutable versioned chunks;
+- only the tutor role to get, create, advance, complete, or delete a private live run;
 - no client to list or edit the membership allowlist;
+- no student access, including direct-path access, to playbooks, chunks, or live runs;
 - no client access to any other Firestore path;
 - no client deletion of the tracker document.
 
-Repeat the deploy command after every intentional change to `firestore.rules`. Rules are not deployed by the GitHub Pages workflow. For this release, deploy the backward-compatible rules before publishing the new Pages build so the new session-approval fields and private-note path are authorized when the client becomes live.
+Repeat the deploy command after every intentional change to `firestore.rules`. Rules are not deployed by the GitHub Pages workflow. For this release, deploy the backward-compatible rules before publishing the new Pages build so the private Session Mode paths, session-approval fields, and private-note path are authorized when the client becomes live.
 
 When a release changes both rules and the web client, deploy the rules first, then deploy Pages. The confirmed 5 September plan requires `scheduleVersion = weekly-saturday-v2` on the next write. Sign in as Mohamed first after the Pages deployment so the tutor account can publish the migrated or reset baseline before Hamad uses the updated tracker.
 
@@ -104,6 +113,8 @@ python -m http.server 4175 --bind 127.0.0.1 --directory $previewRoot
 
 Open `http://127.0.0.1:4175/hamad-cfa-mastery-path/`, sign in, and confirm that an unlisted test account receives no Firestore access. Delete or disable the test account afterward.
 
+`npm run build:pages` includes a static-artifact privacy check. A successful build must not be treated as permission to copy the private JSON or Tutor Bible into a public directory: keep the generated package under the gitignored `output/json/` tree and select it from the tutor-only importer at runtime.
+
 This repository-path mount also verifies the PWA files. Browser installation
 normally requires HTTPS; GitHub Pages supplies HTTPS automatically. Service
 workers are also allowed on localhost/127.0.0.1 for local verification. In
@@ -133,7 +144,7 @@ and **Application > Service workers** for the scoped worker.
 
    `https://YOUR-ACCOUNT.github.io/hamad-cfa-mastery-path/`
 
-Every later push to `main` tests, builds, and redeploys the static tracker. It does not redeploy Firestore rules.
+Every later push to `main` tests, builds, and redeploys the static tracker. It does not redeploy Firestore rules or publish a private playbook.
 
 The workflow runs `actions/configure-pages` before the Vite build and uses the base path returned by GitHub Pages. This keeps scripts, styles, the manifest, and the service worker correctly scoped after a later repository rename or when a custom domain changes the site to the domain root.
 
@@ -156,7 +167,45 @@ worker caches only the hosted application shell; Firebase Authentication and
 Firestore requests remain network-controlled and resume through the tracker's
 existing synchronization queue when connectivity returns.
 
-## 7. Perform the one-time data migration
+## 7. Publish and prepare the private Session 01 playbook
+
+The PDF is Mohamed's recovery reference. The live site reads a separate structured JSON package so it can present the explanation, likely question, and ready-to-speak answer together, provide fast search/filtering, and save meaningful evidence without exposing the content to Hamad.
+
+### Generate the private package
+
+From the parent HN3 workspace, run:
+
+```powershell
+python scripts/export_hamad_session_01_private_playbook.py
+```
+
+The exporter reads the canonical private Tutor Bible sources, validates IDs, routes, timing, content sizes, and integrity hashes, and writes the default artifact to:
+
+`output/json/Hamad_CFA_Level_I_Session_01_Private_Playbook.json`
+
+That directory is gitignored. Keep it that way. Never move the artifact, Tutor Bible PDF, source screenshots, answer keys, or generated chunk files into `src/`, `public/`, `.github/`, `dist/`, or `dist-pages/`, and never attach them to a public GitHub release.
+
+### Publish through the signed-in tutor interface
+
+1. Confirm step 4's Firestore rules deployment succeeded and the new Pages workflow is green.
+2. Open the production Pages URL and sign in as Mohamed. Confirm the membership role is `tutor` and the tracker reports **Synced**.
+3. Open **Session Mode**. If no active Session 01 package exists, choose **Choose private playbook JSON**.
+4. Select `output/json/Hamad_CFA_Level_I_Session_01_Private_Playbook.json`. The client validates the entire file before upload, writes immutable versioned chunks first, and activates the manifest only after every required chunk is present.
+5. Return to Session Mode and verify the Session 01 launch screen shows Saturday, 5 September 2026 at 09:00 Asia/Riyadh and recommends the 150-minute route. Sessions 02-25 remain 120 minutes.
+6. Sign in as Hamad in a separate browser and confirm **Session Mode**, **Tutor Admin**, and all private playbook/run paths remain unavailable. Do not share Mohamed's browser session or downloaded JSON with Hamad.
+
+Republishing an unchanged package is safe: integrity hashes prevent a partial or conflicting version from silently replacing active content. To publish a revised lesson, generate a new validated version and import it from the tutor account; do not edit Firestore chunks by hand.
+
+### Prepare the teaching device for a connection interruption
+
+1. On the exact laptop or phone Mohamed will use, sign in while online and open Session Mode.
+2. Select **Prepare offline** and wait for **Offline copy ready**. This stores the already-authorized package in a private, per-user IndexedDB cache on that device; it does not add the answers to the public service-worker cache.
+3. Reopen Session Mode once and verify the 150-minute route, stages, search, explanations, questions, and spoken answers appear immediately.
+4. Keep the device locked and under Mohamed's control. On a shared or retired device, choose **Remove offline copy**, sign out, and clear the site's storage.
+
+The offline copy is deliberately device-local. Repeat **Prepare offline** on every tutor device that may be used. Firestore remains the cross-device source of truth for the active manifest and meaningful live-run actions; timer ticks are kept local so they do not consume writes or make the classroom dependent on round-trip latency.
+
+## 8. Perform the one-time data migration
 
 Data belongs to a browser origin, so the old hosted tracker and the new GitHub Pages tracker do not share `localStorage`.
 
@@ -172,15 +221,15 @@ Do not import the same legacy backup independently from both accounts. The first
 
 ### Weekly-plan reset for the September 2026 launch
 
-The confirmed client marks the 25-checkpoint Saturday plan as `weekly-saturday-v2`. When it reads an older snapshot, including the provisional `weekly-saturday-v1` plan, it keeps independent evidence such as practice, mistakes, mocks, shared notes, and topic mastery, but clears schedule-bound task completion, session logs, approvals, diagnostics, and overrides so old session IDs or dates cannot be mistaken for the agreed checkpoints.
+The confirmed client marks the 25-checkpoint Saturday plan as `weekly-saturday-v2`. When it reads an older snapshot, including the provisional `weekly-saturday-v1` plan, it keeps independent evidence such as practice, mistakes, mocks, shared notes, and topic mastery, but clears schedule-bound task completion, session logs, approvals, obsolete pre-launch assessment data, and overrides so old session IDs or dates cannot be mistaken for the agreed checkpoints.
 
 No genuine course work has begun for this launch, so use the clean authoritative path:
 
 1. Deploy the revised `firestore.rules` before the Pages build.
 2. Deploy Pages, then open the updated URL as Mohamed; do not ask Hamad to open it yet.
-3. Wait for **Synced**, open **Tutor Console**, and select **Export and reset**.
+3. Wait for **Synced**, open **Tutor Admin**, and select **Export and reset**.
 4. Enter `RESET HAMAD MASTERY` exactly. The tracker downloads a JSON recovery copy before replacing the shared state.
-5. Wait for **Synced** again, refresh, and confirm Session 01 is Saturday 5 September 2026, Session 25 is Saturday 20 February 2027, and the 27 February exam is a separate session-free milestone.
+5. Wait for **Synced** again, refresh, and confirm Session 01 is Saturday 5 September 2026 at 09:00 for 150 minutes, Session 25 is Saturday 20 February 2027 at 09:00 for 120 minutes, and the 27 February exam is a separate session-free milestone.
 6. Only then ask Hamad to sign in. Confirm his second device shows the same clean baseline.
 
 Delete any previously imported legacy Project 202 calendar events before importing the newly generated `hamad-cfa-mastery-calendar.ics` file, otherwise obsolete sessions from the old schedule may remain.
@@ -191,10 +240,12 @@ Delete any previously imported legacy Project 202 calendar events before importi
 - Firebase Web App values identify the project; Firestore Rules authorize access.
 - The `members` allowlist is the access boundary. An authenticated but unlisted Firebase user cannot read or change tracker data.
 - Membership `role` is also enforced by Firestore Rules, not only hidden or disabled in the interface. Keep Mohamed's role exactly `tutor` and Hamad's exactly `student`.
-- Import, reset, session scheduling, tutor-session records, session approval, diagnostic administration, topic mastery, mock administration, and private tutor notes are tutor-controlled. Hamad may complete independent/evidence tasks, request or withdraw session completion, record confidence-rated practice and mistakes, and manage shared notes.
+- Import, reset, session scheduling, tutor-session records, session approval, playbook publishing, private live runs, topic mastery, mock administration, and private tutor notes are tutor-controlled. Hamad may complete independent/evidence tasks, request or withdraw session completion, record confidence-rated practice and mistakes, and manage shared notes.
 - Every cloud snapshot and imported backup is normalized before rendering. Malformed evidence records are discarded, numeric/text fields are bounded, duplicate record IDs are removed, and schedule overrides are accepted only when all 25 checkpoints remain in their original program week and before the exam. The only valid exception is the Friday immediately before that checkpoint's canonical Saturday, still at 09:00 and with a tutor reason.
 - Firestore Rules enforce roles, top-level types, collection limits, revision/timestamp consistency, the `weekly-saturday-v2` schedule version, and the fixed Session 01-25 override-key space. Because the tracker intentionally remains one Firestore document, Rules cannot iterate through every object in its large evidence arrays; the application normalizer is the detailed record-shape boundary and JSON export remains the recovery path.
 - Keep the database in Spark limits by synchronizing the single tracker document only when state changes, not on a timer.
+- Session Mode follows the same principle: only meaningful run actions are written to Firestore; the visible timer advances locally.
+- The optional private offline playbook is stored only in Mohamed's browser profile after an explicit **Prepare offline** action. It is not a substitute for Firestore authorization, it does not synchronize between devices, and it should be removed before a device changes hands.
 - JSON export remains the recovery path for accidental edits or service disruption.
 - Calendar reminder preferences use browser `localStorage` only; they are not written to Firestore or shared between Mohamed and Hamad. Checkpoint time is fixed at 09:00 Asia/Riyadh. The generated `.ics` is a published calendar import with stable event IDs, not an email invitation.
 - Renaming the GitHub repository changes the Pages URL and base path. Update bookmarks and add any new custom hostname to Firebase Authorized domains.

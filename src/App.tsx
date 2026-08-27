@@ -24,6 +24,7 @@ import {
   LogOut,
   Menu,
   NotebookPen,
+  PlayCircle,
   Plus,
   Printer,
   RotateCcw,
@@ -98,7 +99,6 @@ import CalendarExportDialog from "./components/CalendarExportDialog";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
-  DiagnosticEntry,
   MockScore,
   NoteEntry,
   PlanTask,
@@ -120,6 +120,7 @@ type TabId =
   | "mocks"
   | "errors"
   | "notes"
+  | "live"
   | "coach";
 
 type UpdateTracker = (
@@ -150,7 +151,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
   { id: "errors", label: "Mistake Review", mobileLabel: "Mistakes", icon: Archive },
   { id: "notes", label: "Notes & Data", mobileLabel: "Notes", icon: NotebookPen },
-  { id: "coach", label: "Tutor Console", mobileLabel: "Tutor", icon: UserCog },
+  { id: "live", label: "Session Mode", mobileLabel: "Teach", icon: PlayCircle },
+  { id: "coach", label: "Tutor Admin", mobileLabel: "Admin", icon: UserCog },
 ];
 
 const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
@@ -158,7 +160,7 @@ const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
   { label: "Plan", ids: ["roadmap", "sessions"] },
   { label: "Evidence", ids: ["practice", "mastery", "mocks", "errors"] },
   { label: "Records", ids: ["notes"] },
-  { label: "Tutor", ids: ["coach"] },
+  { label: "Tutor", ids: ["live", "coach"] },
 ];
 
 const MOBILE_PRIMARY_IDS: TabId[] = [
@@ -174,6 +176,7 @@ const MOBILE_MORE_IDS: TabId[] = [
   "mocks",
   "errors",
   "notes",
+  "live",
   "coach",
 ];
 
@@ -223,10 +226,15 @@ const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: str
     title: "Notes & Data",
     description: "Keep tutor decisions, commitments, live sync, and recovery tools in one place.",
   },
+  live: {
+    eyebrow: "Private teaching command desk",
+    title: "Session Mode",
+    description: "Teach from one complete, searchable tutor workspace with the clock and evidence beside you.",
+  },
   coach: {
     eyebrow: "Tutor-only administration",
-    title: "Tutor Console",
-    description: "Run launch checks, manage the baseline, reschedule safely, and protect shared progress.",
+    title: "Tutor Admin",
+    description: "Manage approvals, schedules, launch checks, and recovery controls away from the live lesson.",
   },
 };
 
@@ -248,6 +256,9 @@ const NOTE_CATEGORIES = [
 ];
 
 const MockScoreChart = lazy(() => import("./components/MockScoreChart"));
+const TutorSessionWorkspace = lazy(
+  () => import("./components/TutorSessionWorkspace"),
+);
 
 const PLANNED_SESSIONS = PLAN.flatMap((week) =>
   getWeekSessions(week).map((session) => ({
@@ -446,7 +457,7 @@ function ReadingCoverage({
       <BookOpenCheck size={14} />
       <span>
         {session.number <= 3
-          ? "No assigned module — diagnostic and learning-system session"
+          ? "No assigned module — teaching, calculator, or learning-system session"
           : "No new module — integration, mock, repair, or taper session"}
       </span>
     </div>
@@ -801,8 +812,8 @@ function App() {
     if (!task) return;
     if (task.kind === "session") {
       if (role === "tutor") {
-        navigate("coach");
-        notify("Review session completion requests in the Tutor Console.", "warning");
+        navigate("live");
+        notify("Session Mode is ready for the tutor-led checkpoint.");
         return;
       }
       const status = getTaskStatus(task, tracker);
@@ -927,9 +938,16 @@ function App() {
             updatePrivateTutorNotes={updatePrivateTutorNotes}
           />
         );
+      case "live":
+        return (
+          <EmptyState icon={ShieldCheck} title="Tutor access only">
+            Session Mode and its private teaching material are available only to
+            Mohamed&apos;s tutor account.
+          </EmptyState>
+        );
       case "coach":
         return capabilities.canResetTracker ? (
-          <TutorConsoleView
+          <TutorAdminView
             tracker={tracker}
             updateTracker={updateTracker}
             replaceTrackerAuthoritatively={replaceTrackerAuthoritatively}
@@ -939,11 +957,52 @@ function App() {
           />
         ) : (
           <EmptyState icon={ShieldCheck} title="Tutor access only">
-            This console is protected for schedule, diagnostic, and reset administration.
+            Tutor Admin is protected for approvals, schedule changes, launch checks, and recovery controls.
           </EmptyState>
         );
     }
   };
+
+  if (activeTab === "live" && capabilities.canUseLiveSession) {
+    return (
+      <>
+        <Suspense
+          fallback={
+            <main className="session-mode-loader" aria-live="polite" aria-busy="true">
+              <section>
+                <span className="session-mode-loader-mark" aria-hidden="true" />
+                <p>Private tutor workspace</p>
+                <h1>Opening Session Mode</h1>
+                <small>Loading the protected classroom interface.</small>
+              </section>
+            </main>
+          }
+        >
+          <TutorSessionWorkspace
+            userUid={user.uid}
+            tracker={tracker}
+            updateTracker={updateTracker}
+            updatePrivateTutorNotes={updatePrivateTutorNotes}
+            notify={notify}
+            onExit={() => navigate("dashboard")}
+          />
+        </Suspense>
+        {toast && (
+          <div
+            className={cx("toast", toast.tone === "warning" && "toast-warning")}
+            role="status"
+          >
+            {toast.tone === "success" ? (
+              <CircleCheckBig size={18} />
+            ) : (
+              <CircleAlert size={18} />
+            )}
+            {toast.message}
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -965,7 +1024,7 @@ function App() {
 
         <nav className="sidebar-nav" aria-label="Project sections">
           {NAV_GROUPS.filter(
-            (group) => group.label !== "Tutor" || capabilities.canResetTracker,
+            (group) => group.label !== "Tutor" || capabilities.canUseLiveSession,
           ).map((group) => (
             <div className="nav-group" key={group.label}>
               <span className="nav-group-label">{group.label}</span>
@@ -1109,7 +1168,9 @@ function App() {
             </header>
             <div className="mobile-more-grid">
               {MOBILE_MORE_IDS.filter(
-                (id) => id !== "coach" || capabilities.canResetTracker,
+                (id) =>
+                  (id !== "live" && id !== "coach") ||
+                  capabilities.canUseLiveSession,
               ).map((id) => {
                 const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
                 const Icon = item.icon;
@@ -1260,6 +1321,7 @@ function DashboardView({
         </div>
         <div className="quick-actions" aria-label="Quick actions">
           <span>Quick log</span>
+          {role === "tutor" && <button type="button" onClick={() => onNavigate("live")}><PlayCircle size={16} /> Run Session</button>}
           <button type="button" onClick={() => onNavigate("practice")}><TimerReset size={16} /> Practice</button>
           <button type="button" onClick={() => onNavigate("sessions")}><GraduationCap size={16} /> Session</button>
           <button type="button" onClick={() => onNavigate("errors")}><Archive size={16} /> Mistake</button>
@@ -2068,7 +2130,7 @@ function ErrorVaultView({
   );
 }
 
-function TutorConsoleView({
+function TutorAdminView({
   tracker,
   updateTracker,
   replaceTrackerAuthoritatively,
@@ -2090,22 +2152,6 @@ function TutorConsoleView({
   ) ?? effectiveSessions[0]!;
   const [newDate, setNewDate] = useState(selected.effectiveDate);
   const [rescheduleReason, setRescheduleReason] = useState("");
-  const savedDiagnostic = tracker.diagnostics.find(
-    (entry) => entry.sessionNumber === 1,
-  );
-  const [diagnostic, setDiagnostic] = useState({
-    date: savedDiagnostic?.date ?? effectiveSessions[0]!.effectiveDate,
-    attempted: savedDiagnostic?.attempted ?? 30,
-    correct: savedDiagnostic?.correct ?? 0,
-    studyHoursPerWeek: savedDiagnostic?.studyHoursPerWeek ?? 10,
-    pacingRating: savedDiagnostic?.pacingRating ?? 3,
-    confidenceRating: savedDiagnostic?.confidenceRating ?? 3,
-    calculatorReady: savedDiagnostic?.calculatorReady ?? false,
-    priorityTopics: savedDiagnostic?.priorityTopics ?? ([] as string[]),
-    strengths: savedDiagnostic?.strengths ?? "",
-    barriers: savedDiagnostic?.barriers ?? "",
-    tutorPlan: savedDiagnostic?.tutorPlan ?? "",
-  });
   const hasProgress = !isStateMeaningfullyEmpty(tracker);
   const scheduleIntact =
     (effectiveSessions[0]?.effectiveDate ?? program.examAppointment) >=
@@ -2216,40 +2262,6 @@ function TutorConsoleView({
     notify("Canonical session dates restored.");
   };
 
-  const togglePriorityTopic = (topic: string) => {
-    setDiagnostic((current) => ({
-      ...current,
-      priorityTopics: current.priorityTopics.includes(topic)
-        ? current.priorityTopics.filter((item) => item !== topic)
-        : [...current.priorityTopics, topic],
-    }));
-  };
-
-  const saveDiagnostic = (status: DiagnosticEntry["status"]) => {
-    if (diagnostic.correct > diagnostic.attempted) {
-      notify("Diagnostic correct answers cannot exceed attempted answers.", "warning");
-      return;
-    }
-    if (status === "final" && (!diagnostic.barriers.trim() || !diagnostic.tutorPlan.trim())) {
-      notify("Record the barriers and tutor repair plan before finalizing.", "warning");
-      return;
-    }
-    const entry: DiagnosticEntry = {
-      id: savedDiagnostic?.id ?? makeId("diagnostic"),
-      sessionNumber: 1,
-      status,
-      ...diagnostic,
-    };
-    updateTracker((current) => ({
-      ...current,
-      diagnostics: [
-        entry,
-        ...current.diagnostics.filter((item) => item.sessionNumber !== 1),
-      ],
-    }));
-    notify(status === "final" ? "Session 01 diagnostic finalized." : "Diagnostic draft saved.");
-  };
-
   const resetSharedProgress = async () => {
     const confirmation = window.prompt(
       "A JSON backup will download first. To erase all shared progress on every device, type RESET HAMAD MASTERY",
@@ -2314,27 +2326,6 @@ function TutorConsoleView({
             <div className="override-list">{effectiveSessions.filter((entry) => entry.rescheduled).map((entry) => <div key={entry.session.number}><strong>S{String(entry.session.number).padStart(2, "0")}</strong><span>{formatDate(entry.session.date, { day: "numeric", month: "short" })} → {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })}</span><small>{entry.reason}</small></div>)}</div>
           ) : <EmptyState icon={CalendarDays} title="Canonical schedule active">No session date has been overridden.</EmptyState>}
         </article>
-      </section>
-
-      <section className="panel diagnostic-panel">
-        <div className="panel-heading"><div><p className="eyebrow">Session 01 · first 25 minutes</p><h3>Prior-attempt diagnostic and repair baseline</h3></div><Target size={21} /></div>
-        <p className="panel-intro">Capture what happened across the two prior attempts, then test and repair official 2027 Quant Modules M001-M004.</p>
-        <div className="form-grid form-grid-4">
-          <label><span>Date</span><input type="date" value={diagnostic.date} onChange={(event) => setDiagnostic({ ...diagnostic, date: event.target.value })} /></label>
-          <label><span>Questions attempted</span><input type="number" min="0" max="500" value={diagnostic.attempted} onChange={(event) => setDiagnostic({ ...diagnostic, attempted: Number(event.target.value) })} /></label>
-          <label><span>Correct</span><input type="number" min="0" max={diagnostic.attempted} value={diagnostic.correct} onChange={(event) => setDiagnostic({ ...diagnostic, correct: Number(event.target.value) })} /></label>
-          <label><span>Study hours / week</span><input type="number" min="0" max="80" value={diagnostic.studyHoursPerWeek} onChange={(event) => setDiagnostic({ ...diagnostic, studyHoursPerWeek: Number(event.target.value) })} /></label>
-          <label><span>Pacing (1-5)</span><input type="number" min="1" max="5" value={diagnostic.pacingRating} onChange={(event) => setDiagnostic({ ...diagnostic, pacingRating: Number(event.target.value) })} /></label>
-          <label><span>Confidence (1-5)</span><input type="number" min="1" max="5" value={diagnostic.confidenceRating} onChange={(event) => setDiagnostic({ ...diagnostic, confidenceRating: Number(event.target.value) })} /></label>
-          <label className="checkbox-field"><input type="checkbox" checked={diagnostic.calculatorReady} onChange={(event) => setDiagnostic({ ...diagnostic, calculatorReady: event.target.checked })} /><span>Calculator workflow ready</span></label>
-        </div>
-        <fieldset className="topic-selector"><legend>Priority repair topics</legend>{TOPICS.map((topic) => <label key={topic}><input type="checkbox" checked={diagnostic.priorityTopics.includes(topic)} onChange={() => togglePriorityTopic(topic)} /><span>{topicShort(topic)}</span></label>)}</fieldset>
-        <div className="form-grid form-grid-3">
-          <label><span>What already works</span><textarea rows={4} maxLength={1000} value={diagnostic.strengths} onChange={(event) => setDiagnostic({ ...diagnostic, strengths: event.target.value })} /></label>
-          <label><span>Barriers from prior attempts</span><textarea rows={4} maxLength={1000} value={diagnostic.barriers} onChange={(event) => setDiagnostic({ ...diagnostic, barriers: event.target.value })} /></label>
-          <label><span>Tutor repair plan</span><textarea rows={4} maxLength={2000} value={diagnostic.tutorPlan} onChange={(event) => setDiagnostic({ ...diagnostic, tutorPlan: event.target.value })} /></label>
-        </div>
-        <div className="inline-actions"><button className="button button-secondary" type="button" onClick={() => saveDiagnostic("draft")}>Save draft</button><button className="button button-primary" type="button" onClick={() => saveDiagnostic("final")}><Check size={16} /> Finalize baseline</button>{savedDiagnostic && <span className={cx("status-badge", savedDiagnostic.status === "final" ? "status-positive" : "status-gold")}>{savedDiagnostic.status === "final" ? "Finalized" : "Draft"}</span>}</div>
       </section>
 
       <section className="panel danger-zone">
