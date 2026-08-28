@@ -328,6 +328,7 @@
   letter-spacing: -0.045em;
 }
 .ls-launch__header > div:nth-child(2) > p:last-child { margin-bottom: 0; color: var(--ls-slate); }
+.ls-launch__actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .ls-launch__mark { display: grid; width: 54px; height: 54px; place-items: center; color: var(--ls-white); border-radius: 17px; background: var(--ls-azure); box-shadow: 0 10px 24px rgba(23, 105, 224, 0.25); }
 .ls-launch__session-card {
   display: flex;
@@ -809,7 +810,8 @@
   .ls-launch,
   .ls-closeout { border-radius: 0; border-right: 0; border-left: 0; }
   .ls-launch__header { grid-template-columns: auto 1fr; }
-  .ls-launch__header > .ls-button { grid-column: 1 / -1; width: 100%; }
+  .ls-launch__actions { grid-column: 1 / -1; align-items: stretch; }
+  .ls-launch__actions .ls-button { flex: 1; }
   .ls-launch__session-card { align-items: flex-start; flex-direction: column; }
   .ls-launch__version { min-width: 0; }
   .ls-launch__footer { align-items: stretch; flex-direction: column; }

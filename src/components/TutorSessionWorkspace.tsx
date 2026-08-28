@@ -50,8 +50,12 @@ import type {
 import type { PrivateTutorNote, TrackerState } from "../types";
 
 const PLAYBOOK_ID = "hamad-cfa-mastery-session-01";
-const RUN_ID = "hamad-cfa-mastery-session-01-2026-09-05";
+const RUN_ID_BASE = "hamad-cfa-mastery-session-01-2026-09-05";
 const MAX_PRIVATE_PACKAGE_BYTES = 8 * 1024 * 1024;
+
+function liveRunId(version: string): string {
+  return `${RUN_ID_BASE}-${version}`;
+}
 
 type UpdateTracker = (
   recipe: (current: TrackerState) => TrackerState,
@@ -304,10 +308,13 @@ export default function TutorSessionWorkspace({
   const firstWeek = PLAN[0]!;
   const session = getWeekSessions(firstWeek)[0]!;
   const sessionDate = effectiveSessionDate(session, tracker.sessionOverrides);
+  const runId = privatePackage
+    ? liveRunId(privatePackage.manifest.version)
+    : RUN_ID_BASE;
   const sessionTaskId = getSessionTaskId(firstWeek, session);
   const descriptor = useMemo(
     () => ({
-      id: RUN_ID,
+      id: runId,
       number: session.number,
       title: session.title,
       date: sessionDate,
@@ -315,7 +322,7 @@ export default function TutorSessionWorkspace({
       candidateName: "Hamad Al Sagheer",
       topic: "Quantitative Methods",
     }),
-    [session.date, session.number, session.title, sessionDate],
+    [runId, session.date, session.number, session.title, sessionDate],
   );
 
   const loadWorkspace = useCallback(async () => {
@@ -333,10 +340,7 @@ export default function TutorSessionWorkspace({
     let cachedPackage: TutorPlaybookPackage | null = null;
     let cachedRun: LiveSessionRunSnapshot | null = null;
     try {
-      [cachedPackage, cachedRun] = await Promise.all([
-        loadTutorPlaybookOffline(userUid, PLAYBOOK_ID),
-        loadTutorRunOffline(userUid, RUN_ID),
-      ]);
+      cachedPackage = await loadTutorPlaybookOffline(userUid, PLAYBOOK_ID);
     } catch {
       // A browser can disable IndexedDB. Cloud mode remains fully functional.
     }
@@ -352,11 +356,17 @@ export default function TutorSessionWorkspace({
       return;
     }
 
+    const selectedRunId = liveRunId(selectedPackage.manifest.version);
+    try {
+      cachedRun = await loadTutorRunOffline(userUid, selectedRunId);
+    } catch {
+      // The cloud run remains authoritative if device storage is unavailable.
+    }
     const adapted = adaptTutorPlaybookPackage(selectedPackage);
     let cloudRun: TutorLiveRun | null = null;
     if (cloudPackage) {
       try {
-        cloudRun = await getTutorLiveRun(RUN_ID);
+        cloudRun = await getTutorLiveRun(selectedRunId);
       } catch (error) {
         cloudProblem = getCloudErrorMessage(error);
       }
@@ -413,7 +423,7 @@ export default function TutorSessionWorkspace({
           revision: number,
           atClient = new Date().toISOString(),
         ): Parameters<typeof saveTutorLiveRun>[0] => ({
-          runId: RUN_ID,
+          runId,
           playbookId: privatePackage!.manifest.id,
           playbookVersion: privatePackage!.manifest.version,
           sessionNumber: session.number,
@@ -433,7 +443,7 @@ export default function TutorSessionWorkspace({
           setSyncMessage("Private session actions are current on every tutor device.");
           return saved;
         } catch (firstError) {
-          const latest = await getTutorLiveRun(RUN_ID).catch(() => null);
+          const latest = await getTutorLiveRun(runId).catch(() => null);
           if (latest?.events.some((event) => event.id === eventId)) {
             cloudRunRef.current = latest;
             setSyncState("synced");
@@ -465,7 +475,7 @@ export default function TutorSessionWorkspace({
 
   const handleRunChange = useCallback(
     (snapshot: LiveSessionRunSnapshot) => {
-      void cacheTutorRunOffline(userUid, RUN_ID, snapshot).catch(() => undefined);
+      void cacheTutorRunOffline(userUid, runId, snapshot).catch(() => undefined);
       const previous = previousSnapshotRef.current;
       previousSnapshotRef.current = snapshot;
       if (!playbook || !snapshot.routeId) return;
@@ -618,7 +628,7 @@ export default function TutorSessionWorkspace({
         : null;
       if (completedSnapshot) {
         previousSnapshotRef.current = completedSnapshot;
-        await cacheTutorRunOffline(userUid, RUN_ID, completedSnapshot).catch(
+        await cacheTutorRunOffline(userUid, runId, completedSnapshot).catch(
           () => undefined,
         );
       }
@@ -699,6 +709,8 @@ export default function TutorSessionWorkspace({
           onRetry={() => void loadWorkspace()}
           onPrepareOffline={prepareOffline}
           onRemoveOffline={removeOffline}
+          onReplacePlaybook={() => fileRef.current?.click()}
+          replacingPlaybook={publishing}
           onRunChange={handleRunChange}
           onComplete={completeSession}
           onExit={onExit}

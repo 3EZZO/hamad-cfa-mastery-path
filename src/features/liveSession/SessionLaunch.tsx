@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Target,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type {
@@ -23,6 +24,8 @@ export interface SessionLaunchProps {
   offlineReady?: boolean;
   onPrepareOffline?: () => void | Promise<void>;
   onRemoveOffline?: () => void | Promise<void>;
+  onReplacePlaybook?: () => void;
+  replacingPlaybook?: boolean;
   onStart: (route: LiveSessionRoute) => void;
   onExit?: () => void;
 }
@@ -45,6 +48,8 @@ export function SessionLaunch({
   offlineReady = false,
   onPrepareOffline,
   onRemoveOffline,
+  onReplacePlaybook,
+  replacingPlaybook = false,
   onStart,
   onExit,
 }: SessionLaunchProps) {
@@ -95,7 +100,20 @@ export function SessionLaunch({
           <h1 id="ls-launch-title">Run Session {String(session.number).padStart(2, "0")}</h1>
           <p>{playbook.title}</p>
         </div>
-        {onExit && <button className="ls-button ls-button--quiet" type="button" onClick={onExit}>Exit</button>}
+        <div className="ls-launch__actions">
+          {onReplacePlaybook && (
+            <button
+              className="ls-button ls-button--quiet"
+              type="button"
+              disabled={replacingPlaybook}
+              onClick={onReplacePlaybook}
+            >
+              <Upload size={17} />
+              {replacingPlaybook ? "Publishing…" : "Update playbook"}
+            </button>
+          )}
+          {onExit && <button className="ls-button ls-button--quiet" type="button" onClick={onExit}>Exit</button>}
+        </div>
       </header>
 
       <div className="ls-launch__session-card">

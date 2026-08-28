@@ -89,6 +89,8 @@ function LiveSessionWorkspace({
   offlineReady = false,
   onPrepareOffline,
   onRemoveOffline,
+  onReplacePlaybook,
+  replacingPlaybook,
   onRunChange,
   onComplete,
   onExit,
@@ -193,6 +195,8 @@ function LiveSessionWorkspace({
           offlineReady={offlineReady}
           onPrepareOffline={onPrepareOffline}
           onRemoveOffline={onRemoveOffline}
+          onReplacePlaybook={onReplacePlaybook}
+          replacingPlaybook={replacingPlaybook}
           onStart={handleStart}
           onExit={onExit}
         />

@@ -175,6 +175,8 @@ export interface LiveSessionConsoleProps {
   onRetry?: () => void;
   onPrepareOffline?: () => void | Promise<void>;
   onRemoveOffline?: () => void | Promise<void>;
+  onReplacePlaybook?: () => void;
+  replacingPlaybook?: boolean;
   onRunChange?: (snapshot: LiveSessionRunSnapshot) => void;
   onComplete: (result: LiveSessionCloseoutResult) => void | Promise<void>;
   onExit?: () => void;
