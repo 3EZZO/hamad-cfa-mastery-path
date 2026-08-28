@@ -66,6 +66,13 @@ export function SessionLaunch({
         0,
       )
     : 0;
+  const proofCount = selectedRoute
+    ? (playbook.stagesByRoute[selectedRoute.id] ?? []).reduce(
+        (total, stage) =>
+          total + (stage.questions ?? []).filter(item => item.kind === "question").length,
+        0,
+      )
+    : 0;
   const canStart = Boolean(selectedRoute && stageCount && calculatorReady && workspaceReady);
 
   const toggleOffline = async () => {
@@ -113,6 +120,13 @@ export function SessionLaunch({
               (total, stage) => total + Math.max(1, stage.questions?.length ?? 0),
               0,
             );
+            const routeProofs = (playbook.stagesByRoute[route.id] ?? []).reduce(
+              (total, stage) =>
+                total +
+                (stage.questions ?? []).filter(item => item.kind === "question")
+                  .length,
+              0,
+            );
             return (
               <label className={`ls-route-card${selected ? " is-selected" : ""}`} key={route.id}>
                 <input type="radio" name="live-session-route" value={route.id} checked={selected} onChange={() => setRouteId(route.id)} />
@@ -120,7 +134,7 @@ export function SessionLaunch({
                 <span className="ls-route-card__time"><Clock3 size={17} /> {route.minutes} min</span>
                 <strong>{route.name}</strong>
                 <p>{route.description}</p>
-                <small>{routeStages} stages · {routeItems} command desks</small>
+                <small>{routeStages} stages · {routeProofs} mastery proofs · {routeItems} teaching desks</small>
                 {route.recommended && <em>Recommended</em>}
               </label>
             );
@@ -157,7 +171,7 @@ export function SessionLaunch({
       </fieldset>
 
       <footer className="ls-launch__footer">
-        <div><span>Selected</span><strong>{selectedRoute?.name ?? "Choose a route"} · {stageCount} stages · {itemCount} desks</strong></div>
+        <div><span>Selected route</span><strong>{selectedRoute?.name ?? "Choose a route"} · {stageCount} stages · {proofCount} proofs · {itemCount} desks</strong></div>
         <button className="ls-button ls-button--primary ls-button--large" type="button" disabled={!canStart} onClick={() => selectedRoute && onStart(selectedRoute)}>
           <Play size={18} fill="currentColor" /> Start live session <ChevronRight size={18} />
         </button>

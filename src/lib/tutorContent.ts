@@ -59,6 +59,11 @@ export interface TutorPlaybookRoute {
   label: string;
   totalMinutes: number;
   stageIds: string[];
+  /**
+   * Optional curated card order for each stage. When omitted, Session Mode
+   * preserves the original behaviour and presents every card in that stage.
+   */
+  cardIdsByStage?: Record<string, string[]>;
 }
 
 export interface TutorPlaybookCard {
@@ -463,17 +468,44 @@ export async function computeTutorPlaybookManifestContentHash(
 
 function parseRoute(value: unknown, path: string): TutorPlaybookRoute {
   const source = record(value, path);
-  onlyKeys(source, ["id", "label", "totalMinutes", "stageIds"], path);
+  onlyKeys(
+    source,
+    ["id", "label", "totalMinutes", "stageIds", "cardIdsByStage"],
+    path,
+  );
   const stageIds = stringList(source.stageIds, `${path}.stageIds`, 100, 80).map(
     (stageId, index) => identifier(stageId, `${path}.stageIds[${index}]`),
   );
   if (!stageIds.length) fail(`${path}.stageIds`, "must contain at least one stage");
   unique(stageIds, `${path}.stageIds`);
+  let cardIdsByStage: Record<string, string[]> | undefined;
+  if (source.cardIdsByStage !== undefined) {
+    const cardsByStage = record(source.cardIdsByStage, `${path}.cardIdsByStage`);
+    cardIdsByStage = Object.fromEntries(
+      Object.entries(cardsByStage).map(([stageId, value]) => {
+        const parsedStageId = identifier(stageId, `${path}.cardIdsByStage.${stageId}`);
+        const cardIds = stringList(
+          value,
+          `${path}.cardIdsByStage.${stageId}`,
+          400,
+          80,
+        ).map((cardId, index) =>
+          identifier(cardId, `${path}.cardIdsByStage.${stageId}[${index}]`),
+        );
+        if (!cardIds.length) {
+          fail(`${path}.cardIdsByStage.${stageId}`, "must contain at least one card");
+        }
+        unique(cardIds, `${path}.cardIdsByStage.${stageId}`);
+        return [parsedStageId, cardIds];
+      }),
+    );
+  }
   return {
     id: identifier(source.id, `${path}.id`),
     label: requiredString(source.label, `${path}.label`, 100),
     totalMinutes: integer(source.totalMinutes, `${path}.totalMinutes`, 1, 360),
     stageIds,
+    ...(cardIdsByStage ? { cardIdsByStage } : {}),
   };
 }
 
@@ -765,9 +797,31 @@ function validatePackageRelationships(
 
   for (const route of manifest.routes) {
     let total = 0;
+    if (route.cardIdsByStage) {
+      for (const stageId of Object.keys(route.cardIdsByStage)) {
+        if (!route.stageIds.includes(stageId)) {
+          fail(
+            `route.${route.id}.cardIdsByStage.${stageId}`,
+            "references a stage that is not in this route",
+          );
+        }
+      }
+    }
     for (const stageId of route.stageIds) {
       const stage = stageById.get(stageId);
       if (!stage) fail(`route.${route.id}`, `references missing stage ${stageId}`);
+      const selectedCardIds = route.cardIdsByStage?.[stageId];
+      if (selectedCardIds) {
+        const stageCardIds = new Set(stage.cards.map((card) => card.id));
+        for (const cardId of selectedCardIds) {
+          if (!stageCardIds.has(cardId)) {
+            fail(
+              `route.${route.id}.cardIdsByStage.${stageId}`,
+              `references missing card ${cardId}`,
+            );
+          }
+        }
+      }
       const duration = stage.durationMinutesByRoute[route.id];
       if (duration === undefined) {
         fail(

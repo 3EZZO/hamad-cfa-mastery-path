@@ -24,10 +24,10 @@ const VERDICTS: Array<{
   icon: typeof Check;
   shortcut: string;
 }> = [
-  { id: "correct", label: "Correct", detail: "Independent proof", icon: Check, shortcut: "C" },
-  { id: "partial", label: "Partial", detail: "Right path, incomplete", icon: CircleDashed, shortcut: "L" },
-  { id: "repair", label: "Repair", detail: "Name and correct", icon: CircleAlert, shortcut: "R" },
-  { id: "parked", label: "Park", detail: "Return before close", icon: Archive, shortcut: "P" },
+  { id: "correct", label: "Secure", detail: "Independent and explained", icon: Check, shortcut: "C" },
+  { id: "partial", label: "Developing", detail: "Sound method, incomplete proof", icon: CircleDashed, shortcut: "L" },
+  { id: "repair", label: "Repair", detail: "Diagnose, correct, retest", icon: CircleAlert, shortcut: "R" },
+  { id: "parked", label: "Defer", detail: "Return before completion", icon: Archive, shortcut: "P" },
 ];
 
 export function EvidenceRepairFlow({
@@ -64,8 +64,8 @@ export function EvidenceRepairFlow({
     <aside className="ls-evidence" aria-labelledby="ls-evidence-title">
       <header className="ls-evidence__header">
         <div>
-          <p className="ls-eyebrow">Live evidence</p>
-          <h2 id="ls-evidence-title">What happened?</h2>
+          <p className="ls-eyebrow">Tutor observation</p>
+          <h2 id="ls-evidence-title">Record the evidence</h2>
         </div>
         <ShieldCheck size={20} aria-label="Tutor-only evidence" />
       </header>
@@ -93,7 +93,7 @@ export function EvidenceRepairFlow({
       </div>
 
       <fieldset className="ls-confidence">
-        <legend>Hamad&apos;s confidence</legend>
+        <legend>Confidence before feedback</legend>
         <div>
           {[1, 2, 3, 4, 5].map(score => (
             <button
@@ -107,14 +107,14 @@ export function EvidenceRepairFlow({
             </button>
           ))}
         </div>
-        <small>1 = guessing · 5 = can teach it back</small>
+        <small>1 = guessing · 5 = can teach it back accurately</small>
       </fieldset>
 
       {value.verdict === "repair" && (
         <section className="ls-repair" aria-label="Repair path">
           <div className="ls-repair__heading">
             <CircleAlert size={17} />
-            <div><strong>Name the broken step</strong><span>Select every code that applies.</span></div>
+            <div><strong>Locate the first broken step</strong><span>Select every code supported by evidence.</span></div>
           </div>
           <div className="ls-error-codes">
             {(Object.keys(ERROR_CODE_COPY) as ErrorCode[]).map(code => (
@@ -133,7 +133,7 @@ export function EvidenceRepairFlow({
           </div>
           {repairInstructions.length > 0 && (
             <div className="ls-repair__script">
-              <span>Exact repair sequence</span>
+              <span>Smallest effective repair</span>
               <ol>{repairInstructions.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol>
             </div>
           )}
@@ -142,13 +142,13 @@ export function EvidenceRepairFlow({
 
       <label className="ls-note-field">
         <span>
-          Quick tutor note{" "}
-          <small>{needsParkReason ? "required when parked" : "optional"}</small>
+          Evidence note{" "}
+          <small>{needsParkReason ? "required when deferred" : "optional"}</small>
         </span>
         <textarea
           rows={3}
           maxLength={500}
-          placeholder="Record observable evidence, not a general impression."
+          placeholder="Record what Hamad said, wrote, calculated, or corrected."
           value={value.note}
           onChange={event => onChange({ ...value, note: event.target.value })}
         />
@@ -160,13 +160,13 @@ export function EvidenceRepairFlow({
         disabled={!canRecord}
         onClick={onRecord}
       >
-        <Save size={17} /> Record and continue <kbd>Enter</kbd>
+        <Save size={17} /> Save evidence and continue <kbd>Enter</kbd>
       </button>
       {needsErrorCode && !value.errorCodes.length && (
         <p className="ls-evidence__hint"><CircleAlert size={14} /> Select at least one error code.</p>
       )}
       {needsParkReason && !value.note.trim() && (
-        <p className="ls-evidence__hint"><CircleAlert size={14} /> Record why this item is parked.</p>
+        <p className="ls-evidence__hint"><CircleAlert size={14} /> Record why this item is deferred.</p>
       )}
     </aside>
   );

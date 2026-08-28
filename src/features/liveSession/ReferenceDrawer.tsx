@@ -9,6 +9,17 @@ export interface ReferenceDrawerProps {
   onClose: () => void;
 }
 
+function referenceGroup(category: string): string {
+  if (category.startsWith("Question Bank")) return "Question Bank";
+  if (/formula/i.test(category)) return "Formula Desk";
+  if (/calculator|BA II/i.test(category)) return "Calculator";
+  if (/repair/i.test(category)) return "Repair Engine";
+  if (/workflow/i.test(category)) return "Workflows";
+  if (/evidence/i.test(category)) return "Evidence";
+  if (/index|integrity/i.test(category)) return "Fast Find";
+  return "Reference";
+}
+
 export function ReferenceDrawer({
   open,
   references,
@@ -16,7 +27,13 @@ export function ReferenceDrawer({
   onClose,
 }: ReferenceDrawerProps) {
   const [query, setQuery] = useState("");
+  const [group, setGroup] = useState("All");
   const searchRef = useRef<HTMLInputElement>(null);
+
+  const groups = useMemo(
+    () => ["All", ...new Set(references.map(item => referenceGroup(item.category)))],
+    [references],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -35,22 +52,25 @@ export function ReferenceDrawer({
       const rightActive = activeReferenceIds.includes(right.id) ? 1 : 0;
       return rightActive - leftActive || left.title.localeCompare(right.title);
     });
-    if (!normalized) return ordered;
-    return ordered.filter(reference =>
-      [
-        reference.id,
-        reference.title,
-        reference.category,
-        reference.summary ?? "",
-        ...(reference.tags ?? []),
-        ...reference.content,
-        ...(reference.formulae ?? []),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalized),
-    );
-  }, [activeReferenceIds, query, references]);
+    return ordered.filter(reference => {
+      const groupMatch = group === "All" || referenceGroup(reference.category) === group;
+      const queryMatch =
+        !normalized ||
+        [
+          reference.id,
+          reference.title,
+          reference.category,
+          reference.summary ?? "",
+          ...(reference.tags ?? []),
+          ...reference.content,
+          ...(reference.formulae ?? []),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalized);
+      return groupMatch && queryMatch;
+    });
+  }, [activeReferenceIds, group, query, references]);
 
   if (!open) return null;
 
@@ -65,8 +85,8 @@ export function ReferenceDrawer({
       >
         <header>
           <div>
-            <p className="ls-eyebrow">Private tutor desk</p>
-            <h2 id="ls-reference-title">Quick reference</h2>
+            <p className="ls-eyebrow">Private knowledge system</p>
+            <h2 id="ls-reference-title">Knowledge desk</h2>
           </div>
           <button className="ls-icon-button" type="button" onClick={onClose} aria-label="Close reference drawer">
             <X size={20} />
@@ -78,11 +98,24 @@ export function ReferenceDrawer({
             ref={searchRef}
             type="search"
             value={query}
-            placeholder="Concept, formula, or question ID"
+            placeholder="Find a concept, formula, repair, or question ID"
             onChange={event => setQuery(event.target.value)}
           />
           <kbd>F</kbd>
         </label>
+        <div className="ls-reference-groups" role="group" aria-label="Reference category">
+          {groups.map(item => (
+            <button
+              type="button"
+              className={group === item ? "is-selected" : ""}
+              aria-pressed={group === item}
+              key={item}
+              onClick={() => setGroup(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
         <p className="ls-reference-count">
           {filtered.length} {filtered.length === 1 ? "reference" : "references"}
         </p>
@@ -111,8 +144,8 @@ export function ReferenceDrawer({
           {!filtered.length && (
             <div className="ls-reference-empty">
               <Search size={22} />
-              <strong>No reference found</strong>
-              <p>Try a shorter concept name or a question ID.</p>
+              <strong>No knowledge item found</strong>
+              <p>Try a shorter concept name, choose All, or enter a question ID.</p>
             </div>
           )}
         </div>
@@ -120,4 +153,3 @@ export function ReferenceDrawer({
     </div>
   );
 }
-

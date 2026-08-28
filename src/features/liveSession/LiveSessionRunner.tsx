@@ -104,6 +104,26 @@ function resultLabel(result: CommandDeskResult): string {
   return result.question?.title || result.question?.label || result.stage.title;
 }
 
+function isEvidenceTarget(question?: LiveSessionQuestion): boolean {
+  return question?.kind === "question";
+}
+
+const REFERENCE_STOP_WORDS = new Set([
+  "about", "after", "answer", "before", "calculate", "explain", "from",
+  "hamad", "into", "method", "question", "return", "stage", "that",
+  "their", "this", "what", "when", "which", "with", "your",
+]);
+
+function referenceTokens(value: string): string[] {
+  return [...new Set(
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(/\s+/)
+      .filter(token => token.length >= 4 && !REFERENCE_STOP_WORDS.has(token)),
+  )];
+}
+
 export function LiveSessionRunner({
   session,
   route,
@@ -132,21 +152,26 @@ export function LiveSessionRunner({
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
-  const [stageElapsedMs, setStageElapsedMs] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
-  const lastStageTickRef = useRef<number | null>(null);
 
   const stage = stages[stageIndex] ?? stages[0];
   const questions = stage?.questions ?? [];
   const safeQuestionIndex = Math.min(questionIndex, Math.max(0, questions.length - 1));
   const question = questions[safeQuestionIndex];
+  const evidenceTarget = isEvidenceTarget(question);
   const targetId = question?.id ?? stage?.id ?? "unknown";
   const targetLabel = question
-    ? `${question.label ?? `Item ${safeQuestionIndex + 1}`} · ${question.id}`
+    ? `${question.label ?? `Proof ${safeQuestionIndex + 1}`} · ${question.id}`
     : stage?.title ?? "Stage evidence";
-  const currentEvidence = evidence.filter(item => item.stageId === stage?.id);
+  const stageTargetIds = new Set(
+    questions.filter(isEvidenceTarget).map(item => item.id),
+  );
+  const currentEvidence = evidence.filter(
+    item => item.stageId === stage?.id && stageTargetIds.has(item.targetId),
+  );
   const allQuestions = questions.length || 1;
   const stageEvidenceCount = new Set(currentEvidence.map(item => item.targetId)).size;
+  const stageTargetCount = stageTargetIds.size;
   const SyncIcon = syncCopy(syncState).icon;
 
   useEffect(() => {
@@ -156,26 +181,6 @@ export function LiveSessionRunner({
   useEffect(() => {
     onPositionChange?.(stageIndex, safeQuestionIndex);
   }, [onPositionChange, safeQuestionIndex, stageIndex]);
-
-  useEffect(() => {
-    setStageElapsedMs(0);
-    lastStageTickRef.current = null;
-  }, [stage?.id]);
-
-  useEffect(() => {
-    if (timer.status !== "running") {
-      lastStageTickRef.current = null;
-      return;
-    }
-    lastStageTickRef.current = Date.now();
-    const interval = window.setInterval(() => {
-      const now = Date.now();
-      const previous = lastStageTickRef.current ?? now;
-      lastStageTickRef.current = now;
-      setStageElapsedMs(value => value + Math.max(0, now - previous));
-    }, 500);
-    return () => window.clearInterval(interval);
-  }, [timer.status]);
 
   const changePosition = useCallback(
     (nextStage: number, nextQuestion: number) => {
@@ -219,7 +224,7 @@ export function LiveSessionRunner({
   }, [changePosition, safeQuestionIndex, stageIndex, stages]);
 
   const recordEvidence = useCallback(() => {
-    if (!stage || !draft.verdict) return;
+    if (!stage || !evidenceTarget || !draft.verdict) return;
     if (draft.verdict === "repair" && !draft.errorCodes.length) return;
     onEvidence({
       id: makeEvidenceId(),
@@ -234,15 +239,16 @@ export function LiveSessionRunner({
     });
     setDraft(EMPTY_DRAFT);
     goNext();
-  }, [draft, goNext, onEvidence, stage, targetId, targetLabel]);
+  }, [draft, evidenceTarget, goNext, onEvidence, stage, targetId, targetLabel]);
 
   const selectVerdict = useCallback((verdict: EvidenceVerdict) => {
+    if (!evidenceTarget) return;
     setDraft(current => ({
       ...current,
       verdict,
       errorCodes: verdict === "repair" ? current.errorCodes : [],
     }));
-  }, []);
+  }, [evidenceTarget]);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -332,23 +338,86 @@ export function LiveSessionRunner({
       const filterMatch = resultFilter === "all"
         ? true
         : resultFilter === "open"
-          ? !result.verdict
-          : result.verdict === resultFilter;
+          ? isEvidenceTarget(result.question) && !result.verdict
+          : isEvidenceTarget(result.question) && result.verdict === resultFilter;
       return searchMatch && filterMatch;
     });
   }, [commandDeskResults, query, resultFilter]);
 
   const showSearchResults = Boolean(query.trim()) || resultFilter !== "all";
+  const evidenceTargetIds = useMemo(
+    () =>
+      new Set(
+        commandDeskResults
+          .filter(result => isEvidenceTarget(result.question))
+          .map(result => result.question!.id),
+      ),
+    [commandDeskResults],
+  );
+  const targetEvidence = useMemo(
+    () => evidence.filter(entry => evidenceTargetIds.has(entry.targetId)),
+    [evidence, evidenceTargetIds],
+  );
+  const activeReferenceIds = useMemo(() => {
+    const tokens = referenceTokens(
+      [
+        stage?.title,
+        stage?.objective,
+        question?.title,
+        question?.concept,
+        question?.prompt,
+        ...(question?.tags ?? []),
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
+    return references
+      .map(reference => {
+        const searchable = [
+          reference.title,
+          reference.category,
+          reference.summary ?? "",
+          ...(reference.tags ?? []),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return {
+          id: reference.id,
+          score: tokens.reduce(
+            (total, token) => total + (searchable.includes(token) ? 1 : 0),
+            0,
+          ),
+        };
+      })
+      .filter(item => item.score >= 2)
+      .sort((left, right) => right.score - left.score)
+      .slice(0, 3)
+      .map(item => item.id);
+  }, [question, references, stage]);
   const stageProgress = useMemo(
-    () => stages.map(item => ({
-      ...item,
-      evidenceCount: new Set(
-        evidence.filter(entry => entry.stageId === item.id).map(entry => entry.targetId),
-      ).size,
-      targetCount: item.questions?.length || 1,
-    })),
+    () =>
+      stages.map(item => {
+        const targetIds = new Set(
+          (item.questions ?? []).filter(isEvidenceTarget).map(card => card.id),
+        );
+        return {
+          ...item,
+          evidenceCount: new Set(
+            evidence
+              .filter(
+                entry => entry.stageId === item.id && targetIds.has(entry.targetId),
+              )
+              .map(entry => entry.targetId),
+          ).size,
+          targetCount: targetIds.size,
+        };
+      }),
     [evidence, stages],
   );
+  const plannedBeforeMs = stages
+    .slice(0, stageIndex)
+    .reduce((total, item) => total + item.durationMinutes * 60_000, 0);
+  const stageElapsedMs = Math.max(0, timer.elapsedMs - plannedBeforeMs);
   const stageDurationMs = Math.max(1, stage?.durationMinutes ?? 1) * 60_000;
   const stageOvertime = stageElapsedMs > stageDurationMs;
   const stageDisplay = stageOvertime
@@ -377,7 +446,7 @@ export function LiveSessionRunner({
             <strong>{stage.title}</strong>
           </div>
         </div>
-        <MasteryRadar evidence={evidence} total={commandDeskResults.length} />
+        <MasteryRadar evidence={targetEvidence} total={evidenceTargetIds.size} />
         <div className="ls-clock-cluster" aria-label="Session timers">
           <div className={`ls-clock${timer.expired ? " is-overtime" : ""}`}>
             <span>{timer.expired ? "Session overtime" : "Session left"}</span>
@@ -405,7 +474,7 @@ export function LiveSessionRunner({
             <Command size={19} />
           </button>
           <button className="ls-button ls-button--quiet" type="button" onClick={onRequestCloseout}>
-            <Flag size={16} /> Close
+            <Flag size={16} /> Complete
           </button>
         </div>
       </header>
@@ -417,7 +486,9 @@ export function LiveSessionRunner({
         </div>
         <div className="ls-stage-strip__items">
           {stageProgress.map((item, index) => {
-            const complete = item.evidenceCount >= item.targetCount;
+            const complete = item.targetCount
+              ? item.evidenceCount >= item.targetCount
+              : index < stageIndex;
             return (
               <button
                 type="button"
@@ -433,7 +504,7 @@ export function LiveSessionRunner({
           })}
         </div>
         <button className="ls-button ls-button--quiet" type="button" onClick={() => setReferenceOpen(true)}>
-          <BookOpenCheck size={16} /> Reference <kbd>F</kbd>
+          <BookOpenCheck size={16} /> Knowledge desk <kbd>F</kbd>
         </button>
       </nav>
 
@@ -445,7 +516,7 @@ export function LiveSessionRunner({
             ref={searchRef}
             type="search"
             value={query}
-            placeholder="Search a concept, formula, question, or answer"
+            placeholder="Find a concept, formula, question, or model response"
             onChange={event => setQuery(event.target.value)}
           />
           {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={16} /></button> : <kbd>/</kbd>}
@@ -454,12 +525,12 @@ export function LiveSessionRunner({
           <SlidersHorizontal size={17} />
           <span className="ls-sr-only">Filter by evidence result</span>
           <select value={resultFilter} onChange={event => setResultFilter(event.target.value as ResultFilter)}>
-            <option value="all">All items</option>
-            <option value="open">Not recorded</option>
-            <option value="correct">Correct</option>
-            <option value="partial">Partial</option>
+            <option value="all">All route desks</option>
+            <option value="open">Proof not recorded</option>
+            <option value="correct">Secure</option>
+            <option value="partial">Developing</option>
             <option value="repair">Needs repair</option>
-            <option value="parked">Parked</option>
+            <option value="parked">Deferred</option>
           </select>
         </label>
       </section>
@@ -492,8 +563,8 @@ export function LiveSessionRunner({
           ) : (
             <div className="ls-no-results">
               <Search size={23} />
-              <strong>No command-desk item matches</strong>
-              <p>Try fewer words, a formula fragment, or clear the evidence filter.</p>
+              <strong>No teaching desk matches</strong>
+              <p>Try fewer words, a formula fragment, or clear the proof filter.</p>
             </div>
           )}
         </section>
@@ -503,8 +574,8 @@ export function LiveSessionRunner({
         <div className="ls-shortcuts" role="status">
           <span><kbd>/</kbd> search</span><span><kbd>Space</kbd> timers</span>
           <span><kbd>V</kbd> candidate</span><span><kbd>C</kbd> correct</span>
-          <span><kbd>L</kbd> partial</span><span><kbd>R</kbd> repair</span>
-          <span><kbd>P</kbd> park</span><span><kbd>B</kbd> back</span><span><kbd>N</kbd> next</span>
+          <span><kbd>L</kbd> developing</span><span><kbd>R</kbd> repair</span>
+          <span><kbd>P</kbd> defer</span><span><kbd>B</kbd> back</span><span><kbd>N</kbd> next</span>
           <button type="button" onClick={() => setShortcutsOpen(false)} aria-label="Hide shortcuts"><X size={15} /></button>
         </div>
       )}
@@ -512,8 +583,12 @@ export function LiveSessionRunner({
       <div className="ls-runner__grid">
         <main className="ls-runner__main">
           <div className="ls-proof-progress">
-            <span>Command desk {safeQuestionIndex + 1} of {allQuestions}</span>
-            <span>{stageEvidenceCount} recorded in this stage</span>
+            <span>Teaching desk {safeQuestionIndex + 1} of {allQuestions}</span>
+            <span>
+              {stageTargetCount
+                ? `${stageEvidenceCount} of ${stageTargetCount} mastery proofs recorded`
+                : "Teaching stage · no formal proof required"}
+            </span>
           </div>
           <StageCard
             stage={stage}
@@ -535,13 +610,35 @@ export function LiveSessionRunner({
           </nav>
         </main>
 
-        <EvidenceRepairFlow
-          targetLabel={targetLabel}
-          value={draft}
-          repairInstructions={question?.repair?.length ? question.repair : stage.repair}
-          onChange={setDraft}
-          onRecord={recordEvidence}
-        />
+        {evidenceTarget ? (
+          <EvidenceRepairFlow
+            targetLabel={targetLabel}
+            value={draft}
+            repairInstructions={question?.repair?.length ? question.repair : stage.repair}
+            onChange={setDraft}
+            onRecord={recordEvidence}
+          />
+        ) : (
+          <aside className="ls-evidence ls-evidence--teaching" aria-label="Teaching move">
+            <header className="ls-evidence__header">
+              <div>
+                <p className="ls-eyebrow">Teaching move</p>
+                <h2>Build the mental model</h2>
+              </div>
+              <BookOpenCheck size={20} aria-hidden="true" />
+            </header>
+            <p className="ls-evidence__target">No mastery verdict is required on this desk.</p>
+            <ol className="ls-teaching-move-list">
+              <li>Explain the core idea in your own natural voice.</li>
+              <li>Ask the displayed check and wait for Hamad to commit.</li>
+              <li>Use the model response to sharpen the explanation.</li>
+              <li>Move forward to the next independent proof.</li>
+            </ol>
+            <button className="ls-button ls-button--primary ls-button--block" type="button" onClick={goNext}>
+              Continue to next desk <ArrowRight size={17} /> <kbd>N</kbd>
+            </button>
+          </aside>
+        )}
       </div>
 
       <CandidatePromptView
@@ -556,7 +653,7 @@ export function LiveSessionRunner({
       <ReferenceDrawer
         open={referenceOpen}
         references={references}
-        activeReferenceIds={stage.referenceIds}
+        activeReferenceIds={stage.referenceIds?.length ? stage.referenceIds : activeReferenceIds}
         onClose={() => setReferenceOpen(false)}
       />
     </section>

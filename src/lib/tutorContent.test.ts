@@ -72,6 +72,10 @@ function draftPackage() {
           label: "150-minute standard route",
           totalMinutes: 150,
           stageIds: ["launch", "returns"],
+          cardIdsByStage: {
+            launch: ["launch-q01"],
+            returns: ["returns-q01"],
+          },
         },
       ],
       chunkIds: ["chunk-launch", "chunk-returns"],
@@ -182,6 +186,9 @@ describe("private Tutor Bible package validation", () => {
     const parsed = parseTutorPlaybookPackageDraft(draftPackage());
 
     expect(parsed.manifest.defaultRouteId).toBe("standard");
+    expect(parsed.manifest.routes[0]?.cardIdsByStage?.returns).toEqual([
+      "returns-q01",
+    ]);
     expect(parsed.chunks.map((item) => item.id)).toEqual([
       "chunk-launch",
       "chunk-returns",
@@ -200,6 +207,14 @@ describe("private Tutor Bible package validation", () => {
     brokenRoute.manifest.routes[0]!.totalMinutes = 149;
     expect(() => parseTutorPlaybookPackageDraft(brokenRoute)).toThrow(
       /stages total 150/i,
+    );
+
+    const brokenCardSelection = draftPackage();
+    brokenCardSelection.manifest.routes[0]!.cardIdsByStage.returns = [
+      "missing-card",
+    ];
+    expect(() => parseTutorPlaybookPackageDraft(brokenCardSelection)).toThrow(
+      /references missing card missing-card/i,
     );
 
     const duplicateCard = draftPackage();

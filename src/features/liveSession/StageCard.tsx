@@ -75,6 +75,15 @@ function bestAnswer(question?: LiveSessionQuestion): string {
   );
 }
 
+const PROOF_STEPS = ["Recognize", "Predict", "Set up", "Solve", "Interpret"];
+
+function proofStepIndex(question?: LiveSessionQuestion): number {
+  if (question?.kind === "question") return 3;
+  if (question?.kind === "repair" || question?.kind === "checkpoint") return 4;
+  if (question?.kind === "demonstration" || question?.kind === "calculator") return 2;
+  return 0;
+}
+
 export function StageCard({
   stage,
   question,
@@ -88,6 +97,7 @@ export function StageCard({
     : question?.working?.length
       ? question.working
       : stage.write;
+  const activeProofStep = proofStepIndex(question);
 
   return (
     <article className="ls-stage-card" aria-labelledby="ls-stage-title">
@@ -105,13 +115,40 @@ export function StageCard({
         </div>
       </header>
 
+      <section className="ls-proof-rail" aria-label="Mastery proof sequence">
+        <div>
+          <span>Decision proof</span>
+          <strong>From recognition to economic meaning</strong>
+        </div>
+        <ol>
+          {PROOF_STEPS.map((step, index) => (
+            <li
+              className={`${index === activeProofStep ? "is-current" : ""}${
+                index < activeProofStep ? " is-passed" : ""
+              }`}
+              aria-current={index === activeProofStep ? "step" : undefined}
+              key={step}
+            >
+              <span>{index + 1}</span>
+              <strong>{step}</strong>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       <div className="ls-command-grid" aria-label="Tutor command desk">
-        <CommandBlock icon={<Lightbulb size={19} />} label="Understand it" tone="explain">
+        <CommandBlock icon={<Lightbulb size={19} />} label="Core idea" tone="explain">
           <p className="ls-command-lead">{bestExplanation(stage, question)}</p>
           <div className="ls-script-ribbon">
-            <span><Quote size={15} /> Say this</span>
+            <span><Quote size={15} /> Teach it</span>
             <TextList items={bestScript(stage, question)} ordered={bestScript(stage, question).length > 1} />
           </div>
+          {question?.depthNotes ? (
+            <div className="ls-depth-note">
+              <span>Teaching depth</span>
+              <p>{question.depthNotes}</p>
+            </div>
+          ) : null}
           {question?.formulae?.length ? (
             <div className="ls-formula-stack">
               <span>Formula desk</span>
@@ -126,7 +163,7 @@ export function StageCard({
           ) : null}
         </CommandBlock>
 
-        <CommandBlock icon={<MessageSquareText size={19} />} label="Ask Hamad" tone="question">
+        <CommandBlock icon={<MessageSquareText size={19} />} label="Check understanding" tone="question">
           <div className="ls-question-copy">
             <div className="ls-question-copy__topline">
               <span>{question?.label ?? `Proof ${questionIndex + 1}`}</span>
@@ -145,46 +182,49 @@ export function StageCard({
             ) : null}
             {question?.hints?.length ? (
               <div className="ls-hints">
-                <span>Escalating hints</span>
+                <span>Hint ladder</span>
                 <TextList items={question.hints} ordered />
               </div>
             ) : null}
             <button className="ls-button ls-button--candidate" type="button" onClick={onShowCandidate}>
-              <MonitorUp size={17} /> Candidate-safe screen
+              <MonitorUp size={17} /> Present to Hamad
             </button>
           </div>
         </CommandBlock>
 
-        <CommandBlock icon={<Sparkles size={19} />} label="Your ready-to-speak answer" tone="answer">
-          <blockquote className="ls-spoken-answer">“{bestAnswer(question)}”</blockquote>
+        <CommandBlock icon={<Sparkles size={19} />} label="Model response" tone="answer">
+          <p className="ls-model-response-cue">
+            Say this naturally after Hamad commits to an answer.
+          </p>
+          <blockquote className="ls-spoken-answer">{bestAnswer(question)}</blockquote>
           {question?.answer && question.spokenAnswer && question.answer !== question.spokenAnswer ? (
             <div className="ls-answer-detail">
-              <span>Canonical answer</span>
+              <span>Final answer</span>
               <p>{question.answer}</p>
             </div>
           ) : null}
           {question?.working?.length ? (
             <div className="ls-answer-detail">
-              <span>Calculation path</span>
+              <span>Clean working</span>
               <TextList items={question.working} ordered />
             </div>
           ) : null}
           {question?.rationale ? (
             <div className="ls-answer-detail">
-              <span>Why it is right</span>
+              <span>Why this method</span>
               <p>{question.rationale}</p>
             </div>
           ) : null}
           {question?.interpretation ? (
             <div className="ls-answer-detail">
-              <span>Finish with meaning</span>
+              <span>Economic meaning</span>
               <p>{question.interpretation}</p>
             </div>
           ) : null}
           {question?.trap ? (
             <div className="ls-trap-callout">
               <AlertTriangle size={17} />
-              <p><span>Likely trap</span>{question.trap}</p>
+              <p><span>Watch for</span>{question.trap}</p>
             </div>
           ) : null}
           {question?.followUp ? (
@@ -200,13 +240,13 @@ export function StageCard({
         <div className="ls-coaching-rail">
           {listenFor?.length ? (
             <section>
-              <header><CheckCircle2 size={17} /><span>Listen for</span></header>
+              <header><CheckCircle2 size={17} /><span>Evidence to hear</span></header>
               <TextList items={listenFor} />
             </section>
           ) : null}
           {repair?.length ? (
             <section className="is-repair">
-              <header><ClipboardCheck size={17} /><span>If the answer breaks</span></header>
+              <header><ClipboardCheck size={17} /><span>Repair if the logic breaks</span></header>
               <TextList items={repair} ordered />
             </section>
           ) : null}

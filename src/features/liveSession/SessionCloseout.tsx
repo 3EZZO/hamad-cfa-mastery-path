@@ -32,10 +32,15 @@ function inferMastery(
   stage: LiveSessionStage,
   evidence: LiveSessionEvidence[],
 ): MasteryDecision {
-  const entries = evidence.filter(item => item.stageId === stage.id);
+  const targetIds = new Set(
+    (stage.questions ?? []).filter(item => item.kind === "question").map(item => item.id),
+  );
+  const entries = evidence.filter(
+    item => item.stageId === stage.id && targetIds.has(item.targetId),
+  );
   if (!entries.length || entries.some(item => item.verdict === "parked")) return "red";
   if (entries.some(item => item.verdict === "repair" || item.verdict === "partial")) return "amber";
-  const targetCount = stage.questions?.length || 1;
+  const targetCount = targetIds.size;
   const cleanTargets = new Set(
     entries.filter(item => item.verdict === "correct").map(item => item.targetId),
   ).size;
@@ -53,11 +58,15 @@ export function SessionCloseout({
 }: SessionCloseoutProps) {
   const inferred = useMemo<StageMasteryDecision[]>(
     () =>
-      stages.map(stage => ({
-        stageId: stage.id,
-        stageTitle: stage.title,
-        decision: inferMastery(stage, evidence),
-      })),
+      stages
+        .filter(stage =>
+          (stage.questions ?? []).some(item => item.kind === "question"),
+        )
+        .map(stage => ({
+          stageId: stage.id,
+          stageTitle: stage.title,
+          decision: inferMastery(stage, evidence),
+        })),
     [evidence, stages],
   );
   const [mastery, setMastery] = useState(inferred);
@@ -67,10 +76,22 @@ export function SessionCloseout({
   const [delayedRetest, setDelayedRetest] = useState("");
   const [privateTutorNote, setPrivateTutorNote] = useState("");
   const [saving, setSaving] = useState(false);
-  const correct = evidence.filter(item => item.verdict === "correct").length;
-  const partial = evidence.filter(item => item.verdict === "partial").length;
-  const repairs = evidence.filter(item => item.verdict === "repair").length;
-  const parked = evidence.filter(item => item.verdict === "parked").length;
+  const targetIds = useMemo(
+    () =>
+      new Set(
+        stages.flatMap(stage =>
+          (stage.questions ?? [])
+            .filter(item => item.kind === "question")
+            .map(item => item.id),
+        ),
+      ),
+    [stages],
+  );
+  const proofEvidence = evidence.filter(item => targetIds.has(item.targetId));
+  const correct = proofEvidence.filter(item => item.verdict === "correct").length;
+  const partial = proofEvidence.filter(item => item.verdict === "partial").length;
+  const repairs = proofEvidence.filter(item => item.verdict === "repair").length;
+  const parked = proofEvidence.filter(item => item.verdict === "parked").length;
 
   const changeDecision = (stageId: string, decision: MasteryDecision) => {
     setMastery(current =>
@@ -86,7 +107,7 @@ export function SessionCloseout({
         sessionId: session.id,
         routeId: route.id,
         actualMinutes,
-        evidence,
+        evidence: proofEvidence,
         mastery,
         outcome: outcome.trim(),
         nextAction: nextAction.trim(),
@@ -116,16 +137,16 @@ export function SessionCloseout({
 
       <section className="ls-closeout__metrics" aria-label="Session evidence summary">
         <article><Clock3 size={18} /><span><strong>{actualMinutes}</strong><small>actual minutes</small></span></article>
-        <article className="is-positive"><Check size={18} /><span><strong>{correct}</strong><small>clean proofs</small></span></article>
-        <article className="is-partial"><CircleAlert size={18} /><span><strong>{partial}</strong><small>partial proofs</small></span></article>
+        <article className="is-positive"><Check size={18} /><span><strong>{correct}</strong><small>secure proofs</small></span></article>
+        <article className="is-partial"><CircleAlert size={18} /><span><strong>{partial}</strong><small>developing proofs</small></span></article>
         <article className="is-warning"><CircleAlert size={18} /><span><strong>{repairs}</strong><small>repairs</small></span></article>
-        <article className="is-danger"><ClipboardCheck size={18} /><span><strong>{parked}</strong><small>parked</small></span></article>
+        <article className="is-danger"><ClipboardCheck size={18} /><span><strong>{parked}</strong><small>deferred</small></span></article>
       </section>
 
       <section className="ls-closeout__section">
         <div className="ls-section-heading">
           <span>1</span>
-          <div><h2>Mastery decisions</h2><p>Automatic suggestions are editable. Use only observed evidence.</p></div>
+          <div><h2>Mastery decisions</h2><p>Automatic suggestions are editable. Decide from independent evidence only.</p></div>
         </div>
         <div className="ls-mastery-list">
           {mastery.map((item, index) => (
@@ -140,7 +161,7 @@ export function SessionCloseout({
                     key={decision}
                     onClick={() => changeDecision(item.stageId, decision)}
                   >
-                    {decision}
+                    {{ green: "Secure", amber: "Developing", red: "Rebuild" }[decision]}
                   </button>
                 ))}
               </div>

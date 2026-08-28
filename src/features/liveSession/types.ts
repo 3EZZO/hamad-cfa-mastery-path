@@ -49,6 +49,7 @@ export interface LiveSessionQuestion {
   concept?: string;
   kind?: SessionContentKind;
   explanation?: string;
+  depthNotes?: string;
   teachingScript?: string[];
   prompt: string;
   options?: string[];

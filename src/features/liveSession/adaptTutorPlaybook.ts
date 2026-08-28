@@ -47,18 +47,37 @@ function prompt(card: TutorPlaybookCard, stage: TutorPlaybookStage): string {
   return stage.objective;
 }
 
+function teachingLayers(text: string): { core: string; depth?: string } {
+  const normalized = text.trim();
+  if (normalized.length <= 420) return { core: normalized };
+  const sentences = normalized.match(/[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g) ?? [normalized];
+  let used = 0;
+  const coreParts: string[] = [];
+  while (used < sentences.length && coreParts.join(" ").length < 260) {
+    coreParts.push(sentences[used]!.trim());
+    used += 1;
+  }
+  const core = coreParts.join(" ");
+  const depth = sentences.slice(used).map(item => item.trim()).join(" ");
+  return { core: core || normalized, depth: depth || undefined };
+}
+
 function adaptCard(
   card: TutorPlaybookCard,
   stage: TutorPlaybookStage,
   index: number,
 ): LiveSessionQuestion {
+  const layers = teachingLayers(card.body || card.rationale || stage.objective);
   return {
     id: card.id,
-    label: `Desk ${String(index + 1).padStart(2, "0")}`,
+    label: `${card.kind === "question" ? "Proof" : "Teach"} ${String(
+      index + 1,
+    ).padStart(2, "0")}`,
     title: card.title || stage.title,
     concept: stage.title,
     kind: CARD_KIND_MAP[card.kind],
-    explanation: card.body || card.rationale || stage.objective,
+    explanation: layers.core,
+    depthNotes: layers.depth,
     teachingScript: cleanList(card.say),
     prompt: prompt(card, stage),
     answer: card.answer || undefined,
@@ -88,12 +107,22 @@ export function adaptTutorPlaybookPackage(
   const routedStageIds = new Set(
     value.manifest.routes.flatMap(route => route.stageIds),
   );
+  const selectedLiveCardIds = new Set<string>();
 
   const stagesByRoute = Object.fromEntries(
     value.manifest.routes.map(route => {
       const stages = route.stageIds.flatMap((stageId, routeIndex) => {
         const source = stageById.get(stageId);
         if (!source) return [];
+        const sourceCardById = new Map(source.cards.map(card => [card.id, card]));
+        const selectedIds = route.cardIdsByStage?.[stageId];
+        const selectedCards = selectedIds
+          ? selectedIds.flatMap(cardId => {
+              const card = sourceCardById.get(cardId);
+              return card ? [card] : [];
+            })
+          : source.cards;
+        selectedCards.forEach(card => selectedLiveCardIds.add(card.id));
         const stage: LiveSessionStage = {
           id: source.id,
           order: routeIndex + 1,
@@ -102,7 +131,9 @@ export function adaptTutorPlaybookPackage(
           durationMinutes: source.durationMinutesByRoute[route.id] ?? 0,
           objective: source.objective,
           explanation: source.objective,
-          questions: source.cards.map((card, index) => adaptCard(card, source, index)),
+          questions: selectedCards.map((card, index) =>
+            adaptCard(card, source, index),
+          ),
         };
         return [stage];
       });
@@ -114,18 +145,27 @@ export function adaptTutorPlaybookPackage(
     id: value.manifest.id,
     version: value.manifest.version,
     title: value.manifest.title,
-    routes: value.manifest.routes.map(route => ({
-      id: route.id,
-      name: route.label,
-      minutes: route.totalMinutes,
-      description: `${route.stageIds.length} guided stages with live evidence capture.`,
-      recommended: route.id === value.manifest.defaultRouteId,
-    })),
+    routes: value.manifest.routes.map(route => {
+      const routeStages = stagesByRoute[route.id] ?? [];
+      const proofCount = routeStages.reduce(
+        (total, stage) =>
+          total + (stage.questions ?? []).filter(card => card.kind === "question").length,
+        0,
+      );
+      return {
+        id: route.id,
+        name: route.label,
+        minutes: route.totalMinutes,
+        description: `${route.stageIds.length} stages · ${proofCount} independent mastery proofs · full teaching script.`,
+        recommended: route.id === value.manifest.defaultRouteId,
+      };
+    }),
     stagesByRoute,
-    references: sourceStages
-      .filter(stage => !routedStageIds.has(stage.id))
-      .flatMap(stage =>
-        stage.cards.map(card => {
+    references: sourceStages.flatMap(stage => {
+      const isRoutedStage = routedStageIds.has(stage.id);
+      return stage.cards
+        .filter(card => !isRoutedStage || !selectedLiveCardIds.has(card.id))
+        .map(card => {
           const content = [
             ...card.say,
             ...card.write.map(item => `Write: ${item}`),
@@ -139,14 +179,16 @@ export function adaptTutorPlaybookPackage(
           return {
             id: card.id,
             title: card.title || stage.title,
-            category: stage.title,
+            category: isRoutedStage
+              ? `Question Bank · ${stage.title}`
+              : stage.title,
             summary: card.body || stage.objective,
             content: content.length ? content : [card.body || stage.objective],
             formulae:
               card.kind === "formula" ? cleanList([card.body, ...card.write]) : undefined,
             tags: [stage.id, card.kind, ...card.errorTags],
           };
-        }),
-      ),
+        });
+    }),
   };
 }

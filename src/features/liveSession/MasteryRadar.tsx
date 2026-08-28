@@ -22,7 +22,7 @@ export function MasteryRadar({ evidence, total }: MasteryRadarProps) {
   const safeTotal = Math.max(1, total);
   const circumference = 201.06;
   const dash = Math.min(circumference, (summary.recorded / safeTotal) * circumference);
-  const label = `Mastery Radar: ${summary.recorded} of ${total} items recorded; ${summary.correct} correct, ${summary.partial} partial, ${summary.repair} repair, ${summary.parked} parked.`;
+  const label = `Proof Radar: ${summary.recorded} of ${total} mastery proofs recorded; ${summary.correct} secure, ${summary.partial} developing, ${summary.repair} repair, ${summary.parked} deferred.`;
 
   return (
     <div className="ls-mastery-radar" role="img" aria-label={label} title={label}>
@@ -41,7 +41,7 @@ export function MasteryRadar({ evidence, total }: MasteryRadarProps) {
         <circle className="ls-mastery-radar__center" cx="39" cy="39" r="13" />
       </svg>
       <span className="ls-mastery-radar__score"><strong>{summary.recorded}</strong><small>/{total}</small></span>
-      <span className="ls-mastery-radar__label">Mastery Radar</span>
+      <span className="ls-mastery-radar__label">Proof Radar</span>
       <span className="ls-mastery-radar__dots" aria-hidden="true">
         <i className="is-correct" title={`${summary.correct} correct`} />
         <i className="is-partial" title={`${summary.partial} partial`} />
