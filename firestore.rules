@@ -693,8 +693,10 @@ service cloud.firestore {
             event.type in [
               'navigate', 'assessment', 'repair'
             ]
-            && resource.data.status == 'running'
-            && request.resource.data.status == 'running'
+            // Pausing controls elapsed time only. The tutor may still record
+            // teaching evidence or move desks while discussion is paused.
+            && resource.data.status in ['running', 'paused']
+            && request.resource.data.status == resource.data.status
             && request.resource.data.endedAtClient == null
           )
         );

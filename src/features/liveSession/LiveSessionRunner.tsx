@@ -20,6 +20,10 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CandidatePromptView } from "./CandidatePromptView";
 import { EvidenceRepairFlow } from "./EvidenceRepairFlow";
+import {
+  resolveLinearSessionAction,
+  type LinearSessionPhase,
+} from "./linearSessionFlow";
 import { MasteryRadar } from "./MasteryRadar";
 import { ReferenceDrawer } from "./ReferenceDrawer";
 import {
@@ -62,6 +66,7 @@ export interface LiveSessionRunnerProps {
   onEvidence: (entry: LiveSessionEvidence) => void;
   onDeskCompletionChange: (deskKey: string, complete: boolean) => void;
   onPositionChange?: (stageIndex: number, questionIndex: number) => void;
+  onSyncRetry?: () => void;
   onRequestCloseout: () => void;
   onExit?: () => void;
 }
@@ -105,12 +110,15 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return Boolean(
     target.closest(
-      "input, textarea, select, button, a, [contenteditable='true'], [role='dialog']",
-    ),
+      "input, textarea, select, button, a, [contenteditable='true'], [role='dialog']"
+    )
   );
 }
 
-function syncCopy(state: SyncPresentation): { label: string; icon: typeof Cloud } {
+function syncCopy(state: SyncPresentation): {
+  label: string;
+  icon: typeof Cloud;
+} {
   if (state === "offline") return { label: "Offline ready", icon: CloudOff };
   if (state === "error") return { label: "Sync issue", icon: CircleAlert };
   if (state === "saving") return { label: "Saving", icon: Cloud };
@@ -141,19 +149,39 @@ function queueName(mode: QueueMode): string {
 }
 
 const REFERENCE_STOP_WORDS = new Set([
-  "about", "after", "answer", "before", "calculate", "explain", "from",
-  "hamad", "into", "method", "question", "return", "stage", "that",
-  "their", "this", "what", "when", "which", "with", "your",
+  "about",
+  "after",
+  "answer",
+  "before",
+  "calculate",
+  "explain",
+  "from",
+  "hamad",
+  "into",
+  "method",
+  "question",
+  "return",
+  "stage",
+  "that",
+  "their",
+  "this",
+  "what",
+  "when",
+  "which",
+  "with",
+  "your",
 ]);
 
 function referenceTokens(value: string): string[] {
-  return [...new Set(
-    value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .split(/\s+/)
-      .filter(token => token.length >= 4 && !REFERENCE_STOP_WORDS.has(token)),
-  )];
+  return [
+    ...new Set(
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .split(/\s+/)
+        .filter(token => token.length >= 4 && !REFERENCE_STOP_WORDS.has(token))
+    ),
+  ];
 }
 
 export function LiveSessionRunner({
@@ -171,15 +199,18 @@ export function LiveSessionRunner({
   onEvidence,
   onDeskCompletionChange,
   onPositionChange,
+  onSyncRetry,
   onRequestCloseout,
   onExit,
 }: LiveSessionRunnerProps) {
   const safeInitialStage = Math.min(
     Math.max(0, initialStageIndex),
-    Math.max(0, stages.length - 1),
+    Math.max(0, stages.length - 1)
   );
   const [stageIndex, setStageIndex] = useState(safeInitialStage);
-  const [questionIndex, setQuestionIndex] = useState(Math.max(0, initialQuestionIndex));
+  const [questionIndex, setQuestionIndex] = useState(
+    Math.max(0, initialQuestionIndex)
+  );
   const [draft, setDraft] = useState<EvidenceDraft>(EMPTY_DRAFT);
   const [candidateOpen, setCandidateOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
@@ -187,25 +218,30 @@ export function LiveSessionRunner({
   const [query, setQuery] = useState("");
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
   const [queueMode, setQueueMode] = useState<QueueMode>("all");
-  const [flowStep, setFlowStep] = useState<TeachingFlowStep>("teach");
+  const [linearPhase, setLinearPhase] = useState<LinearSessionPhase>("teach");
   const [deskElapsedSeconds, setDeskElapsedSeconds] = useState(0);
   const [deskTimerRunning, setDeskTimerRunning] = useState(false);
   const [advanceHint, setAdvanceHint] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const toolsRef = useRef<HTMLDetailsElement>(null);
+  const flowStep: TeachingFlowStep =
+    linearPhase === "evidence" ? "answer" : linearPhase;
 
   const stage = stages[stageIndex] ?? stages[0];
   const questions = stage?.questions ?? [];
-  const safeQuestionIndex = Math.min(questionIndex, Math.max(0, questions.length - 1));
+  const safeQuestionIndex = Math.min(
+    questionIndex,
+    Math.max(0, questions.length - 1)
+  );
   const question = questions[safeQuestionIndex];
   const allDecks = useMemo(() => flattenSessionDecks(stages), [stages]);
   const currentDeck = allDecks.find(
     deck =>
-      deck.stageIndex === stageIndex &&
-      deck.questionIndex === safeQuestionIndex,
+      deck.stageIndex === stageIndex && deck.questionIndex === safeQuestionIndex
   );
   const queueDecks = useMemo(
     () => allDecks.filter(deck => deckMatchesQueue(deck, queueMode)),
-    [allDecks, queueMode],
+    [allDecks, queueMode]
   );
   const evidenceTarget = isEvidenceTarget(question);
   const targetId = question?.id ?? stage?.id ?? "unknown";
@@ -213,27 +249,32 @@ export function LiveSessionRunner({
   const deskComplete = completedDeskIds.includes(currentDeskKey);
   const targetLabel = question
     ? `${question.label ?? `Proof ${safeQuestionIndex + 1}`} · ${question.id}`
-    : stage?.title ?? "Stage evidence";
+    : (stage?.title ?? "Stage evidence");
   const stageTargetIds = new Set(
-    questions.filter(isEvidenceTarget).map(item => item.id),
+    questions.filter(isEvidenceTarget).map(item => item.id)
   );
   const currentEvidence = evidence.filter(
-    item => item.stageId === stage?.id && stageTargetIds.has(item.targetId),
+    item => item.stageId === stage?.id && stageTargetIds.has(item.targetId)
   );
-  const stageEvidenceCount = new Set(currentEvidence.map(item => item.targetId)).size;
+  const stageEvidenceCount = new Set(currentEvidence.map(item => item.targetId))
+    .size;
   const stageTargetCount = stageTargetIds.size;
-  const latestEvidence = useMemo(() => latestEvidenceByTarget(evidence), [evidence]);
+  const latestEvidence = useMemo(
+    () => latestEvidenceByTarget(evidence),
+    [evidence]
+  );
   const SyncIcon = syncCopy(syncState).icon;
 
   const isDeckCovered = useCallback(
     (deck: SessionDeck) =>
       completedDeskIds.includes(deck.key) ||
       (deck.isProof && latestEvidence.has(deck.targetId)),
-    [completedDeskIds, latestEvidence],
+    [completedDeskIds, latestEvidence]
   );
 
   useEffect(() => {
-    if (questionIndex !== safeQuestionIndex) setQuestionIndex(safeQuestionIndex);
+    if (questionIndex !== safeQuestionIndex)
+      setQuestionIndex(safeQuestionIndex);
   }, [questionIndex, safeQuestionIndex]);
 
   useEffect(() => {
@@ -242,65 +283,76 @@ export function LiveSessionRunner({
 
   const changePosition = useCallback(
     (nextStage: number, nextQuestion: number) => {
-      setStageIndex(Math.min(Math.max(0, nextStage), Math.max(0, stages.length - 1)));
+      setStageIndex(
+        Math.min(Math.max(0, nextStage), Math.max(0, stages.length - 1))
+      );
       setQuestionIndex(Math.max(0, nextQuestion));
       setDraft(EMPTY_DRAFT);
-      setFlowStep("teach");
+      setLinearPhase("teach");
       setDeskTimerRunning(false);
       setAdvanceHint("");
       window.scrollTo({ top: 0, behavior: "auto" });
     },
-    [stages.length],
+    [stages.length]
   );
 
   const navigateToDeck = useCallback(
     (deck: SessionDeck) => changePosition(deck.stageIndex, deck.questionIndex),
-    [changePosition],
+    [changePosition]
   );
 
-  const moveForward = useCallback((treatCurrentAsCovered = false) => {
-    if (!currentDeck) return;
-    const resolution = resolveForwardDeck({
-      currentDeck,
-      queueDecks,
+  const moveForward = useCallback(
+    (treatCurrentAsCovered = false) => {
+      if (!currentDeck) return;
+      const resolution = resolveForwardDeck({
+        currentDeck,
+        queueDecks,
+        allDecks,
+        evidence,
+        coveredDeckKeys: completedDeskIds,
+        treatCurrentAsCovered,
+      });
+      if (resolution.nextDeck) {
+        if (resolution.expandedToAll) setQueueMode("all");
+        return navigateToDeck(resolution.nextDeck);
+      }
+      if (!resolution.canCloseout) {
+        setAdvanceHint(
+          "Cover this teaching deck or record evidence before closeout."
+        );
+        return;
+      }
+      onRequestCloseout();
+    },
+    [
       allDecks,
+      completedDeskIds,
+      currentDeck,
       evidence,
-      coveredDeckKeys: completedDeskIds,
-      treatCurrentAsCovered,
-    });
-    if (resolution.nextDeck) {
-      if (resolution.expandedToAll) setQueueMode("all");
-      return navigateToDeck(resolution.nextDeck);
-    }
-    if (!resolution.canCloseout) {
-      setAdvanceHint("Cover this teaching deck or record evidence before closeout.");
-      return;
-    }
-    onRequestCloseout();
-  }, [
-    allDecks,
-    completedDeskIds,
-    currentDeck,
-    evidence,
-    navigateToDeck,
-    onRequestCloseout,
-    queueDecks,
-  ]);
+      navigateToDeck,
+      onRequestCloseout,
+      queueDecks,
+    ]
+  );
 
   const goPrevious = useCallback(() => {
     if (!currentDeck) return;
-    const exactIndex = queueDecks.findIndex(deck => deck.key === currentDeck.key);
-    const previous = exactIndex >= 0
-      ? queueDecks[exactIndex - 1]
-      : [...queueDecks]
-          .reverse()
-          .find(deck => deck.globalIndex < currentDeck.globalIndex);
+    const exactIndex = queueDecks.findIndex(
+      deck => deck.key === currentDeck.key
+    );
+    const previous =
+      exactIndex >= 0
+        ? queueDecks[exactIndex - 1]
+        : [...queueDecks]
+            .reverse()
+            .find(deck => deck.globalIndex < currentDeck.globalIndex);
     if (previous) navigateToDeck(previous);
   }, [currentDeck, navigateToDeck, queueDecks]);
 
   const recordEvidence = useCallback(() => {
     const verdict = draft.verdict;
-    if (!stage || !evidenceTarget || !verdict || !canRecordEvidenceDraft(draft)) return;
+    if (!stage || !evidenceTarget || !verdict || !canRecordEvidenceDraft(draft))
+      return;
     onEvidence({
       id: makeEvidenceId(),
       stageId: stage.id,
@@ -327,14 +379,17 @@ export function LiveSessionRunner({
     targetLabel,
   ]);
 
-  const selectVerdict = useCallback((verdict: EvidenceVerdict) => {
-    if (!evidenceTarget) return;
-    setDraft(current => ({
-      ...current,
-      verdict,
-      errorCodes: verdict === "repair" ? current.errorCodes : [],
-    }));
-  }, [evidenceTarget]);
+  const selectVerdict = useCallback(
+    (verdict: EvidenceVerdict) => {
+      if (!evidenceTarget) return;
+      setDraft(current => ({
+        ...current,
+        verdict,
+        errorCodes: verdict === "repair" ? current.errorCodes : [],
+      }));
+    },
+    [evidenceTarget]
+  );
 
   useEffect(() => {
     setDeskElapsedSeconds(0);
@@ -345,15 +400,10 @@ export function LiveSessionRunner({
     if (!deskTimerRunning || timer.status !== "running") return;
     const interval = window.setInterval(
       () => setDeskElapsedSeconds(value => value + 1),
-      1_000,
+      1_000
     );
     return () => window.clearInterval(interval);
   }, [deskTimerRunning, timer.status]);
-
-  const markDeskCompleteAndContinue = useCallback(() => {
-    if (!deskComplete) onDeskCompletionChange(currentDeskKey, true);
-    moveForward(true);
-  }, [currentDeskKey, deskComplete, moveForward, onDeskCompletionChange]);
 
   const selectFlowStep = useCallback(
     (step: TeachingFlowStep) => {
@@ -363,9 +413,10 @@ export function LiveSessionRunner({
       } else if (step !== "ask") {
         setDeskTimerRunning(false);
       }
-      setFlowStep(step);
+      setLinearPhase(step);
+      setAdvanceHint("");
     },
-    [flowStep],
+    [flowStep]
   );
 
   const openCandidateView = useCallback(() => {
@@ -376,12 +427,12 @@ export function LiveSessionRunner({
   const focusEvidencePanel = useCallback(() => {
     setDeskTimerRunning(false);
     setAdvanceHint(
-      "Choose a verdict and save the evidence. Use Defer with a short reason when this proof must wait.",
+      "Choose a verdict and save the evidence. Use Defer with a short reason when this proof must wait."
     );
     window.setTimeout(() => {
       const panel = document.querySelector<HTMLElement>("#ls-evidence-panel");
       const reducedMotion = window.matchMedia?.(
-        "(prefers-reduced-motion: reduce)",
+        "(prefers-reduced-motion: reduce)"
       ).matches;
       panel?.scrollIntoView({
         behavior: reducedMotion ? "auto" : "smooth",
@@ -391,16 +442,49 @@ export function LiveSessionRunner({
     }, 0);
   }, []);
 
-  const advanceCurrentDeck = useCallback(() => {
+  const advanceLinearSequence = useCallback(() => {
     if (!currentDeck) return;
-    if (evidenceTarget && !isDeckCovered(currentDeck)) {
-      if (canRecordEvidenceDraft(draft)) {
-        recordEvidence();
-      } else {
+    const action = resolveLinearSessionAction({
+      phase: linearPhase,
+      isProof: evidenceTarget,
+      isCovered: isDeckCovered(currentDeck),
+      evidenceReady: canRecordEvidenceDraft(draft),
+    });
+    if (action.kind === "move-to-phase") {
+      if (action.phase === "evidence") {
+        setLinearPhase("evidence");
         focusEvidencePanel();
+      } else {
+        selectFlowStep(action.phase);
+        const tone =
+          action.phase === "teach"
+            ? "explain"
+            : action.phase === "ask"
+              ? "question"
+              : "answer";
+        window.setTimeout(() => {
+          const reducedMotion = window.matchMedia?.(
+            "(prefers-reduced-motion: reduce)"
+          ).matches;
+          document
+            .querySelector<HTMLElement>(`.ls-command-block--${tone}`)
+            ?.scrollIntoView({
+              behavior: reducedMotion ? "auto" : "smooth",
+              block: "start",
+            });
+        }, 0);
       }
       return;
     }
+    if (action.kind === "focus-evidence") {
+      focusEvidencePanel();
+      return;
+    }
+    if (action.kind === "record-evidence") {
+      recordEvidence();
+      return;
+    }
+
     if (!evidenceTarget && !deskComplete) {
       onDeskCompletionChange(currentDeskKey, true);
     }
@@ -413,9 +497,11 @@ export function LiveSessionRunner({
     evidenceTarget,
     focusEvidencePanel,
     isDeckCovered,
+    linearPhase,
     moveForward,
     onDeskCompletionChange,
     recordEvidence,
+    selectFlowStep,
   ]);
 
   useEffect(() => {
@@ -423,12 +509,16 @@ export function LiveSessionRunner({
       if (candidateOpen || referenceOpen) return;
       if (event.key === "/" && !isInteractiveTarget(event.target)) {
         event.preventDefault();
-        searchRef.current?.focus();
+        if (toolsRef.current) toolsRef.current.open = true;
+        window.setTimeout(() => searchRef.current?.focus(), 0);
         return;
       }
       if (isInteractiveTarget(event.target)) return;
       const key = event.key.toLowerCase();
       if (key === " ") {
+        event.preventDefault();
+        if (!event.repeat) advanceLinearSequence();
+      } else if (key === "t") {
         event.preventDefault();
         timer.toggle();
       } else if (key === "v") {
@@ -460,7 +550,7 @@ export function LiveSessionRunner({
         selectVerdict("parked");
       } else if (key === "n") {
         event.preventDefault();
-        advanceCurrentDeck();
+        if (!event.repeat) advanceLinearSequence();
       } else if (key === "b") {
         event.preventDefault();
         goPrevious();
@@ -475,7 +565,7 @@ export function LiveSessionRunner({
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
   }, [
-    advanceCurrentDeck,
+    advanceLinearSequence,
     candidateOpen,
     draft.verdict,
     goPrevious,
@@ -513,7 +603,10 @@ export function LiveSessionRunner({
           itemQuestion?.rationale,
           itemQuestion?.tier,
           ...(itemQuestion?.tags ?? []),
-        ].filter(Boolean).join(" ").toLowerCase(),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase(),
       };
     });
   }, [allDecks, latestEvidence]);
@@ -533,7 +626,8 @@ export function LiveSessionRunner({
               ? (result.question?.tier ?? "core") === resultFilter
               : resultFilter === "open"
                 ? isEvidenceTarget(result.question) && !result.verdict
-                : isEvidenceTarget(result.question) && result.verdict === resultFilter;
+                : isEvidenceTarget(result.question) &&
+                  result.verdict === resultFilter;
       return searchMatch && filterMatch;
     });
   }, [commandDeskResults, completedDeskIds, query, resultFilter]);
@@ -544,16 +638,16 @@ export function LiveSessionRunner({
       new Set(
         commandDeskResults
           .filter(result => isEvidenceTarget(result.question))
-          .map(result => result.question!.id),
+          .map(result => result.question!.id)
       ),
-    [commandDeskResults],
+    [commandDeskResults]
   );
   const targetEvidence = useMemo(
     () =>
       [...latestEvidence.values()].filter(entry =>
-        evidenceTargetIds.has(entry.targetId),
+        evidenceTargetIds.has(entry.targetId)
       ),
-    [evidenceTargetIds, latestEvidence],
+    [evidenceTargetIds, latestEvidence]
   );
   const activeReferenceIds = useMemo(() => {
     const tokens = referenceTokens(
@@ -566,7 +660,7 @@ export function LiveSessionRunner({
         ...(question?.tags ?? []),
       ]
         .filter(Boolean)
-        .join(" "),
+        .join(" ")
     );
     return references
       .map(reference => {
@@ -582,7 +676,7 @@ export function LiveSessionRunner({
           id: reference.id,
           score: tokens.reduce(
             (total, token) => total + (searchable.includes(token) ? 1 : 0),
-            0,
+            0
           ),
         };
       })
@@ -598,7 +692,7 @@ export function LiveSessionRunner({
         evidence,
         coveredDeckKeys: completedDeskIds,
       }),
-    [allDecks, completedDeskIds, evidence],
+    [allDecks, completedDeskIds, evidence]
   );
   const stageProgress = useMemo(
     () =>
@@ -615,7 +709,7 @@ export function LiveSessionRunner({
           deckCount: stageSummary.totalDecks,
         };
       }),
-    [allDecks, completedDeskIds, evidence, stages],
+    [allDecks, completedDeskIds, evidence, stages]
   );
   const deskTargetSeconds = Math.max(30, question?.expectedSeconds ?? 90);
   const deskOvertime = deskElapsedSeconds > deskTargetSeconds;
@@ -636,6 +730,46 @@ export function LiveSessionRunner({
       (currentQueueIndex < 0 &&
         queueDecks.some(deck => deck.globalIndex > currentDeck.globalIndex))
     : false;
+  const currentDeckCovered = currentDeck ? isDeckCovered(currentDeck) : false;
+  const linearAction = resolveLinearSessionAction({
+    phase: linearPhase,
+    isProof: evidenceTarget,
+    isCovered: currentDeckCovered,
+    evidenceReady: canRecordEvidenceDraft(draft),
+  });
+  const linearStepNumber =
+    linearPhase === "teach"
+      ? 1
+      : linearPhase === "ask"
+        ? 2
+        : linearPhase === "answer"
+          ? 3
+          : 4;
+  const linearStepTotal = evidenceTarget && !currentDeckCovered ? 4 : 3;
+  const linearStepLabel =
+    linearPhase === "teach"
+      ? "Teach the concept"
+      : linearPhase === "ask"
+        ? "Ask and wait for commitment"
+        : linearPhase === "answer"
+          ? "Explain the model answer"
+          : "Record Hamad's evidence";
+  const primaryActionLabel =
+    linearAction.kind === "move-to-phase"
+      ? linearAction.phase === "ask"
+        ? "Next: ask Hamad"
+        : linearAction.phase === "answer"
+          ? "Next: explain answer"
+          : "Next: record evidence"
+      : linearAction.kind === "record-evidence"
+        ? "Save evidence & next"
+        : linearAction.kind === "focus-evidence"
+          ? "Complete evidence details"
+          : hasNextQueueDeck || nextOpenDeck
+            ? currentDeckCovered
+              ? "Next deck"
+              : "Cover & next deck"
+            : "Finish session";
 
   if (!stage) {
     return (
@@ -643,8 +777,18 @@ export function LiveSessionRunner({
         <CircleAlert size={30} />
         <p className="ls-eyebrow">Nothing to run</p>
         <h2>This route has no teaching stages</h2>
-        <p>Choose a different route or republish the private playbook package.</p>
-        {onExit && <button className="ls-button ls-button--primary" type="button" onClick={onExit}>Return to tracker</button>}
+        <p>
+          Choose a different route or republish the private playbook package.
+        </p>
+        {onExit && (
+          <button
+            className="ls-button ls-button--primary"
+            type="button"
+            onClick={onExit}
+          >
+            Return to tracker
+          </button>
+        )}
       </section>
     );
   }
@@ -655,24 +799,35 @@ export function LiveSessionRunner({
         <div className="ls-livebar__identity">
           <span className="ls-live-dot" aria-hidden="true" />
           <div>
-            <span>Session {String(session.number).padStart(2, "0")} · {route.name}</span>
+            <span>
+              Session {String(session.number).padStart(2, "0")} · {route.name}
+            </span>
             <strong>{stage.title}</strong>
           </div>
         </div>
-        <MasteryRadar evidence={targetEvidence} total={evidenceTargetIds.size} />
+        <MasteryRadar
+          evidence={targetEvidence}
+          total={evidenceTargetIds.size}
+        />
         <div className="ls-clock-cluster" aria-label="Session timers">
           <div className={`ls-clock${timer.expired ? " is-overtime" : ""}`}>
             <span>{timer.expired ? "Session overtime" : "Session left"}</span>
             <time>{timer.display}</time>
           </div>
-          <div className={`ls-clock ls-clock--desk${deskOvertime ? " is-overtime" : ""}`}>
+          <div
+            className={`ls-clock ls-clock--desk${deskOvertime ? " is-overtime" : ""}`}
+          >
             <span>{deskOvertime ? "Response overtime" : "Response time"}</span>
             <time>{deskDisplay}</time>
             <div>
               <button
                 type="button"
                 onClick={() => setDeskTimerRunning(value => !value)}
-                aria-label={deskTimerRunning ? "Pause response timer" : "Resume response timer"}
+                aria-label={
+                  deskTimerRunning
+                    ? "Pause response timer"
+                    : "Resume response timer"
+                }
               >
                 {deskTimerRunning ? <Pause size={12} /> : <Play size={12} />}
               </button>
@@ -690,19 +845,52 @@ export function LiveSessionRunner({
             type="button"
             disabled={timer.status === "complete"}
             onClick={timer.toggle}
-            aria-label={timer.status === "running" ? "Pause session timer" : "Resume session timer"}
+            aria-label={
+              timer.status === "running"
+                ? "Pause session timer"
+                : "Resume session timer"
+            }
           >
-            {timer.status === "running" ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+            {timer.status === "running" ? (
+              <Pause size={18} fill="currentColor" />
+            ) : (
+              <Play size={18} fill="currentColor" />
+            )}
           </button>
         </div>
         <div className="ls-livebar__actions">
-          <span className={`ls-sync ls-sync--${syncState}`} title={syncMessage}>
-            <SyncIcon size={15} /> {syncCopy(syncState).label}
-          </span>
-          <button className="ls-icon-button" type="button" onClick={() => setShortcutsOpen(value => !value)} aria-label="Show keyboard shortcuts">
+          {(syncState === "error" || syncState === "offline") && onSyncRetry ? (
+            <button
+              className={`ls-sync ls-sync--${syncState}`}
+              type="button"
+              onClick={onSyncRetry}
+              aria-label={`${syncCopy(syncState).label}. Retry synchronization.`}
+              title={syncMessage}
+            >
+              <SyncIcon size={15} /> {syncCopy(syncState).label}
+              <small>Retry</small>
+            </button>
+          ) : (
+            <span
+              className={`ls-sync ls-sync--${syncState}`}
+              title={syncMessage}
+            >
+              <SyncIcon size={15} /> {syncCopy(syncState).label}
+            </span>
+          )}
+          <button
+            className="ls-icon-button"
+            type="button"
+            onClick={() => setShortcutsOpen(value => !value)}
+            aria-label="Show keyboard shortcuts"
+          >
             <Command size={19} />
           </button>
-          <button className="ls-button ls-button--quiet" type="button" onClick={onRequestCloseout}>
+          <button
+            className="ls-button ls-button--quiet"
+            type="button"
+            onClick={onRequestCloseout}
+          >
             <Flag size={16} /> Complete
           </button>
         </div>
@@ -710,12 +898,15 @@ export function LiveSessionRunner({
 
       <nav className="ls-stage-strip" aria-label="Session stages">
         <div className="ls-stage-strip__progress">
-          <span>Stage {stageIndex + 1} of {stages.length}</span>
+          <span>
+            Stage {stageIndex + 1} of {stages.length}
+          </span>
           <strong>{stage.label}</strong>
         </div>
         <div className="ls-stage-strip__items">
           {stageProgress.map((item, index) => {
-            const complete = item.deckCount > 0 && item.coveredCount >= item.deckCount;
+            const complete =
+              item.deckCount > 0 && item.coveredCount >= item.deckCount;
             return (
               <button
                 type="button"
@@ -725,21 +916,34 @@ export function LiveSessionRunner({
                 key={item.id}
                 onClick={() => changePosition(index, 0)}
               >
-                {complete ? <CheckCircle2 size={15} /> : <span>{index + 1}</span>}
+                {complete ? (
+                  <CheckCircle2 size={15} />
+                ) : (
+                  <span>{index + 1}</span>
+                )}
               </button>
             );
           })}
         </div>
-        <button className="ls-button ls-button--quiet" type="button" onClick={() => setReferenceOpen(true)}>
+        <button
+          className="ls-button ls-button--quiet"
+          type="button"
+          onClick={() => setReferenceOpen(true)}
+        >
           <BookOpenCheck size={16} /> Knowledge desk <kbd>F</kbd>
         </button>
       </nav>
 
-      <section className="ls-deck-console" aria-label="Teaching deck control centre">
+      <section
+        className="ls-deck-console"
+        aria-label="Teaching deck control centre"
+      >
         <div className="ls-deck-console__coverage">
           <div>
             <span>Curriculum coverage</span>
-            <strong>{progress.coveredDecks} / {progress.totalDecks}</strong>
+            <strong>
+              {progress.coveredDecks} / {progress.totalDecks}
+            </strong>
           </div>
           <div
             className="ls-deck-console__bar"
@@ -751,9 +955,11 @@ export function LiveSessionRunner({
           >
             <span
               style={{
-                width: `${progress.totalDecks
-                  ? (progress.coveredDecks / progress.totalDecks) * 100
-                  : 0}%`,
+                width: `${
+                  progress.totalDecks
+                    ? (progress.coveredDecks / progress.totalDecks) * 100
+                    : 0
+                }%`,
               }}
             />
           </div>
@@ -764,139 +970,248 @@ export function LiveSessionRunner({
               : " · no recorded proof needs attention"}
           </small>
         </div>
-        <label className="ls-deck-select">
-          <Layers3 size={17} />
-          <span>Jump to deck</span>
-          <select
-            value={currentDeck?.key ?? ""}
-            onChange={event => {
-              const selected = allDecks.find(deck => deck.key === event.target.value);
-              if (selected) navigateToDeck(selected);
-            }}
-          >
-            {stages.map((item, itemStageIndex) => (
-              <optgroup label={`${item.label} · ${item.title}`} key={item.id}>
-                {allDecks
-                  .filter(deck => deck.stageIndex === itemStageIndex)
-                  .map(deck => (
-                    <option value={deck.key} key={deck.key}>
-                      {String(deck.globalNumber).padStart(3, "0")} · {deck.question?.title ?? deck.stageTitle}
-                    </option>
-                  ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-        <label className="ls-deck-select ls-deck-select--queue">
-          <SlidersHorizontal size={17} />
-          <span>Next / previous queue</span>
-          <select
-            value={queueMode}
-            onChange={event => setQueueMode(event.target.value as QueueMode)}
-          >
-            <option value="core">Core session queue</option>
-            <option value="core-plus">Core + reinforcement</option>
-            <option value="stretch">Stretch proofs</option>
-            <option value="all">All curriculum decks</option>
-          </select>
-          <small>{queueDecks.length} decks · {queueName(queueMode)}</small>
-        </label>
-        <button
-          className="ls-button ls-button--quiet ls-next-open"
-          type="button"
-          disabled={!nextOpenDeck}
-          onClick={() => nextOpenDeck && navigateToDeck(nextOpenDeck)}
-        >
-          <CheckCircle2 size={16} />
-          {nextOpenDeck ? `First open: ${nextOpenDeck.globalNumber}` : "All decks covered"}
-        </button>
-      </section>
-
-      <section className="ls-command-search" aria-label="Find any playbook item">
-        <label>
-          <Search size={18} />
-          <span className="ls-sr-only">Search the private playbook</span>
-          <input
-            ref={searchRef}
-            type="search"
-            value={query}
-            placeholder="Find a concept, formula, question, or model response"
-            onChange={event => setQuery(event.target.value)}
-          />
-          {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={16} /></button> : <kbd>/</kbd>}
-        </label>
-        <label className="ls-filter-control">
-          <SlidersHorizontal size={17} />
-          <span className="ls-sr-only">Filter by evidence result</span>
-          <select value={resultFilter} onChange={event => setResultFilter(event.target.value as ResultFilter)}>
-            <option value="all">All route desks</option>
-            <option value="uncovered">All uncovered decks</option>
-            <option value="core">Core decks</option>
-            <option value="reinforcement">Reinforcement decks</option>
-            <option value="stretch">Stretch decks</option>
-            <option value="open">Proof not recorded</option>
-            <option value="correct">Secure</option>
-            <option value="partial">Developing</option>
-            <option value="repair">Needs repair</option>
-            <option value="parked">Deferred</option>
-          </select>
-        </label>
-      </section>
-
-      {showSearchResults && (
-        <section className="ls-search-results" aria-live="polite" aria-label="Playbook search results">
-          <header>
-            <div><strong>{filteredResults.length} matches</strong><span>Ordered by teaching route</span></div>
-            <button type="button" onClick={() => { setQuery(""); setResultFilter("all"); }}>Clear</button>
-          </header>
-          {filteredResults.length ? (
-            <div className="ls-search-results__list">
-              {filteredResults.map(result => {
-                const covered =
-                  completedDeskIds.includes(result.deck.key) || Boolean(result.verdict);
-                return (
-                  <button
-                    type="button"
-                    key={result.key}
-                    onClick={() => {
-                      changePosition(result.stageIndex, result.questionIndex);
-                      setQuery("");
-                      setResultFilter("all");
-                    }}
+        <details className="ls-deck-tools" ref={toolsRef}>
+          <summary>
+            <SlidersHorizontal size={18} />
+            <span>
+              <strong>Deck tools</strong>
+              <small>Jump, search, filter, or change queue</small>
+            </span>
+            <kbd>/</kbd>
+          </summary>
+          <div className="ls-deck-tools__selectors">
+            <label className="ls-deck-select">
+              <Layers3 size={17} />
+              <span>Jump to deck</span>
+              <select
+                value={currentDeck?.key ?? ""}
+                onChange={event => {
+                  const selected = allDecks.find(
+                    deck => deck.key === event.target.value
+                  );
+                  if (selected) navigateToDeck(selected);
+                }}
+              >
+                {stages.map((item, itemStageIndex) => (
+                  <optgroup
+                    label={`${item.label} · ${item.title}`}
+                    key={item.id}
                   >
-                    <span>
-                      Deck {result.deck.globalNumber} · {result.stage.label} · {result.question?.tier ?? "core"}
-                    </span>
-                    <strong>{resultLabel(result)}</strong>
-                    <small>{result.question?.prompt ?? result.stage.objective}</small>
-                    <em className={result.verdict ? `is-${result.verdict}` : covered ? "is-covered" : "is-open"}>
-                      {result.verdict ?? (covered ? "covered" : "open")}
-                    </em>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="ls-no-results">
-              <Search size={23} />
-              <strong>No teaching desk matches</strong>
-              <p>Try fewer words, a formula fragment, or clear the proof filter.</p>
-            </div>
+                    {allDecks
+                      .filter(deck => deck.stageIndex === itemStageIndex)
+                      .map(deck => (
+                        <option value={deck.key} key={deck.key}>
+                          {String(deck.globalNumber).padStart(3, "0")} ·{" "}
+                          {deck.question?.title ?? deck.stageTitle}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+            <label className="ls-deck-select ls-deck-select--queue">
+              <SlidersHorizontal size={17} />
+              <span>Next / previous queue</span>
+              <select
+                value={queueMode}
+                onChange={event =>
+                  setQueueMode(event.target.value as QueueMode)
+                }
+              >
+                <option value="core">Core session queue</option>
+                <option value="core-plus">Core + reinforcement</option>
+                <option value="stretch">Stretch proofs</option>
+                <option value="all">All curriculum decks</option>
+              </select>
+              <small>
+                {queueDecks.length} decks · {queueName(queueMode)}
+              </small>
+            </label>
+            <button
+              className="ls-button ls-button--quiet ls-next-open"
+              type="button"
+              disabled={!nextOpenDeck}
+              onClick={() => nextOpenDeck && navigateToDeck(nextOpenDeck)}
+            >
+              <CheckCircle2 size={16} />
+              {nextOpenDeck
+                ? `First open: ${nextOpenDeck.globalNumber}`
+                : "All decks covered"}
+            </button>
+          </div>
+
+          <section
+            className="ls-command-search"
+            aria-label="Find any playbook item"
+          >
+            <label>
+              <Search size={18} />
+              <span className="ls-sr-only">Search the private playbook</span>
+              <input
+                ref={searchRef}
+                type="search"
+                value={query}
+                placeholder="Find a concept, formula, question, or model response"
+                onChange={event => setQuery(event.target.value)}
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                >
+                  <X size={16} />
+                </button>
+              ) : (
+                <kbd>/</kbd>
+              )}
+            </label>
+            <label className="ls-filter-control">
+              <SlidersHorizontal size={17} />
+              <span className="ls-sr-only">Filter by evidence result</span>
+              <select
+                value={resultFilter}
+                onChange={event =>
+                  setResultFilter(event.target.value as ResultFilter)
+                }
+              >
+                <option value="all">All route desks</option>
+                <option value="uncovered">All uncovered decks</option>
+                <option value="core">Core decks</option>
+                <option value="reinforcement">Reinforcement decks</option>
+                <option value="stretch">Stretch decks</option>
+                <option value="open">Proof not recorded</option>
+                <option value="correct">Secure</option>
+                <option value="partial">Developing</option>
+                <option value="repair">Needs repair</option>
+                <option value="parked">Deferred</option>
+              </select>
+            </label>
+          </section>
+
+          {showSearchResults && (
+            <section
+              className="ls-search-results"
+              aria-live="polite"
+              aria-label="Playbook search results"
+            >
+              <header>
+                <div>
+                  <strong>{filteredResults.length} matches</strong>
+                  <span>Ordered by teaching route</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    setResultFilter("all");
+                  }}
+                >
+                  Clear
+                </button>
+              </header>
+              {filteredResults.length ? (
+                <div className="ls-search-results__list">
+                  {filteredResults.map(result => {
+                    const covered =
+                      completedDeskIds.includes(result.deck.key) ||
+                      Boolean(result.verdict);
+                    return (
+                      <button
+                        type="button"
+                        key={result.key}
+                        onClick={() => {
+                          changePosition(
+                            result.stageIndex,
+                            result.questionIndex
+                          );
+                          setQuery("");
+                          setResultFilter("all");
+                        }}
+                      >
+                        <span>
+                          Deck {result.deck.globalNumber} · {result.stage.label}{" "}
+                          · {result.question?.tier ?? "core"}
+                        </span>
+                        <strong>{resultLabel(result)}</strong>
+                        <small>
+                          {result.question?.prompt ?? result.stage.objective}
+                        </small>
+                        <em
+                          className={
+                            result.verdict
+                              ? `is-${result.verdict}`
+                              : covered
+                                ? "is-covered"
+                                : "is-open"
+                          }
+                        >
+                          {result.verdict ?? (covered ? "covered" : "open")}
+                        </em>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="ls-no-results">
+                  <Search size={23} />
+                  <strong>No teaching desk matches</strong>
+                  <p>
+                    Try fewer words, a formula fragment, or clear the proof
+                    filter.
+                  </p>
+                </div>
+              )}
+            </section>
           )}
-        </section>
-      )}
+        </details>
+      </section>
 
       {shortcutsOpen && (
         <div className="ls-shortcuts" role="status">
-          <span><kbd>/</kbd> search</span><span><kbd>Space</kbd> timers</span>
-          <span><kbd>V</kbd> candidate</span><span><kbd>C</kbd> correct</span>
-          <span><kbd>L</kbd> developing</span><span><kbd>R</kbd> repair</span>
-          <span><kbd>P</kbd> defer</span><span><kbd>B</kbd> back</span><span><kbd>N</kbd> next</span>
-          <button type="button" onClick={() => setShortcutsOpen(false)} aria-label="Hide shortcuts"><X size={15} /></button>
+          <span>
+            <kbd>Space</kbd> continue
+          </span>
+          <span>
+            <kbd>T</kbd> timer
+          </span>
+          <span>
+            <kbd>/</kbd> search
+          </span>
+          <span>
+            <kbd>V</kbd> candidate
+          </span>
+          <span>
+            <kbd>C</kbd> correct
+          </span>
+          <span>
+            <kbd>L</kbd> developing
+          </span>
+          <span>
+            <kbd>R</kbd> repair
+          </span>
+          <span>
+            <kbd>P</kbd> defer
+          </span>
+          <span>
+            <kbd>B</kbd> back
+          </span>
+          <span>
+            <kbd>N</kbd> next
+          </span>
+          <button
+            type="button"
+            onClick={() => setShortcutsOpen(false)}
+            aria-label="Hide shortcuts"
+          >
+            <X size={15} />
+          </button>
         </div>
       )}
 
-      <div className="ls-runner__grid">
+      <div
+        className={`ls-runner__grid${linearPhase === "evidence" ? " is-evidence-step" : ""}`}
+      >
         <main className="ls-runner__main">
           <div className="ls-proof-progress">
             <span>
@@ -910,6 +1225,39 @@ export function LiveSessionRunner({
                 : "Teaching stage · no formal proof required"}
             </span>
           </div>
+          <nav
+            className="ls-linear-control"
+            aria-label="Linear session navigation"
+          >
+            <button
+              className="ls-linear-control__back"
+              type="button"
+              disabled={!hasPreviousQueueDeck}
+              onClick={goPrevious}
+              aria-label="Return to the previous teaching deck"
+            >
+              <ArrowLeft size={18} />
+              <span>Previous deck</span>
+            </button>
+            <div className="ls-linear-control__status" aria-live="polite">
+              <span>
+                Step {linearStepNumber} of {linearStepTotal}
+              </span>
+              <strong>{linearStepLabel}</strong>
+              <small>
+                One route, in order. Space performs the blue button.
+              </small>
+            </div>
+            <button
+              className="ls-linear-control__next"
+              type="button"
+              onClick={advanceLinearSequence}
+            >
+              <span>{primaryActionLabel}</span>
+              <kbd>Space</kbd>
+              <ArrowRight size={20} />
+            </button>
+          </nav>
           <StageCard
             stage={stage}
             question={question}
@@ -924,34 +1272,23 @@ export function LiveSessionRunner({
               <CircleAlert size={16} /> {advanceHint}
             </p>
           ) : null}
-          <nav className="ls-page-controls" aria-label="Command desk navigation">
-            <button className="ls-button ls-button--quiet" type="button" disabled={!hasPreviousQueueDeck} onClick={goPrevious}>
-              <ArrowLeft size={17} /> Previous <kbd>B</kbd>
-            </button>
-            <button className="ls-button ls-button--candidate" type="button" onClick={openCandidateView}>
-              <MonitorUp size={17} /> Candidate view <kbd>V</kbd>
-            </button>
-            <button className="ls-button ls-button--quiet" type="button" onClick={advanceCurrentDeck}>
-              {evidenceTarget && !deskComplete && !latestEvidence.has(targetId)
-                ? "Record evidence"
-                : hasNextQueueDeck || nextOpenDeck
-                  ? "Cover & next"
-                  : "Closeout"}
-              <ArrowRight size={17} /> <kbd>N</kbd>
-            </button>
-          </nav>
         </main>
 
         {evidenceTarget ? (
           <EvidenceRepairFlow
             targetLabel={targetLabel}
             value={draft}
-            repairInstructions={question?.repair?.length ? question.repair : stage.repair}
+            repairInstructions={
+              question?.repair?.length ? question.repair : stage.repair
+            }
             onChange={setDraft}
             onRecord={recordEvidence}
           />
         ) : (
-          <aside className="ls-evidence ls-evidence--teaching" aria-label="Teaching move">
+          <aside
+            className="ls-evidence ls-evidence--teaching"
+            aria-label="Teaching move"
+          >
             <header className="ls-evidence__header">
               <div>
                 <p className="ls-eyebrow">Teaching move</p>
@@ -970,14 +1307,10 @@ export function LiveSessionRunner({
               <li>Use the model response to sharpen the explanation.</li>
               <li>Move forward to the next independent proof.</li>
             </ol>
-            <button
-              className="ls-button ls-button--primary ls-button--block"
-              type="button"
-              onClick={markDeskCompleteAndContinue}
-            >
-              {deskComplete ? "Covered · continue" : "Mark covered & continue"}
-              <ArrowRight size={17} /> <kbd>N</kbd>
-            </button>
+            <p className="ls-teaching-move-next">
+              Use the single blue Next control. After Answer it records this
+              deck as covered and opens the next deck in route order.
+            </p>
             {deskComplete ? (
               <button
                 className="ls-button ls-button--quiet ls-button--block"
@@ -991,49 +1324,29 @@ export function LiveSessionRunner({
         )}
       </div>
 
-      <nav className="ls-mobile-session-dock" aria-label="Mobile session controls">
-        <button type="button" disabled={!hasPreviousQueueDeck} onClick={goPrevious} aria-label="Previous teaching deck">
-          <ArrowLeft size={18} />
-        </button>
-        {(["teach", "ask", "answer"] as const).map((step, index) => (
-          <button
-            type="button"
-            className={flowStep === step ? "is-current" : ""}
-            onClick={() => {
-              selectFlowStep(step);
-              const tone = step === "teach" ? "explain" : step === "ask" ? "question" : "answer";
-              window.setTimeout(() => {
-                const reducedMotion = window.matchMedia?.(
-                  "(prefers-reduced-motion: reduce)",
-                ).matches;
-                document
-                  .querySelector<HTMLElement>(`.ls-command-block--${tone}`)
-                  ?.scrollIntoView({
-                    behavior: reducedMotion ? "auto" : "smooth",
-                    block: "start",
-                  });
-              }, 0);
-            }}
-            aria-label={`Go to ${step} panel`}
-            key={step}
-          >
-            <span>{index + 1}</span>
-            {step}
-          </button>
-        ))}
+      <nav
+        className="ls-mobile-session-dock"
+        aria-label="Mobile session controls"
+      >
         <button
           type="button"
-          className={evidenceTarget && !deskComplete && !latestEvidence.has(targetId) ? "is-attention" : ""}
-          onClick={advanceCurrentDeck}
-          aria-label={
-            evidenceTarget && !deskComplete && !latestEvidence.has(targetId)
-              ? "Record evidence before continuing"
-              : "Cover this deck and continue"
-          }
+          disabled={!hasPreviousQueueDeck}
+          onClick={goPrevious}
+          aria-label="Previous teaching deck"
         >
-          {evidenceTarget && !deskComplete && !latestEvidence.has(targetId)
-            ? <Flag size={18} />
-            : <ArrowRight size={18} />}
+          <ArrowLeft size={18} />
+        </button>
+        <button
+          type="button"
+          className="ls-mobile-session-dock__next"
+          onClick={advanceLinearSequence}
+          aria-label={primaryActionLabel}
+        >
+          <span>
+            Step {linearStepNumber}/{linearStepTotal}
+          </span>
+          <strong>{primaryActionLabel}</strong>
+          <ArrowRight size={19} />
         </button>
       </nav>
 
@@ -1049,7 +1362,7 @@ export function LiveSessionRunner({
           selectFlowStep("answer");
           window.setTimeout(() => {
             const reducedMotion = window.matchMedia?.(
-              "(prefers-reduced-motion: reduce)",
+              "(prefers-reduced-motion: reduce)"
             ).matches;
             document
               .querySelector<HTMLElement>(".ls-command-block--answer")
@@ -1063,7 +1376,9 @@ export function LiveSessionRunner({
       <ReferenceDrawer
         open={referenceOpen}
         references={references}
-        activeReferenceIds={stage.referenceIds?.length ? stage.referenceIds : activeReferenceIds}
+        activeReferenceIds={
+          stage.referenceIds?.length ? stage.referenceIds : activeReferenceIds
+        }
         onClose={() => setReferenceOpen(false)}
       />
     </section>

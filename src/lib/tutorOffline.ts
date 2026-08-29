@@ -34,6 +34,7 @@ interface OfflineRunEnvelope {
 export interface TutorOfflineStatus {
   ready: boolean;
   version: string | null;
+  contentHash: string | null;
   storedAt: string | null;
 }
 
@@ -43,7 +44,9 @@ export function isTutorOfflineSupported(): boolean {
 
 function requireIndexedDb(): IDBFactory {
   if (!isTutorOfflineSupported()) {
-    throw new Error("Private offline preparation is not supported by this browser.");
+    throw new Error(
+      "Private offline preparation is not supported by this browser."
+    );
   }
   return window.indexedDB;
 }
@@ -59,24 +62,34 @@ function openDatabase(): Promise<IDBDatabase> {
     request.onupgradeneeded = () => {
       const database = request.result;
       if (!database.objectStoreNames.contains(STORE_NAME)) {
-        const store = database.createObjectStore(STORE_NAME, { keyPath: "key" });
+        const store = database.createObjectStore(STORE_NAME, {
+          keyPath: "key",
+        });
         store.createIndex("uid", "uid", { unique: false });
       }
       if (!database.objectStoreNames.contains(RUN_STORE_NAME)) {
-        const store = database.createObjectStore(RUN_STORE_NAME, { keyPath: "key" });
+        const store = database.createObjectStore(RUN_STORE_NAME, {
+          keyPath: "key",
+        });
         store.createIndex("uid", "uid", { unique: false });
       }
     };
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error("Unable to open private offline storage."));
-    request.onblocked = () => reject(new Error("Private offline storage is blocked by another tracker tab."));
+    request.onerror = () =>
+      reject(
+        request.error ?? new Error("Unable to open private offline storage.")
+      );
+    request.onblocked = () =>
+      reject(
+        new Error("Private offline storage is blocked by another tracker tab.")
+      );
   });
 }
 
 async function runRequest<T>(
   storeName: typeof STORE_NAME | typeof RUN_STORE_NAME,
   mode: IDBTransactionMode,
-  operation: (store: IDBObjectStore) => IDBRequest<T>,
+  operation: (store: IDBObjectStore) => IDBRequest<T>
 ): Promise<T> {
   const database = await openDatabase();
   try {
@@ -84,8 +97,13 @@ async function runRequest<T>(
       const transaction = database.transaction(storeName, mode);
       const request = operation(transaction.objectStore(storeName));
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error ?? new Error("Private offline storage failed."));
-      transaction.onabort = () => reject(transaction.error ?? new Error("Private offline storage was interrupted."));
+      request.onerror = () =>
+        reject(request.error ?? new Error("Private offline storage failed."));
+      transaction.onabort = () =>
+        reject(
+          transaction.error ??
+            new Error("Private offline storage was interrupted.")
+        );
     });
   } finally {
     database.close();
@@ -93,21 +111,21 @@ async function runRequest<T>(
 }
 
 async function parseCachedPackage(
-  value: unknown,
+  value: unknown
 ): Promise<TutorPlaybookPackage | null> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const candidate = value as Partial<OfflinePlaybookEnvelope>;
   if (!candidate.package || typeof candidate.package !== "object") return null;
   try {
     const manifest = parseTutorPlaybookManifest(
-      (candidate.package as TutorPlaybookPackage).manifest,
+      (candidate.package as TutorPlaybookPackage).manifest
     );
     const chunks = (candidate.package as TutorPlaybookPackage).chunks.map(
-      parseTutorPlaybookChunk,
+      parseTutorPlaybookChunk
     );
     const safe = validateTutorPlaybookPackage(manifest, chunks);
     await verifyTutorPlaybookPackageIntegrity(
-      tutorPlaybookPackageToDraft(safe.manifest, safe.chunks),
+      tutorPlaybookPackageToDraft(safe.manifest, safe.chunks)
     );
     return safe;
   } catch {
@@ -117,7 +135,7 @@ async function parseCachedPackage(
 
 export async function cacheTutorPlaybookOffline(
   uid: string,
-  playbook: TutorPlaybookPackage,
+  playbook: TutorPlaybookPackage
 ): Promise<TutorOfflineStatus> {
   const safe = validateTutorPlaybookPackage(playbook.manifest, playbook.chunks);
   const storedAt = new Date().toISOString();
@@ -130,48 +148,66 @@ export async function cacheTutorPlaybookOffline(
     storedAt,
     package: safe,
   };
-  await runRequest(STORE_NAME, "readwrite", (store) => store.put(envelope));
-  return { ready: true, version: envelope.version, storedAt };
+  await runRequest(STORE_NAME, "readwrite", store => store.put(envelope));
+  return {
+    ready: true,
+    version: envelope.version,
+    contentHash: envelope.contentHash,
+    storedAt,
+  };
 }
 
 export async function loadTutorPlaybookOffline(
   uid: string,
-  playbookId: string,
+  playbookId: string
 ): Promise<TutorPlaybookPackage | null> {
-  const value = await runRequest<unknown>(STORE_NAME, "readonly", (store) =>
-    store.get(envelopeKey(uid, playbookId)),
+  const value = await runRequest<unknown>(STORE_NAME, "readonly", store =>
+    store.get(envelopeKey(uid, playbookId))
   );
   return await parseCachedPackage(value);
 }
 
 export async function getTutorOfflineStatus(
   uid: string,
-  playbookId: string,
+  playbookId: string
 ): Promise<TutorOfflineStatus> {
   if (!isTutorOfflineSupported()) {
-    return { ready: false, version: null, storedAt: null };
+    return {
+      ready: false,
+      version: null,
+      contentHash: null,
+      storedAt: null,
+    };
   }
-  const value = await runRequest<unknown>(STORE_NAME, "readonly", (store) =>
-    store.get(envelopeKey(uid, playbookId)),
+  const value = await runRequest<unknown>(STORE_NAME, "readonly", store =>
+    store.get(envelopeKey(uid, playbookId))
   );
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return { ready: false, version: null, storedAt: null };
+    return {
+      ready: false,
+      version: null,
+      contentHash: null,
+      storedAt: null,
+    };
   }
   const candidate = value as Partial<OfflinePlaybookEnvelope>;
   return {
     ready: Boolean(await parseCachedPackage(candidate)),
     version: typeof candidate.version === "string" ? candidate.version : null,
-    storedAt: typeof candidate.storedAt === "string" ? candidate.storedAt : null,
+    contentHash:
+      typeof candidate.contentHash === "string" ? candidate.contentHash : null,
+    storedAt:
+      typeof candidate.storedAt === "string" ? candidate.storedAt : null,
   };
 }
 
 export async function removeTutorPlaybookOffline(
   uid: string,
-  playbookId: string,
+  playbookId: string
 ): Promise<void> {
   if (!isTutorOfflineSupported()) return;
-  await runRequest(STORE_NAME, "readwrite", (store) =>
-    store.delete(envelopeKey(uid, playbookId)),
+  await runRequest(STORE_NAME, "readwrite", store =>
+    store.delete(envelopeKey(uid, playbookId))
   );
 }
 
@@ -184,7 +220,7 @@ function parseRunSnapshot(value: unknown): LiveSessionRunSnapshot | null {
   const candidate = value as Partial<LiveSessionRunSnapshot>;
   if (
     !["launch", "running", "closeout", "complete"].includes(
-      candidate.phase ?? "",
+      candidate.phase ?? ""
     ) ||
     !Array.isArray(candidate.evidence) ||
     (candidate.completedDeskIds !== undefined &&
@@ -202,7 +238,7 @@ function parseRunSnapshot(value: unknown): LiveSessionRunSnapshot | null {
 export async function cacheTutorRunOffline(
   uid: string,
   runId: string,
-  snapshot: LiveSessionRunSnapshot,
+  snapshot: LiveSessionRunSnapshot
 ): Promise<void> {
   const safe = parseRunSnapshot(snapshot);
   if (!safe) throw new Error("The live-session recovery snapshot is invalid.");
@@ -213,16 +249,16 @@ export async function cacheTutorRunOffline(
     storedAt: new Date().toISOString(),
     snapshot: safe,
   };
-  await runRequest(RUN_STORE_NAME, "readwrite", (store) => store.put(envelope));
+  await runRequest(RUN_STORE_NAME, "readwrite", store => store.put(envelope));
 }
 
 export async function loadTutorRunOffline(
   uid: string,
-  runId: string,
+  runId: string
 ): Promise<LiveSessionRunSnapshot | null> {
   if (!isTutorOfflineSupported()) return null;
-  const value = await runRequest<unknown>(RUN_STORE_NAME, "readonly", (store) =>
-    store.get(runEnvelopeKey(uid, runId)),
+  const value = await runRequest<unknown>(RUN_STORE_NAME, "readonly", store =>
+    store.get(runEnvelopeKey(uid, runId))
   );
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return parseRunSnapshot((value as Partial<OfflineRunEnvelope>).snapshot);
@@ -230,11 +266,11 @@ export async function loadTutorRunOffline(
 
 export async function removeTutorRunOffline(
   uid: string,
-  runId: string,
+  runId: string
 ): Promise<void> {
   if (!isTutorOfflineSupported()) return;
-  await runRequest(RUN_STORE_NAME, "readwrite", (store) =>
-    store.delete(runEnvelopeKey(uid, runId)),
+  await runRequest(RUN_STORE_NAME, "readwrite", store =>
+    store.delete(runEnvelopeKey(uid, runId))
   );
 }
 
@@ -245,9 +281,9 @@ export async function clearTutorOfflineData(uid: string): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       const transaction = database.transaction(
         [STORE_NAME, RUN_STORE_NAME],
-        "readwrite",
+        "readwrite"
       );
-      [STORE_NAME, RUN_STORE_NAME].forEach((storeName) => {
+      [STORE_NAME, RUN_STORE_NAME].forEach(storeName => {
         const store = transaction.objectStore(storeName);
         const request = store.index("uid").openKeyCursor(IDBKeyRange.only(uid));
         request.onsuccess = () => {
@@ -258,12 +294,20 @@ export async function clearTutorOfflineData(uid: string): Promise<void> {
         };
         request.onerror = () =>
           reject(
-            request.error ?? new Error("Unable to clear private offline data."),
+            request.error ?? new Error("Unable to clear private offline data.")
           );
       });
       transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error ?? new Error("Unable to clear private offline data."));
-      transaction.onabort = () => reject(transaction.error ?? new Error("Unable to clear private offline data."));
+      transaction.onerror = () =>
+        reject(
+          transaction.error ??
+            new Error("Unable to clear private offline data.")
+        );
+      transaction.onabort = () =>
+        reject(
+          transaction.error ??
+            new Error("Unable to clear private offline data.")
+        );
     });
   } finally {
     database.close();

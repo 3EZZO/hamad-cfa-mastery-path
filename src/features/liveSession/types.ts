@@ -145,6 +145,11 @@ export interface LiveSessionRunSnapshot {
   evidence: LiveSessionEvidence[];
   completedDeskIds?: string[];
   timer: SessionTimerSnapshot | null;
+  /**
+   * Kept in the device-local recovery snapshot so a completed closeout can be
+   * replayed to Firestore after a refresh or temporary connection failure.
+   */
+  closeout?: LiveSessionCloseoutResult | null;
   updatedAt: string;
 }
 
@@ -199,12 +204,14 @@ export const ERROR_CODE_COPY: Record<
   T: {
     label: "Timeline",
     description: "Cash-flow timing or external-flow error",
-    repairCue: "Draw the dates and place every external cash flow before calculating.",
+    repairCue:
+      "Draw the dates and place every external cash flow before calculating.",
   },
   P: {
     label: "Periodicity",
     description: "Rate and period units do not match",
-    repairCue: "Make N, the rate, and the payment frequency describe the same period.",
+    repairCue:
+      "Make N, the rate, and the payment frequency describe the same period.",
   },
   S: {
     label: "Sign",
@@ -214,7 +221,8 @@ export const ERROR_CODE_COPY: Record<
   A: {
     label: "Arithmetic",
     description: "Calculation or algebra broke",
-    repairCue: "Estimate direction and magnitude, then rebuild one line at a time.",
+    repairCue:
+      "Estimate direction and magnitude, then rebuild one line at a time.",
   },
   I: {
     label: "Interpretation",
@@ -224,6 +232,7 @@ export const ERROR_CODE_COPY: Record<
   C: {
     label: "Confidence",
     description: "Confidence and evidence disagree",
-    repairCue: "Use a fresh no-cue proof before accepting confidence as calibrated.",
+    repairCue:
+      "Use a fresh no-cue proof before accepting confidence as calibrated.",
   },
 };

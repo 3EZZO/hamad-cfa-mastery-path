@@ -5,13 +5,7 @@ import {
   ShieldCheck,
   Upload,
 } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   adaptTutorPlaybookPackage,
   LiveSessionConsole,
@@ -24,6 +18,7 @@ import {
 } from "../features/liveSession";
 import { getSessionTaskId, getWeekSessions, PLAN } from "../data/plan";
 import {
+  CloudClientError,
   getCloudErrorMessage,
   getTutorLiveRun,
   importTutorPlaybookPackage,
@@ -50,6 +45,7 @@ import type {
   TutorLiveRunAction,
   TutorPlaybookPackage,
 } from "../lib/tutorContent";
+import { isTutorLiveRunActionSatisfied } from "../lib/tutorContent";
 import type { PrivateTutorNote, TrackerState } from "../types";
 
 const PLAYBOOK_ID = "hamad-cfa-mastery-session-01";
@@ -58,16 +54,14 @@ const MAX_PRIVATE_PACKAGE_BYTES = 8 * 1024 * 1024;
 const DESK_COMPLETE_NOTE = "[[session-desk-complete:v1]]";
 const DESK_REOPEN_NOTE = "[[session-desk-reopen:v1]]";
 
-function liveRunId(version: string): string {
-  return `${RUN_ID_BASE}-${version}`;
+function liveRunId(version: string, contentHash: string): string {
+  return `${RUN_ID_BASE}-${version}-${contentHash.slice(0, 12)}`;
 }
 
-type UpdateTracker = (
-  recipe: (current: TrackerState) => TrackerState,
-) => void;
+type UpdateTracker = (recipe: (current: TrackerState) => TrackerState) => void;
 
 type UpdatePrivateTutorNotes = (
-  recipe: (current: PrivateTutorNote[]) => PrivateTutorNote[],
+  recipe: (current: PrivateTutorNote[]) => PrivateTutorNote[]
 ) => Promise<void>;
 
 type Notify = (message: string, tone?: "success" | "warning") => void;
@@ -87,6 +81,9 @@ type PendingAction = Omit<
 >;
 
 interface QueuedCloudMutation {
+  scope: string;
+  generation: number;
+  cancelled: boolean;
   execute: () => Promise<TutorLiveRun>;
   resolve: (run: TutorLiveRun) => void;
   reject: (error: unknown) => void;
@@ -96,9 +93,20 @@ interface QueuedCloudMutation {
 const RETRYABLE_SYNC_ERRORS = new Set<CloudErrorCode>([
   "network-unavailable",
   "service-unavailable",
-  "tutor-live-run-conflict",
   "unknown",
 ]);
+
+const MAX_CONFLICT_REBASE_ATTEMPTS = 4;
+const MAX_UNKNOWN_RETRIES = 3;
+
+class QueueScopeChangedError extends Error {
+  constructor() {
+    super(
+      "The active Tutor Bible changed before this action was synchronized."
+    );
+    this.name = "QueueScopeChangedError";
+  }
+}
 
 function syncRetryDelay(attempts: number): number {
   return Math.min(30_000, 1_000 * 2 ** Math.min(attempts, 5));
@@ -116,12 +124,13 @@ function snapshotElapsedSeconds(snapshot: LiveSessionRunSnapshot): number {
 
 function positionForSnapshot(
   snapshot: LiveSessionRunSnapshot,
-  playbook: LiveSessionPlaybook,
+  playbook: LiveSessionPlaybook
 ): { stageId: string; cardId: string | null } {
   const routeId = snapshot.routeId ?? playbook.routes[0]?.id ?? "";
   const stages = playbook.stagesByRoute[routeId] ?? [];
   const stage = stages[snapshot.stageIndex] ?? stages[0];
-  const card = stage?.questions?.[snapshot.questionIndex] ?? stage?.questions?.[0];
+  const card =
+    stage?.questions?.[snapshot.questionIndex] ?? stage?.questions?.[0];
   return {
     stageId: stage?.id ?? "session-launch",
     cardId: card?.id ?? null,
@@ -129,7 +138,7 @@ function positionForSnapshot(
 }
 
 function positionForDeskKey(
-  key: string,
+  key: string
 ): { stageId: string; cardId: string } | null {
   const separator = key.indexOf("::");
   if (separator <= 0 || separator >= key.length - 2) return null;
@@ -143,34 +152,39 @@ function targetLabel(
   playbook: LiveSessionPlaybook,
   routeId: string,
   stageId: string,
-  cardId: string | null | undefined,
+  cardId: string | null | undefined
 ): string {
   const stage = (playbook.stagesByRoute[routeId] ?? []).find(
-    (candidate) => candidate.id === stageId,
+    candidate => candidate.id === stageId
   );
-  const question = stage?.questions?.find((candidate) => candidate.id === cardId);
-  return question?.title || question?.label || stage?.title || cardId || stageId;
+  const question = stage?.questions?.find(candidate => candidate.id === cardId);
+  return (
+    question?.title || question?.label || stage?.title || cardId || stageId
+  );
 }
 
 function tutorRunToSnapshot(
   run: TutorLiveRun,
-  playbook: LiveSessionPlaybook,
+  playbook: LiveSessionPlaybook
 ): LiveSessionRunSnapshot {
   const stages = playbook.stagesByRoute[run.routeId] ?? [];
   const stageIndex = Math.max(
     0,
-    stages.findIndex((stage) => stage.id === run.currentStageId),
+    stages.findIndex(stage => stage.id === run.currentStageId)
   );
   const stage = stages[stageIndex];
   const questionIndex = Math.max(
     0,
-    stage?.questions?.findIndex((question) => question.id === run.currentCardId) ??
-      0,
+    stage?.questions?.findIndex(
+      question => question.id === run.currentCardId
+    ) ?? 0
   );
-  const route = playbook.routes.find((candidate) => candidate.id === run.routeId);
+  const route = playbook.routes.find(candidate => candidate.id === run.routeId);
   const evidence = run.events
     .filter(
-      (event): event is TutorLiveRunAction & {
+      (
+        event
+      ): event is TutorLiveRunAction & {
         stageId: string;
         cardId: string;
         result: NonNullable<TutorLiveRunAction["result"]>;
@@ -178,10 +192,12 @@ function tutorRunToSnapshot(
         errorCodes: NonNullable<TutorLiveRunAction["errorCodes"]>;
       } =>
         event.type === "assessment" &&
-        Boolean(event.stageId && event.cardId && event.result && event.confidence) &&
-        Array.isArray(event.errorCodes),
+        Boolean(
+          event.stageId && event.cardId && event.result && event.confidence
+        ) &&
+        Array.isArray(event.errorCodes)
     )
-    .map((event) => ({
+    .map(event => ({
       id: event.id,
       stageId: event.stageId,
       targetId: event.cardId,
@@ -189,7 +205,7 @@ function tutorRunToSnapshot(
         playbook,
         run.routeId,
         event.stageId,
-        event.cardId,
+        event.cardId
       ),
       verdict: event.result,
       confidence: event.confidence,
@@ -198,7 +214,7 @@ function tutorRunToSnapshot(
       recordedAt: event.atClient,
     }));
   const completedDeskIds = new Set<string>();
-  run.events.forEach((event) => {
+  run.events.forEach(event => {
     if (!event.stageId || !event.cardId) return;
     const key = sessionDeckKey(event.stageId, event.cardId);
     if (event.type === "assessment" || event.note === DESK_COMPLETE_NOTE) {
@@ -215,6 +231,24 @@ function tutorRunToSnapshot(
         : run.status === "running"
           ? "running"
           : "idle";
+  const completedEvent = [...run.events]
+    .reverse()
+    .find(event => event.type === "complete" && event.closeout);
+  const closeout = completedEvent?.closeout
+    ? {
+        sessionId: run.id,
+        routeId: run.routeId,
+        actualMinutes: Math.max(1, Math.round(run.elapsedSeconds / 60)),
+        evidence,
+        mastery: completedEvent.closeout.mastery,
+        outcome: completedEvent.closeout.outcome,
+        nextAction: completedEvent.closeout.nextAction,
+        homework: completedEvent.closeout.homework,
+        delayedRetest: completedEvent.closeout.delayedRetest,
+        privateTutorNote: completedEvent.closeout.privateTutorNote,
+        completedAt: completedEvent.atClient,
+      }
+    : null;
 
   return {
     phase:
@@ -228,6 +262,7 @@ function tutorRunToSnapshot(
     questionIndex,
     evidence,
     completedDeskIds: [...completedDeskIds],
+    closeout,
     timer: {
       status: timerStatus,
       durationMs: Math.max(1, route?.minutes ?? 150) * 60_000,
@@ -241,11 +276,13 @@ function tutorRunToSnapshot(
 
 function newerSnapshot(
   cloud: LiveSessionRunSnapshot | null,
-  local: LiveSessionRunSnapshot | null,
+  local: LiveSessionRunSnapshot | null
 ): LiveSessionRunSnapshot | null {
   if (!cloud) return local;
   if (!local || cloud.phase === "complete") return cloud;
-  return Date.parse(local.updatedAt) > Date.parse(cloud.updatedAt) ? local : cloud;
+  return Date.parse(local.updatedAt) > Date.parse(cloud.updatedAt)
+    ? local
+    : cloud;
 }
 
 function actionId(): string {
@@ -273,14 +310,21 @@ function PrivateSetup({
 }) {
   return (
     <main className="live-session ls-private-setup">
-      <section className="ls-private-setup__card" aria-labelledby="private-setup-title">
-        <div className="ls-private-setup__mark"><LockKeyhole size={30} /></div>
+      <section
+        className="ls-private-setup__card"
+        aria-labelledby="private-setup-title"
+      >
+        <div className="ls-private-setup__mark">
+          <LockKeyhole size={30} />
+        </div>
         <p className="ls-eyebrow">One-time tutor setup</p>
-        <h1 id="private-setup-title">Publish the private Session 01 Tutor Bible</h1>
+        <h1 id="private-setup-title">
+          Publish the private Session 01 Tutor Bible
+        </h1>
         <p className="ls-private-setup__lead">
           Choose the generated private JSON package from this computer. It is
-          validated, written directly to Mohamed&apos;s protected Firestore library,
-          and never added to the public GitHub Pages build.
+          validated, written directly to Mohamed&apos;s protected Firestore
+          library, and never added to the public GitHub Pages build.
         </p>
         {state === "error" && (
           <div className="ls-private-setup__alert" role="alert">
@@ -289,9 +333,32 @@ function PrivateSetup({
           </div>
         )}
         <div className="ls-private-setup__steps">
-          <article><span>01</span><div><strong>Select</strong><p>Open the Session 01 private playbook JSON.</p></div></article>
-          <article><span>02</span><div><strong>Validate</strong><p>The tracker verifies every route, stage, card, and content hash.</p></div></article>
-          <article><span>03</span><div><strong>Protect</strong><p>Only the active tutor account can read the teaching scripts and answers.</p></div></article>
+          <article>
+            <span>01</span>
+            <div>
+              <strong>Select</strong>
+              <p>Open the Session 01 private playbook JSON.</p>
+            </div>
+          </article>
+          <article>
+            <span>02</span>
+            <div>
+              <strong>Validate</strong>
+              <p>
+                The tracker verifies every route, stage, card, and content hash.
+              </p>
+            </div>
+          </article>
+          <article>
+            <span>03</span>
+            <div>
+              <strong>Protect</strong>
+              <p>
+                Only the active tutor account can read the teaching scripts and
+                answers.
+              </p>
+            </div>
+          </article>
         </div>
         <button
           className="ls-button ls-button--primary ls-button--large"
@@ -299,7 +366,11 @@ function PrivateSetup({
           disabled={busy}
           onClick={onChoose}
         >
-          {busy ? <RefreshCw className="ls-spin" size={18} /> : <Upload size={18} />}
+          {busy ? (
+            <RefreshCw className="ls-spin" size={18} />
+          ) : (
+            <Upload size={18} />
+          )}
           {busy ? "Publishing securely..." : "Choose private playbook JSON"}
         </button>
         <div className="ls-private-setup__assurance">
@@ -307,10 +378,18 @@ function PrivateSetup({
           <span>Student access is denied at the database rules boundary.</span>
         </div>
         <div className="ls-private-setup__secondary">
-          <button className="ls-button ls-button--quiet" type="button" onClick={onRetry}>
+          <button
+            className="ls-button ls-button--quiet"
+            type="button"
+            onClick={onRetry}
+          >
             <RefreshCw size={16} /> Retry private library
           </button>
-          <button className="ls-button ls-button--quiet" type="button" onClick={onExit}>
+          <button
+            className="ls-button ls-button--quiet"
+            type="button"
+            onClick={onExit}
+          >
             Return to tracker
           </button>
         </div>
@@ -330,35 +409,64 @@ export default function TutorSessionWorkspace({
   const [privatePackage, setPrivatePackage] =
     useState<TutorPlaybookPackage | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
-    "loading",
+    "loading"
   );
   const [loadMessage, setLoadMessage] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [offlineReady, setOfflineReady] = useState(false);
   const [syncState, setSyncState] = useState<SyncPresentation>("synced");
-  const [syncMessage, setSyncMessage] = useState("Private session state is current.");
-  const [initialRun, setInitialRun] =
-    useState<LiveSessionRunSnapshot | null>(null);
+  const [syncMessage, setSyncMessage] = useState(
+    "Private session state is current."
+  );
+  const [initialRun, setInitialRun] = useState<LiveSessionRunSnapshot | null>(
+    null
+  );
+  const [workspaceEpoch, setWorkspaceEpoch] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const loadSequenceRef = useRef(0);
   const cloudRunRef = useRef<TutorLiveRun | null>(null);
   const previousSnapshotRef = useRef<LiveSessionRunSnapshot | null>(null);
   const saveQueueRef = useRef<QueuedCloudMutation[]>([]);
-  const drainingSaveQueueRef = useRef(false);
-  const retrySaveQueueRef = useRef(false);
+  const syncGenerationRef = useRef(0);
+  const activeScopeRef = useRef("");
+  const drainingGenerationRef = useRef<number | null>(null);
   const retryTimerRef = useRef<number | null>(null);
   const terminalSyncErrorRef = useRef<unknown | null>(null);
+  const quarantinedSyncIssueRef = useRef("");
   const startQueuedRef = useRef(false);
+
+  const resetSyncScope = useCallback((nextScope: string) => {
+    if (activeScopeRef.current === nextScope) return;
+    activeScopeRef.current = nextScope;
+    syncGenerationRef.current += 1;
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    const cancelled = saveQueueRef.current.splice(0);
+    cancelled.forEach(item => {
+      item.cancelled = true;
+      item.reject(new QueueScopeChangedError());
+    });
+    terminalSyncErrorRef.current = null;
+    quarantinedSyncIssueRef.current = "";
+    cloudRunRef.current = null;
+    previousSnapshotRef.current = null;
+    startQueuedRef.current = false;
+  }, []);
 
   const playbook = useMemo(
     () => (privatePackage ? adaptTutorPlaybookPackage(privatePackage) : null),
-    [privatePackage],
+    [privatePackage]
   );
   const firstWeek = PLAN[0]!;
   const session = getWeekSessions(firstWeek)[0]!;
   const sessionDate = effectiveSessionDate(session, tracker.sessionOverrides);
   const runId = privatePackage
-    ? liveRunId(privatePackage.manifest.version)
+    ? liveRunId(
+        privatePackage.manifest.version,
+        privatePackage.manifest.contentHash
+      )
     : RUN_ID_BASE;
   const sessionTaskId = getSessionTaskId(firstWeek, session);
   const descriptor = useMemo(
@@ -371,7 +479,7 @@ export default function TutorSessionWorkspace({
       candidateName: "Hamad Al Sagheer",
       topic: "Quantitative Methods",
     }),
-    [runId, session.date, session.number, session.title, sessionDate],
+    [runId, session.date, session.number, session.title, sessionDate]
   );
 
   const loadWorkspace = useCallback(async () => {
@@ -405,7 +513,11 @@ export default function TutorSessionWorkspace({
       return;
     }
 
-    const selectedRunId = liveRunId(selectedPackage.manifest.version);
+    const selectedRunId = liveRunId(
+      selectedPackage.manifest.version,
+      selectedPackage.manifest.contentHash
+    );
+    resetSyncScope(selectedRunId);
     try {
       cachedRun = await loadTutorRunOffline(userUid, selectedRunId);
     } catch {
@@ -431,59 +543,113 @@ export default function TutorSessionWorkspace({
     previousSnapshotRef.current = cloudSnapshot;
     setPrivatePackage(selectedPackage);
     setInitialRun(restored);
+    setWorkspaceEpoch(value => value + 1);
     try {
       const status = await getTutorOfflineStatus(userUid, PLAYBOOK_ID);
-      if (sequence === loadSequenceRef.current) setOfflineReady(status.ready);
+      if (sequence === loadSequenceRef.current) {
+        setOfflineReady(
+          status.ready &&
+            status.version === selectedPackage.manifest.version &&
+            status.contentHash === selectedPackage.manifest.contentHash
+        );
+      }
     } catch {
       setOfflineReady(false);
     }
     setLoadState("ready");
     if (cloudPackage && !cloudProblem) {
       setSyncState("synced");
-      setSyncMessage("Private content and meaningful session actions are current.");
+      setSyncMessage(
+        "Private content and meaningful session actions are current."
+      );
     } else {
       setSyncState("offline");
       setSyncMessage("Using the private device-local offline recovery copy.");
     }
-  }, [userUid]);
+  }, [resetSyncScope, userUid]);
 
   useEffect(() => {
     void loadWorkspace();
   }, [loadWorkspace]);
 
   const drainSaveQueue = useCallback(async () => {
-    if (drainingSaveQueueRef.current) {
-      retrySaveQueueRef.current = true;
-      return;
-    }
-    drainingSaveQueueRef.current = true;
+    const generation = syncGenerationRef.current;
+    if (drainingGenerationRef.current === generation) return;
+    drainingGenerationRef.current = generation;
     try {
-      while (saveQueueRef.current.length > 0) {
+      while (
+        generation === syncGenerationRef.current &&
+        saveQueueRef.current.length > 0
+      ) {
         const pending = saveQueueRef.current[0]!;
+        if (
+          pending.cancelled ||
+          pending.generation !== generation ||
+          pending.scope !== activeScopeRef.current
+        ) {
+          if (saveQueueRef.current[0] === pending) saveQueueRef.current.shift();
+          if (!pending.cancelled) pending.reject(new QueueScopeChangedError());
+          continue;
+        }
+
         setSyncState("saving");
         setSyncMessage("Saving meaningful tutor actions in order...");
         try {
           const saved = await pending.execute();
-          saveQueueRef.current.shift();
+          if (generation !== syncGenerationRef.current || pending.cancelled) {
+            continue;
+          }
+          if (saveQueueRef.current[0] === pending) {
+            saveQueueRef.current.shift();
+          }
           pending.resolve(saved);
         } catch (error) {
+          if (
+            generation !== syncGenerationRef.current ||
+            pending.cancelled ||
+            saveQueueRef.current[0] !== pending
+          ) {
+            continue;
+          }
           const cloudError = mapCloudError(error);
+
+          if (cloudError.code === "tutor-live-run-conflict") {
+            saveQueueRef.current.shift();
+            pending.reject(cloudError);
+            quarantinedSyncIssueRef.current =
+              "One stale action was safely skipped after cloud reconciliation. Reload cloud state to verify this device.";
+            continue;
+          }
+
+          pending.attempts += 1;
+          if (
+            cloudError.code === "unknown" &&
+            pending.attempts >= MAX_UNKNOWN_RETRIES
+          ) {
+            saveQueueRef.current.shift();
+            pending.reject(cloudError);
+            quarantinedSyncIssueRef.current =
+              "One action could not be confirmed after three attempts. Your device copy is safe; retry cloud sync.";
+            continue;
+          }
+
           if (!RETRYABLE_SYNC_ERRORS.has(cloudError.code)) {
             terminalSyncErrorRef.current = cloudError;
             const rejected = saveQueueRef.current.splice(0);
             rejected.forEach(item => item.reject(cloudError));
             setSyncState("error");
             setSyncMessage(
-              `${cloudError.message} The local recovery copy remains available; sign in correctly and reopen Session Mode to retry.`,
+              `${cloudError.message} The device recovery copy remains safe. Correct access, then retry sync.`
             );
             return;
           }
 
-          pending.attempts += 1;
           const delay = syncRetryDelay(pending.attempts - 1);
           setSyncState(navigator.onLine ? "error" : "offline");
           setSyncMessage(
-            `${cloudError.message} The action is retained in order and will retry automatically in ${Math.ceil(delay / 1_000)} seconds.`,
+            navigator.onLine
+              ? `${cloudError.message} Retrying automatically in ${Math.ceil(delay / 1_000)} seconds.`
+              : "Saved on this device. Cloud sync will resume automatically when the connection returns."
           );
           if (navigator.onLine) {
             if (retryTimerRef.current !== null) {
@@ -491,23 +657,28 @@ export default function TutorSessionWorkspace({
             }
             retryTimerRef.current = window.setTimeout(() => {
               retryTimerRef.current = null;
-              void drainSaveQueue();
+              if (generation === syncGenerationRef.current) {
+                void drainSaveQueue();
+              }
             }, delay);
           }
           return;
         }
       }
-      setSyncState("synced");
-      setSyncMessage("Private session actions are current on every tutor device.");
+
+      if (generation !== syncGenerationRef.current) return;
+      if (quarantinedSyncIssueRef.current) {
+        setSyncState("error");
+        setSyncMessage(quarantinedSyncIssueRef.current);
+      } else {
+        setSyncState("synced");
+        setSyncMessage(
+          "Private session actions are current on every tutor device."
+        );
+      }
     } finally {
-      drainingSaveQueueRef.current = false;
-      if (retrySaveQueueRef.current) {
-        retrySaveQueueRef.current = false;
-        if (retryTimerRef.current !== null) {
-          window.clearTimeout(retryTimerRef.current);
-          retryTimerRef.current = null;
-        }
-        queueMicrotask(() => void drainSaveQueue());
+      if (drainingGenerationRef.current === generation) {
+        drainingGenerationRef.current = null;
       }
     }
   }, []);
@@ -530,74 +701,155 @@ export default function TutorSessionWorkspace({
     };
   }, [drainSaveQueue]);
 
+  const retrySyncNow = useCallback(() => {
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    terminalSyncErrorRef.current = null;
+    quarantinedSyncIssueRef.current = "";
+    if (saveQueueRef.current[0]) {
+      saveQueueRef.current[0].attempts = 0;
+      void drainSaveQueue();
+      return;
+    }
+    void loadWorkspace();
+  }, [drainSaveQueue, loadWorkspace]);
+
   const enqueueAction = useCallback(
     (
       payload: PendingAction,
-      snapshot: LiveSessionRunSnapshot,
+      snapshot: LiveSessionRunSnapshot
     ): Promise<TutorLiveRun> => {
-      if (!playbook || !snapshot.routeId) {
+      if (!playbook || !privatePackage || !snapshot.routeId) {
         return Promise.reject(new Error("Choose a live-session route first."));
       }
       if (terminalSyncErrorRef.current) {
         return Promise.reject(terminalSyncErrorRef.current);
       }
       const eventId = actionId();
+      const scope = runId;
+      const generation = syncGenerationRef.current;
+      const playbookId = privatePackage.manifest.id;
+      const playbookVersion = privatePackage.manifest.version;
+      const routeId = snapshot.routeId;
+      const localElapsedSeconds = snapshotElapsedSeconds(snapshot);
       const execute = async (): Promise<TutorLiveRun> => {
-        const current = cloudRunRef.current;
-        const elapsedSeconds =
-          payload.type === "start"
-            ? 0
-            : Math.max(current?.elapsedSeconds ?? 0, snapshotElapsedSeconds(snapshot));
-        const buildRequest = (
-          revision: number,
-          atClient = new Date().toISOString(),
-        ): Parameters<typeof saveTutorLiveRun>[0] => ({
-          runId,
-          playbookId: privatePackage!.manifest.id,
-          playbookVersion: privatePackage!.manifest.version,
-          sessionNumber: session.number,
-          routeId: snapshot.routeId!,
-          expectedRevision: revision,
-          action: {
-            ...payload,
-            id: eventId,
-            atClient,
-            elapsedSeconds,
-          },
-        });
-        try {
-          const saved = await saveTutorLiveRun(buildRequest(current?.revision ?? 0));
-          cloudRunRef.current = saved;
-          return saved;
-        } catch (firstError) {
-          const latest = await getTutorLiveRun(runId).catch(() => null);
-          if (latest?.events.some((event) => event.id === eventId)) {
-            cloudRunRef.current = latest;
-            return latest;
+        let current =
+          cloudRunRef.current?.id === scope ? cloudRunRef.current : null;
+        let lastConflict: unknown = new CloudClientError(
+          "tutor-live-run-conflict"
+        );
+
+        for (
+          let attempt = 0;
+          attempt < MAX_CONFLICT_REBASE_ATTEMPTS;
+          attempt += 1
+        ) {
+          if (
+            generation !== syncGenerationRef.current ||
+            scope !== activeScopeRef.current
+          ) {
+            throw new QueueScopeChangedError();
           }
-          if (latest && latest.status !== "completed" && latest.status !== "abandoned") {
-            cloudRunRef.current = latest;
-            const retried = await saveTutorLiveRun(
-              buildRequest(latest.revision, new Date().toISOString()),
-            );
-            cloudRunRef.current = retried;
-            return retried;
+
+          if (current) {
+            const sameIdentity =
+              current.id === scope &&
+              current.playbookId === playbookId &&
+              current.playbookVersion === playbookVersion &&
+              current.sessionNumber === session.number &&
+              current.routeId === routeId;
+            if (!sameIdentity) {
+              throw new CloudClientError("tutor-live-run-conflict");
+            }
+            if (
+              isTutorLiveRunActionSatisfied(current, {
+                id: eventId,
+                type: payload.type,
+              }) ||
+              current.status === "completed" ||
+              current.status === "abandoned"
+            ) {
+              if (generation === syncGenerationRef.current) {
+                cloudRunRef.current = current;
+              }
+              return current;
+            }
           }
-          throw firstError;
+
+          const remoteTimestamp = current
+            ? Date.parse(current.updatedAtClient)
+            : 0;
+          const atClient = new Date(
+            Math.max(
+              Date.now(),
+              Number.isFinite(remoteTimestamp) ? remoteTimestamp + 1 : 0
+            )
+          ).toISOString();
+          const elapsedSeconds =
+            payload.type === "start" && !current
+              ? 0
+              : Math.max(current?.elapsedSeconds ?? 0, localElapsedSeconds);
+          try {
+            const saved = await saveTutorLiveRun({
+              runId: scope,
+              playbookId,
+              playbookVersion,
+              sessionNumber: session.number,
+              routeId,
+              expectedRevision: current?.revision ?? 0,
+              action: {
+                ...payload,
+                id: eventId,
+                atClient,
+                elapsedSeconds,
+              },
+            });
+            if (generation === syncGenerationRef.current) {
+              cloudRunRef.current = saved;
+            }
+            return saved;
+          } catch (error) {
+            const cloudError = mapCloudError(error);
+            if (cloudError.code !== "tutor-live-run-conflict") {
+              throw cloudError;
+            }
+            lastConflict = cloudError;
+            const latest = await getTutorLiveRun(scope);
+            if (latest?.events.some(event => event.id === eventId)) {
+              if (generation === syncGenerationRef.current) {
+                cloudRunRef.current = latest;
+              }
+              return latest;
+            }
+            current = latest;
+          }
         }
+        throw lastConflict;
       };
       const queued = new Promise<TutorLiveRun>((resolve, reject) => {
-        saveQueueRef.current.push({ execute, resolve, reject, attempts: 0 });
+        saveQueueRef.current.push({
+          scope,
+          generation,
+          cancelled: false,
+          execute,
+          resolve,
+          reject,
+          attempts: 0,
+        });
       });
       void drainSaveQueue();
       return queued;
     },
-    [drainSaveQueue, playbook, privatePackage, session.number],
+    [drainSaveQueue, playbook, privatePackage, runId, session.number]
   );
 
   const handleRunChange = useCallback(
     (snapshot: LiveSessionRunSnapshot) => {
-      void cacheTutorRunOffline(userUid, runId, snapshot).catch(() => undefined);
+      void cacheTutorRunOffline(userUid, runId, snapshot).catch(
+        () => undefined
+      );
       const previous = previousSnapshotRef.current;
       previousSnapshotRef.current = snapshot;
       if (!playbook || !snapshot.routeId) return;
@@ -607,7 +859,7 @@ export default function TutorSessionWorkspace({
         : null;
 
       if (
-        snapshot.phase === "running" &&
+        snapshot.phase !== "launch" &&
         !cloudRunRef.current &&
         !startQueuedRef.current
       ) {
@@ -618,7 +870,7 @@ export default function TutorSessionWorkspace({
             stageId: currentPosition.stageId,
             cardId: currentPosition.cardId,
           },
-          snapshot,
+          snapshot
         ).catch(() => {
           startQueuedRef.current = false;
         });
@@ -636,17 +888,17 @@ export default function TutorSessionWorkspace({
       }
 
       const previousEvidenceIds = new Set(
-        previous?.evidence.map((entry) => entry.id) ?? [],
+        previous?.evidence.map(entry => entry.id) ?? []
       );
       const newEvidenceEntries = snapshot.evidence.filter(
-        (entry) => !previousEvidenceIds.has(entry.id),
+        entry => !previousEvidenceIds.has(entry.id)
       );
       const newlyAssessedDeskKeys = new Set(
         newEvidenceEntries.map(entry =>
-          sessionDeckKey(entry.stageId, entry.targetId),
-        ),
+          sessionDeckKey(entry.stageId, entry.targetId)
+        )
       );
-      newEvidenceEntries.forEach((entry) => {
+      newEvidenceEntries.forEach(entry => {
         void enqueueAction(
           {
             type: "assessment",
@@ -657,7 +909,7 @@ export default function TutorSessionWorkspace({
             errorCodes: entry.errorCodes,
             ...(entry.note ? { note: entry.note } : {}),
           },
-          snapshot,
+          snapshot
         ).catch(() => undefined);
       });
 
@@ -665,8 +917,7 @@ export default function TutorSessionWorkspace({
       const nextCompleted = new Set(snapshot.completedDeskIds ?? []);
       [...nextCompleted]
         .filter(
-          key =>
-            !previousCompleted.has(key) && !newlyAssessedDeskKeys.has(key),
+          key => !previousCompleted.has(key) && !newlyAssessedDeskKeys.has(key)
         )
         .forEach(key => {
           const position = positionForDeskKey(key);
@@ -678,7 +929,7 @@ export default function TutorSessionWorkspace({
               cardId: position.cardId,
               note: DESK_COMPLETE_NOTE,
             },
-            snapshot,
+            snapshot
           ).catch(() => undefined);
         });
       [...previousCompleted]
@@ -693,7 +944,7 @@ export default function TutorSessionWorkspace({
               cardId: position.cardId,
               note: DESK_REOPEN_NOTE,
             },
-            snapshot,
+            snapshot
           ).catch(() => undefined);
         });
 
@@ -708,11 +959,40 @@ export default function TutorSessionWorkspace({
             stageId: currentPosition.stageId,
             cardId: currentPosition.cardId,
           },
-          snapshot,
+          snapshot
         ).catch(() => undefined);
       }
+
+      if (
+        snapshot.phase === "complete" &&
+        snapshot.closeout &&
+        cloudRunRef.current?.status !== "completed" &&
+        (previous?.phase !== "complete" ||
+          previous.closeout?.completedAt !== snapshot.closeout.completedAt)
+      ) {
+        const closeout = snapshot.closeout;
+        void enqueueAction(
+          {
+            type: "complete",
+            closeout: {
+              mastery: closeout.mastery,
+              outcome: closeout.outcome,
+              nextAction: closeout.nextAction,
+              homework: closeout.homework,
+              delayedRetest: closeout.delayedRetest,
+              privateTutorNote: closeout.privateTutorNote,
+            },
+          },
+          snapshot
+        ).catch(error => {
+          notify(
+            `The closeout is safe on this device; cloud sync needs attention: ${getCloudErrorMessage(error)}`,
+            "warning"
+          );
+        });
+      }
     },
-    [enqueueAction, playbook, userUid],
+    [enqueueAction, notify, playbook, runId, userUid]
   );
 
   const prepareOffline = useCallback(async () => {
@@ -729,33 +1009,8 @@ export default function TutorSessionWorkspace({
   }, [notify, userUid]);
 
   const completeSession = useCallback(
-    async (result: LiveSessionCloseoutResult) => {
-      const snapshot = previousSnapshotRef.current;
-      if (snapshot) {
-        try {
-          await enqueueAction(
-            {
-              type: "complete",
-              closeout: {
-                mastery: result.mastery,
-                outcome: result.outcome,
-                nextAction: result.nextAction,
-                homework: result.homework,
-                delayedRetest: result.delayedRetest,
-                privateTutorNote: result.privateTutorNote,
-              },
-            },
-            snapshot,
-          );
-        } catch (error) {
-          notify(
-            `Closeout is safe locally, but private run sync needs attention: ${getCloudErrorMessage(error)}`,
-            "warning",
-          );
-        }
-      }
-
-      updateTracker((current) =>
+    (result: LiveSessionCloseoutResult) => {
+      updateTracker(current =>
         applyLiveSessionCloseout({
           tracker: current,
           result,
@@ -764,42 +1019,25 @@ export default function TutorSessionWorkspace({
           date: sessionDate,
           title: session.title,
           taskId: sessionTaskId,
-        }),
+        })
       );
       const privateNote = buildLiveSessionPrivateNote(result, sessionDate);
       if (privateNote) {
-        try {
-          await updatePrivateTutorNotes((notes) => [
-            privateNote,
-            ...notes.filter((note) => note.id !== privateNote.id),
-          ]);
-        } catch (error) {
+        void updatePrivateTutorNotes(notes => [
+          privateNote,
+          ...notes.filter(note => note.id !== privateNote.id),
+        ]).catch(error => {
           notify(
             `Shared records are saved; retry the private note later: ${getCloudErrorMessage(error)}`,
-            "warning",
+            "warning"
           );
-        }
+        });
       }
-      const completedSnapshot = snapshot
-        ? {
-            ...snapshot,
-            phase: "complete" as const,
-            timer: snapshot.timer
-              ? { ...snapshot.timer, status: "complete" as const }
-              : null,
-            updatedAt: result.completedAt,
-          }
-        : null;
-      if (completedSnapshot) {
-        previousSnapshotRef.current = completedSnapshot;
-        await cacheTutorRunOffline(userUid, runId, completedSnapshot).catch(
-          () => undefined,
-        );
-      }
-      notify("Session 01 closed out: tracker, mastery, practice, and repairs updated.");
+      notify(
+        "Session 01 is saved on this device. Cloud closeout is syncing in the background."
+      );
     },
     [
-      enqueueAction,
       firstWeek.week,
       notify,
       session.number,
@@ -808,8 +1046,7 @@ export default function TutorSessionWorkspace({
       sessionTaskId,
       updatePrivateTutorNotes,
       updateTracker,
-      userUid,
-    ],
+    ]
   );
 
   const importPrivatePackage = useCallback(
@@ -818,18 +1055,22 @@ export default function TutorSessionWorkspace({
       setPublishing(true);
       try {
         if (file.size > MAX_PRIVATE_PACKAGE_BYTES) {
-          throw new Error("The private package is larger than the 8 MB safety limit.");
+          throw new Error(
+            "The private package is larger than the 8 MB safety limit."
+          );
         }
         const value: unknown = JSON.parse(await file.text());
         const published = await importTutorPlaybookPackage(value);
         if (published.manifest.id !== PLAYBOOK_ID) {
-          throw new Error("Choose the Session 01 Hamad CFA Mastery playbook package.");
+          throw new Error(
+            "Choose the Session 01 Hamad CFA Mastery playbook package."
+          );
         }
         await cacheTutorPlaybookOffline(userUid, published);
-        setPrivatePackage(published);
-        setOfflineReady(true);
-        notify("Private Tutor Bible published and prepared offline.");
         await loadWorkspace();
+        notify(
+          `Private Tutor Bible ${published.manifest.version} published with protected offline recovery.`
+        );
       } catch (error) {
         setLoadState("error");
         setLoadMessage(getCloudErrorMessage(error));
@@ -839,7 +1080,7 @@ export default function TutorSessionWorkspace({
         if (fileRef.current) fileRef.current.value = "";
       }
     },
-    [loadWorkspace, notify, userUid],
+    [loadWorkspace, notify, userUid]
   );
 
   return (
@@ -858,11 +1099,12 @@ export default function TutorSessionWorkspace({
           message={loadMessage}
           busy={publishing}
           onChoose={() => fileRef.current?.click()}
-          onRetry={() => void loadWorkspace()}
+          onRetry={retrySyncNow}
           onExit={onExit}
         />
       ) : (
         <LiveSessionConsole
+          key={`${runId}:${workspaceEpoch}`}
           session={descriptor}
           playbook={playbook}
           loadState="ready"
@@ -870,7 +1112,7 @@ export default function TutorSessionWorkspace({
           syncState={syncState}
           syncMessage={syncMessage}
           offlineReady={offlineReady}
-          onRetry={() => void loadWorkspace()}
+          onRetry={retrySyncNow}
           onPrepareOffline={prepareOffline}
           onRemoveOffline={removeOffline}
           onReplacePlaybook={() => fileRef.current?.click()}
@@ -885,7 +1127,7 @@ export default function TutorSessionWorkspace({
         ref={fileRef}
         type="file"
         accept="application/json,.json"
-        onChange={(event) => void importPrivatePackage(event.target.files?.[0])}
+        onChange={event => void importPrivatePackage(event.target.files?.[0])}
       />
     </>
   );

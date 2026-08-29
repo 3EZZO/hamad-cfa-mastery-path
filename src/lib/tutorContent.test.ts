@@ -4,6 +4,7 @@ import {
   buildTutorPlaybookChunkStorageId,
   computeTutorPlaybookChunkContentHash,
   computeTutorPlaybookManifestContentHash,
+  isTutorLiveRunActionSatisfied,
   parseTutorLiveRun,
   parseTutorLiveRunAction,
   parseTutorPlaybookChunk,
@@ -116,7 +117,7 @@ function publishedPackage(): {
     publishedBy: "tutor-uid",
     publishedAtClient,
   });
-  const chunks = draft.chunks.map((item) =>
+  const chunks = draft.chunks.map(item =>
     parseTutorPlaybookChunk({
       ...item,
       playbookId: manifest.id,
@@ -124,11 +125,11 @@ function publishedPackage(): {
       storageId: buildTutorPlaybookChunkStorageId(
         manifest.id,
         manifest.version,
-        item.id,
+        item.id
       ),
       publishedBy: "tutor-uid",
       publishedAtClient,
-    }),
+    })
   );
   return { manifest, chunks };
 }
@@ -137,12 +138,14 @@ function action(
   id: string,
   type: TutorLiveRunAction["type"],
   elapsedSeconds: number,
-  extra: Partial<TutorLiveRunAction> = {},
+  extra: Partial<TutorLiveRunAction> = {}
 ): TutorLiveRunAction {
   return {
     id,
     type,
-    atClient: new Date(Date.parse(STARTED_AT) + elapsedSeconds * 1_000).toISOString(),
+    atClient: new Date(
+      Date.parse(STARTED_AT) + elapsedSeconds * 1_000
+    ).toISOString(),
     elapsedSeconds,
     ...extra,
   };
@@ -150,7 +153,7 @@ function action(
 
 function saveRequest(
   expectedRevision: number,
-  event: TutorLiveRunAction,
+  event: TutorLiveRunAction
 ): TutorLiveRunSaveRequest {
   return {
     runId: "session-01-2026-09-05",
@@ -166,7 +169,11 @@ function saveRequest(
 function closeout() {
   return {
     mastery: [
-      { stageId: "launch", stageTitle: "Cold launch", decision: "green" as const },
+      {
+        stageId: "launch",
+        stageTitle: "Cold launch",
+        decision: "green" as const,
+      },
       {
         stageId: "returns",
         stageTitle: "Return measures",
@@ -189,7 +196,7 @@ describe("private Tutor Bible package validation", () => {
     expect(parsed.manifest.routes[0]?.cardIdsByStage?.returns).toEqual([
       "returns-q01",
     ]);
-    expect(parsed.chunks.map((item) => item.id)).toEqual([
+    expect(parsed.chunks.map(item => item.id)).toEqual([
       "chunk-launch",
       "chunk-returns",
     ]);
@@ -200,13 +207,13 @@ describe("private Tutor Bible package validation", () => {
     const unknownField = draftPackage();
     Object.assign(unknownField.manifest, { studentReadableAnswerKey: true });
     expect(() => parseTutorPlaybookPackageDraft(unknownField)).toThrow(
-      /unsupported fields/i,
+      /unsupported fields/i
     );
 
     const brokenRoute = draftPackage();
     brokenRoute.manifest.routes[0]!.totalMinutes = 149;
     expect(() => parseTutorPlaybookPackageDraft(brokenRoute)).toThrow(
-      /stages total 150/i,
+      /stages total 150/i
     );
 
     const brokenCardSelection = draftPackage();
@@ -214,33 +221,36 @@ describe("private Tutor Bible package validation", () => {
       "missing-card",
     ];
     expect(() => parseTutorPlaybookPackageDraft(brokenCardSelection)).toThrow(
-      /references missing card missing-card/i,
+      /references missing card missing-card/i
     );
 
     const duplicateCard = draftPackage();
     duplicateCard.chunks[0]!.stages[0]!.cards.push(
-      duplicateCard.chunks[1]!.stages[0]!.cards[0]!,
+      duplicateCard.chunks[1]!.stages[0]!.cards[0]!
     );
     expect(() => parseTutorPlaybookPackageDraft(duplicateCard)).toThrow(
-      /duplicate IDs/i,
+      /duplicate IDs/i
     );
 
     const oversized = draftPackage();
     oversized.chunks[0]!.stages[0]!.cards[0]!.body = "x".repeat(451_000);
     expect(() => parseTutorPlaybookPackageDraft(oversized)).toThrow(
-      /safe limit/i,
+      /safe limit/i
     );
   });
 
   it("cross-validates published chunk ownership and returns manifest order", () => {
     const { manifest, chunks } = publishedPackage();
-    const validated = validateTutorPlaybookPackage(manifest, [...chunks].reverse());
-    expect(validated.chunks.map((item) => item.id)).toEqual(manifest.chunkIds);
+    const validated = validateTutorPlaybookPackage(
+      manifest,
+      [...chunks].reverse()
+    );
+    expect(validated.chunks.map(item => item.id)).toEqual(manifest.chunkIds);
 
     const foreign = { ...chunks[0]!, playbookId: "session-02" };
-    expect(() => validateTutorPlaybookPackage(manifest, [foreign, chunks[1]!])).toThrow(
-      /active manifest version/i,
-    );
+    expect(() =>
+      validateTutorPlaybookPackage(manifest, [foreign, chunks[1]!])
+    ).toThrow(/active manifest version/i);
   });
 
   it("cryptographically rejects altered chunks and manifest metadata", async () => {
@@ -251,22 +261,22 @@ describe("private Tutor Bible package validation", () => {
     }
     parsed.manifest.contentHash = await computeTutorPlaybookManifestContentHash(
       parsed.manifest,
-      parsed.chunks,
+      parsed.chunks
     );
     await expect(verifyTutorPlaybookPackageIntegrity(parsed)).resolves.toEqual(
-      parsed,
+      parsed
     );
 
     const altered = structuredClone(parsed);
     altered.chunks[0]!.stages[0]!.cards[0]!.answer = "A changed answer.";
     await expect(verifyTutorPlaybookPackageIntegrity(altered)).rejects.toThrow(
-      /does not match the chunk contents/i,
+      /does not match the chunk contents/i
     );
 
     const alteredManifest = structuredClone(parsed);
     alteredManifest.manifest.title = "Changed title";
     await expect(
-      verifyTutorPlaybookPackageIntegrity(alteredManifest),
+      verifyTutorPlaybookPackageIntegrity(alteredManifest)
     ).rejects.toThrow(/versioned package contents/i);
   });
 });
@@ -276,26 +286,29 @@ describe("private tutor live-run state machine", () => {
     let run: TutorLiveRun | null = applyTutorLiveRunAction(
       null,
       saveRequest(0, action("event-01", "start", 0, { stageId: "launch" })),
-      "tutor-uid",
+      "tutor-uid"
     );
     expect(run).toMatchObject({ status: "running", revision: 1 });
 
     run = applyTutorLiveRunAction(
       run,
       saveRequest(1, action("event-02", "pause", 120)),
-      "tutor-uid",
+      "tutor-uid"
     );
     expect(run.status).toBe("paused");
 
     run = applyTutorLiveRunAction(
       run,
-      saveRequest(2, action("event-03", "note", 125, { note: "Parking a question." })),
-      "tutor-uid",
+      saveRequest(
+        2,
+        action("event-03", "note", 125, { note: "Parking a question." })
+      ),
+      "tutor-uid"
     );
     run = applyTutorLiveRunAction(
       run,
       saveRequest(3, action("event-04", "resume", 130)),
-      "tutor-uid",
+      "tutor-uid"
     );
     run = applyTutorLiveRunAction(
       run,
@@ -308,17 +321,17 @@ describe("private tutor live-run state machine", () => {
           confidence: 4,
           errorCodes: ["D", "I"],
           note: "Method selected only after a prompt.",
-        }),
+        })
       ),
-      "tutor-uid",
+      "tutor-uid"
     );
     run = applyTutorLiveRunAction(
       run,
       saveRequest(
         5,
-        action("event-06", "complete", 600, { closeout: closeout() }),
+        action("event-06", "complete", 600, { closeout: closeout() })
       ),
-      "tutor-uid",
+      "tutor-uid"
     );
 
     expect(run).toMatchObject({
@@ -338,14 +351,132 @@ describe("private tutor live-run state machine", () => {
     expect(parseTutorLiveRun(run)).toEqual(run);
   });
 
+  it("keeps meaningful navigation, assessment, and repair valid while the clock is paused", () => {
+    let run = applyTutorLiveRunAction(
+      null,
+      saveRequest(0, action("event-01", "start", 0, { stageId: "launch" })),
+      "tutor-uid"
+    );
+    run = applyTutorLiveRunAction(
+      run,
+      saveRequest(1, action("event-02", "pause", 120)),
+      "tutor-uid"
+    );
+    run = applyTutorLiveRunAction(
+      run,
+      saveRequest(
+        2,
+        action("event-03", "navigate", 120, {
+          stageId: "returns",
+          cardId: "returns-q01",
+        })
+      ),
+      "tutor-uid"
+    );
+    run = applyTutorLiveRunAction(
+      run,
+      saveRequest(
+        3,
+        action("event-04", "assessment", 120, {
+          stageId: "returns",
+          cardId: "returns-q01",
+          result: "repair",
+          confidence: 2,
+          errorCodes: ["D"],
+        })
+      ),
+      "tutor-uid"
+    );
+    run = applyTutorLiveRunAction(
+      run,
+      saveRequest(
+        4,
+        action("event-05", "repair", 120, {
+          stageId: "returns",
+          cardId: "returns-q01",
+          errorCodes: ["D"],
+          note: "Rebuilt the growth-factor chain.",
+        })
+      ),
+      "tutor-uid"
+    );
+
+    expect(run).toMatchObject({
+      status: "paused",
+      revision: 5,
+      currentStageId: "returns",
+      currentCardId: "returns-q01",
+    });
+    expect(parseTutorLiveRun(run)).toEqual(run);
+  });
+
+  it("recognizes idempotent control actions after a cloud rebase", () => {
+    const running = applyTutorLiveRunAction(
+      null,
+      saveRequest(0, action("event-01", "start", 0, { stageId: "launch" })),
+      "tutor-uid"
+    );
+    expect(
+      isTutorLiveRunActionSatisfied(running, {
+        id: "different-start",
+        type: "start",
+      })
+    ).toBe(true);
+    expect(
+      isTutorLiveRunActionSatisfied(running, {
+        id: "different-resume",
+        type: "resume",
+      })
+    ).toBe(true);
+    expect(
+      isTutorLiveRunActionSatisfied(running, {
+        id: "event-01",
+        type: "navigate",
+      })
+    ).toBe(true);
+    expect(
+      isTutorLiveRunActionSatisfied(running, {
+        id: "different-pause",
+        type: "pause",
+      })
+    ).toBe(false);
+
+    const paused = applyTutorLiveRunAction(
+      running,
+      saveRequest(1, action("event-02", "pause", 30)),
+      "tutor-uid"
+    );
+    expect(
+      isTutorLiveRunActionSatisfied(paused, {
+        id: "different-pause",
+        type: "pause",
+      })
+    ).toBe(true);
+
+    const completed = applyTutorLiveRunAction(
+      paused,
+      saveRequest(
+        2,
+        action("event-03", "complete", 30, { closeout: closeout() })
+      ),
+      "tutor-uid"
+    );
+    expect(
+      isTutorLiveRunActionSatisfied(completed, {
+        id: "different-complete",
+        type: "complete",
+      })
+    ).toBe(true);
+  });
+
   it("rejects malformed action semantics and non-canonical timestamps", () => {
     expect(() =>
       parseTutorLiveRunAction(
         action("event-01", "assessment", 10, {
           stageId: "returns",
           cardId: "returns-q01",
-        }),
-      ),
+        })
+      )
     ).toThrow(/result/i);
 
     expect(() =>
@@ -353,15 +484,15 @@ describe("private tutor live-run state machine", () => {
         action("event-01", "repair", 10, {
           stageId: "returns",
           cardId: "returns-q01",
-        }),
-      ),
+        })
+      )
     ).toThrow(/errorCodes/i);
 
     expect(() =>
       parseTutorLiveRunAction({
         ...action("event-01", "start", 0, { stageId: "launch" }),
         atClient: "2026-09-05 09:00:00",
-      }),
+      })
     ).toThrow(/canonical UTC ISO/i);
   });
 
@@ -369,45 +500,51 @@ describe("private tutor live-run state machine", () => {
     const run = applyTutorLiveRunAction(
       null,
       saveRequest(0, action("event-01", "start", 0, { stageId: "launch" })),
-      "tutor-uid",
+      "tutor-uid"
     );
 
     expect(() =>
       applyTutorLiveRunAction(
         run,
         saveRequest(0, action("event-02", "pause", 10)),
-        "tutor-uid",
-      ),
+        "tutor-uid"
+      )
     ).toThrow(TutorLiveRunConflictError);
     expect(() =>
       applyTutorLiveRunAction(
         run,
-        saveRequest(1, action("event-01", "navigate", 10, { stageId: "returns" })),
-        "tutor-uid",
-      ),
+        saveRequest(
+          1,
+          action("event-01", "navigate", 10, { stageId: "returns" })
+        ),
+        "tutor-uid"
+      )
     ).toThrow(/already been saved/i);
     expect(() =>
       applyTutorLiveRunAction(
         run,
-        saveRequest(1, action("event-02", "navigate", -1, { stageId: "returns" })),
-        "tutor-uid",
-      ),
+        saveRequest(
+          1,
+          action("event-02", "navigate", -1, { stageId: "returns" })
+        ),
+        "tutor-uid"
+      )
     ).toThrow(TutorContentValidationError);
 
     const completed = applyTutorLiveRunAction(
       run,
       saveRequest(
         1,
-        action("event-02", "complete", 20, { closeout: closeout() }),
+        action("event-02", "complete", 20, { closeout: closeout() })
       ),
-      "tutor-uid",
+      "tutor-uid"
     );
     expect(() =>
       applyTutorLiveRunAction(
         completed,
         saveRequest(2, action("event-03", "note", 21, { note: "Too late" })),
-        "tutor-uid",
-      ),
+        "tutor-uid"
+      )
     ).toThrow(/immutable/i);
   });
 
@@ -415,16 +552,16 @@ describe("private tutor live-run state machine", () => {
     const run = applyTutorLiveRunAction(
       null,
       saveRequest(0, action("event-01", "start", 0, { stageId: "launch" })),
-      "tutor-uid",
+      "tutor-uid"
     );
     expect(() => parseTutorLiveRun({ ...run, status: "paused" })).toThrow(
-      /action history/i,
+      /action history/i
     );
-    expect(() => parseTutorLiveRun({ ...run, currentStageId: "returns" })).toThrow(
-      /action history/i,
-    );
+    expect(() =>
+      parseTutorLiveRun({ ...run, currentStageId: "returns" })
+    ).toThrow(/action history/i);
     expect(() => parseTutorLiveRun({ ...run, revision: 2 })).toThrow(
-      /number of saved actions/i,
+      /number of saved actions/i
     );
   });
 });

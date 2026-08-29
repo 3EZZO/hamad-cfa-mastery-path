@@ -16,7 +16,7 @@ describe("private tutor Firestore rule boundary", () => {
   it("protects playbook manifests and immutable chunks with the tutor role", () => {
     const playbooks = blockBetween(
       "match /programs/project-202/tutorPlaybooks/{playbookId}",
-      "match /programs/project-202/tutorRuns/{runId}",
+      "match /programs/project-202/tutorRuns/{runId}"
     );
 
     expect(playbooks).toContain("allow get: if activeProject202Role('tutor')");
@@ -29,7 +29,7 @@ describe("private tutor Firestore rule boundary", () => {
   it("allows only tutor live-run access and enforces one meaningful appended event", () => {
     const runs = blockBetween(
       "match /programs/project-202/tutorRuns/{runId}",
-      "match /{document=**}",
+      "match /{document=**}"
     );
 
     expect(runs).toContain("allow get: if activeProject202Role('tutor')");
@@ -38,16 +38,20 @@ describe("private tutor Firestore rule boundary", () => {
     expect(runs).toContain("allow delete: if activeProject202Role('tutor')");
     expect(runs).not.toContain("activeProject202Role('student')");
     expect(rules).toContain(
-      "request.resource.data.events.size() == resource.data.events.size() + 1",
+      "request.resource.data.events.size() == resource.data.events.size() + 1"
     );
     expect(rules).toContain("event.type != 'start'");
     expect(rules).toContain("event.result != 'repair'");
+    expect(rules).toContain("resource.data.status in ['running', 'paused']");
+    expect(rules).toContain(
+      "request.resource.data.status == resource.data.status"
+    );
     expect(rules).not.toContain("!(event.result in ['partial', 'repair'])");
   });
 
   it("keeps a final deny-all rule for anonymous and unrecognized paths", () => {
     expect(rules).toMatch(
-      /match \/\{document=\*\*\}[\s\S]*allow read, write: if false;/,
+      /match \/\{document=\*\*\}[\s\S]*allow read, write: if false;/
     );
   });
 });

@@ -38,8 +38,7 @@ export const TUTOR_PLAYBOOK_CARD_KINDS = [
   "note",
 ] as const;
 
-export type TutorPlaybookCardKind =
-  (typeof TUTOR_PLAYBOOK_CARD_KINDS)[number];
+export type TutorPlaybookCardKind = (typeof TUTOR_PLAYBOOK_CARD_KINDS)[number];
 
 export const TUTOR_ERROR_CODES = [
   "D",
@@ -164,11 +163,7 @@ export const TUTOR_LIVE_RUN_ACTION_TYPES = [
 export type TutorLiveRunActionType =
   (typeof TUTOR_LIVE_RUN_ACTION_TYPES)[number];
 
-export type TutorAssessmentResult =
-  | "correct"
-  | "partial"
-  | "repair"
-  | "parked";
+export type TutorAssessmentResult = "correct" | "partial" | "repair" | "parked";
 
 export type TutorMasteryDecision = "green" | "amber" | "red";
 
@@ -260,9 +255,9 @@ function record(value: unknown, path: string): Record<string, unknown> {
 function onlyKeys(
   value: Record<string, unknown>,
   allowed: readonly string[],
-  path: string,
+  path: string
 ): void {
-  const unexpected = Object.keys(value).filter((key) => !allowed.includes(key));
+  const unexpected = Object.keys(value).filter(key => !allowed.includes(key));
   if (unexpected.length) {
     fail(path, `contains unsupported fields: ${unexpected.join(", ")}`);
   }
@@ -271,7 +266,7 @@ function onlyKeys(
 function requiredString(
   value: unknown,
   path: string,
-  maxLength: number,
+  maxLength: number
 ): string {
   if (typeof value !== "string") fail(path, "must be a string");
   const normalized = value.trim();
@@ -285,7 +280,7 @@ function requiredString(
 function optionalString(
   value: unknown,
   path: string,
-  maxLength: number,
+  maxLength: number
 ): string {
   if (value === undefined) return "";
   if (typeof value !== "string") fail(path, "must be a string");
@@ -298,7 +293,10 @@ function optionalString(
 function identifier(value: unknown, path: string): string {
   const normalized = requiredString(value, path, 80).toLowerCase();
   if (!ID_PATTERN.test(normalized)) {
-    fail(path, "must use lowercase letters, numbers, dots, underscores, or hyphens");
+    fail(
+      path,
+      "must use lowercase letters, numbers, dots, underscores, or hyphens"
+    );
   }
   return normalized;
 }
@@ -327,9 +325,13 @@ function integer(
   value: unknown,
   path: string,
   min: number,
-  max: number,
+  max: number
 ): number {
-  if (!Number.isSafeInteger(value) || Number(value) < min || Number(value) > max) {
+  if (
+    !Number.isSafeInteger(value) ||
+    Number(value) < min ||
+    Number(value) > max
+  ) {
     fail(path, `must be an integer between ${min} and ${max}`);
   }
   return Number(value);
@@ -353,7 +355,7 @@ function stringList(
   path: string,
   maximumItems: number,
   maximumItemLength: number,
-  defaultValue: string[] = [],
+  defaultValue: string[] = []
 ): string[] {
   if (value === undefined) return [...defaultValue];
   if (!Array.isArray(value)) fail(path, "must be a list");
@@ -361,7 +363,7 @@ function stringList(
     fail(path, `must contain at most ${maximumItems} items`);
   }
   return value.map((item, index) =>
-    requiredString(item, `${path}[${index}]`, maximumItemLength),
+    requiredString(item, `${path}[${index}]`, maximumItemLength)
   );
 }
 
@@ -374,7 +376,7 @@ function unique(values: readonly string[], path: string): void {
 function enumValue<T extends string>(
   value: unknown,
   allowed: readonly T[],
-  path: string,
+  path: string
 ): T {
   if (typeof value !== "string" || !allowed.includes(value as T)) {
     fail(path, `must be one of: ${allowed.join(", ")}`);
@@ -395,17 +397,17 @@ function canonicalTutorContentValue(value: unknown, path = "content"): unknown {
   }
   if (Array.isArray(value)) {
     return value.map((item, index) =>
-      canonicalTutorContentValue(item, `${path}[${index}]`),
+      canonicalTutorContentValue(item, `${path}[${index}]`)
     );
   }
   if (isRecord(value)) {
     return Object.fromEntries(
       Object.keys(value)
         .sort()
-        .map((key) => [
+        .map(key => [
           key,
           canonicalTutorContentValue(value[key], `${path}.${key}`),
-        ]),
+        ])
     );
   }
   fail(path, `contains unsupported ${typeof value} data`);
@@ -421,20 +423,20 @@ async function sha256CanonicalTutorContent(value: unknown): Promise<string> {
   const subtle = globalThis.crypto?.subtle;
   if (!subtle) {
     throw new TutorContentValidationError(
-      "SHA-256 verification is unavailable in this browser.",
+      "SHA-256 verification is unavailable in this browser."
     );
   }
   const digest = await subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(canonicalTutorContentJson(value)),
+    new TextEncoder().encode(canonicalTutorContentJson(value))
   );
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
+  return Array.from(new Uint8Array(digest), byte =>
+    byte.toString(16).padStart(2, "0")
   ).join("");
 }
 
 export async function computeTutorPlaybookChunkContentHash(
-  chunk: TutorPlaybookChunkDraft,
+  chunk: TutorPlaybookChunkDraft
 ): Promise<string> {
   return sha256CanonicalTutorContent({
     schemaVersion: chunk.schemaVersion,
@@ -448,11 +450,11 @@ export async function computeTutorPlaybookChunkContentHash(
 
 export async function computeTutorPlaybookManifestContentHash(
   manifest: TutorPlaybookManifestDraft,
-  chunks: readonly TutorPlaybookChunkDraft[],
+  chunks: readonly TutorPlaybookChunkDraft[]
 ): Promise<string> {
   const chunkHashes = [...chunks]
     .sort((left, right) => left.order - right.order)
-    .map((chunk) => chunk.contentHash);
+    .map(chunk => chunk.contentHash);
   return sha256CanonicalTutorContent({
     schemaVersion: manifest.schemaVersion,
     id: manifest.id,
@@ -471,33 +473,43 @@ function parseRoute(value: unknown, path: string): TutorPlaybookRoute {
   onlyKeys(
     source,
     ["id", "label", "totalMinutes", "stageIds", "cardIdsByStage"],
-    path,
+    path
   );
   const stageIds = stringList(source.stageIds, `${path}.stageIds`, 100, 80).map(
-    (stageId, index) => identifier(stageId, `${path}.stageIds[${index}]`),
+    (stageId, index) => identifier(stageId, `${path}.stageIds[${index}]`)
   );
-  if (!stageIds.length) fail(`${path}.stageIds`, "must contain at least one stage");
+  if (!stageIds.length)
+    fail(`${path}.stageIds`, "must contain at least one stage");
   unique(stageIds, `${path}.stageIds`);
   let cardIdsByStage: Record<string, string[]> | undefined;
   if (source.cardIdsByStage !== undefined) {
-    const cardsByStage = record(source.cardIdsByStage, `${path}.cardIdsByStage`);
+    const cardsByStage = record(
+      source.cardIdsByStage,
+      `${path}.cardIdsByStage`
+    );
     cardIdsByStage = Object.fromEntries(
       Object.entries(cardsByStage).map(([stageId, value]) => {
-        const parsedStageId = identifier(stageId, `${path}.cardIdsByStage.${stageId}`);
+        const parsedStageId = identifier(
+          stageId,
+          `${path}.cardIdsByStage.${stageId}`
+        );
         const cardIds = stringList(
           value,
           `${path}.cardIdsByStage.${stageId}`,
           400,
-          80,
+          80
         ).map((cardId, index) =>
-          identifier(cardId, `${path}.cardIdsByStage.${stageId}[${index}]`),
+          identifier(cardId, `${path}.cardIdsByStage.${stageId}[${index}]`)
         );
         if (!cardIds.length) {
-          fail(`${path}.cardIdsByStage.${stageId}`, "must contain at least one card");
+          fail(
+            `${path}.cardIdsByStage.${stageId}`,
+            "must contain at least one card"
+          );
         }
         unique(cardIds, `${path}.cardIdsByStage.${stageId}`);
         return [parsedStageId, cardIds];
-      }),
+      })
     );
   }
   return {
@@ -512,9 +524,10 @@ function parseRoute(value: unknown, path: string): TutorPlaybookRoute {
 function parseErrorTags(value: unknown, path: string): TutorErrorCode[] {
   if (value === undefined) return [];
   if (!Array.isArray(value)) fail(path, "must be a list");
-  if (value.length > TUTOR_ERROR_CODES.length) fail(path, "contains too many codes");
+  if (value.length > TUTOR_ERROR_CODES.length)
+    fail(path, "contains too many codes");
   const result = value.map((item, index) =>
-    enumValue(item, TUTOR_ERROR_CODES, `${path}[${index}]`),
+    enumValue(item, TUTOR_ERROR_CODES, `${path}[${index}]`)
   );
   unique(result, path);
   return result;
@@ -543,7 +556,7 @@ function parseCard(value: unknown, path: string): TutorPlaybookCard {
       "expectedSeconds",
       "difficulty",
     ],
-    path,
+    path
   );
 
   const card: TutorPlaybookCard = {
@@ -564,7 +577,7 @@ function parseCard(value: unknown, path: string): TutorPlaybookCard {
       source.masteryEvidence,
       `${path}.masteryEvidence`,
       30,
-      4_000,
+      4_000
     ),
     errorTags: parseErrorTags(source.errorTags, `${path}.errorTags`),
     expectedSeconds:
@@ -589,7 +602,7 @@ function parseCard(value: unknown, path: string): TutorPlaybookCard {
       card.listenFor.length ||
       card.ifWrong.length ||
       card.hints.length ||
-      card.masteryEvidence.length,
+      card.masteryEvidence.length
   );
   if (!hasContent) fail(path, "must contain tutor-facing content");
   if (card.kind === "question" && (!card.prompt || !card.answer)) {
@@ -601,17 +614,15 @@ function parseCard(value: unknown, path: string): TutorPlaybookCard {
   return card;
 }
 
-function parseDurations(
-  value: unknown,
-  path: string,
-): Record<string, number> {
+function parseDurations(value: unknown, path: string): Record<string, number> {
   const source = record(value, path);
-  if (Object.keys(source).length > 4) fail(path, "supports at most four routes");
+  if (Object.keys(source).length > 4)
+    fail(path, "supports at most four routes");
   return Object.fromEntries(
     Object.entries(source).map(([key, duration]) => [
       identifier(key, `${path}.${key}`),
       integer(duration, `${path}.${key}`, 0, 360),
-    ]),
+    ])
   );
 }
 
@@ -620,7 +631,7 @@ function parseStage(value: unknown, path: string): TutorPlaybookStage {
   onlyKeys(
     source,
     ["id", "title", "objective", "durationMinutesByRoute", "cards"],
-    path,
+    path
   );
   if (!Array.isArray(source.cards) || !source.cards.length) {
     fail(`${path}.cards`, "must contain at least one card");
@@ -629,11 +640,11 @@ function parseStage(value: unknown, path: string): TutorPlaybookStage {
     fail(`${path}.cards`, "must contain at most 250 cards");
   }
   const cards = source.cards.map((card, index) =>
-    parseCard(card, `${path}.cards[${index}]`),
+    parseCard(card, `${path}.cards[${index}]`)
   );
   unique(
-    cards.map((card) => card.id),
-    `${path}.cards`,
+    cards.map(card => card.id),
+    `${path}.cards`
   );
   return {
     id: identifier(source.id, `${path}.id`),
@@ -641,7 +652,7 @@ function parseStage(value: unknown, path: string): TutorPlaybookStage {
     objective: requiredString(source.objective, `${path}.objective`, 2_000),
     durationMinutesByRoute: parseDurations(
       source.durationMinutesByRoute,
-      `${path}.durationMinutesByRoute`,
+      `${path}.durationMinutesByRoute`
     ),
     cards,
   };
@@ -649,7 +660,7 @@ function parseStage(value: unknown, path: string): TutorPlaybookStage {
 
 export function parseTutorPlaybookManifestDraft(
   value: unknown,
-  path = "manifest",
+  path = "manifest"
 ): TutorPlaybookManifestDraft {
   const source = record(value, path);
   onlyKeys(
@@ -665,36 +676,41 @@ export function parseTutorPlaybookManifestDraft(
       "routes",
       "chunkIds",
     ],
-    path,
+    path
   );
   if (source.schemaVersion !== TUTOR_PLAYBOOK_SCHEMA_VERSION) {
-    fail(`${path}.schemaVersion`, `must equal ${TUTOR_PLAYBOOK_SCHEMA_VERSION}`);
+    fail(
+      `${path}.schemaVersion`,
+      `must equal ${TUTOR_PLAYBOOK_SCHEMA_VERSION}`
+    );
   }
-  if (!Array.isArray(source.routes) || !source.routes.length || source.routes.length > 4) {
+  if (
+    !Array.isArray(source.routes) ||
+    !source.routes.length ||
+    source.routes.length > 4
+  ) {
     fail(`${path}.routes`, "must contain between one and four routes");
   }
   const routes = source.routes.map((route, index) =>
-    parseRoute(route, `${path}.routes[${index}]`),
+    parseRoute(route, `${path}.routes[${index}]`)
   );
   unique(
-    routes.map((route) => route.id),
-    `${path}.routes`,
+    routes.map(route => route.id),
+    `${path}.routes`
   );
   const chunkIds = stringList(
     source.chunkIds,
     `${path}.chunkIds`,
     MAX_TUTOR_PLAYBOOK_CHUNKS,
-    80,
-  ).map((chunkId, index) =>
-    identifier(chunkId, `${path}.chunkIds[${index}]`),
-  );
+    80
+  ).map((chunkId, index) => identifier(chunkId, `${path}.chunkIds[${index}]`));
   if (!chunkIds.length) fail(`${path}.chunkIds`, "must not be empty");
   unique(chunkIds, `${path}.chunkIds`);
   const defaultRouteId = identifier(
     source.defaultRouteId,
-    `${path}.defaultRouteId`,
+    `${path}.defaultRouteId`
   );
-  if (!routes.some((route) => route.id === defaultRouteId)) {
+  if (!routes.some(route => route.id === defaultRouteId)) {
     fail(`${path}.defaultRouteId`, "must reference a declared route");
   }
   return {
@@ -704,7 +720,7 @@ export function parseTutorPlaybookManifestDraft(
       source.sessionNumber,
       `${path}.sessionNumber`,
       1,
-      MAX_SESSION_NUMBER,
+      MAX_SESSION_NUMBER
     ),
     title: requiredString(source.title, `${path}.title`, 240),
     version: identifier(source.version, `${path}.version`),
@@ -717,7 +733,7 @@ export function parseTutorPlaybookManifestDraft(
 
 export function parseTutorPlaybookChunkDraft(
   value: unknown,
-  path = "chunk",
+  path = "chunk"
 ): TutorPlaybookChunkDraft {
   if (approximateUtf8Bytes(value) > MAX_TUTOR_PLAYBOOK_CHUNK_BYTES) {
     fail(path, `exceeds the ${MAX_TUTOR_PLAYBOOK_CHUNK_BYTES}-byte safe limit`);
@@ -726,10 +742,13 @@ export function parseTutorPlaybookChunkDraft(
   onlyKeys(
     source,
     ["schemaVersion", "id", "order", "kind", "title", "contentHash", "stages"],
-    path,
+    path
   );
   if (source.schemaVersion !== TUTOR_PLAYBOOK_SCHEMA_VERSION) {
-    fail(`${path}.schemaVersion`, `must equal ${TUTOR_PLAYBOOK_SCHEMA_VERSION}`);
+    fail(
+      `${path}.schemaVersion`,
+      `must equal ${TUTOR_PLAYBOOK_SCHEMA_VERSION}`
+    );
   }
   if (!Array.isArray(source.stages) || !source.stages.length) {
     fail(`${path}.stages`, "must contain at least one stage");
@@ -738,16 +757,21 @@ export function parseTutorPlaybookChunkDraft(
     fail(`${path}.stages`, "must contain at most 50 stages");
   }
   const stages = source.stages.map((stage, index) =>
-    parseStage(stage, `${path}.stages[${index}]`),
+    parseStage(stage, `${path}.stages[${index}]`)
   );
   unique(
-    stages.map((stage) => stage.id),
-    `${path}.stages`,
+    stages.map(stage => stage.id),
+    `${path}.stages`
   );
   return {
     schemaVersion: TUTOR_PLAYBOOK_SCHEMA_VERSION,
     id: identifier(source.id, `${path}.id`),
-    order: integer(source.order, `${path}.order`, 0, MAX_TUTOR_PLAYBOOK_CHUNKS - 1),
+    order: integer(
+      source.order,
+      `${path}.order`,
+      0,
+      MAX_TUTOR_PLAYBOOK_CHUNKS - 1
+    ),
     kind: enumValue(source.kind, TUTOR_PLAYBOOK_CHUNK_KINDS, `${path}.kind`),
     title: requiredString(source.title, `${path}.title`, 240),
     contentHash: hash(source.contentHash, `${path}.contentHash`),
@@ -757,39 +781,44 @@ export function parseTutorPlaybookChunkDraft(
 
 function validatePackageRelationships(
   manifest: TutorPlaybookManifestDraft,
-  chunks: TutorPlaybookChunkDraft[],
+  chunks: TutorPlaybookChunkDraft[]
 ): void {
   if (chunks.length !== manifest.chunkIds.length) {
     fail("chunks", "must match the manifest chunkIds exactly");
   }
-  const orderedChunks = [...chunks].sort((left, right) => left.order - right.order);
+  const orderedChunks = [...chunks].sort(
+    (left, right) => left.order - right.order
+  );
   orderedChunks.forEach((chunk, index) => {
-    if (chunk.order !== index) fail(`chunks[${index}].order`, "must be contiguous from zero");
+    if (chunk.order !== index)
+      fail(`chunks[${index}].order`, "must be contiguous from zero");
     if (chunk.id !== manifest.chunkIds[index]) {
       fail(`manifest.chunkIds[${index}]`, "must match chunk order and ID");
     }
   });
   unique(
-    chunks.map((chunk) => chunk.id),
-    "chunks",
+    chunks.map(chunk => chunk.id),
+    "chunks"
   );
 
-  const allStages = orderedChunks.flatMap((chunk) => chunk.stages);
+  const allStages = orderedChunks.flatMap(chunk => chunk.stages);
   unique(
-    allStages.map((stage) => stage.id),
-    "chunks.stages",
+    allStages.map(stage => stage.id),
+    "chunks.stages"
   );
-  const stageById = new Map(allStages.map((stage) => [stage.id, stage]));
-  const allCardIds = allStages.flatMap((stage) => stage.cards.map((card) => card.id));
+  const stageById = new Map(allStages.map(stage => [stage.id, stage]));
+  const allCardIds = allStages.flatMap(stage =>
+    stage.cards.map(card => card.id)
+  );
   unique(allCardIds, "chunks.stages.cards");
 
-  const routeIds = new Set(manifest.routes.map((route) => route.id));
+  const routeIds = new Set(manifest.routes.map(route => route.id));
   for (const stage of allStages) {
     for (const routeId of Object.keys(stage.durationMinutesByRoute)) {
       if (!routeIds.has(routeId)) {
         fail(
           `stage.${stage.id}.durationMinutesByRoute.${routeId}`,
-          "references an undeclared route",
+          "references an undeclared route"
         );
       }
     }
@@ -802,22 +831,23 @@ function validatePackageRelationships(
         if (!route.stageIds.includes(stageId)) {
           fail(
             `route.${route.id}.cardIdsByStage.${stageId}`,
-            "references a stage that is not in this route",
+            "references a stage that is not in this route"
           );
         }
       }
     }
     for (const stageId of route.stageIds) {
       const stage = stageById.get(stageId);
-      if (!stage) fail(`route.${route.id}`, `references missing stage ${stageId}`);
+      if (!stage)
+        fail(`route.${route.id}`, `references missing stage ${stageId}`);
       const selectedCardIds = route.cardIdsByStage?.[stageId];
       if (selectedCardIds) {
-        const stageCardIds = new Set(stage.cards.map((card) => card.id));
+        const stageCardIds = new Set(stage.cards.map(card => card.id));
         for (const cardId of selectedCardIds) {
           if (!stageCardIds.has(cardId)) {
             fail(
               `route.${route.id}.cardIdsByStage.${stageId}`,
-              `references missing card ${cardId}`,
+              `references missing card ${cardId}`
             );
           }
         }
@@ -826,7 +856,7 @@ function validatePackageRelationships(
       if (duration === undefined) {
         fail(
           `stage.${stageId}.durationMinutesByRoute`,
-          `is missing duration for route ${route.id}`,
+          `is missing duration for route ${route.id}`
         );
       }
       total += duration;
@@ -834,21 +864,21 @@ function validatePackageRelationships(
     if (total !== route.totalMinutes) {
       fail(
         `route.${route.id}.totalMinutes`,
-        `declares ${route.totalMinutes}, but its stages total ${total}`,
+        `declares ${route.totalMinutes}, but its stages total ${total}`
       );
     }
   }
 }
 
 export function parseTutorPlaybookPackageDraft(
-  value: unknown,
+  value: unknown
 ): TutorPlaybookPackageDraft {
   const source = record(value, "playbook");
   onlyKeys(source, ["manifest", "chunks"], "playbook");
   if (!Array.isArray(source.chunks)) fail("playbook.chunks", "must be a list");
   const manifest = parseTutorPlaybookManifestDraft(source.manifest);
   const chunks = source.chunks.map((chunk, index) =>
-    parseTutorPlaybookChunkDraft(chunk, `chunks[${index}]`),
+    parseTutorPlaybookChunkDraft(chunk, `chunks[${index}]`)
   );
   validatePackageRelationships(manifest, chunks);
   return {
@@ -862,21 +892,27 @@ export function parseTutorPlaybookPackageDraft(
  * Call this before the first Firestore write and after loading protected data.
  */
 export async function verifyTutorPlaybookPackageIntegrity(
-  value: unknown,
+  value: unknown
 ): Promise<TutorPlaybookPackageDraft> {
   const parsed = parseTutorPlaybookPackageDraft(value);
   for (const chunk of parsed.chunks) {
     const computed = await computeTutorPlaybookChunkContentHash(chunk);
     if (computed !== chunk.contentHash) {
-      fail(`chunk.${chunk.id}.contentHash`, "does not match the chunk contents");
+      fail(
+        `chunk.${chunk.id}.contentHash`,
+        "does not match the chunk contents"
+      );
     }
   }
   const computedManifestHash = await computeTutorPlaybookManifestContentHash(
     parsed.manifest,
-    parsed.chunks,
+    parsed.chunks
   );
   if (computedManifestHash !== parsed.manifest.contentHash) {
-    fail("manifest.contentHash", "does not match the versioned package contents");
+    fail(
+      "manifest.contentHash",
+      "does not match the versioned package contents"
+    );
   }
   return parsed;
 }
@@ -884,7 +920,7 @@ export async function verifyTutorPlaybookPackageIntegrity(
 export function buildTutorPlaybookChunkStorageId(
   playbookId: string,
   version: string,
-  chunkId: string,
+  chunkId: string
 ): string {
   const safePlaybookId = identifier(playbookId, "playbookId");
   const safeVersion = identifier(version, "version");
@@ -893,7 +929,7 @@ export function buildTutorPlaybookChunkStorageId(
 }
 
 export function parseTutorPlaybookManifest(
-  value: unknown,
+  value: unknown
 ): TutorPlaybookManifest {
   const source = record(value, "manifest");
   onlyKeys(
@@ -912,7 +948,7 @@ export function parseTutorPlaybookManifest(
       "publishedBy",
       "publishedAtClient",
     ],
-    "manifest",
+    "manifest"
   );
   const draft = parseTutorPlaybookManifestDraft({
     schemaVersion: source.schemaVersion,
@@ -928,10 +964,14 @@ export function parseTutorPlaybookManifest(
   return {
     ...draft,
     revision: integer(source.revision, "manifest.revision", 1, 1_000_000),
-    publishedBy: requiredString(source.publishedBy, "manifest.publishedBy", 128),
+    publishedBy: requiredString(
+      source.publishedBy,
+      "manifest.publishedBy",
+      128
+    ),
     publishedAtClient: isoTimestamp(
       source.publishedAtClient,
-      "manifest.publishedAtClient",
+      "manifest.publishedAtClient"
     ),
   };
 }
@@ -957,7 +997,7 @@ export function parseTutorPlaybookChunk(value: unknown): TutorPlaybookChunk {
       "publishedBy",
       "publishedAtClient",
     ],
-    "chunk",
+    "chunk"
   );
   const draft = parseTutorPlaybookChunkDraft({
     schemaVersion: source.schemaVersion,
@@ -974,7 +1014,7 @@ export function parseTutorPlaybookChunk(value: unknown): TutorPlaybookChunk {
   const expectedStorageId = buildTutorPlaybookChunkStorageId(
     playbookId,
     version,
-    draft.id,
+    draft.id
   );
   if (storageId !== expectedStorageId) {
     fail("chunk.storageId", "does not match playbook, version, and chunk IDs");
@@ -987,31 +1027,37 @@ export function parseTutorPlaybookChunk(value: unknown): TutorPlaybookChunk {
     publishedBy: requiredString(source.publishedBy, "chunk.publishedBy", 128),
     publishedAtClient: isoTimestamp(
       source.publishedAtClient,
-      "chunk.publishedAtClient",
+      "chunk.publishedAtClient"
     ),
   };
 }
 
 export function validateTutorPlaybookPackage(
   manifest: TutorPlaybookManifest,
-  chunks: TutorPlaybookChunk[],
+  chunks: TutorPlaybookChunk[]
 ): TutorPlaybookPackage {
   const draft = tutorPlaybookPackageToDraft(manifest, chunks);
   chunks.forEach((chunk, index) => {
-    if (chunk.playbookId !== manifest.id || chunk.version !== manifest.version) {
-      fail(`chunks[${index}]`, "does not belong to the active manifest version");
+    if (
+      chunk.playbookId !== manifest.id ||
+      chunk.version !== manifest.version
+    ) {
+      fail(
+        `chunks[${index}]`,
+        "does not belong to the active manifest version"
+      );
     }
   });
-  const chunkById = new Map(chunks.map((chunk) => [chunk.id, chunk]));
+  const chunkById = new Map(chunks.map(chunk => [chunk.id, chunk]));
   return {
     manifest,
-    chunks: draft.chunks.map((chunk) => chunkById.get(chunk.id)!),
+    chunks: draft.chunks.map(chunk => chunkById.get(chunk.id)!),
   };
 }
 
 export function tutorPlaybookPackageToDraft(
   manifest: TutorPlaybookManifest,
-  chunks: readonly TutorPlaybookChunk[],
+  chunks: readonly TutorPlaybookChunk[]
 ): TutorPlaybookPackageDraft {
   return parseTutorPlaybookPackageDraft({
     manifest: {
@@ -1025,7 +1071,7 @@ export function tutorPlaybookPackageToDraft(
       routes: manifest.routes,
       chunkIds: manifest.chunkIds,
     },
-    chunks: chunks.map((chunk) => ({
+    chunks: chunks.map(chunk => ({
       schemaVersion: chunk.schemaVersion,
       id: chunk.id,
       order: chunk.order,
@@ -1039,7 +1085,7 @@ export function tutorPlaybookPackageToDraft(
 
 export function parseTutorLiveRunCloseout(
   value: unknown,
-  path = "closeout",
+  path = "closeout"
 ): TutorLiveRunCloseout {
   const source = record(value, path);
   onlyKeys(
@@ -1052,7 +1098,7 @@ export function parseTutorLiveRunCloseout(
       "delayedRetest",
       "privateTutorNote",
     ],
-    path,
+    path
   );
   if (!Array.isArray(source.mastery) || !source.mastery.length) {
     fail(`${path}.mastery`, "must contain at least one stage decision");
@@ -1069,44 +1115,40 @@ export function parseTutorLiveRunCloseout(
       stageTitle: requiredString(
         decision.stageTitle,
         `${itemPath}.stageTitle`,
-        200,
+        200
       ),
       decision: enumValue(
         decision.decision,
         ["green", "amber", "red"] as const,
-        `${itemPath}.decision`,
+        `${itemPath}.decision`
       ),
     };
   });
   unique(
-    mastery.map((item) => item.stageId),
-    `${path}.mastery`,
+    mastery.map(item => item.stageId),
+    `${path}.mastery`
   );
   return {
     mastery,
     outcome: requiredString(source.outcome, `${path}.outcome`, 2_000),
-    nextAction: requiredString(
-      source.nextAction,
-      `${path}.nextAction`,
-      2_000,
-    ),
+    nextAction: requiredString(source.nextAction, `${path}.nextAction`, 2_000),
     homework: requiredString(source.homework, `${path}.homework`, 4_000),
     delayedRetest: requiredString(
       source.delayedRetest,
       `${path}.delayedRetest`,
-      4_000,
+      4_000
     ),
     privateTutorNote: optionalString(
       source.privateTutorNote,
       `${path}.privateTutorNote`,
-      4_000,
+      4_000
     ),
   };
 }
 
 export function parseTutorLiveRunAction(
   value: unknown,
-  path = "action",
+  path = "action"
 ): TutorLiveRunAction {
   const source = record(value, path);
   onlyKeys(
@@ -1124,9 +1166,13 @@ export function parseTutorLiveRunAction(
       "note",
       "closeout",
     ],
-    path,
+    path
   );
-  const type = enumValue(source.type, TUTOR_LIVE_RUN_ACTION_TYPES, `${path}.type`);
+  const type = enumValue(
+    source.type,
+    TUTOR_LIVE_RUN_ACTION_TYPES,
+    `${path}.type`
+  );
   const action: TutorLiveRunAction = {
     id: identifier(source.id, `${path}.id`),
     type,
@@ -1135,7 +1181,7 @@ export function parseTutorLiveRunAction(
       source.elapsedSeconds,
       `${path}.elapsedSeconds`,
       0,
-      MAX_SESSION_SECONDS,
+      MAX_SESSION_SECONDS
     ),
   };
   if (source.stageId !== undefined) {
@@ -1143,22 +1189,19 @@ export function parseTutorLiveRunAction(
   }
   if (source.cardId !== undefined) {
     action.cardId =
-      source.cardId === null ? null : identifier(source.cardId, `${path}.cardId`);
+      source.cardId === null
+        ? null
+        : identifier(source.cardId, `${path}.cardId`);
   }
   if (source.result !== undefined) {
     action.result = enumValue(
       source.result,
       ["correct", "partial", "repair", "parked"] as const,
-      `${path}.result`,
+      `${path}.result`
     );
   }
   if (source.confidence !== undefined) {
-    action.confidence = integer(
-      source.confidence,
-      `${path}.confidence`,
-      1,
-      5,
-    );
+    action.confidence = integer(source.confidence, `${path}.confidence`, 1, 5);
   }
   if (source.errorCodes !== undefined) {
     action.errorCodes = parseErrorTags(source.errorCodes, `${path}.errorCodes`);
@@ -1169,7 +1212,7 @@ export function parseTutorLiveRunAction(
   if (source.closeout !== undefined) {
     action.closeout = parseTutorLiveRunCloseout(
       source.closeout,
-      `${path}.closeout`,
+      `${path}.closeout`
     );
   }
 
@@ -1225,7 +1268,7 @@ export function parseTutorLiveRunAction(
 }
 
 export function parseTutorLiveRunSaveRequest(
-  value: unknown,
+  value: unknown
 ): TutorLiveRunSaveRequest {
   const source = record(value, "saveRequest");
   onlyKeys(
@@ -1239,27 +1282,27 @@ export function parseTutorLiveRunSaveRequest(
       "expectedRevision",
       "action",
     ],
-    "saveRequest",
+    "saveRequest"
   );
   return {
     runId: identifier(source.runId, "saveRequest.runId"),
     playbookId: identifier(source.playbookId, "saveRequest.playbookId"),
     playbookVersion: identifier(
       source.playbookVersion,
-      "saveRequest.playbookVersion",
+      "saveRequest.playbookVersion"
     ),
     sessionNumber: integer(
       source.sessionNumber,
       "saveRequest.sessionNumber",
       1,
-      MAX_SESSION_NUMBER,
+      MAX_SESSION_NUMBER
     ),
     routeId: identifier(source.routeId, "saveRequest.routeId"),
     expectedRevision: integer(
       source.expectedRevision,
       "saveRequest.expectedRevision",
       0,
-      1_000_000,
+      1_000_000
     ),
     action: parseTutorLiveRunAction(source.action),
   };
@@ -1290,23 +1333,29 @@ export function parseTutorLiveRun(value: unknown): TutorLiveRun {
       "updatedBy",
       "updatedAtClient",
     ],
-    "liveRun",
+    "liveRun"
   );
   if (source.schemaVersion !== TUTOR_LIVE_RUN_SCHEMA_VERSION) {
-    fail("liveRun.schemaVersion", `must equal ${TUTOR_LIVE_RUN_SCHEMA_VERSION}`);
+    fail(
+      "liveRun.schemaVersion",
+      `must equal ${TUTOR_LIVE_RUN_SCHEMA_VERSION}`
+    );
   }
   if (!Array.isArray(source.events) || !source.events.length) {
     fail("liveRun.events", "must contain at least the start action");
   }
   if (source.events.length > MAX_TUTOR_LIVE_RUN_EVENTS) {
-    fail("liveRun.events", `must contain at most ${MAX_TUTOR_LIVE_RUN_EVENTS} events`);
+    fail(
+      "liveRun.events",
+      `must contain at most ${MAX_TUTOR_LIVE_RUN_EVENTS} events`
+    );
   }
   const events = source.events.map((event, index) =>
-    parseTutorLiveRunAction(event, `liveRun.events[${index}]`),
+    parseTutorLiveRunAction(event, `liveRun.events[${index}]`)
   );
   unique(
-    events.map((event) => event.id),
-    "liveRun.events",
+    events.map(event => event.id),
+    "liveRun.events"
   );
   if (events[0]?.type !== "start") {
     fail("liveRun.events[0]", "must be the start action");
@@ -1329,7 +1378,7 @@ export function parseTutorLiveRun(value: unknown): TutorLiveRun {
     source.elapsedSeconds,
     "liveRun.elapsedSeconds",
     0,
-    MAX_SESSION_SECONDS,
+    MAX_SESSION_SECONDS
   );
   if (events.at(-1)!.elapsedSeconds !== elapsedSeconds) {
     fail("liveRun.elapsedSeconds", "must match the latest meaningful action");
@@ -1337,14 +1386,20 @@ export function parseTutorLiveRun(value: unknown): TutorLiveRun {
   const status = enumValue(
     source.status,
     TUTOR_LIVE_RUN_STATUSES,
-    "liveRun.status",
+    "liveRun.status"
   );
   const endedAtClient = nullableTimestamp(
     source.endedAtClient,
-    "liveRun.endedAtClient",
+    "liveRun.endedAtClient"
   );
-  if ((status === "completed" || status === "abandoned") !== Boolean(endedAtClient)) {
-    fail("liveRun.endedAtClient", "must exist exactly when the run is terminal");
+  if (
+    (status === "completed" || status === "abandoned") !==
+    Boolean(endedAtClient)
+  ) {
+    fail(
+      "liveRun.endedAtClient",
+      "must exist exactly when the run is terminal"
+    );
   }
 
   let replayedStatus: TutorLiveRunStatus = "running";
@@ -1371,10 +1426,7 @@ export function parseTutorLiveRun(value: unknown): TutorLiveRun {
   if (source.updatedAtClient !== events.at(-1)!.atClient) {
     fail("liveRun.updatedAtClient", "must match the latest action");
   }
-  if (
-    endedAtClient !== null &&
-    endedAtClient !== events.at(-1)!.atClient
-  ) {
+  if (endedAtClient !== null && endedAtClient !== events.at(-1)!.atClient) {
     fail("liveRun.endedAtClient", "must match the terminal action");
   }
   if (source.revision !== events.length) {
@@ -1386,13 +1438,13 @@ export function parseTutorLiveRun(value: unknown): TutorLiveRun {
     playbookId: identifier(source.playbookId, "liveRun.playbookId"),
     playbookVersion: identifier(
       source.playbookVersion,
-      "liveRun.playbookVersion",
+      "liveRun.playbookVersion"
     ),
     sessionNumber: integer(
       source.sessionNumber,
       "liveRun.sessionNumber",
       1,
-      MAX_SESSION_NUMBER,
+      MAX_SESSION_NUMBER
     ),
     routeId: identifier(source.routeId, "liveRun.routeId"),
     status,
@@ -1404,7 +1456,7 @@ export function parseTutorLiveRun(value: unknown): TutorLiveRun {
     elapsedSeconds,
     startedAtClient: isoTimestamp(
       source.startedAtClient,
-      "liveRun.startedAtClient",
+      "liveRun.startedAtClient"
     ),
     endedAtClient,
     events,
@@ -1412,45 +1464,70 @@ export function parseTutorLiveRun(value: unknown): TutorLiveRun {
     updatedBy: requiredString(source.updatedBy, "liveRun.updatedBy", 128),
     updatedAtClient: isoTimestamp(
       source.updatedAtClient,
-      "liveRun.updatedAtClient",
+      "liveRun.updatedAtClient"
     ),
   };
 }
 
 function statusAfterAction(
   current: TutorLiveRunStatus,
-  action: TutorLiveRunActionType,
+  action: TutorLiveRunActionType
 ): TutorLiveRunStatus {
   if (current === "completed" || current === "abandoned") {
-    throw new TutorLiveRunConflictError("A completed or abandoned run is immutable.");
+    throw new TutorLiveRunConflictError(
+      "A completed or abandoned run is immutable."
+    );
   }
   if (action === "start") {
     throw new TutorLiveRunConflictError("A live run can be started only once.");
   }
   if (action === "pause") {
     if (current !== "running") {
-      throw new TutorLiveRunConflictError("Only a running session can be paused.");
+      throw new TutorLiveRunConflictError(
+        "Only a running session can be paused."
+      );
     }
     return "paused";
   }
   if (action === "resume") {
     if (current !== "paused") {
-      throw new TutorLiveRunConflictError("Only a paused session can be resumed.");
+      throw new TutorLiveRunConflictError(
+        "Only a paused session can be resumed."
+      );
     }
     return "running";
   }
   if (action === "complete") return "completed";
   if (action === "abandon") return "abandoned";
-  if (current === "paused" && action !== "note") {
-    throw new TutorLiveRunConflictError("Resume the session before recording that action.");
-  }
+  // Pausing stops the teaching clock; it must not make evidence capture or
+  // navigation invalid. A tutor may deliberately pause while discussing a
+  // difficult answer, then record the assessment/repair before resuming.
   return current;
+}
+
+/**
+ * Returns true when a retried control action would only restate the run's
+ * current state. The client uses this after fetching the latest cloud
+ * revision so harmless start/pause/resume/complete races are idempotent
+ * instead of becoming permanent sync conflicts.
+ */
+export function isTutorLiveRunActionSatisfied(
+  current: TutorLiveRun,
+  action: Pick<TutorLiveRunAction, "id" | "type">
+): boolean {
+  if (current.events.some(event => event.id === action.id)) return true;
+  if (action.type === "start") return true;
+  if (action.type === "pause") return current.status === "paused";
+  if (action.type === "resume") return current.status === "running";
+  if (action.type === "complete") return current.status === "completed";
+  if (action.type === "abandon") return current.status === "abandoned";
+  return false;
 }
 
 export function applyTutorLiveRunAction(
   currentValue: TutorLiveRun | null,
   requestValue: TutorLiveRunSaveRequest,
-  actorUid: string,
+  actorUid: string
 ): TutorLiveRun {
   const request = parseTutorLiveRunSaveRequest(requestValue);
   const actor = requiredString(actorUid, "actorUid", 128);
@@ -1458,10 +1535,14 @@ export function applyTutorLiveRunAction(
 
   if (!currentValue) {
     if (request.expectedRevision !== 0) {
-      throw new TutorLiveRunConflictError("A new run must expect revision zero.");
+      throw new TutorLiveRunConflictError(
+        "A new run must expect revision zero."
+      );
     }
     if (action.type !== "start") {
-      throw new TutorLiveRunConflictError("The first saved action must be start.");
+      throw new TutorLiveRunConflictError(
+        "The first saved action must be start."
+      );
     }
     return parseTutorLiveRun({
       schemaVersion: TUTOR_LIVE_RUN_SCHEMA_VERSION,
@@ -1486,7 +1567,7 @@ export function applyTutorLiveRunAction(
   const current = parseTutorLiveRun(currentValue);
   if (request.expectedRevision !== current.revision) {
     throw new TutorLiveRunConflictError(
-      `Expected revision ${request.expectedRevision}, but cloud revision is ${current.revision}.`,
+      `Expected revision ${request.expectedRevision}, but cloud revision is ${current.revision}.`
     );
   }
   if (
@@ -1496,13 +1577,17 @@ export function applyTutorLiveRunAction(
     request.sessionNumber !== current.sessionNumber ||
     request.routeId !== current.routeId
   ) {
-    throw new TutorLiveRunConflictError("Run identity and route cannot change after start.");
+    throw new TutorLiveRunConflictError(
+      "Run identity and route cannot change after start."
+    );
   }
-  if (current.events.some((event) => event.id === action.id)) {
+  if (current.events.some(event => event.id === action.id)) {
     throw new TutorLiveRunConflictError("That action has already been saved.");
   }
   if (current.events.length >= MAX_TUTOR_LIVE_RUN_EVENTS) {
-    throw new TutorLiveRunConflictError("The live run event limit has been reached.");
+    throw new TutorLiveRunConflictError(
+      "The live run event limit has been reached."
+    );
   }
   if (action.elapsedSeconds < current.elapsedSeconds) {
     throw new TutorLiveRunConflictError("Elapsed time cannot move backwards.");
