@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   adaptTutorPlaybookPackage,
+  isPreSessionRehearsal,
   LiveSessionConsole,
   sessionDeckKey,
   type ErrorCode,
@@ -19,6 +20,7 @@ import {
 import { getSessionTaskId, getWeekSessions, PLAN } from "../data/plan";
 import {
   CloudClientError,
+  deleteTutorLiveRun,
   getCloudErrorMessage,
   getTutorLiveRun,
   importTutorPlaybookPackage,
@@ -30,6 +32,7 @@ import {
 import {
   applyLiveSessionCloseout,
   buildLiveSessionPrivateNote,
+  removeLiveSessionCloseoutArtifacts,
 } from "../lib/liveSessionCloseout";
 import { effectiveSessionDate } from "../lib/schedule";
 import {
@@ -39,6 +42,7 @@ import {
   loadTutorPlaybookOffline,
   loadTutorRunOffline,
   removeTutorPlaybookOffline,
+  removeTutorRunOffline,
 } from "../lib/tutorOffline";
 import type {
   TutorLiveRun,
@@ -435,8 +439,8 @@ export default function TutorSessionWorkspace({
   const quarantinedSyncIssueRef = useRef("");
   const startQueuedRef = useRef(false);
 
-  const resetSyncScope = useCallback((nextScope: string) => {
-    if (activeScopeRef.current === nextScope) return;
+  const resetSyncScope = useCallback((nextScope: string, force = false) => {
+    if (!force && activeScopeRef.current === nextScope) return;
     activeScopeRef.current = nextScope;
     syncGenerationRef.current += 1;
     if (retryTimerRef.current !== null) {
@@ -1049,6 +1053,76 @@ export default function TutorSessionWorkspace({
     ]
   );
 
+  const discardPreSessionRehearsal = useCallback(
+    async (result: LiveSessionCloseoutResult) => {
+      if (
+        result.sessionId !== runId ||
+        !isPreSessionRehearsal(result.completedAt, sessionDate, "09:00")
+      ) {
+        throw new Error(
+          "Only a run completed before the scheduled session can be cleared here."
+        );
+      }
+
+      setSyncState("saving");
+      setSyncMessage("Clearing the rehearsal from cloud and device recovery...");
+      // A restart deliberately reuses the same deterministic run ID. Force a
+      // new queue generation so an old retry cannot race the delete.
+      resetSyncScope(runId, true);
+      try {
+        await deleteTutorLiveRun(runId);
+        await removeTutorRunOffline(userUid, runId);
+      } catch (error) {
+        const cloudError = mapCloudError(error);
+        setSyncState(navigator.onLine ? "error" : "offline");
+        setSyncMessage(
+          `${cloudError.message} The completed rehearsal remains available; retry when ready.`
+        );
+        throw cloudError;
+      }
+
+      updateTracker(current =>
+        removeLiveSessionCloseoutArtifacts({
+          tracker: current,
+          result,
+          taskId: sessionTaskId,
+        })
+      );
+
+      const privateNote = buildLiveSessionPrivateNote(result, sessionDate);
+      if (privateNote) {
+        try {
+          await updatePrivateTutorNotes(notes =>
+            notes.filter(note => note.id !== privateNote.id)
+          );
+        } catch (error) {
+          notify(
+            `The rehearsal reopened, but its private note needs manual removal: ${getCloudErrorMessage(error)}`,
+            "warning"
+          );
+        }
+      }
+
+      setInitialRun(null);
+      setWorkspaceEpoch(value => value + 1);
+      setSyncState("synced");
+      setSyncMessage("Fresh Session 01 launch is ready on this device.");
+      notify(
+        "Pre-session rehearsal cleared. Session 01 is ready to start fresh."
+      );
+    },
+    [
+      notify,
+      resetSyncScope,
+      runId,
+      sessionDate,
+      sessionTaskId,
+      updatePrivateTutorNotes,
+      updateTracker,
+      userUid,
+    ]
+  );
+
   const importPrivatePackage = useCallback(
     async (file: File | undefined) => {
       if (!file) return;
@@ -1119,6 +1193,7 @@ export default function TutorSessionWorkspace({
           replacingPlaybook={publishing}
           onRunChange={handleRunChange}
           onComplete={completeSession}
+          onDiscardRehearsal={discardPreSessionRehearsal}
           onExit={onExit}
         />
       )}

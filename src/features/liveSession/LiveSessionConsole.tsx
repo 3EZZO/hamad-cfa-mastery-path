@@ -4,6 +4,7 @@ import {
   CloudAlert,
   LogOut,
   RefreshCw,
+  RotateCcw,
   Settings2,
   ShieldCheck,
   Upload,
@@ -17,6 +18,7 @@ import {
   type ReactNode,
 } from "react";
 import { LiveSessionRunner } from "./LiveSessionRunner";
+import { isPreSessionRehearsal } from "./sessionLifecycle";
 import { sessionDeckKey } from "./sessionDeckModel";
 import { SessionCloseout } from "./SessionCloseout";
 import { SessionLaunch } from "./SessionLaunch";
@@ -234,6 +236,7 @@ function LiveSessionWorkspace({
   replacingPlaybook,
   onRunChange,
   onComplete,
+  onDiscardRehearsal,
   onExit,
 }: LiveSessionConsoleProps & { playbook: LiveSessionPlaybook }) {
   const initialRouteId = preferredRouteId(playbook, initialRun?.routeId);
@@ -258,6 +261,9 @@ function LiveSessionWorkspace({
     useState<SessionTimerSnapshot | null>(initialRun?.timer ?? null);
   const [completion, setCompletion] =
     useState<LiveSessionCloseoutResult | null>(initialRun?.closeout ?? null);
+  const [discardConfirming, setDiscardConfirming] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  const [discardError, setDiscardError] = useState("");
   const wasRunningBeforeCloseout = useRef(false);
   const selectedRoute =
     playbook.routes.find(route => route.id === routeId) ?? playbook.routes[0];
@@ -347,6 +353,30 @@ function LiveSessionWorkspace({
         : syncState === "offline"
           ? "Saved on this device · it will sync when the connection returns."
           : "Saved on this device · cloud sync needs a retry.";
+  const isRehearsal = Boolean(
+    completion &&
+      isPreSessionRehearsal(
+        completion.completedAt,
+        session.date,
+        session.startTime
+      )
+  );
+
+  const discardRehearsal = async () => {
+    if (!completion || !onDiscardRehearsal || discarding) return;
+    setDiscarding(true);
+    setDiscardError("");
+    try {
+      await onDiscardRehearsal(completion);
+    } catch (error) {
+      setDiscardError(
+        error instanceof Error
+          ? error.message
+          : "The rehearsal could not be cleared. Nothing was discarded."
+      );
+      setDiscarding(false);
+    }
+  };
 
   if (!selectedRoute || !playbook.routes.length) {
     return (
@@ -416,13 +446,19 @@ function LiveSessionWorkspace({
           <span className="ls-complete__mark">
             <CheckCircle2 size={34} />
           </span>
-          <p className="ls-eyebrow">Session safely recorded</p>
+          <p className="ls-eyebrow">
+            {isRehearsal
+              ? "Pre-session rehearsal recorded"
+              : "Session safely recorded"}
+          </p>
           <h1 id="ls-complete-title">
-            Session {String(session.number).padStart(2, "0")} is complete
+            Session {String(session.number).padStart(2, "0")}
+            {isRehearsal ? " rehearsal" : ""} is complete
           </h1>
           <p>
-            The live evidence and closeout decisions have been handed to the
-            tracker.
+            {isRehearsal
+              ? "This practice run finished before the scheduled session. Clear it to return to the launch screen with a clean official record."
+              : "The live evidence and closeout decisions have been handed to the tracker."}
           </p>
           {completionSummary && (
             <div className="ls-complete__summary">
@@ -462,10 +498,76 @@ function LiveSessionWorkspace({
               Answers and private tutor notes remain in the tutor workspace.
             </span>
           </div>
+          {isRehearsal && onDiscardRehearsal && (
+            <div className="ls-rehearsal-reset">
+              {!discardConfirming ? (
+                <button
+                  className="ls-button ls-button--primary ls-button--large"
+                  type="button"
+                  onClick={() => {
+                    setDiscardError("");
+                    setDiscardConfirming(true);
+                  }}
+                >
+                  <RotateCcw size={18} /> Discard rehearsal &amp; start fresh
+                </button>
+              ) : (
+                <div
+                  className="ls-rehearsal-reset__confirm"
+                  role="alertdialog"
+                  aria-labelledby="ls-rehearsal-reset-title"
+                  aria-describedby="ls-rehearsal-reset-copy"
+                >
+                  <strong id="ls-rehearsal-reset-title">
+                    Clear this rehearsal?
+                  </strong>
+                  <p id="ls-rehearsal-reset-copy">
+                    This removes this test run from the cloud and this device,
+                    plus only the progress records it generated. Your 120-deck
+                    Tutor Bible, schedule, and unrelated records stay
+                    unchanged.
+                  </p>
+                  {discardError && (
+                    <p className="ls-rehearsal-reset__error" role="alert">
+                      {discardError}
+                    </p>
+                  )}
+                  <div>
+                    <button
+                      className="ls-button ls-button--quiet"
+                      type="button"
+                      disabled={discarding}
+                      onClick={() => {
+                        setDiscardConfirming(false);
+                        setDiscardError("");
+                      }}
+                    >
+                      Keep rehearsal
+                    </button>
+                    <button
+                      className="ls-button ls-button--danger"
+                      type="button"
+                      disabled={discarding}
+                      onClick={() => void discardRehearsal()}
+                    >
+                      {discarding ? (
+                        <RefreshCw className="ls-spin" size={17} />
+                      ) : (
+                        <RotateCcw size={17} />
+                      )}
+                      {discarding
+                        ? "Clearing rehearsal..."
+                        : "Clear & return to launch"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div className="ls-complete__actions">
             {onExit && (
               <button
-                className="ls-button ls-button--primary ls-button--large"
+                className="ls-button ls-button--quiet ls-button--large"
                 type="button"
                 onClick={onExit}
               >

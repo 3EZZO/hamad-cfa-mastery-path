@@ -37,6 +37,12 @@ export interface ApplyLiveSessionCloseoutOptions {
   taskId: string;
 }
 
+export interface RemoveLiveSessionCloseoutOptions {
+  tracker: TrackerState;
+  result: LiveSessionCloseoutResult;
+  taskId: string;
+}
+
 function uniqueLatestEvidence(evidence: LiveSessionEvidence[]): LiveSessionEvidence[] {
   const latest = new Map<string, LiveSessionEvidence>();
   evidence.forEach((entry) => latest.set(entry.targetId, entry));
@@ -166,6 +172,57 @@ export function applyLiveSessionCloseout({
     sessionLogs: upsertById(tracker.sessionLogs, sessionLog),
     practiceLogs: nextPracticeLogs,
     errorEntries: nextErrors,
+  };
+}
+
+/**
+ * Removes only the deterministic shared records created by one pre-session
+ * rehearsal closeout. This is intentionally separate from the ordinary live
+ * run delete: clearing a Firestore run alone would leave false progress in the
+ * student tracker. Unrelated sessions, practice, errors, and mastery changes
+ * are preserved.
+ */
+export function removeLiveSessionCloseoutArtifacts({
+  tracker,
+  result,
+  taskId,
+}: RemoveLiveSessionCloseoutOptions): TrackerState {
+  const baseId = safeId(result.sessionId);
+  const sessionLogId = `${baseId}-session-log`;
+  const practiceLogId = `${baseId}-live-evidence`;
+  const errorIdPrefix = `${baseId}-error-`;
+  const derivedMastery = masteryScore(result);
+  const taskCompletions = { ...tracker.taskCompletions };
+  const sessionCompletionRequests = {
+    ...tracker.sessionCompletionRequests,
+  };
+  const sessionCompletionReviews = { ...tracker.sessionCompletionReviews };
+  const topicMastery = { ...tracker.topicMastery };
+
+  delete taskCompletions[taskId];
+  delete sessionCompletionRequests[taskId];
+  delete sessionCompletionReviews[taskId];
+  // Do not erase a mastery value that Mohamed changed after the rehearsal.
+  if (
+    derivedMastery > 0 &&
+    topicMastery["Quantitative Methods"] === derivedMastery
+  ) {
+    delete topicMastery["Quantitative Methods"];
+  }
+
+  return {
+    ...tracker,
+    taskCompletions,
+    sessionCompletionRequests,
+    sessionCompletionReviews,
+    topicMastery,
+    sessionLogs: tracker.sessionLogs.filter(item => item.id !== sessionLogId),
+    practiceLogs: tracker.practiceLogs.filter(
+      item => item.id !== practiceLogId
+    ),
+    errorEntries: tracker.errorEntries.filter(
+      item => !item.id.startsWith(errorIdPrefix)
+    ),
   };
 }
 

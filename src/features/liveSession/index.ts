@@ -16,6 +16,7 @@ export { SessionCloseout } from "./SessionCloseout";
 export type { SessionCloseoutProps } from "./SessionCloseout";
 export { SessionLaunch } from "./SessionLaunch";
 export type { SessionLaunchProps } from "./SessionLaunch";
+export { isPreSessionRehearsal } from "./sessionLifecycle";
 export {
   calculateSessionDeckProgress,
   flattenSessionDecks,
