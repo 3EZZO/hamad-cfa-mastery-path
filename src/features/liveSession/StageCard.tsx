@@ -31,7 +31,13 @@ export interface StageCardProps {
   onShowCandidate: () => void;
 }
 
-function TextList({ items, ordered = false }: { items?: string[]; ordered?: boolean }) {
+function TextList({
+  items,
+  ordered = false,
+}: {
+  items?: string[];
+  ordered?: boolean;
+}) {
   if (!items?.length) return null;
   const Tag = ordered ? "ol" : "ul";
   return (
@@ -64,7 +70,9 @@ function CommandBlock({
       className={`ls-command-block ls-command-block--${tone}${active ? " is-active" : ""}`}
     >
       <header>
-        <span className="ls-command-block__icon" aria-hidden="true">{icon}</span>
+        <span className="ls-command-block__icon" aria-hidden="true">
+          {icon}
+        </span>
         <span>{label}</span>
       </header>
       <div className="ls-command-block__body">{children}</div>
@@ -72,11 +80,17 @@ function CommandBlock({
   );
 }
 
-function bestExplanation(stage: LiveSessionStage, question?: LiveSessionQuestion): string {
+function bestExplanation(
+  stage: LiveSessionStage,
+  question?: LiveSessionQuestion
+): string {
   return question?.explanation || stage.explanation || stage.objective;
 }
 
-function bestScript(stage: LiveSessionStage, question?: LiveSessionQuestion): string[] {
+function bestScript(
+  stage: LiveSessionStage,
+  question?: LiveSessionQuestion
+): string[] {
   if (question?.teachingScript?.length) return question.teachingScript;
   if (stage.say?.length) return stage.say;
   return [bestExplanation(stage, question)];
@@ -100,7 +114,9 @@ export function StageCard({
   onFlowStepChange,
   onShowCandidate,
 }: StageCardProps) {
-  const listenFor = question?.listenFor?.length ? question.listenFor : stage.listenFor;
+  const listenFor = question?.listenFor?.length
+    ? question.listenFor
+    : stage.listenFor;
   const repair = question?.repair?.length ? question.repair : stage.repair;
   const write = question?.write?.length
     ? question.write
@@ -114,14 +130,16 @@ export function StageCard({
 
   const moveTo = (step: TeachingFlowStep) => {
     onFlowStepChange(step);
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
     window.setTimeout(
       () =>
         flowRefs[step].current?.scrollIntoView({
           behavior: reducedMotion ? "auto" : "smooth",
-          block: "start",
+          block: "nearest",
         }),
-      0,
+      0
     );
   };
 
@@ -133,13 +151,39 @@ export function StageCard({
           <h2 id="ls-stage-title">{question?.title || stage.title}</h2>
           <p>{stage.objective}</p>
         </div>
-        <div className="ls-item-meta" aria-label="Current teaching item details">
-          <span><Route size={15} /> Item {questionIndex + 1}</span>
-          {question?.kind && <span><BookOpen size={15} /> {question.kind}</span>}
-          {question?.tier && <span><Route size={15} /> {question.tier}</span>}
-          {complete && <span className="is-covered"><CheckCircle2 size={15} /> Covered</span>}
-          {question?.difficulty ? <span><Gauge size={15} /> Level {question.difficulty}/5</span> : null}
-          {question?.expectedSeconds ? <span><Clock3 size={15} /> {Math.ceil(question.expectedSeconds / 60)} min</span> : null}
+        <div
+          className="ls-item-meta"
+          aria-label="Current teaching item details"
+        >
+          <span>
+            <Route size={15} /> Item {questionIndex + 1}
+          </span>
+          {question?.kind && (
+            <span>
+              <BookOpen size={15} /> {question.kind}
+            </span>
+          )}
+          {question?.tier && (
+            <span>
+              <Route size={15} /> {question.tier}
+            </span>
+          )}
+          {complete && (
+            <span className="is-covered">
+              <CheckCircle2 size={15} /> Covered
+            </span>
+          )}
+          {question?.difficulty ? (
+            <span>
+              <Gauge size={15} /> Level {question.difficulty}/5
+            </span>
+          ) : null}
+          {question?.expectedSeconds ? (
+            <span>
+              <Clock3 size={15} /> {Math.ceil(question.expectedSeconds / 60)}{" "}
+              min
+            </span>
+          ) : null}
         </div>
       </header>
 
@@ -179,8 +223,13 @@ export function StageCard({
         >
           <p className="ls-command-lead">{bestExplanation(stage, question)}</p>
           <div className="ls-script-ribbon">
-            <span><Quote size={15} /> Teach it</span>
-            <TextList items={bestScript(stage, question)} ordered={bestScript(stage, question).length > 1} />
+            <span>
+              <Quote size={15} /> Teach it
+            </span>
+            <TextList
+              items={bestScript(stage, question)}
+              ordered={bestScript(stage, question).length > 1}
+            />
           </div>
           {question?.depthNotes ? (
             <div className="ls-depth-note">
@@ -191,12 +240,16 @@ export function StageCard({
           {question?.formulae?.length ? (
             <div className="ls-formula-stack">
               <span>Formula desk</span>
-              {question.formulae.map(formula => <code key={formula}>{formula}</code>)}
+              {question.formulae.map(formula => (
+                <code key={formula}>{formula}</code>
+              ))}
             </div>
           ) : null}
           {write?.length ? (
             <div className="ls-board-cue">
-              <span><PenLine size={15} /> Write or draw</span>
+              <span>
+                <PenLine size={15} /> Write or draw
+              </span>
               <TextList items={write} ordered />
             </div>
           ) : null}
@@ -231,10 +284,18 @@ export function StageCard({
                 <TextList items={question.hints} ordered />
               </div>
             ) : null}
-            <button className="ls-button ls-button--candidate" type="button" onClick={onShowCandidate}>
+            <button
+              className="ls-button ls-button--candidate"
+              type="button"
+              onClick={onShowCandidate}
+            >
               <MonitorUp size={17} /> Present to Hamad
             </button>
-            <button className="ls-flow-forward" type="button" onClick={() => moveTo("answer")}>
+            <button
+              className="ls-flow-forward"
+              type="button"
+              onClick={() => moveTo("answer")}
+            >
               Hamad has committed · go to Answer <ArrowRight size={16} />
             </button>
           </div>
@@ -250,8 +311,12 @@ export function StageCard({
           <p className="ls-model-response-cue">
             Say this naturally after Hamad commits to an answer.
           </p>
-          <blockquote className="ls-spoken-answer">{bestAnswer(question)}</blockquote>
-          {question?.answer && question.spokenAnswer && question.answer !== question.spokenAnswer ? (
+          <blockquote className="ls-spoken-answer">
+            {bestAnswer(question)}
+          </blockquote>
+          {question?.answer &&
+          question.spokenAnswer &&
+          question.answer !== question.spokenAnswer ? (
             <div className="ls-answer-detail">
               <span>Final answer</span>
               <p>{question.answer}</p>
@@ -278,7 +343,10 @@ export function StageCard({
           {question?.trap ? (
             <div className="ls-trap-callout">
               <AlertTriangle size={17} />
-              <p><span>Watch for</span>{question.trap}</p>
+              <p>
+                <span>Watch for</span>
+                {question.trap}
+              </p>
             </div>
           ) : null}
           {question?.followUp ? (
@@ -290,21 +358,34 @@ export function StageCard({
         </CommandBlock>
       </div>
 
-      {(listenFor?.length || repair?.length) ? (
-        <div className="ls-coaching-rail">
-          {listenFor?.length ? (
-            <section>
-              <header><CheckCircle2 size={17} /><span>Evidence to hear</span></header>
-              <TextList items={listenFor} />
-            </section>
-          ) : null}
-          {repair?.length ? (
-            <section className="is-repair">
-              <header><ClipboardCheck size={17} /><span>Repair if the logic breaks</span></header>
-              <TextList items={repair} ordered />
-            </section>
-          ) : null}
-        </div>
+      {listenFor?.length || repair?.length ? (
+        <details className="ls-coaching-drawer">
+          <summary>
+            <ClipboardCheck size={16} />
+            <strong>Coaching cues</strong>
+            <span>Evidence to hear and repair prompts</span>
+          </summary>
+          <div className="ls-coaching-rail">
+            {listenFor?.length ? (
+              <section>
+                <header>
+                  <CheckCircle2 size={17} />
+                  <span>Evidence to hear</span>
+                </header>
+                <TextList items={listenFor} />
+              </section>
+            ) : null}
+            {repair?.length ? (
+              <section className="is-repair">
+                <header>
+                  <ClipboardCheck size={17} />
+                  <span>Repair if the logic breaks</span>
+                </header>
+                <TextList items={repair} ordered />
+              </section>
+            ) : null}
+          </div>
+        </details>
       ) : null}
     </article>
   );

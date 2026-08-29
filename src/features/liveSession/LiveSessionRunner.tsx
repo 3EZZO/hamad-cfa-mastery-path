@@ -17,7 +17,14 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { CandidatePromptView } from "./CandidatePromptView";
 import { EvidenceRepairFlow } from "./EvidenceRepairFlow";
 import {
@@ -63,6 +70,7 @@ export interface LiveSessionRunnerProps {
   initialQuestionIndex?: number;
   syncState?: SyncPresentation;
   syncMessage?: string;
+  sessionTools?: ReactNode;
   onEvidence: (entry: LiveSessionEvidence) => void;
   onDeskCompletionChange: (deskKey: string, complete: boolean) => void;
   onPositionChange?: (stageIndex: number, questionIndex: number) => void;
@@ -196,6 +204,7 @@ export function LiveSessionRunner({
   initialQuestionIndex = 0,
   syncState = "synced",
   syncMessage,
+  sessionTools,
   onEvidence,
   onDeskCompletionChange,
   onPositionChange,
@@ -276,6 +285,17 @@ export function LiveSessionRunner({
     if (questionIndex !== safeQuestionIndex)
       setQuestionIndex(safeQuestionIndex);
   }, [questionIndex, safeQuestionIndex]);
+
+  useEffect(() => {
+    const closeDeckToolsOnOutsidePress = (event: PointerEvent) => {
+      const tools = toolsRef.current;
+      if (!tools?.open || tools.contains(event.target as Node)) return;
+      tools.open = false;
+    };
+    document.addEventListener("pointerdown", closeDeckToolsOnOutsidePress);
+    return () =>
+      document.removeEventListener("pointerdown", closeDeckToolsOnOutsidePress);
+  }, []);
 
   useEffect(() => {
     onPositionChange?.(stageIndex, safeQuestionIndex);
@@ -436,7 +456,7 @@ export function LiveSessionRunner({
       ).matches;
       panel?.scrollIntoView({
         behavior: reducedMotion ? "auto" : "smooth",
-        block: "start",
+        block: "nearest",
       });
       panel?.focus({ preventScroll: true });
     }, 0);
@@ -470,7 +490,7 @@ export function LiveSessionRunner({
             .querySelector<HTMLElement>(`.ls-command-block--${tone}`)
             ?.scrollIntoView({
               behavior: reducedMotion ? "auto" : "smooth",
-              block: "start",
+              block: "nearest",
             });
         }, 0);
       }
@@ -507,6 +527,11 @@ export function LiveSessionRunner({
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       if (candidateOpen || referenceOpen) return;
+      if (event.key === "Escape" && toolsRef.current?.open) {
+        event.preventDefault();
+        toolsRef.current.open = false;
+        return;
+      }
       if (event.key === "/" && !isInteractiveTarget(event.target)) {
         event.preventDefault();
         if (toolsRef.current) toolsRef.current.open = true;
@@ -893,6 +918,7 @@ export function LiveSessionRunner({
           >
             <Flag size={16} /> Complete
           </button>
+          {sessionTools}
         </div>
       </header>
 
@@ -979,191 +1005,199 @@ export function LiveSessionRunner({
             </span>
             <kbd>/</kbd>
           </summary>
-          <div className="ls-deck-tools__selectors">
-            <label className="ls-deck-select">
-              <Layers3 size={17} />
-              <span>Jump to deck</span>
-              <select
-                value={currentDeck?.key ?? ""}
-                onChange={event => {
-                  const selected = allDecks.find(
-                    deck => deck.key === event.target.value
-                  );
-                  if (selected) navigateToDeck(selected);
-                }}
-              >
-                {stages.map((item, itemStageIndex) => (
-                  <optgroup
-                    label={`${item.label} · ${item.title}`}
-                    key={item.id}
-                  >
-                    {allDecks
-                      .filter(deck => deck.stageIndex === itemStageIndex)
-                      .map(deck => (
-                        <option value={deck.key} key={deck.key}>
-                          {String(deck.globalNumber).padStart(3, "0")} ·{" "}
-                          {deck.question?.title ?? deck.stageTitle}
-                        </option>
-                      ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-            <label className="ls-deck-select ls-deck-select--queue">
-              <SlidersHorizontal size={17} />
-              <span>Next / previous queue</span>
-              <select
-                value={queueMode}
-                onChange={event =>
-                  setQueueMode(event.target.value as QueueMode)
-                }
-              >
-                <option value="core">Core session queue</option>
-                <option value="core-plus">Core + reinforcement</option>
-                <option value="stretch">Stretch proofs</option>
-                <option value="all">All curriculum decks</option>
-              </select>
-              <small>
-                {queueDecks.length} decks · {queueName(queueMode)}
-              </small>
-            </label>
-            <button
-              className="ls-button ls-button--quiet ls-next-open"
-              type="button"
-              disabled={!nextOpenDeck}
-              onClick={() => nextOpenDeck && navigateToDeck(nextOpenDeck)}
-            >
-              <CheckCircle2 size={16} />
-              {nextOpenDeck
-                ? `First open: ${nextOpenDeck.globalNumber}`
-                : "All decks covered"}
-            </button>
-          </div>
-
-          <section
-            className="ls-command-search"
-            aria-label="Find any playbook item"
-          >
-            <label>
-              <Search size={18} />
-              <span className="ls-sr-only">Search the private playbook</span>
-              <input
-                ref={searchRef}
-                type="search"
-                value={query}
-                placeholder="Find a concept, formula, question, or model response"
-                onChange={event => setQuery(event.target.value)}
-              />
-              {query ? (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  aria-label="Clear search"
-                >
-                  <X size={16} />
-                </button>
-              ) : (
-                <kbd>/</kbd>
-              )}
-            </label>
-            <label className="ls-filter-control">
-              <SlidersHorizontal size={17} />
-              <span className="ls-sr-only">Filter by evidence result</span>
-              <select
-                value={resultFilter}
-                onChange={event =>
-                  setResultFilter(event.target.value as ResultFilter)
-                }
-              >
-                <option value="all">All route desks</option>
-                <option value="uncovered">All uncovered decks</option>
-                <option value="core">Core decks</option>
-                <option value="reinforcement">Reinforcement decks</option>
-                <option value="stretch">Stretch decks</option>
-                <option value="open">Proof not recorded</option>
-                <option value="correct">Secure</option>
-                <option value="partial">Developing</option>
-                <option value="repair">Needs repair</option>
-                <option value="parked">Deferred</option>
-              </select>
-            </label>
-          </section>
-
-          {showSearchResults && (
-            <section
-              className="ls-search-results"
-              aria-live="polite"
-              aria-label="Playbook search results"
-            >
-              <header>
-                <div>
-                  <strong>{filteredResults.length} matches</strong>
-                  <span>Ordered by teaching route</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setResultFilter("all");
+          <div className="ls-deck-tools__popover">
+            <div className="ls-deck-tools__selectors">
+              <label className="ls-deck-select">
+                <Layers3 size={17} />
+                <span>Jump to deck</span>
+                <select
+                  value={currentDeck?.key ?? ""}
+                  onChange={event => {
+                    const selected = allDecks.find(
+                      deck => deck.key === event.target.value
+                    );
+                    if (selected) navigateToDeck(selected);
+                    if (toolsRef.current) toolsRef.current.open = false;
                   }}
                 >
-                  Clear
-                </button>
-              </header>
-              {filteredResults.length ? (
-                <div className="ls-search-results__list">
-                  {filteredResults.map(result => {
-                    const covered =
-                      completedDeskIds.includes(result.deck.key) ||
-                      Boolean(result.verdict);
-                    return (
-                      <button
-                        type="button"
-                        key={result.key}
-                        onClick={() => {
-                          changePosition(
-                            result.stageIndex,
-                            result.questionIndex
-                          );
-                          setQuery("");
-                          setResultFilter("all");
-                        }}
-                      >
-                        <span>
-                          Deck {result.deck.globalNumber} · {result.stage.label}{" "}
-                          · {result.question?.tier ?? "core"}
-                        </span>
-                        <strong>{resultLabel(result)}</strong>
-                        <small>
-                          {result.question?.prompt ?? result.stage.objective}
-                        </small>
-                        <em
-                          className={
-                            result.verdict
-                              ? `is-${result.verdict}`
-                              : covered
-                                ? "is-covered"
-                                : "is-open"
-                          }
-                        >
-                          {result.verdict ?? (covered ? "covered" : "open")}
-                        </em>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="ls-no-results">
-                  <Search size={23} />
-                  <strong>No teaching desk matches</strong>
-                  <p>
-                    Try fewer words, a formula fragment, or clear the proof
-                    filter.
-                  </p>
-                </div>
-              )}
+                  {stages.map((item, itemStageIndex) => (
+                    <optgroup
+                      label={`${item.label} · ${item.title}`}
+                      key={item.id}
+                    >
+                      {allDecks
+                        .filter(deck => deck.stageIndex === itemStageIndex)
+                        .map(deck => (
+                          <option value={deck.key} key={deck.key}>
+                            {String(deck.globalNumber).padStart(3, "0")} ·{" "}
+                            {deck.question?.title ?? deck.stageTitle}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+              <label className="ls-deck-select ls-deck-select--queue">
+                <SlidersHorizontal size={17} />
+                <span>Next / previous queue</span>
+                <select
+                  value={queueMode}
+                  onChange={event =>
+                    setQueueMode(event.target.value as QueueMode)
+                  }
+                >
+                  <option value="core">Core session queue</option>
+                  <option value="core-plus">Core + reinforcement</option>
+                  <option value="stretch">Stretch proofs</option>
+                  <option value="all">All curriculum decks</option>
+                </select>
+                <small>
+                  {queueDecks.length} decks · {queueName(queueMode)}
+                </small>
+              </label>
+              <button
+                className="ls-button ls-button--quiet ls-next-open"
+                type="button"
+                disabled={!nextOpenDeck}
+                onClick={() => {
+                  if (nextOpenDeck) navigateToDeck(nextOpenDeck);
+                  if (toolsRef.current) toolsRef.current.open = false;
+                }}
+              >
+                <CheckCircle2 size={16} />
+                {nextOpenDeck
+                  ? `First open: ${nextOpenDeck.globalNumber}`
+                  : "All decks covered"}
+              </button>
+            </div>
+
+            <section
+              className="ls-command-search"
+              aria-label="Find any playbook item"
+            >
+              <label>
+                <Search size={18} />
+                <span className="ls-sr-only">Search the private playbook</span>
+                <input
+                  ref={searchRef}
+                  type="search"
+                  value={query}
+                  placeholder="Find a concept, formula, question, or model response"
+                  onChange={event => setQuery(event.target.value)}
+                />
+                {query ? (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label="Clear search"
+                  >
+                    <X size={16} />
+                  </button>
+                ) : (
+                  <kbd>/</kbd>
+                )}
+              </label>
+              <label className="ls-filter-control">
+                <SlidersHorizontal size={17} />
+                <span className="ls-sr-only">Filter by evidence result</span>
+                <select
+                  value={resultFilter}
+                  onChange={event =>
+                    setResultFilter(event.target.value as ResultFilter)
+                  }
+                >
+                  <option value="all">All route desks</option>
+                  <option value="uncovered">All uncovered decks</option>
+                  <option value="core">Core decks</option>
+                  <option value="reinforcement">Reinforcement decks</option>
+                  <option value="stretch">Stretch decks</option>
+                  <option value="open">Proof not recorded</option>
+                  <option value="correct">Secure</option>
+                  <option value="partial">Developing</option>
+                  <option value="repair">Needs repair</option>
+                  <option value="parked">Deferred</option>
+                </select>
+              </label>
             </section>
-          )}
+
+            {showSearchResults && (
+              <section
+                className="ls-search-results"
+                aria-live="polite"
+                aria-label="Playbook search results"
+              >
+                <header>
+                  <div>
+                    <strong>{filteredResults.length} matches</strong>
+                    <span>Ordered by teaching route</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      setResultFilter("all");
+                    }}
+                  >
+                    Clear
+                  </button>
+                </header>
+                {filteredResults.length ? (
+                  <div className="ls-search-results__list">
+                    {filteredResults.map(result => {
+                      const covered =
+                        completedDeskIds.includes(result.deck.key) ||
+                        Boolean(result.verdict);
+                      return (
+                        <button
+                          type="button"
+                          key={result.key}
+                          onClick={() => {
+                            changePosition(
+                              result.stageIndex,
+                              result.questionIndex
+                            );
+                            setQuery("");
+                            setResultFilter("all");
+                            if (toolsRef.current) toolsRef.current.open = false;
+                          }}
+                        >
+                          <span>
+                            Deck {result.deck.globalNumber} ·{" "}
+                            {result.stage.label} ·{" "}
+                            {result.question?.tier ?? "core"}
+                          </span>
+                          <strong>{resultLabel(result)}</strong>
+                          <small>
+                            {result.question?.prompt ?? result.stage.objective}
+                          </small>
+                          <em
+                            className={
+                              result.verdict
+                                ? `is-${result.verdict}`
+                                : covered
+                                  ? "is-covered"
+                                  : "is-open"
+                            }
+                          >
+                            {result.verdict ?? (covered ? "covered" : "open")}
+                          </em>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="ls-no-results">
+                    <Search size={23} />
+                    <strong>No teaching desk matches</strong>
+                    <p>
+                      Try fewer words, a formula fragment, or clear the proof
+                      filter.
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
         </details>
       </section>
 
@@ -1210,7 +1244,7 @@ export function LiveSessionRunner({
       )}
 
       <div
-        className={`ls-runner__grid${linearPhase === "evidence" ? " is-evidence-step" : ""}`}
+        className={`ls-runner__grid${evidenceTarget ? " has-evidence-rail" : " is-teaching-deck"}${linearPhase === "evidence" ? " is-evidence-step" : ""}`}
       >
         <main className="ls-runner__main">
           <div className="ls-proof-progress">
@@ -1259,6 +1293,7 @@ export function LiveSessionRunner({
             </button>
           </nav>
           <StageCard
+            key={currentDeck?.key ?? `${stage.id}:${safeQuestionIndex}`}
             stage={stage}
             question={question}
             questionIndex={safeQuestionIndex}
@@ -1368,7 +1403,7 @@ export function LiveSessionRunner({
               .querySelector<HTMLElement>(".ls-command-block--answer")
               ?.scrollIntoView({
                 behavior: reducedMotion ? "auto" : "smooth",
-                block: "start",
+                block: "nearest",
               });
           }, 0);
         }}

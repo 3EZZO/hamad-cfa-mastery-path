@@ -1319,6 +1319,22 @@
   border-bottom: 1px solid var(--ls-line);
   background: #eef7ff;
 }
+.ls-deck-tools[open] {
+  z-index: 70;
+}
+.ls-deck-tools__popover {
+  position: absolute;
+  z-index: 70;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(980px, calc(100vw - 32px));
+  max-height: calc(100dvh - 132px);
+  overflow-y: auto;
+  border: 1px solid var(--ls-line-strong);
+  border-radius: 16px;
+  background: #f7fbfe;
+  box-shadow: 0 24px 60px rgba(7, 30, 51, 0.24);
+}
 .ls-deck-tools__selectors {
   display: grid;
   grid-template-columns: minmax(250px, 1.2fr) minmax(220px, 1fr) auto;
@@ -1468,6 +1484,16 @@
   border-radius: 0 0 18px 18px;
   background: var(--ls-white);
   box-shadow: 0 24px 60px rgba(7, 30, 51, 0.2);
+}
+.ls-deck-tools__popover .ls-search-results {
+  position: static;
+  max-height: min(52dvh, 520px);
+  margin: 0 10px 10px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.ls-deck-tools__popover .ls-search-results__list {
+  max-height: calc(min(52dvh, 520px) - 66px);
 }
 .ls-search-results > header {
   display: flex;
@@ -1735,6 +1761,7 @@
     var(--ls-shadow-soft);
 }
 .ls-stage-card {
+  position: relative;
   overflow: hidden;
   border: 1px solid var(--ls-line);
   border-radius: 18px;
@@ -2247,6 +2274,54 @@
   gap: 0;
   border-top: 1px solid var(--ls-line);
   background: #f8fbff;
+}
+.ls-coaching-drawer {
+  position: relative;
+  z-index: 7;
+  border-top: 1px solid var(--ls-line);
+  background: #f8fbff;
+}
+.ls-coaching-drawer > summary {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  color: var(--ls-teal-deep);
+  font-size: 0.73rem;
+  list-style: none;
+  cursor: pointer;
+}
+.ls-coaching-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+.ls-coaching-drawer > summary strong {
+  font-weight: 850;
+}
+.ls-coaching-drawer > summary span {
+  overflow: hidden;
+  color: var(--ls-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ls-coaching-drawer[open] > summary {
+  color: var(--ls-white);
+  background: var(--ls-teal-deep);
+}
+.ls-coaching-drawer[open] > summary span {
+  color: #c9e8e6;
+}
+.ls-coaching-drawer[open] .ls-coaching-rail {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 6px);
+  left: 8px;
+  max-height: min(48dvh, 420px);
+  overflow-y: auto;
+  border: 1px solid var(--ls-line-strong);
+  border-radius: 14px;
+  background: var(--ls-white);
+  box-shadow: 0 22px 52px rgba(7, 30, 51, 0.24);
 }
 .ls-coaching-rail section {
   padding: 14px 18px;
@@ -3579,6 +3654,456 @@
     text-align: left;
   }
 }
+
+/* Bounded Session Mode cockpit for laptop and desktop viewports. */
+@media (min-width: 900px) {
+  .live-session--running {
+    height: 100dvh;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  .live-session--running .ls-runner {
+    display: grid;
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  }
+  .live-session--running .ls-livebar {
+    position: static;
+    grid-row: 1;
+  }
+  .live-session--running .ls-stage-strip {
+    grid-row: 2;
+  }
+  .live-session--running .ls-deck-console {
+    grid-row: 3;
+  }
+  .live-session--running .ls-shortcuts {
+    grid-row: 4;
+  }
+  .live-session--running .ls-runner__grid {
+    grid-row: 5;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .live-session--running .ls-runner__main {
+    position: relative;
+    display: grid;
+    min-height: 0;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .live-session--running .ls-linear-control,
+  .live-session--running .ls-evidence {
+    position: static;
+  }
+  .live-session--running .ls-stage-card {
+    display: grid;
+    min-height: 0;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+  .live-session--running .ls-command-grid {
+    min-height: 0;
+    overflow: hidden;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .live-session--running .ls-command-block,
+  .live-session--running .ls-command-block--answer {
+    display: grid;
+    min-height: 0;
+    grid-column: auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    border-top: 0;
+  }
+  .live-session--running .ls-command-block--question {
+    border-right: 1px solid var(--ls-line);
+  }
+  .live-session--running .ls-command-block__body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .live-session--running .ls-runner__grid.is-teaching-deck {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .live-session--running
+    .ls-runner__grid.is-teaching-deck
+    .ls-evidence--teaching {
+    display: none;
+  }
+  .live-session--running .ls-runner__grid.has-evidence-rail {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .live-session--running .ls-evidence {
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+  .live-session--running .ls-advance-hint {
+    position: absolute;
+    z-index: 82;
+    right: 12px;
+    bottom: 12px;
+    max-width: min(520px, calc(100% - 24px));
+    margin: 0;
+    box-shadow: 0 14px 34px rgba(112, 75, 8, 0.2);
+  }
+}
+
+/* 14-inch laptop compact geometry: 1366x768 and 1536x864. */
+@media (min-width: 900px) and (max-height: 900px) {
+  .live-session--running {
+    --ls-laptop-livebar-h: 64px;
+    --ls-laptop-stagebar-h: 44px;
+    --ls-laptop-deckbar-h: 48px;
+    --ls-laptop-linear-h: 50px;
+    --ls-laptop-stagehead-h: 76px;
+    --ls-laptop-flow-h: 42px;
+    --ls-laptop-commandhead-h: 42px;
+    --ls-laptop-coaching-h: 34px;
+  }
+  .live-session--running .ls-runner {
+    grid-template-rows:
+      var(--ls-laptop-livebar-h) var(--ls-laptop-stagebar-h)
+      var(--ls-laptop-deckbar-h) auto minmax(0, 1fr);
+  }
+  .live-session--running .ls-livebar {
+    min-height: var(--ls-laptop-livebar-h);
+    z-index: 90;
+    gap: 8px;
+    padding: 5px 10px;
+    border-radius: 0;
+    grid-template-columns: minmax(220px, 1fr) auto auto;
+  }
+  .live-session--running .ls-mastery-radar {
+    display: none;
+  }
+  .live-session--running .ls-livebar__identity strong {
+    font-size: 0.92rem;
+  }
+  .live-session--running .ls-livebar__identity span {
+    font-size: 0.63rem;
+  }
+  .live-session--running .ls-clock-cluster,
+  .live-session--running .ls-livebar__actions {
+    gap: 4px;
+  }
+  .live-session--running .ls-clock {
+    min-width: 84px;
+    padding: 4px 8px;
+  }
+  .live-session--running .ls-clock span {
+    font-size: 0.56rem;
+  }
+  .live-session--running .ls-clock time {
+    font-size: 0.84rem;
+  }
+  .live-session--running .ls-clock--desk {
+    padding-right: 36px;
+  }
+  .live-session--running .ls-clock--desk > div {
+    top: 3px;
+    right: 3px;
+  }
+  .live-session--running .ls-clock--desk button {
+    width: 22px;
+    height: 19px;
+  }
+  .live-session--running .ls-timer-toggle {
+    width: 38px;
+    min-height: 38px;
+  }
+  .live-session--running .ls-livebar__actions > .ls-button,
+  .live-session--running .ls-livebar__actions > .ls-icon-button,
+  .live-session--running .ls-livebar__actions .ls-workspace-tools > summary {
+    min-height: 36px;
+  }
+  .live-session--running .ls-livebar__actions > .ls-button {
+    padding: 7px 10px;
+  }
+  .live-session--running .ls-livebar__actions > .ls-icon-button {
+    width: 36px;
+  }
+  .live-session--running .ls-sync {
+    min-height: 34px;
+    padding: 5px 8px;
+  }
+  .live-session--running .ls-livebar .ls-workspace-tools > summary {
+    padding: 6px 9px;
+    color: #dcecf7;
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: none;
+  }
+  .live-session--running .ls-livebar .ls-workspace-tools[open] > summary {
+    color: var(--ls-navy);
+    border-color: #7bd9ff;
+    background: #7bd9ff;
+  }
+  .live-session--running .ls-stage-strip {
+    min-height: var(--ls-laptop-stagebar-h);
+    gap: 8px;
+    padding: 4px 8px;
+  }
+  .live-session--running .ls-stage-strip__progress {
+    min-width: 112px;
+  }
+  .live-session--running .ls-stage-strip__progress span {
+    font-size: 0.6rem;
+  }
+  .live-session--running .ls-stage-strip__progress strong {
+    font-size: 0.76rem;
+  }
+  .live-session--running .ls-stage-strip__items {
+    gap: 5px;
+  }
+  .live-session--running .ls-stage-strip__items button {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+  .live-session--running .ls-stage-strip > .ls-button {
+    min-height: 34px;
+    padding: 6px 9px;
+    font-size: 0.74rem;
+  }
+  .live-session--running .ls-deck-console {
+    min-height: var(--ls-laptop-deckbar-h);
+    gap: 8px;
+    padding: 4px 8px;
+    grid-template-columns: minmax(280px, 0.7fr) minmax(0, 1.3fr);
+  }
+  .live-session--running .ls-deck-console__coverage {
+    min-height: 38px;
+    padding: 4px 8px;
+    grid-template-columns: auto minmax(80px, 1fr);
+    column-gap: 10px;
+  }
+  .live-session--running .ls-deck-console__coverage > div:first-child {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+  }
+  .live-session--running .ls-deck-console__coverage small {
+    display: none;
+  }
+  .live-session--running .ls-deck-console__bar {
+    height: 5px;
+    margin: 0;
+  }
+  .live-session--running .ls-deck-tools > summary {
+    min-height: 38px;
+    padding: 5px 9px;
+  }
+  .live-session--running .ls-deck-tools > summary small {
+    display: none;
+  }
+  .live-session--running .ls-deck-tools__popover {
+    max-height: calc(
+      100dvh - var(--ls-laptop-livebar-h) - var(--ls-laptop-stagebar-h) -
+        var(--ls-laptop-deckbar-h) - 12px
+    );
+  }
+  .live-session--running .ls-shortcuts {
+    min-height: 32px;
+    padding: 4px 8px;
+  }
+  .live-session--running .ls-runner__grid {
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 0;
+  }
+  .live-session--running .ls-proof-progress {
+    display: none;
+  }
+  .live-session--running .ls-runner__main {
+    grid-template-rows: var(--ls-laptop-linear-h) minmax(0, 1fr);
+  }
+  .live-session--running .ls-linear-control {
+    min-height: var(--ls-laptop-linear-h);
+    gap: 5px;
+    padding: 3px;
+    margin: 0 0 6px;
+    border-radius: 12px;
+    grid-template-columns: auto minmax(180px, 1fr) minmax(210px, auto);
+  }
+  .live-session--running .ls-linear-control button {
+    min-height: 42px;
+  }
+  .live-session--running .ls-linear-control__status {
+    padding: 2px 7px;
+  }
+  .live-session--running .ls-linear-control__status > span {
+    font-size: 0.58rem;
+  }
+  .live-session--running .ls-linear-control__status strong {
+    font-size: 0.82rem;
+  }
+  .live-session--running .ls-linear-control__status small {
+    display: none;
+  }
+  .live-session--running .ls-linear-control__back,
+  .live-session--running .ls-linear-control__next {
+    padding: 0 10px;
+    font-size: 0.78rem;
+  }
+  .live-session--running .ls-stage-card {
+    grid-template-rows:
+      minmax(0, var(--ls-laptop-stagehead-h)) var(--ls-laptop-flow-h)
+      minmax(0, 1fr) var(--ls-laptop-coaching-h);
+  }
+  .live-session--running .ls-stage-card__header {
+    min-height: 0;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 11px;
+  }
+  .live-session--running .ls-stage-card__identity .ls-eyebrow {
+    margin-bottom: 2px;
+    font-size: 0.62rem;
+  }
+  .live-session--running .ls-stage-card__identity h2 {
+    display: -webkit-box;
+    overflow: hidden;
+    margin-bottom: 2px;
+    font-size: 1.28rem;
+    line-height: 1.08;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .live-session--running .ls-stage-card__identity > p:last-child {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.76rem;
+    line-height: 1.2;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  .live-session--running .ls-item-meta {
+    max-width: 330px;
+    justify-content: flex-end;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .live-session--running .ls-item-meta::-webkit-scrollbar {
+    display: none;
+  }
+  .live-session--running .ls-item-meta span {
+    flex: 0 0 auto;
+    padding: 4px 6px;
+    font-size: 0.61rem;
+  }
+  .live-session--running .ls-teach-flow {
+    min-height: var(--ls-laptop-flow-h);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .live-session--running .ls-teach-flow > div {
+    display: none;
+  }
+  .live-session--running .ls-teach-flow > button {
+    min-height: var(--ls-laptop-flow-h);
+    padding: 4px 8px;
+    grid-template-columns: 25px 1fr;
+  }
+  .live-session--running .ls-teach-flow > button > span {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+  }
+  .live-session--running .ls-teach-flow > button small {
+    display: none;
+  }
+  .live-session--running .ls-command-block > header {
+    min-height: var(--ls-laptop-commandhead-h);
+    padding: 6px 10px;
+  }
+  .live-session--running .ls-command-block__icon {
+    width: 26px;
+    height: 26px;
+  }
+  .live-session--running .ls-command-block__body {
+    padding: 10px 12px;
+  }
+  .live-session--running .ls-command-lead {
+    font-size: 0.95rem;
+    line-height: 1.46;
+  }
+  .live-session--running .ls-script-ribbon,
+  .live-session--running .ls-depth-note,
+  .live-session--running .ls-board-cue,
+  .live-session--running .ls-formula-stack,
+  .live-session--running .ls-hints,
+  .live-session--running .ls-answer-detail {
+    margin-top: 9px;
+    padding: 9px;
+  }
+  .live-session--running .ls-question-copy h3 {
+    margin-bottom: 9px;
+    font-size: 1rem;
+    line-height: 1.34;
+  }
+  .live-session--running .ls-question-options {
+    gap: 5px;
+  }
+  .live-session--running .ls-question-options li {
+    padding: 6px;
+  }
+  .live-session--running .ls-spoken-answer {
+    padding: 10px 11px 10px 14px;
+    margin-bottom: 9px;
+    font-size: 0.96rem;
+    line-height: 1.46;
+  }
+  .live-session--running .ls-coaching-drawer > summary {
+    min-height: var(--ls-laptop-coaching-h);
+    padding: 5px 10px;
+  }
+  .live-session--running .ls-evidence__header {
+    padding: 10px 12px;
+  }
+  .live-session--running .ls-evidence__header h2 {
+    font-size: 1rem;
+  }
+  .live-session--running .ls-evidence__target {
+    padding: 8px 10px;
+  }
+  .live-session--running .ls-verdicts,
+  .live-session--running .ls-confidence,
+  .live-session--running .ls-repair,
+  .live-session--running .ls-note-field {
+    padding: 8px;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1100px) and (max-height: 900px) {
+  .live-session--running .ls-livebar .ls-workspace-tools > summary span {
+    display: none;
+  }
+  .live-session--running .ls-runner__grid.has-evidence-rail {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .live-session--running
+    .ls-runner__grid.has-evidence-rail:not(.is-evidence-step)
+    .ls-evidence {
+    display: none;
+  }
+  .live-session--running
+    .ls-runner__grid.has-evidence-rail.is-evidence-step
+    .ls-evidence {
+    position: absolute;
+    z-index: 30;
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: min(340px, 42vw);
+    height: auto;
+    box-shadow: 0 24px 60px rgba(7, 30, 51, 0.28);
+  }
+}
+/* End bounded Session Mode cockpit. */
 
 @media (prefers-reduced-motion: reduce) {
   .live-session *,

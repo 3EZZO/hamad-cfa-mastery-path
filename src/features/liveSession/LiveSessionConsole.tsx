@@ -117,18 +117,16 @@ function LoadError({
   );
 }
 
-function WorkspaceFrame({
+function WorkspaceTools({
   playbook,
   replacingPlaybook,
   onReplacePlaybook,
   onExit,
-  children,
 }: Pick<
   LiveSessionConsoleProps,
   "replacingPlaybook" | "onReplacePlaybook" | "onExit"
 > & {
   playbook: LiveSessionPlaybook;
-  children: ReactNode;
 }) {
   const deckCount = Math.max(
     0,
@@ -138,41 +136,68 @@ function WorkspaceFrame({
   );
 
   return (
-    <div className="live-session">
-      <div className="ls-workspace-bar">
-        <details className="ls-workspace-tools">
-          <summary>
-            <Settings2 size={16} />
-            <span>Session tools</span>
-          </summary>
-          <div className="ls-workspace-tools__menu">
-            <div className="ls-workspace-tools__identity">
-              <span>Active private playbook</span>
-              <strong>{deckCount} decks</strong>
-              <small>{playbook.version}</small>
-            </div>
-            {onReplacePlaybook && (
-              <button
-                type="button"
-                disabled={replacingPlaybook}
-                onClick={onReplacePlaybook}
-              >
-                {replacingPlaybook ? (
-                  <RefreshCw className="ls-spin" size={16} />
-                ) : (
-                  <Upload size={16} />
-                )}
-                {replacingPlaybook ? "Updating…" : "Update playbook"}
-              </button>
+    <details className="ls-workspace-tools">
+      <summary>
+        <Settings2 size={16} />
+        <span>Session tools</span>
+      </summary>
+      <div className="ls-workspace-tools__menu">
+        <div className="ls-workspace-tools__identity">
+          <span>Active private playbook</span>
+          <strong>{deckCount} decks</strong>
+          <small>{playbook.version}</small>
+        </div>
+        {onReplacePlaybook && (
+          <button
+            type="button"
+            disabled={replacingPlaybook}
+            onClick={onReplacePlaybook}
+          >
+            {replacingPlaybook ? (
+              <RefreshCw className="ls-spin" size={16} />
+            ) : (
+              <Upload size={16} />
             )}
-            {onExit && (
-              <button type="button" onClick={onExit}>
-                <LogOut size={16} /> Exit Session Mode
-              </button>
-            )}
-          </div>
-        </details>
+            {replacingPlaybook ? "Updating…" : "Update playbook"}
+          </button>
+        )}
+        {onExit && (
+          <button type="button" onClick={onExit}>
+            <LogOut size={16} /> Exit Session Mode
+          </button>
+        )}
       </div>
+    </details>
+  );
+}
+
+function WorkspaceFrame({
+  playbook,
+  replacingPlaybook,
+  onReplacePlaybook,
+  onExit,
+  running = false,
+  children,
+}: Pick<
+  LiveSessionConsoleProps,
+  "replacingPlaybook" | "onReplacePlaybook" | "onExit"
+> & {
+  playbook: LiveSessionPlaybook;
+  running?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`live-session${running ? " live-session--running" : ""}`}>
+      {!running && (
+        <div className="ls-workspace-bar">
+          <WorkspaceTools
+            playbook={playbook}
+            replacingPlaybook={replacingPlaybook}
+            onReplacePlaybook={onReplacePlaybook}
+            onExit={onExit}
+          />
+        </div>
+      )}
       {children}
     </div>
   );
@@ -355,11 +380,11 @@ function LiveSessionWorkspace({
           : "Saved on this device · cloud sync needs a retry.";
   const isRehearsal = Boolean(
     completion &&
-      isPreSessionRehearsal(
-        completion.completedAt,
-        session.date,
-        session.startTime
-      )
+    isPreSessionRehearsal(
+      completion.completedAt,
+      session.date,
+      session.startTime
+    )
   );
 
   const discardRehearsal = async () => {
@@ -524,8 +549,7 @@ function LiveSessionWorkspace({
                   <p id="ls-rehearsal-reset-copy">
                     This removes this test run from the cloud and this device,
                     plus only the progress records it generated. Your 120-deck
-                    Tutor Bible, schedule, and unrelated records stay
-                    unchanged.
+                    Tutor Bible, schedule, and unrelated records stay unchanged.
                   </p>
                   {discardError && (
                     <p className="ls-rehearsal-reset__error" role="alert">
@@ -586,6 +610,7 @@ function LiveSessionWorkspace({
       replacingPlaybook={replacingPlaybook}
       onReplacePlaybook={onReplacePlaybook}
       onExit={onExit}
+      running
     >
       <LiveSessionRunner
         session={session}
@@ -599,6 +624,14 @@ function LiveSessionWorkspace({
         initialQuestionIndex={questionIndex}
         syncState={syncState}
         syncMessage={syncMessage}
+        sessionTools={
+          <WorkspaceTools
+            playbook={playbook}
+            replacingPlaybook={replacingPlaybook}
+            onReplacePlaybook={onReplacePlaybook}
+            onExit={onExit}
+          />
+        }
         onSyncRetry={onRetry}
         onEvidence={entry => setEvidence(current => [...current, entry])}
         onDeskCompletionChange={(deskKey, complete) => {
