@@ -8,6 +8,7 @@ import type {
   LiveSessionQuestion,
   LiveSessionStage,
   SessionContentKind,
+  TeachingDeckTier,
 } from "./types";
 
 const CARD_KIND_MAP: Record<TutorPlaybookCard["kind"], SessionContentKind> = {
@@ -62,6 +63,22 @@ function teachingLayers(text: string): { core: string; depth?: string } {
   return { core: core || normalized, depth: depth || undefined };
 }
 
+function teachingTier(card: TutorPlaybookCard): TeachingDeckTier {
+  if (
+    card.kind === "instruction" ||
+    card.kind === "explanation" ||
+    card.kind === "formula" ||
+    card.kind === "checkpoint"
+  ) {
+    return "core";
+  }
+  if (card.kind === "question" || card.kind === "solution") {
+    if ((card.difficulty ?? 3) >= 5) return "stretch";
+    return (card.difficulty ?? 3) <= 3 ? "core" : "reinforcement";
+  }
+  return "reinforcement";
+}
+
 function adaptCard(
   card: TutorPlaybookCard,
   stage: TutorPlaybookStage,
@@ -91,6 +108,7 @@ function adaptCard(
     tags: [card.kind, ...card.errorTags],
     difficulty: card.difficulty,
     expectedSeconds: card.expectedSeconds,
+    tier: teachingTier(card),
   };
 }
 
@@ -152,11 +170,15 @@ export function adaptTutorPlaybookPackage(
           total + (stage.questions ?? []).filter(card => card.kind === "question").length,
         0,
       );
+      const deckCount = routeStages.reduce(
+        (total, stage) => total + (stage.questions?.length || 1),
+        0,
+      );
       return {
         id: route.id,
         name: route.label,
         minutes: route.totalMinutes,
-        description: `${route.stageIds.length} stages · ${proofCount} independent mastery proofs · full teaching script.`,
+        description: `${deckCount} Teach–Ask–Answer decks · ${route.stageIds.length} stages · ${proofCount} independent mastery proofs.`,
         recommended: route.id === value.manifest.defaultRouteId,
       };
     }),

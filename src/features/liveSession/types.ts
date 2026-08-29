@@ -18,6 +18,9 @@ export type SessionContentKind =
   | "repair"
   | "checkpoint";
 
+export type TeachingDeckTier = "core" | "reinforcement" | "stretch";
+export type TeachingFlowStep = "teach" | "ask" | "answer";
+
 export interface LiveSessionDescriptor {
   id: string;
   number: number;
@@ -68,6 +71,7 @@ export interface LiveSessionQuestion {
   tags?: string[];
   difficulty?: number | null;
   expectedSeconds?: number | null;
+  tier?: TeachingDeckTier;
 }
 
 export interface LiveSessionStage {
@@ -139,6 +143,7 @@ export interface LiveSessionRunSnapshot {
   stageIndex: number;
   questionIndex: number;
   evidence: LiveSessionEvidence[];
+  completedDeskIds?: string[];
   timer: SessionTimerSnapshot | null;
   updatedAt: string;
 }

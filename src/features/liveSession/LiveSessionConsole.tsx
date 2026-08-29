@@ -3,11 +3,11 @@ import {
   ChevronRight,
   CloudAlert,
   RefreshCw,
-  RotateCcw,
   ShieldCheck,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LiveSessionRunner } from "./LiveSessionRunner";
+import { sessionDeckKey } from "./sessionDeckModel";
 import { SessionCloseout } from "./SessionCloseout";
 import { SessionLaunch } from "./SessionLaunch";
 import type {
@@ -101,6 +101,12 @@ function LiveSessionWorkspace({
   const [stageIndex, setStageIndex] = useState(initialRun?.stageIndex ?? 0);
   const [questionIndex, setQuestionIndex] = useState(initialRun?.questionIndex ?? 0);
   const [evidence, setEvidence] = useState<LiveSessionEvidence[]>(initialRun?.evidence ?? []);
+  const [completedDeskIds, setCompletedDeskIds] = useState<string[]>(
+    initialRun?.completedDeskIds ??
+      (initialRun?.evidence ?? []).map(entry =>
+        sessionDeckKey(entry.stageId, entry.targetId),
+      ),
+  );
   const [timerSnapshot, setTimerSnapshot] = useState<SessionTimerSnapshot | null>(initialRun?.timer ?? null);
   const [completion, setCompletion] = useState<LiveSessionCloseoutResult | null>(null);
   const wasRunningBeforeCloseout = useRef(false);
@@ -124,16 +130,27 @@ function LiveSessionWorkspace({
       stageIndex,
       questionIndex,
       evidence,
+      completedDeskIds,
       timer: timerSnapshot,
       updatedAt: new Date().toISOString(),
     });
-  }, [evidence, onRunChange, phase, questionIndex, routeId, stageIndex, timerSnapshot]);
+  }, [
+    completedDeskIds,
+    evidence,
+    onRunChange,
+    phase,
+    questionIndex,
+    routeId,
+    stageIndex,
+    timerSnapshot,
+  ]);
 
   const handleStart = (route: LiveSessionRoute) => {
     setRouteId(route.id);
     setStageIndex(0);
     setQuestionIndex(0);
     setEvidence([]);
+    setCompletedDeskIds([]);
     setCompletion(null);
     setPhase("running");
     timer.start(route.minutes);
@@ -155,17 +172,6 @@ function LiveSessionWorkspace({
     timer.finish();
     setCompletion(result);
     setPhase("complete");
-  };
-
-  const restart = () => {
-    const approved = window.confirm("Return to the launch screen? Your completed record remains saved.");
-    if (!approved) return;
-    timer.reset(selectedRoute?.minutes);
-    setEvidence([]);
-    setStageIndex(0);
-    setQuestionIndex(0);
-    setCompletion(null);
-    setPhase("launch");
   };
 
   const completionSummary = useMemo(() => {
@@ -237,7 +243,6 @@ function LiveSessionWorkspace({
           )}
           <div className="ls-complete__assurance"><ShieldCheck size={18} /><span>Answers and private tutor notes remain in the tutor workspace.</span></div>
           <div className="ls-complete__actions">
-            <button className="ls-button ls-button--quiet" type="button" onClick={restart}><RotateCcw size={17} /> Return to launch</button>
             {onExit && <button className="ls-button ls-button--primary ls-button--large" type="button" onClick={onExit}>Return to tracker <ChevronRight size={18} /></button>}
           </div>
         </section>
@@ -254,11 +259,20 @@ function LiveSessionWorkspace({
         references={playbook.references}
         timer={timer}
         evidence={evidence}
+        completedDeskIds={completedDeskIds}
         initialStageIndex={stageIndex}
         initialQuestionIndex={questionIndex}
         syncState={syncState}
         syncMessage={syncMessage}
         onEvidence={entry => setEvidence(current => [...current, entry])}
+        onDeskCompletionChange={(deskKey, complete) => {
+          setCompletedDeskIds(current => {
+            const next = new Set(current);
+            if (complete) next.add(deskKey);
+            else next.delete(deskKey);
+            return [...next];
+          });
+        }}
         onPositionChange={(nextStage, nextQuestion) => {
           setStageIndex(nextStage);
           setQuestionIndex(nextQuestion);

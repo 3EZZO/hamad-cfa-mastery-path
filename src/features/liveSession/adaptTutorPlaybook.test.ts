@@ -82,6 +82,11 @@ describe("private playbook adapter", () => {
 
     expect(adapted.stagesByRoute["route-150"]?.[0]?.questions?.map(item => item.id))
       .toEqual(["selected-proof"]);
+    expect(adapted.stagesByRoute["route-150"]?.[0]?.questions?.[0]?.tier)
+      .toBe("core");
+    expect(adapted.routes[0]?.description).toContain(
+      "1 Teach–Ask–Answer decks",
+    );
     expect(adapted.references).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

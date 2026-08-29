@@ -8,6 +8,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
+import { latestEvidenceByTarget } from "./sessionDeckModel";
 import type {
   LiveSessionCloseoutResult,
   LiveSessionDescriptor,
@@ -28,16 +29,20 @@ export interface SessionCloseoutProps {
   onSubmit: (result: LiveSessionCloseoutResult) => void | Promise<void>;
 }
 
-function inferMastery(
+export function inferMastery(
   stage: LiveSessionStage,
   evidence: LiveSessionEvidence[],
 ): MasteryDecision {
   const targetIds = new Set(
     (stage.questions ?? []).filter(item => item.kind === "question").map(item => item.id),
   );
-  const entries = evidence.filter(
-    item => item.stageId === stage.id && targetIds.has(item.targetId),
-  );
+  const entries = [
+    ...latestEvidenceByTarget(
+      evidence.filter(
+        item => item.stageId === stage.id && targetIds.has(item.targetId),
+      ),
+    ).values(),
+  ];
   if (!entries.length || entries.some(item => item.verdict === "parked")) return "red";
   if (entries.some(item => item.verdict === "repair" || item.verdict === "partial")) return "amber";
   const targetCount = targetIds.size;
@@ -87,7 +92,11 @@ export function SessionCloseout({
       ),
     [stages],
   );
-  const proofEvidence = evidence.filter(item => targetIds.has(item.targetId));
+  const proofEvidence = [
+    ...latestEvidenceByTarget(
+      evidence.filter(item => targetIds.has(item.targetId)),
+    ).values(),
+  ];
   const correct = proofEvidence.filter(item => item.verdict === "correct").length;
   const partial = proofEvidence.filter(item => item.verdict === "partial").length;
   const repairs = proofEvidence.filter(item => item.verdict === "repair").length;

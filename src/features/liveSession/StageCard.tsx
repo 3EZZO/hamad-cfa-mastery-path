@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ArrowRight,
   BookOpen,
   CheckCircle2,
   ClipboardCheck,
@@ -13,12 +14,20 @@ import {
   Route,
   Sparkles,
 } from "lucide-react";
-import type { LiveSessionQuestion, LiveSessionStage } from "./types";
+import { useRef } from "react";
+import type {
+  LiveSessionQuestion,
+  LiveSessionStage,
+  TeachingFlowStep,
+} from "./types";
 
 export interface StageCardProps {
   stage: LiveSessionStage;
   question?: LiveSessionQuestion;
   questionIndex: number;
+  flowStep: TeachingFlowStep;
+  complete: boolean;
+  onFlowStepChange: (step: TeachingFlowStep) => void;
   onShowCandidate: () => void;
 }
 
@@ -39,14 +48,21 @@ function CommandBlock({
   label,
   children,
   tone,
+  active,
+  sectionRef,
 }: {
   icon: React.ReactNode;
   label: string;
   children: React.ReactNode;
   tone: "explain" | "question" | "answer";
+  active: boolean;
+  sectionRef: React.RefObject<HTMLElement | null>;
 }) {
   return (
-    <section className={`ls-command-block ls-command-block--${tone}`}>
+    <section
+      ref={sectionRef}
+      className={`ls-command-block ls-command-block--${tone}${active ? " is-active" : ""}`}
+    >
       <header>
         <span className="ls-command-block__icon" aria-hidden="true">{icon}</span>
         <span>{label}</span>
@@ -75,19 +91,13 @@ function bestAnswer(question?: LiveSessionQuestion): string {
   );
 }
 
-const PROOF_STEPS = ["Recognize", "Predict", "Set up", "Solve", "Interpret"];
-
-function proofStepIndex(question?: LiveSessionQuestion): number {
-  if (question?.kind === "question") return 3;
-  if (question?.kind === "repair" || question?.kind === "checkpoint") return 4;
-  if (question?.kind === "demonstration" || question?.kind === "calculator") return 2;
-  return 0;
-}
-
 export function StageCard({
   stage,
   question,
   questionIndex,
+  flowStep,
+  complete,
+  onFlowStepChange,
   onShowCandidate,
 }: StageCardProps) {
   const listenFor = question?.listenFor?.length ? question.listenFor : stage.listenFor;
@@ -97,7 +107,23 @@ export function StageCard({
     : question?.working?.length
       ? question.working
       : stage.write;
-  const activeProofStep = proofStepIndex(question);
+  const teachRef = useRef<HTMLElement>(null);
+  const askRef = useRef<HTMLElement>(null);
+  const answerRef = useRef<HTMLElement>(null);
+  const flowRefs = { teach: teachRef, ask: askRef, answer: answerRef };
+
+  const moveTo = (step: TeachingFlowStep) => {
+    onFlowStepChange(step);
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(
+      () =>
+        flowRefs[step].current?.scrollIntoView({
+          behavior: reducedMotion ? "auto" : "smooth",
+          block: "start",
+        }),
+      0,
+    );
+  };
 
   return (
     <article className="ls-stage-card" aria-labelledby="ls-stage-title">
@@ -110,34 +136,47 @@ export function StageCard({
         <div className="ls-item-meta" aria-label="Current teaching item details">
           <span><Route size={15} /> Item {questionIndex + 1}</span>
           {question?.kind && <span><BookOpen size={15} /> {question.kind}</span>}
+          {question?.tier && <span><Route size={15} /> {question.tier}</span>}
+          {complete && <span className="is-covered"><CheckCircle2 size={15} /> Covered</span>}
           {question?.difficulty ? <span><Gauge size={15} /> Level {question.difficulty}/5</span> : null}
           {question?.expectedSeconds ? <span><Clock3 size={15} /> {Math.ceil(question.expectedSeconds / 60)} min</span> : null}
         </div>
       </header>
 
-      <section className="ls-proof-rail" aria-label="Mastery proof sequence">
+      <nav className="ls-teach-flow" aria-label="Teach, ask, answer workflow">
         <div>
-          <span>Decision proof</span>
-          <strong>From recognition to economic meaning</strong>
+          <span>All three panels remain visible</span>
+          <strong>Move deliberately: teach, ask, then answer</strong>
         </div>
-        <ol>
-          {PROOF_STEPS.map((step, index) => (
-            <li
-              className={`${index === activeProofStep ? "is-current" : ""}${
-                index < activeProofStep ? " is-passed" : ""
-              }`}
-              aria-current={index === activeProofStep ? "step" : undefined}
-              key={step}
-            >
-              <span>{index + 1}</span>
-              <strong>{step}</strong>
-            </li>
-          ))}
-        </ol>
-      </section>
+        {(["teach", "ask", "answer"] as const).map((step, index) => (
+          <button
+            type="button"
+            className={flowStep === step ? "is-current" : ""}
+            aria-current={flowStep === step ? "step" : undefined}
+            onClick={() => moveTo(step)}
+            key={step}
+          >
+            <span>{index + 1}</span>
+            <strong>{step}</strong>
+            <small>
+              {step === "teach"
+                ? "Build the concept"
+                : step === "ask"
+                  ? "Require commitment"
+                  : "Explain the result"}
+            </small>
+          </button>
+        ))}
+      </nav>
 
       <div className="ls-command-grid" aria-label="Tutor command desk">
-        <CommandBlock icon={<Lightbulb size={19} />} label="Core idea" tone="explain">
+        <CommandBlock
+          icon={<Lightbulb size={19} />}
+          label="1 · Teach"
+          tone="explain"
+          active={flowStep === "teach"}
+          sectionRef={teachRef}
+        >
           <p className="ls-command-lead">{bestExplanation(stage, question)}</p>
           <div className="ls-script-ribbon">
             <span><Quote size={15} /> Teach it</span>
@@ -163,7 +202,13 @@ export function StageCard({
           ) : null}
         </CommandBlock>
 
-        <CommandBlock icon={<MessageSquareText size={19} />} label="Check understanding" tone="question">
+        <CommandBlock
+          icon={<MessageSquareText size={19} />}
+          label="2 · Ask"
+          tone="question"
+          active={flowStep === "ask"}
+          sectionRef={askRef}
+        >
           <div className="ls-question-copy">
             <div className="ls-question-copy__topline">
               <span>{question?.label ?? `Proof ${questionIndex + 1}`}</span>
@@ -189,10 +234,19 @@ export function StageCard({
             <button className="ls-button ls-button--candidate" type="button" onClick={onShowCandidate}>
               <MonitorUp size={17} /> Present to Hamad
             </button>
+            <button className="ls-flow-forward" type="button" onClick={() => moveTo("answer")}>
+              Hamad has committed · go to Answer <ArrowRight size={16} />
+            </button>
           </div>
         </CommandBlock>
 
-        <CommandBlock icon={<Sparkles size={19} />} label="Model response" tone="answer">
+        <CommandBlock
+          icon={<Sparkles size={19} />}
+          label="3 · Answer"
+          tone="answer"
+          active={flowStep === "answer"}
+          sectionRef={answerRef}
+        >
           <p className="ls-model-response-cue">
             Say this naturally after Hamad commits to an answer.
           </p>

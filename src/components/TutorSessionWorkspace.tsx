@@ -15,6 +15,7 @@ import {
 import {
   adaptTutorPlaybookPackage,
   LiveSessionConsole,
+  sessionDeckKey,
   type ErrorCode,
   type LiveSessionCloseoutResult,
   type LiveSessionPlaybook,
@@ -27,7 +28,9 @@ import {
   getTutorLiveRun,
   importTutorPlaybookPackage,
   loadTutorPlaybookPackage,
+  mapCloudError,
   saveTutorLiveRun,
+  type CloudErrorCode,
 } from "../lib/cloud";
 import {
   applyLiveSessionCloseout,
@@ -52,6 +55,8 @@ import type { PrivateTutorNote, TrackerState } from "../types";
 const PLAYBOOK_ID = "hamad-cfa-mastery-session-01";
 const RUN_ID_BASE = "hamad-cfa-mastery-session-01-2026-09-05";
 const MAX_PRIVATE_PACKAGE_BYTES = 8 * 1024 * 1024;
+const DESK_COMPLETE_NOTE = "[[session-desk-complete:v1]]";
+const DESK_REOPEN_NOTE = "[[session-desk-reopen:v1]]";
 
 function liveRunId(version: string): string {
   return `${RUN_ID_BASE}-${version}`;
@@ -81,6 +86,24 @@ type PendingAction = Omit<
   "id" | "atClient" | "elapsedSeconds"
 >;
 
+interface QueuedCloudMutation {
+  execute: () => Promise<TutorLiveRun>;
+  resolve: (run: TutorLiveRun) => void;
+  reject: (error: unknown) => void;
+  attempts: number;
+}
+
+const RETRYABLE_SYNC_ERRORS = new Set<CloudErrorCode>([
+  "network-unavailable",
+  "service-unavailable",
+  "tutor-live-run-conflict",
+  "unknown",
+]);
+
+function syncRetryDelay(attempts: number): number {
+  return Math.min(30_000, 1_000 * 2 ** Math.min(attempts, 5));
+}
+
 function snapshotElapsedSeconds(snapshot: LiveSessionRunSnapshot): number {
   const timer = snapshot.timer;
   if (!timer) return 0;
@@ -102,6 +125,17 @@ function positionForSnapshot(
   return {
     stageId: stage?.id ?? "session-launch",
     cardId: card?.id ?? null,
+  };
+}
+
+function positionForDeskKey(
+  key: string,
+): { stageId: string; cardId: string } | null {
+  const separator = key.indexOf("::");
+  if (separator <= 0 || separator >= key.length - 2) return null;
+  return {
+    stageId: key.slice(0, separator),
+    cardId: key.slice(separator + 2),
   };
 }
 
@@ -163,6 +197,16 @@ function tutorRunToSnapshot(
       note: event.note ?? "",
       recordedAt: event.atClient,
     }));
+  const completedDeskIds = new Set<string>();
+  run.events.forEach((event) => {
+    if (!event.stageId || !event.cardId) return;
+    const key = sessionDeckKey(event.stageId, event.cardId);
+    if (event.type === "assessment" || event.note === DESK_COMPLETE_NOTE) {
+      completedDeskIds.add(key);
+    } else if (event.note === DESK_REOPEN_NOTE) {
+      completedDeskIds.delete(key);
+    }
+  });
   const timerStatus =
     run.status === "completed"
       ? "complete"
@@ -183,6 +227,7 @@ function tutorRunToSnapshot(
     stageIndex,
     questionIndex,
     evidence,
+    completedDeskIds: [...completedDeskIds],
     timer: {
       status: timerStatus,
       durationMs: Math.max(1, route?.minutes ?? 150) * 60_000,
@@ -298,7 +343,11 @@ export default function TutorSessionWorkspace({
   const loadSequenceRef = useRef(0);
   const cloudRunRef = useRef<TutorLiveRun | null>(null);
   const previousSnapshotRef = useRef<LiveSessionRunSnapshot | null>(null);
-  const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const saveQueueRef = useRef<QueuedCloudMutation[]>([]);
+  const drainingSaveQueueRef = useRef(false);
+  const retrySaveQueueRef = useRef(false);
+  const retryTimerRef = useRef<number | null>(null);
+  const terminalSyncErrorRef = useRef<unknown | null>(null);
   const startQueuedRef = useRef(false);
 
   const playbook = useMemo(
@@ -402,6 +451,85 @@ export default function TutorSessionWorkspace({
     void loadWorkspace();
   }, [loadWorkspace]);
 
+  const drainSaveQueue = useCallback(async () => {
+    if (drainingSaveQueueRef.current) {
+      retrySaveQueueRef.current = true;
+      return;
+    }
+    drainingSaveQueueRef.current = true;
+    try {
+      while (saveQueueRef.current.length > 0) {
+        const pending = saveQueueRef.current[0]!;
+        setSyncState("saving");
+        setSyncMessage("Saving meaningful tutor actions in order...");
+        try {
+          const saved = await pending.execute();
+          saveQueueRef.current.shift();
+          pending.resolve(saved);
+        } catch (error) {
+          const cloudError = mapCloudError(error);
+          if (!RETRYABLE_SYNC_ERRORS.has(cloudError.code)) {
+            terminalSyncErrorRef.current = cloudError;
+            const rejected = saveQueueRef.current.splice(0);
+            rejected.forEach(item => item.reject(cloudError));
+            setSyncState("error");
+            setSyncMessage(
+              `${cloudError.message} The local recovery copy remains available; sign in correctly and reopen Session Mode to retry.`,
+            );
+            return;
+          }
+
+          pending.attempts += 1;
+          const delay = syncRetryDelay(pending.attempts - 1);
+          setSyncState(navigator.onLine ? "error" : "offline");
+          setSyncMessage(
+            `${cloudError.message} The action is retained in order and will retry automatically in ${Math.ceil(delay / 1_000)} seconds.`,
+          );
+          if (navigator.onLine) {
+            if (retryTimerRef.current !== null) {
+              window.clearTimeout(retryTimerRef.current);
+            }
+            retryTimerRef.current = window.setTimeout(() => {
+              retryTimerRef.current = null;
+              void drainSaveQueue();
+            }, delay);
+          }
+          return;
+        }
+      }
+      setSyncState("synced");
+      setSyncMessage("Private session actions are current on every tutor device.");
+    } finally {
+      drainingSaveQueueRef.current = false;
+      if (retrySaveQueueRef.current) {
+        retrySaveQueueRef.current = false;
+        if (retryTimerRef.current !== null) {
+          window.clearTimeout(retryTimerRef.current);
+          retryTimerRef.current = null;
+        }
+        queueMicrotask(() => void drainSaveQueue());
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const retryPendingActions = () => {
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      if (saveQueueRef.current[0]) saveQueueRef.current[0].attempts = 0;
+      void drainSaveQueue();
+    };
+    window.addEventListener("online", retryPendingActions);
+    return () => {
+      window.removeEventListener("online", retryPendingActions);
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+      }
+    };
+  }, [drainSaveQueue]);
+
   const enqueueAction = useCallback(
     (
       payload: PendingAction,
@@ -410,15 +538,16 @@ export default function TutorSessionWorkspace({
       if (!playbook || !snapshot.routeId) {
         return Promise.reject(new Error("Choose a live-session route first."));
       }
+      if (terminalSyncErrorRef.current) {
+        return Promise.reject(terminalSyncErrorRef.current);
+      }
+      const eventId = actionId();
       const execute = async (): Promise<TutorLiveRun> => {
-        setSyncState("saving");
-        setSyncMessage("Saving a meaningful tutor action...");
         const current = cloudRunRef.current;
         const elapsedSeconds =
           payload.type === "start"
             ? 0
             : Math.max(current?.elapsedSeconds ?? 0, snapshotElapsedSeconds(snapshot));
-        const eventId = actionId();
         const buildRequest = (
           revision: number,
           atClient = new Date().toISOString(),
@@ -439,15 +568,11 @@ export default function TutorSessionWorkspace({
         try {
           const saved = await saveTutorLiveRun(buildRequest(current?.revision ?? 0));
           cloudRunRef.current = saved;
-          setSyncState("synced");
-          setSyncMessage("Private session actions are current on every tutor device.");
           return saved;
         } catch (firstError) {
           const latest = await getTutorLiveRun(runId).catch(() => null);
           if (latest?.events.some((event) => event.id === eventId)) {
             cloudRunRef.current = latest;
-            setSyncState("synced");
-            setSyncMessage("The saved action was verified after reconnecting.");
             return latest;
           }
           if (latest && latest.status !== "completed" && latest.status !== "abandoned") {
@@ -456,21 +581,18 @@ export default function TutorSessionWorkspace({
               buildRequest(latest.revision, new Date().toISOString()),
             );
             cloudRunRef.current = retried;
-            setSyncState("synced");
-            setSyncMessage("A cross-device change was reconciled safely.");
             return retried;
           }
           throw firstError;
         }
       };
-      const queued = saveQueueRef.current.catch(() => undefined).then(execute);
-      saveQueueRef.current = queued.catch((error) => {
-        setSyncState(navigator.onLine ? "error" : "offline");
-        setSyncMessage(getCloudErrorMessage(error));
+      const queued = new Promise<TutorLiveRun>((resolve, reject) => {
+        saveQueueRef.current.push({ execute, resolve, reject, attempts: 0 });
       });
+      void drainSaveQueue();
       return queued;
     },
-    [playbook, privatePackage, session.number],
+    [drainSaveQueue, playbook, privatePackage, session.number],
   );
 
   const handleRunChange = useCallback(
@@ -516,18 +638,60 @@ export default function TutorSessionWorkspace({
       const previousEvidenceIds = new Set(
         previous?.evidence.map((entry) => entry.id) ?? [],
       );
-      snapshot.evidence
-        .filter((entry) => !previousEvidenceIds.has(entry.id))
-        .forEach((entry) => {
+      const newEvidenceEntries = snapshot.evidence.filter(
+        (entry) => !previousEvidenceIds.has(entry.id),
+      );
+      const newlyAssessedDeskKeys = new Set(
+        newEvidenceEntries.map(entry =>
+          sessionDeckKey(entry.stageId, entry.targetId),
+        ),
+      );
+      newEvidenceEntries.forEach((entry) => {
+        void enqueueAction(
+          {
+            type: "assessment",
+            stageId: entry.stageId,
+            cardId: entry.targetId,
+            result: entry.verdict,
+            confidence: entry.confidence,
+            errorCodes: entry.errorCodes,
+            ...(entry.note ? { note: entry.note } : {}),
+          },
+          snapshot,
+        ).catch(() => undefined);
+      });
+
+      const previousCompleted = new Set(previous?.completedDeskIds ?? []);
+      const nextCompleted = new Set(snapshot.completedDeskIds ?? []);
+      [...nextCompleted]
+        .filter(
+          key =>
+            !previousCompleted.has(key) && !newlyAssessedDeskKeys.has(key),
+        )
+        .forEach(key => {
+          const position = positionForDeskKey(key);
+          if (!position) return;
           void enqueueAction(
             {
-              type: "assessment",
-              stageId: entry.stageId,
-              cardId: entry.targetId,
-              result: entry.verdict,
-              confidence: entry.confidence,
-              errorCodes: entry.errorCodes,
-              ...(entry.note ? { note: entry.note } : {}),
+              type: "note",
+              stageId: position.stageId,
+              cardId: position.cardId,
+              note: DESK_COMPLETE_NOTE,
+            },
+            snapshot,
+          ).catch(() => undefined);
+        });
+      [...previousCompleted]
+        .filter(key => !nextCompleted.has(key))
+        .forEach(key => {
+          const position = positionForDeskKey(key);
+          if (!position) return;
+          void enqueueAction(
+            {
+              type: "note",
+              stageId: position.stageId,
+              cardId: position.cardId,
+              note: DESK_REOPEN_NOTE,
             },
             snapshot,
           ).catch(() => undefined);

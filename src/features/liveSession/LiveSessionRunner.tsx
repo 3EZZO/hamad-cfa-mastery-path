@@ -8,9 +8,11 @@ import {
   CloudOff,
   Command,
   Flag,
+  Layers3,
   MonitorUp,
   Pause,
   Play,
+  RotateCcw,
   Search,
   SlidersHorizontal,
   X,
@@ -20,6 +22,15 @@ import { CandidatePromptView } from "./CandidatePromptView";
 import { EvidenceRepairFlow } from "./EvidenceRepairFlow";
 import { MasteryRadar } from "./MasteryRadar";
 import { ReferenceDrawer } from "./ReferenceDrawer";
+import {
+  canRecordEvidenceDraft,
+  calculateSessionDeckProgress,
+  flattenSessionDecks,
+  latestEvidenceByTarget,
+  resolveForwardDeck,
+  sessionDeckKey,
+  type SessionDeck,
+} from "./sessionDeckModel";
 import { StageCard } from "./StageCard";
 import type { SessionTimerController } from "./useSessionTimer";
 import { formatSessionTime } from "./useSessionTimer";
@@ -33,6 +44,7 @@ import type {
   LiveSessionRoute,
   LiveSessionStage,
   SyncPresentation,
+  TeachingFlowStep,
 } from "./types";
 
 export interface LiveSessionRunnerProps {
@@ -42,17 +54,27 @@ export interface LiveSessionRunnerProps {
   references: LiveSessionReference[];
   timer: SessionTimerController;
   evidence: LiveSessionEvidence[];
+  completedDeskIds: string[];
   initialStageIndex?: number;
   initialQuestionIndex?: number;
   syncState?: SyncPresentation;
   syncMessage?: string;
   onEvidence: (entry: LiveSessionEvidence) => void;
+  onDeskCompletionChange: (deskKey: string, complete: boolean) => void;
   onPositionChange?: (stageIndex: number, questionIndex: number) => void;
   onRequestCloseout: () => void;
   onExit?: () => void;
 }
 
-type ResultFilter = "all" | "open" | EvidenceVerdict;
+type ResultFilter =
+  | "all"
+  | "uncovered"
+  | "core"
+  | "reinforcement"
+  | "stretch"
+  | "open"
+  | EvidenceVerdict;
+type QueueMode = "core" | "core-plus" | "all" | "stretch";
 
 interface CommandDeskResult {
   key: string;
@@ -61,6 +83,7 @@ interface CommandDeskResult {
   stage: LiveSessionStage;
   question?: LiveSessionQuestion;
   verdict?: EvidenceVerdict;
+  deck: SessionDeck;
   searchable: string;
 }
 
@@ -94,18 +117,27 @@ function syncCopy(state: SyncPresentation): { label: string; icon: typeof Cloud 
   return { label: "Synced", icon: CheckCircle2 };
 }
 
-function latestEvidenceMap(evidence: LiveSessionEvidence[]): Map<string, LiveSessionEvidence> {
-  const result = new Map<string, LiveSessionEvidence>();
-  evidence.forEach(entry => result.set(entry.targetId, entry));
-  return result;
-}
-
 function resultLabel(result: CommandDeskResult): string {
   return result.question?.title || result.question?.label || result.stage.title;
 }
 
 function isEvidenceTarget(question?: LiveSessionQuestion): boolean {
   return question?.kind === "question";
+}
+
+function deckMatchesQueue(deck: SessionDeck, mode: QueueMode): boolean {
+  const tier = deck.question?.tier ?? "core";
+  if (mode === "all") return true;
+  if (mode === "stretch") return tier === "stretch";
+  if (mode === "core-plus") return tier !== "stretch";
+  return tier === "core";
+}
+
+function queueName(mode: QueueMode): string {
+  if (mode === "all") return "All curriculum decks";
+  if (mode === "core-plus") return "Core + reinforcement";
+  if (mode === "stretch") return "Stretch proofs";
+  return "Core session queue";
 }
 
 const REFERENCE_STOP_WORDS = new Set([
@@ -131,11 +163,13 @@ export function LiveSessionRunner({
   references,
   timer,
   evidence,
+  completedDeskIds,
   initialStageIndex = 0,
   initialQuestionIndex = 0,
   syncState = "synced",
   syncMessage,
   onEvidence,
+  onDeskCompletionChange,
   onPositionChange,
   onRequestCloseout,
   onExit,
@@ -152,14 +186,31 @@ export function LiveSessionRunner({
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
+  const [queueMode, setQueueMode] = useState<QueueMode>("all");
+  const [flowStep, setFlowStep] = useState<TeachingFlowStep>("teach");
+  const [deskElapsedSeconds, setDeskElapsedSeconds] = useState(0);
+  const [deskTimerRunning, setDeskTimerRunning] = useState(false);
+  const [advanceHint, setAdvanceHint] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
   const stage = stages[stageIndex] ?? stages[0];
   const questions = stage?.questions ?? [];
   const safeQuestionIndex = Math.min(questionIndex, Math.max(0, questions.length - 1));
   const question = questions[safeQuestionIndex];
+  const allDecks = useMemo(() => flattenSessionDecks(stages), [stages]);
+  const currentDeck = allDecks.find(
+    deck =>
+      deck.stageIndex === stageIndex &&
+      deck.questionIndex === safeQuestionIndex,
+  );
+  const queueDecks = useMemo(
+    () => allDecks.filter(deck => deckMatchesQueue(deck, queueMode)),
+    [allDecks, queueMode],
+  );
   const evidenceTarget = isEvidenceTarget(question);
   const targetId = question?.id ?? stage?.id ?? "unknown";
+  const currentDeskKey = sessionDeckKey(stage?.id ?? "unknown", targetId);
+  const deskComplete = completedDeskIds.includes(currentDeskKey);
   const targetLabel = question
     ? `${question.label ?? `Proof ${safeQuestionIndex + 1}`} · ${question.id}`
     : stage?.title ?? "Stage evidence";
@@ -169,10 +220,17 @@ export function LiveSessionRunner({
   const currentEvidence = evidence.filter(
     item => item.stageId === stage?.id && stageTargetIds.has(item.targetId),
   );
-  const allQuestions = questions.length || 1;
   const stageEvidenceCount = new Set(currentEvidence.map(item => item.targetId)).size;
   const stageTargetCount = stageTargetIds.size;
+  const latestEvidence = useMemo(() => latestEvidenceByTarget(evidence), [evidence]);
   const SyncIcon = syncCopy(syncState).icon;
+
+  const isDeckCovered = useCallback(
+    (deck: SessionDeck) =>
+      completedDeskIds.includes(deck.key) ||
+      (deck.isProof && latestEvidence.has(deck.targetId)),
+    [completedDeskIds, latestEvidence],
+  );
 
   useEffect(() => {
     if (questionIndex !== safeQuestionIndex) setQuestionIndex(safeQuestionIndex);
@@ -187,59 +245,87 @@ export function LiveSessionRunner({
       setStageIndex(Math.min(Math.max(0, nextStage), Math.max(0, stages.length - 1)));
       setQuestionIndex(Math.max(0, nextQuestion));
       setDraft(EMPTY_DRAFT);
+      setFlowStep("teach");
+      setDeskTimerRunning(false);
+      setAdvanceHint("");
       window.scrollTo({ top: 0, behavior: "auto" });
     },
     [stages.length],
   );
 
-  const goNext = useCallback(() => {
-    if (!stage) return;
-    if (safeQuestionIndex + 1 < questions.length) {
-      changePosition(stageIndex, safeQuestionIndex + 1);
-      return;
+  const navigateToDeck = useCallback(
+    (deck: SessionDeck) => changePosition(deck.stageIndex, deck.questionIndex),
+    [changePosition],
+  );
+
+  const moveForward = useCallback((treatCurrentAsCovered = false) => {
+    if (!currentDeck) return;
+    const resolution = resolveForwardDeck({
+      currentDeck,
+      queueDecks,
+      allDecks,
+      evidence,
+      coveredDeckKeys: completedDeskIds,
+      treatCurrentAsCovered,
+    });
+    if (resolution.nextDeck) {
+      if (resolution.expandedToAll) setQueueMode("all");
+      return navigateToDeck(resolution.nextDeck);
     }
-    if (stageIndex + 1 < stages.length) {
-      changePosition(stageIndex + 1, 0);
+    if (!resolution.canCloseout) {
+      setAdvanceHint("Cover this teaching deck or record evidence before closeout.");
       return;
     }
     onRequestCloseout();
   }, [
-    changePosition,
+    allDecks,
+    completedDeskIds,
+    currentDeck,
+    evidence,
+    navigateToDeck,
     onRequestCloseout,
-    questions.length,
-    safeQuestionIndex,
-    stage,
-    stageIndex,
-    stages.length,
+    queueDecks,
   ]);
 
   const goPrevious = useCallback(() => {
-    if (safeQuestionIndex > 0) {
-      changePosition(stageIndex, safeQuestionIndex - 1);
-      return;
-    }
-    if (stageIndex <= 0) return;
-    const previousStage = stages[stageIndex - 1];
-    changePosition(stageIndex - 1, Math.max(0, (previousStage?.questions?.length ?? 1) - 1));
-  }, [changePosition, safeQuestionIndex, stageIndex, stages]);
+    if (!currentDeck) return;
+    const exactIndex = queueDecks.findIndex(deck => deck.key === currentDeck.key);
+    const previous = exactIndex >= 0
+      ? queueDecks[exactIndex - 1]
+      : [...queueDecks]
+          .reverse()
+          .find(deck => deck.globalIndex < currentDeck.globalIndex);
+    if (previous) navigateToDeck(previous);
+  }, [currentDeck, navigateToDeck, queueDecks]);
 
   const recordEvidence = useCallback(() => {
-    if (!stage || !evidenceTarget || !draft.verdict) return;
-    if (draft.verdict === "repair" && !draft.errorCodes.length) return;
+    const verdict = draft.verdict;
+    if (!stage || !evidenceTarget || !verdict || !canRecordEvidenceDraft(draft)) return;
     onEvidence({
       id: makeEvidenceId(),
       stageId: stage.id,
       targetId,
       targetLabel,
-      verdict: draft.verdict,
+      verdict,
       confidence: draft.confidence,
-      errorCodes: draft.verdict === "repair" ? draft.errorCodes : [],
+      errorCodes: verdict === "repair" ? draft.errorCodes : [],
       note: draft.note.trim(),
       recordedAt: new Date().toISOString(),
     });
+    onDeskCompletionChange(currentDeskKey, true);
     setDraft(EMPTY_DRAFT);
-    goNext();
-  }, [draft, evidenceTarget, goNext, onEvidence, stage, targetId, targetLabel]);
+    moveForward(true);
+  }, [
+    currentDeskKey,
+    draft,
+    evidenceTarget,
+    moveForward,
+    onDeskCompletionChange,
+    onEvidence,
+    stage,
+    targetId,
+    targetLabel,
+  ]);
 
   const selectVerdict = useCallback((verdict: EvidenceVerdict) => {
     if (!evidenceTarget) return;
@@ -251,7 +337,90 @@ export function LiveSessionRunner({
   }, [evidenceTarget]);
 
   useEffect(() => {
+    setDeskElapsedSeconds(0);
+    setDeskTimerRunning(false);
+  }, [currentDeskKey]);
+
+  useEffect(() => {
+    if (!deskTimerRunning || timer.status !== "running") return;
+    const interval = window.setInterval(
+      () => setDeskElapsedSeconds(value => value + 1),
+      1_000,
+    );
+    return () => window.clearInterval(interval);
+  }, [deskTimerRunning, timer.status]);
+
+  const markDeskCompleteAndContinue = useCallback(() => {
+    if (!deskComplete) onDeskCompletionChange(currentDeskKey, true);
+    moveForward(true);
+  }, [currentDeskKey, deskComplete, moveForward, onDeskCompletionChange]);
+
+  const selectFlowStep = useCallback(
+    (step: TeachingFlowStep) => {
+      if (step === "ask" && flowStep !== "ask") {
+        setDeskElapsedSeconds(0);
+        setDeskTimerRunning(true);
+      } else if (step !== "ask") {
+        setDeskTimerRunning(false);
+      }
+      setFlowStep(step);
+    },
+    [flowStep],
+  );
+
+  const openCandidateView = useCallback(() => {
+    selectFlowStep("ask");
+    setCandidateOpen(true);
+  }, [selectFlowStep]);
+
+  const focusEvidencePanel = useCallback(() => {
+    setDeskTimerRunning(false);
+    setAdvanceHint(
+      "Choose a verdict and save the evidence. Use Defer with a short reason when this proof must wait.",
+    );
+    window.setTimeout(() => {
+      const panel = document.querySelector<HTMLElement>("#ls-evidence-panel");
+      const reducedMotion = window.matchMedia?.(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      panel?.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+      panel?.focus({ preventScroll: true });
+    }, 0);
+  }, []);
+
+  const advanceCurrentDeck = useCallback(() => {
+    if (!currentDeck) return;
+    if (evidenceTarget && !isDeckCovered(currentDeck)) {
+      if (canRecordEvidenceDraft(draft)) {
+        recordEvidence();
+      } else {
+        focusEvidencePanel();
+      }
+      return;
+    }
+    if (!evidenceTarget && !deskComplete) {
+      onDeskCompletionChange(currentDeskKey, true);
+    }
+    moveForward(true);
+  }, [
+    currentDeck,
+    currentDeskKey,
+    deskComplete,
+    draft,
+    evidenceTarget,
+    focusEvidencePanel,
+    isDeckCovered,
+    moveForward,
+    onDeskCompletionChange,
+    recordEvidence,
+  ]);
+
+  useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
+      if (candidateOpen || referenceOpen) return;
       if (event.key === "/" && !isInteractiveTarget(event.target)) {
         event.preventDefault();
         searchRef.current?.focus();
@@ -264,7 +433,16 @@ export function LiveSessionRunner({
         timer.toggle();
       } else if (key === "v") {
         event.preventDefault();
-        setCandidateOpen(true);
+        openCandidateView();
+      } else if (key === "1") {
+        event.preventDefault();
+        selectFlowStep("teach");
+      } else if (key === "2") {
+        event.preventDefault();
+        selectFlowStep("ask");
+      } else if (key === "3") {
+        event.preventDefault();
+        selectFlowStep("answer");
       } else if (key === "f") {
         event.preventDefault();
         setReferenceOpen(true);
@@ -282,7 +460,7 @@ export function LiveSessionRunner({
         selectVerdict("parked");
       } else if (key === "n") {
         event.preventDefault();
-        goNext();
+        advanceCurrentDeck();
       } else if (key === "b") {
         event.preventDefault();
         goPrevious();
@@ -296,53 +474,69 @@ export function LiveSessionRunner({
     };
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [draft.verdict, goNext, goPrevious, recordEvidence, selectVerdict, timer]);
-
-  const latestEvidence = useMemo(() => latestEvidenceMap(evidence), [evidence]);
+  }, [
+    advanceCurrentDeck,
+    candidateOpen,
+    draft.verdict,
+    goPrevious,
+    openCandidateView,
+    recordEvidence,
+    referenceOpen,
+    selectFlowStep,
+    selectVerdict,
+    timer,
+  ]);
   const commandDeskResults = useMemo<CommandDeskResult[]>(() => {
-    return stages.flatMap((item, itemStageIndex) => {
-      const stageQuestions = item.questions?.length ? item.questions : [undefined];
-      return stageQuestions.map((itemQuestion, itemQuestionIndex) => {
-        const itemTargetId = itemQuestion?.id ?? item.id;
-        const verdict = latestEvidence.get(itemTargetId)?.verdict;
-        return {
-          key: `${item.id}-${itemTargetId}`,
-          stageIndex: itemStageIndex,
-          questionIndex: itemQuestionIndex,
-          stage: item,
-          question: itemQuestion,
-          verdict,
-          searchable: [
-            item.label,
-            item.title,
-            item.objective,
-            itemQuestion?.id,
-            itemQuestion?.title,
-            itemQuestion?.concept,
-            itemQuestion?.explanation,
-            itemQuestion?.prompt,
-            itemQuestion?.answer,
-            itemQuestion?.spokenAnswer,
-            itemQuestion?.rationale,
-            ...(itemQuestion?.tags ?? []),
-          ].filter(Boolean).join(" ").toLowerCase(),
-        };
-      });
+    return allDecks.map(deck => {
+      const item = deck.stage;
+      const itemQuestion = deck.question;
+      const verdict = latestEvidence.get(deck.targetId)?.verdict;
+      return {
+        key: deck.key,
+        stageIndex: deck.stageIndex,
+        questionIndex: deck.questionIndex,
+        stage: item,
+        question: itemQuestion,
+        verdict,
+        deck,
+        searchable: [
+          item.label,
+          item.title,
+          item.objective,
+          itemQuestion?.id,
+          itemQuestion?.title,
+          itemQuestion?.concept,
+          itemQuestion?.explanation,
+          itemQuestion?.prompt,
+          itemQuestion?.answer,
+          itemQuestion?.spokenAnswer,
+          itemQuestion?.rationale,
+          itemQuestion?.tier,
+          ...(itemQuestion?.tags ?? []),
+        ].filter(Boolean).join(" ").toLowerCase(),
+      };
     });
-  }, [latestEvidence, stages]);
+  }, [allDecks, latestEvidence]);
 
   const filteredResults = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return commandDeskResults.filter(result => {
       const searchMatch = !normalized || result.searchable.includes(normalized);
-      const filterMatch = resultFilter === "all"
-        ? true
-        : resultFilter === "open"
-          ? isEvidenceTarget(result.question) && !result.verdict
-          : isEvidenceTarget(result.question) && result.verdict === resultFilter;
+      const covered =
+        completedDeskIds.includes(result.deck.key) || Boolean(result.verdict);
+      const filterMatch =
+        resultFilter === "all"
+          ? true
+          : resultFilter === "uncovered"
+            ? !covered
+            : ["core", "reinforcement", "stretch"].includes(resultFilter)
+              ? (result.question?.tier ?? "core") === resultFilter
+              : resultFilter === "open"
+                ? isEvidenceTarget(result.question) && !result.verdict
+                : isEvidenceTarget(result.question) && result.verdict === resultFilter;
       return searchMatch && filterMatch;
     });
-  }, [commandDeskResults, query, resultFilter]);
+  }, [commandDeskResults, completedDeskIds, query, resultFilter]);
 
   const showSearchResults = Boolean(query.trim()) || resultFilter !== "all";
   const evidenceTargetIds = useMemo(
@@ -355,8 +549,11 @@ export function LiveSessionRunner({
     [commandDeskResults],
   );
   const targetEvidence = useMemo(
-    () => evidence.filter(entry => evidenceTargetIds.has(entry.targetId)),
-    [evidence, evidenceTargetIds],
+    () =>
+      [...latestEvidence.values()].filter(entry =>
+        evidenceTargetIds.has(entry.targetId),
+      ),
+    [evidenceTargetIds, latestEvidence],
   );
   const activeReferenceIds = useMemo(() => {
     const tokens = referenceTokens(
@@ -394,35 +591,51 @@ export function LiveSessionRunner({
       .slice(0, 3)
       .map(item => item.id);
   }, [question, references, stage]);
+  const progress = useMemo(
+    () =>
+      calculateSessionDeckProgress({
+        decks: allDecks,
+        evidence,
+        coveredDeckKeys: completedDeskIds,
+      }),
+    [allDecks, completedDeskIds, evidence],
+  );
   const stageProgress = useMemo(
     () =>
       stages.map(item => {
-        const targetIds = new Set(
-          (item.questions ?? []).filter(isEvidenceTarget).map(card => card.id),
-        );
+        const stageDecks = allDecks.filter(deck => deck.stageId === item.id);
+        const stageSummary = calculateSessionDeckProgress({
+          decks: stageDecks,
+          evidence,
+          coveredDeckKeys: completedDeskIds,
+        });
         return {
           ...item,
-          evidenceCount: new Set(
-            evidence
-              .filter(
-                entry => entry.stageId === item.id && targetIds.has(entry.targetId),
-              )
-              .map(entry => entry.targetId),
-          ).size,
-          targetCount: targetIds.size,
+          coveredCount: stageSummary.coveredDecks,
+          deckCount: stageSummary.totalDecks,
         };
       }),
-    [evidence, stages],
+    [allDecks, completedDeskIds, evidence, stages],
   );
-  const plannedBeforeMs = stages
-    .slice(0, stageIndex)
-    .reduce((total, item) => total + item.durationMinutes * 60_000, 0);
-  const stageElapsedMs = Math.max(0, timer.elapsedMs - plannedBeforeMs);
-  const stageDurationMs = Math.max(1, stage?.durationMinutes ?? 1) * 60_000;
-  const stageOvertime = stageElapsedMs > stageDurationMs;
-  const stageDisplay = stageOvertime
-    ? `+${formatSessionTime(stageElapsedMs - stageDurationMs)}`
-    : formatSessionTime(stageDurationMs - stageElapsedMs);
+  const deskTargetSeconds = Math.max(30, question?.expectedSeconds ?? 90);
+  const deskOvertime = deskElapsedSeconds > deskTargetSeconds;
+  const deskDisplay = deskOvertime
+    ? `+${formatSessionTime((deskElapsedSeconds - deskTargetSeconds) * 1_000)}`
+    : formatSessionTime((deskTargetSeconds - deskElapsedSeconds) * 1_000);
+  const nextOpenDeck = allDecks.find(deck => !isDeckCovered(deck));
+  const currentQueueIndex = currentDeck
+    ? queueDecks.findIndex(deck => deck.key === currentDeck.key)
+    : -1;
+  const hasPreviousQueueDeck = currentDeck
+    ? currentQueueIndex > 0 ||
+      (currentQueueIndex < 0 &&
+        queueDecks.some(deck => deck.globalIndex < currentDeck.globalIndex))
+    : false;
+  const hasNextQueueDeck = currentDeck
+    ? (currentQueueIndex >= 0 && currentQueueIndex < queueDecks.length - 1) ||
+      (currentQueueIndex < 0 &&
+        queueDecks.some(deck => deck.globalIndex > currentDeck.globalIndex))
+    : false;
 
   if (!stage) {
     return (
@@ -452,16 +665,32 @@ export function LiveSessionRunner({
             <span>{timer.expired ? "Session overtime" : "Session left"}</span>
             <time>{timer.display}</time>
           </div>
-          <div className={`ls-clock${stageOvertime ? " is-overtime" : ""}`}>
-            <span>{stageOvertime ? "Stage overtime" : "Stage left"}</span>
-            <time>{stageDisplay}</time>
+          <div className={`ls-clock ls-clock--desk${deskOvertime ? " is-overtime" : ""}`}>
+            <span>{deskOvertime ? "Response overtime" : "Response time"}</span>
+            <time>{deskDisplay}</time>
+            <div>
+              <button
+                type="button"
+                onClick={() => setDeskTimerRunning(value => !value)}
+                aria-label={deskTimerRunning ? "Pause response timer" : "Resume response timer"}
+              >
+                {deskTimerRunning ? <Pause size={12} /> : <Play size={12} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeskElapsedSeconds(0)}
+                aria-label="Reset response timer"
+              >
+                <RotateCcw size={12} />
+              </button>
+            </div>
           </div>
           <button
             className="ls-timer-toggle"
             type="button"
             disabled={timer.status === "complete"}
             onClick={timer.toggle}
-            aria-label={timer.status === "running" ? "Pause both timers" : "Resume both timers"}
+            aria-label={timer.status === "running" ? "Pause session timer" : "Resume session timer"}
           >
             {timer.status === "running" ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
           </button>
@@ -486,9 +715,7 @@ export function LiveSessionRunner({
         </div>
         <div className="ls-stage-strip__items">
           {stageProgress.map((item, index) => {
-            const complete = item.targetCount
-              ? item.evidenceCount >= item.targetCount
-              : index < stageIndex;
+            const complete = item.deckCount > 0 && item.coveredCount >= item.deckCount;
             return (
               <button
                 type="button"
@@ -508,6 +735,83 @@ export function LiveSessionRunner({
         </button>
       </nav>
 
+      <section className="ls-deck-console" aria-label="Teaching deck control centre">
+        <div className="ls-deck-console__coverage">
+          <div>
+            <span>Curriculum coverage</span>
+            <strong>{progress.coveredDecks} / {progress.totalDecks}</strong>
+          </div>
+          <div
+            className="ls-deck-console__bar"
+            role="progressbar"
+            aria-label="Teaching deck coverage"
+            aria-valuemin={0}
+            aria-valuemax={progress.totalDecks}
+            aria-valuenow={progress.coveredDecks}
+          >
+            <span
+              style={{
+                width: `${progress.totalDecks
+                  ? (progress.coveredDecks / progress.totalDecks) * 100
+                  : 0}%`,
+              }}
+            />
+          </div>
+          <small>
+            {progress.recordedProofs} / {progress.totalProofs} proofs recorded
+            {progress.needsAttentionProofs
+              ? ` · ${progress.needsAttentionProofs} need attention`
+              : " · no recorded proof needs attention"}
+          </small>
+        </div>
+        <label className="ls-deck-select">
+          <Layers3 size={17} />
+          <span>Jump to deck</span>
+          <select
+            value={currentDeck?.key ?? ""}
+            onChange={event => {
+              const selected = allDecks.find(deck => deck.key === event.target.value);
+              if (selected) navigateToDeck(selected);
+            }}
+          >
+            {stages.map((item, itemStageIndex) => (
+              <optgroup label={`${item.label} · ${item.title}`} key={item.id}>
+                {allDecks
+                  .filter(deck => deck.stageIndex === itemStageIndex)
+                  .map(deck => (
+                    <option value={deck.key} key={deck.key}>
+                      {String(deck.globalNumber).padStart(3, "0")} · {deck.question?.title ?? deck.stageTitle}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+        <label className="ls-deck-select ls-deck-select--queue">
+          <SlidersHorizontal size={17} />
+          <span>Next / previous queue</span>
+          <select
+            value={queueMode}
+            onChange={event => setQueueMode(event.target.value as QueueMode)}
+          >
+            <option value="core">Core session queue</option>
+            <option value="core-plus">Core + reinforcement</option>
+            <option value="stretch">Stretch proofs</option>
+            <option value="all">All curriculum decks</option>
+          </select>
+          <small>{queueDecks.length} decks · {queueName(queueMode)}</small>
+        </label>
+        <button
+          className="ls-button ls-button--quiet ls-next-open"
+          type="button"
+          disabled={!nextOpenDeck}
+          onClick={() => nextOpenDeck && navigateToDeck(nextOpenDeck)}
+        >
+          <CheckCircle2 size={16} />
+          {nextOpenDeck ? `First open: ${nextOpenDeck.globalNumber}` : "All decks covered"}
+        </button>
+      </section>
+
       <section className="ls-command-search" aria-label="Find any playbook item">
         <label>
           <Search size={18} />
@@ -526,6 +830,10 @@ export function LiveSessionRunner({
           <span className="ls-sr-only">Filter by evidence result</span>
           <select value={resultFilter} onChange={event => setResultFilter(event.target.value as ResultFilter)}>
             <option value="all">All route desks</option>
+            <option value="uncovered">All uncovered decks</option>
+            <option value="core">Core decks</option>
+            <option value="reinforcement">Reinforcement decks</option>
+            <option value="stretch">Stretch decks</option>
             <option value="open">Proof not recorded</option>
             <option value="correct">Secure</option>
             <option value="partial">Developing</option>
@@ -543,22 +851,30 @@ export function LiveSessionRunner({
           </header>
           {filteredResults.length ? (
             <div className="ls-search-results__list">
-              {filteredResults.map(result => (
-                <button
-                  type="button"
-                  key={result.key}
-                  onClick={() => {
-                    changePosition(result.stageIndex, result.questionIndex);
-                    setQuery("");
-                    setResultFilter("all");
-                  }}
-                >
-                  <span>{result.stage.label} · {result.question?.label ?? "Stage"}</span>
-                  <strong>{resultLabel(result)}</strong>
-                  <small>{result.question?.prompt ?? result.stage.objective}</small>
-                  <em className={result.verdict ? `is-${result.verdict}` : "is-open"}>{result.verdict ?? "open"}</em>
-                </button>
-              ))}
+              {filteredResults.map(result => {
+                const covered =
+                  completedDeskIds.includes(result.deck.key) || Boolean(result.verdict);
+                return (
+                  <button
+                    type="button"
+                    key={result.key}
+                    onClick={() => {
+                      changePosition(result.stageIndex, result.questionIndex);
+                      setQuery("");
+                      setResultFilter("all");
+                    }}
+                  >
+                    <span>
+                      Deck {result.deck.globalNumber} · {result.stage.label} · {result.question?.tier ?? "core"}
+                    </span>
+                    <strong>{resultLabel(result)}</strong>
+                    <small>{result.question?.prompt ?? result.stage.objective}</small>
+                    <em className={result.verdict ? `is-${result.verdict}` : covered ? "is-covered" : "is-open"}>
+                      {result.verdict ?? (covered ? "covered" : "open")}
+                    </em>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div className="ls-no-results">
@@ -583,10 +899,14 @@ export function LiveSessionRunner({
       <div className="ls-runner__grid">
         <main className="ls-runner__main">
           <div className="ls-proof-progress">
-            <span>Teaching desk {safeQuestionIndex + 1} of {allQuestions}</span>
+            <span>
+              Deck {currentDeck?.globalNumber ?? 1} of {allDecks.length}
+              {question?.tier ? ` · ${question.tier}` : ""}
+              {deskComplete ? " · covered" : " · open"}
+            </span>
             <span>
               {stageTargetCount
-                ? `${stageEvidenceCount} of ${stageTargetCount} mastery proofs recorded`
+                ? `${stageEvidenceCount} of ${stageTargetCount} stage proofs recorded`
                 : "Teaching stage · no formal proof required"}
             </span>
           </div>
@@ -594,17 +914,29 @@ export function LiveSessionRunner({
             stage={stage}
             question={question}
             questionIndex={safeQuestionIndex}
-            onShowCandidate={() => setCandidateOpen(true)}
+            flowStep={flowStep}
+            complete={deskComplete}
+            onFlowStepChange={selectFlowStep}
+            onShowCandidate={openCandidateView}
           />
+          {advanceHint ? (
+            <p className="ls-advance-hint" role="status" aria-live="polite">
+              <CircleAlert size={16} /> {advanceHint}
+            </p>
+          ) : null}
           <nav className="ls-page-controls" aria-label="Command desk navigation">
-            <button className="ls-button ls-button--quiet" type="button" disabled={stageIndex === 0 && safeQuestionIndex === 0} onClick={goPrevious}>
+            <button className="ls-button ls-button--quiet" type="button" disabled={!hasPreviousQueueDeck} onClick={goPrevious}>
               <ArrowLeft size={17} /> Previous <kbd>B</kbd>
             </button>
-            <button className="ls-button ls-button--candidate" type="button" onClick={() => setCandidateOpen(true)}>
+            <button className="ls-button ls-button--candidate" type="button" onClick={openCandidateView}>
               <MonitorUp size={17} /> Candidate view <kbd>V</kbd>
             </button>
-            <button className="ls-button ls-button--quiet" type="button" onClick={goNext}>
-              {stageIndex === stages.length - 1 && safeQuestionIndex === allQuestions - 1 ? "Closeout" : "Next"}
+            <button className="ls-button ls-button--quiet" type="button" onClick={advanceCurrentDeck}>
+              {evidenceTarget && !deskComplete && !latestEvidence.has(targetId)
+                ? "Record evidence"
+                : hasNextQueueDeck || nextOpenDeck
+                  ? "Cover & next"
+                  : "Closeout"}
               <ArrowRight size={17} /> <kbd>N</kbd>
             </button>
           </nav>
@@ -627,19 +959,83 @@ export function LiveSessionRunner({
               </div>
               <BookOpenCheck size={20} aria-hidden="true" />
             </header>
-            <p className="ls-evidence__target">No mastery verdict is required on this desk.</p>
+            <p className="ls-evidence__target">
+              {deskComplete
+                ? "This teaching deck is recorded as covered."
+                : "Teach, check understanding, then record this deck as covered."}
+            </p>
             <ol className="ls-teaching-move-list">
               <li>Explain the core idea in your own natural voice.</li>
               <li>Ask the displayed check and wait for Hamad to commit.</li>
               <li>Use the model response to sharpen the explanation.</li>
               <li>Move forward to the next independent proof.</li>
             </ol>
-            <button className="ls-button ls-button--primary ls-button--block" type="button" onClick={goNext}>
-              Continue to next desk <ArrowRight size={17} /> <kbd>N</kbd>
+            <button
+              className="ls-button ls-button--primary ls-button--block"
+              type="button"
+              onClick={markDeskCompleteAndContinue}
+            >
+              {deskComplete ? "Covered · continue" : "Mark covered & continue"}
+              <ArrowRight size={17} /> <kbd>N</kbd>
             </button>
+            {deskComplete ? (
+              <button
+                className="ls-button ls-button--quiet ls-button--block"
+                type="button"
+                onClick={() => onDeskCompletionChange(currentDeskKey, false)}
+              >
+                Reopen this deck
+              </button>
+            ) : null}
           </aside>
         )}
       </div>
+
+      <nav className="ls-mobile-session-dock" aria-label="Mobile session controls">
+        <button type="button" disabled={!hasPreviousQueueDeck} onClick={goPrevious} aria-label="Previous teaching deck">
+          <ArrowLeft size={18} />
+        </button>
+        {(["teach", "ask", "answer"] as const).map((step, index) => (
+          <button
+            type="button"
+            className={flowStep === step ? "is-current" : ""}
+            onClick={() => {
+              selectFlowStep(step);
+              const tone = step === "teach" ? "explain" : step === "ask" ? "question" : "answer";
+              window.setTimeout(() => {
+                const reducedMotion = window.matchMedia?.(
+                  "(prefers-reduced-motion: reduce)",
+                ).matches;
+                document
+                  .querySelector<HTMLElement>(`.ls-command-block--${tone}`)
+                  ?.scrollIntoView({
+                    behavior: reducedMotion ? "auto" : "smooth",
+                    block: "start",
+                  });
+              }, 0);
+            }}
+            aria-label={`Go to ${step} panel`}
+            key={step}
+          >
+            <span>{index + 1}</span>
+            {step}
+          </button>
+        ))}
+        <button
+          type="button"
+          className={evidenceTarget && !deskComplete && !latestEvidence.has(targetId) ? "is-attention" : ""}
+          onClick={advanceCurrentDeck}
+          aria-label={
+            evidenceTarget && !deskComplete && !latestEvidence.has(targetId)
+              ? "Record evidence before continuing"
+              : "Cover this deck and continue"
+          }
+        >
+          {evidenceTarget && !deskComplete && !latestEvidence.has(targetId)
+            ? <Flag size={18} />
+            : <ArrowRight size={18} />}
+        </button>
+      </nav>
 
       <CandidatePromptView
         open={candidateOpen}
@@ -647,8 +1043,22 @@ export function LiveSessionRunner({
         stageLabel={stage.title}
         prompt={question?.prompt ?? stage.ask?.[0] ?? stage.objective}
         options={question?.options}
-        timeDisplay={timer.display}
-        onClose={() => setCandidateOpen(false)}
+        timeDisplay={deskDisplay}
+        onClose={() => {
+          setCandidateOpen(false);
+          selectFlowStep("answer");
+          window.setTimeout(() => {
+            const reducedMotion = window.matchMedia?.(
+              "(prefers-reduced-motion: reduce)",
+            ).matches;
+            document
+              .querySelector<HTMLElement>(".ls-command-block--answer")
+              ?.scrollIntoView({
+                behavior: reducedMotion ? "auto" : "smooth",
+                block: "start",
+              });
+          }, 0);
+        }}
       />
       <ReferenceDrawer
         open={referenceOpen}

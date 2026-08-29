@@ -61,7 +61,12 @@ export function EvidenceRepairFlow({
   );
 
   return (
-    <aside className="ls-evidence" aria-labelledby="ls-evidence-title">
+    <aside
+      className="ls-evidence"
+      id="ls-evidence-panel"
+      tabIndex={-1}
+      aria-labelledby="ls-evidence-title"
+    >
       <header className="ls-evidence__header">
         <div>
           <p className="ls-eyebrow">Tutor observation</p>

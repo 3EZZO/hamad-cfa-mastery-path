@@ -187,6 +187,9 @@ function parseRunSnapshot(value: unknown): LiveSessionRunSnapshot | null {
       candidate.phase ?? "",
     ) ||
     !Array.isArray(candidate.evidence) ||
+    (candidate.completedDeskIds !== undefined &&
+      (!Array.isArray(candidate.completedDeskIds) ||
+        candidate.completedDeskIds.some(item => typeof item !== "string"))) ||
     typeof candidate.stageIndex !== "number" ||
     typeof candidate.questionIndex !== "number" ||
     typeof candidate.updatedAt !== "string"

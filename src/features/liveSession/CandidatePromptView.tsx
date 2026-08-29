@@ -1,5 +1,6 @@
 import { Maximize2, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useDialogFocus } from "./useDialogFocus";
 
 export interface CandidatePromptViewProps {
   open: boolean;
@@ -20,22 +21,22 @@ export function CandidatePromptView({
   timeDisplay,
   onClose,
 }: CandidatePromptViewProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    closeRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose, open]);
+  useDialogFocus(open, dialogRef, closeRef, onClose);
 
   if (!open) return null;
 
   return (
-    <div className="ls-candidate" role="dialog" aria-modal="true" aria-labelledby="ls-candidate-title">
+    <div
+      ref={dialogRef}
+      className="ls-candidate"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ls-candidate-title"
+      tabIndex={-1}
+    >
       <header className="ls-candidate__header">
         <div>
           <span>{sessionLabel}</span>
@@ -64,4 +65,3 @@ export function CandidatePromptView({
     </div>
   );
 }
-

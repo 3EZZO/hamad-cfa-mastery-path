@@ -1,6 +1,7 @@
 import { BookOpenCheck, Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { LiveSessionReference } from "./types";
+import { useDialogFocus } from "./useDialogFocus";
 
 export interface ReferenceDrawerProps {
   open: boolean;
@@ -28,6 +29,7 @@ export function ReferenceDrawer({
 }: ReferenceDrawerProps) {
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState("All");
+  const dialogRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const groups = useMemo(
@@ -35,15 +37,7 @@ export function ReferenceDrawer({
     [references],
   );
 
-  useEffect(() => {
-    if (!open) return;
-    searchRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose, open]);
+  useDialogFocus(open, dialogRef, searchRef, onClose);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -77,10 +71,12 @@ export function ReferenceDrawer({
   return (
     <div className="ls-drawer-backdrop" onMouseDown={onClose}>
       <aside
+        ref={dialogRef}
         className="ls-reference-drawer"
         role="dialog"
         aria-modal="true"
         aria-labelledby="ls-reference-title"
+        tabIndex={-1}
         onMouseDown={event => event.stopPropagation()}
       >
         <header>

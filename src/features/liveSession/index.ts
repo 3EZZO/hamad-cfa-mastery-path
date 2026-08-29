@@ -16,6 +16,17 @@ export { SessionCloseout } from "./SessionCloseout";
 export type { SessionCloseoutProps } from "./SessionCloseout";
 export { SessionLaunch } from "./SessionLaunch";
 export type { SessionLaunchProps } from "./SessionLaunch";
+export {
+  calculateSessionDeckProgress,
+  flattenSessionDecks,
+  latestEvidenceByTarget,
+  sessionDeckKey,
+} from "./sessionDeckModel";
+export type {
+  CalculateSessionDeckProgressOptions,
+  SessionDeck,
+  SessionDeckProgress,
+} from "./sessionDeckModel";
 export { StageCard } from "./StageCard";
 export type { StageCardProps } from "./StageCard";
 export { formatSessionTime, useSessionTimer } from "./useSessionTimer";
