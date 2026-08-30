@@ -130,6 +130,9 @@ export type CloudErrorCode =
   | "authentication-required"
   | "invalid-cloud-data"
   | "invalid-membership"
+  | "inactive-membership"
+  | "tutor-role-required"
+  | "firestore-contract-rejected"
   | "invalid-tutor-content"
   | "tutor-live-run-conflict"
   | "conflict-base-missing"
@@ -154,6 +157,12 @@ const FRIENDLY_ERROR_MESSAGES: Record<CloudErrorCode, string> = {
     "The saved cloud record is not a valid Hamad CFA Mastery tracker.",
   "invalid-membership":
     "This account's Hamad CFA Mastery membership record is invalid. Ask the tutor to check Firebase.",
+  "inactive-membership":
+    "This account does not have an active Hamad CFA Mastery membership. Ask the project owner to check Firebase.",
+  "tutor-role-required":
+    "This private Session Mode action requires the active tutor account.",
+  "firestore-contract-rejected":
+    "Firebase rejected this private Session Mode operation even though the account is an active tutor. The deployed Firestore rules or write contract may be out of date.",
   "invalid-tutor-content":
     "The tutor playbook or live-session record is invalid and was not saved.",
   "tutor-live-run-conflict":
@@ -161,7 +170,7 @@ const FRIENDLY_ERROR_MESSAGES: Record<CloudErrorCode, string> = {
   "conflict-base-missing":
     "The cloud tracker changed before this device finished loading it. Refresh and try again.",
   "permission-denied":
-    "This account is not authorized to access Hamad's tracker.",
+    "Firebase denied this cloud operation. Verify the account membership and deployed Firestore rules.",
   "popup-blocked":
     "The sign-in popup was blocked. Allow popups for this site and try again.",
   "popup-cancelled": "Google sign-in was cancelled.",
@@ -1040,6 +1049,47 @@ export function mapCloudError(error: unknown): CloudClientError {
   })();
 
   return new CloudClientError(mappedCode, error);
+}
+
+/**
+ * Refines Firestore's deliberately broad `permission-denied` response for a
+ * tutor-only operation. Firestore uses the same code when membership fails and
+ * when an otherwise authorized write does not satisfy the deployed rules, so
+ * the generic code alone must not be presented as proof that the account is
+ * unauthorized.
+ */
+export async function diagnoseTutorCloudError(
+  error: unknown,
+): Promise<CloudClientError> {
+  const cloudError = mapCloudError(error);
+  if (cloudError.code !== "permission-denied") return cloudError;
+
+  try {
+    const { auth, firestore } = getFirebaseServices();
+    const user = requireAuthenticatedUser(auth);
+    const snapshot = await getDoc(memberDocument(firestore, user.uid));
+    if (!snapshot.exists()) {
+      return new CloudClientError("inactive-membership", cloudError);
+    }
+
+    const member = parseProjectMember(user.uid, snapshot.data());
+    if (!member.active) {
+      return new CloudClientError("inactive-membership", cloudError);
+    }
+    if (member.role !== "tutor") {
+      return new CloudClientError("tutor-role-required", cloudError);
+    }
+    return new CloudClientError("firestore-contract-rejected", cloudError);
+  } catch (probeError) {
+    const probeCloudError = mapCloudError(probeError);
+    if (
+      probeCloudError.code === "authentication-required" ||
+      probeCloudError.code === "invalid-membership"
+    ) {
+      return probeCloudError;
+    }
+    return cloudError;
+  }
 }
 
 export function getCloudErrorMessage(error: unknown): string {

@@ -62,9 +62,16 @@ Do not manually create playbook or run data in the console. The signed-in tutor 
 From this project directory, authenticate the Firebase CLI and deploy only the checked-in rules:
 
 ```powershell
-npx firebase-tools@latest login
-npx firebase-tools@latest deploy --only firestore:rules --project YOUR_FIREBASE_PROJECT_ID
+npx --yes firebase-tools@15.28.1 login
+npm run firestore:rules:deploy
 ```
+
+The deployment wrapper pins the Firebase CLI to `15.28.1`, refuses any project
+other than `project-202-tracker`, and verifies that the Rules API release target
+is exactly `cloud.firestore`. A deployment that reports
+`cloud.firestore/(default)` fails verification because that separate release
+name may leave the production default-database rules unchanged. Do not replace
+the pinned version with `@latest` without first confirming the release target.
 
 The rules intentionally allow:
 
@@ -81,6 +88,15 @@ The rules intentionally allow:
 - no client deletion of the tracker document.
 
 Repeat the deploy command after every intentional change to `firestore.rules`. Rules are not deployed by the GitHub Pages workflow. For this release, deploy the backward-compatible rules before publishing the new Pages build so the private Session Mode paths, session-approval fields, and private-note path are authorized when the client becomes live.
+
+For a controlled remote deployment, create a protected GitHub environment named
+`firebase-production`, require reviewer approval, and add an environment secret
+named `FIREBASE_SERVICE_ACCOUNT_PROJECT_202_TRACKER` containing the JSON for a
+least-privilege service account that can release Firestore rules. Then run the
+manual **Deploy Firestore rules** workflow from GitHub Actions. The workflow
+refuses to continue if the secret is absent, writes the credential only to the
+runner's temporary directory, removes it after the job, and uses the same pinned
+deployment wrapper and release-target verification as the local command.
 
 When a release changes both rules and the web client, deploy the rules first, then deploy Pages. The confirmed 5 September plan requires `scheduleVersion = weekly-saturday-v2` on the next write. Sign in as Mohamed first after the Pages deployment so the tutor account can publish the migrated or reset baseline before Hamad uses the updated tracker.
 

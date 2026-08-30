@@ -9,6 +9,7 @@
     "test": "vitest run",
     "build": "npm run typecheck && vinext build && node scripts/finalize-sites-build.mjs",
     "build:pages": "npm run typecheck && vite build --config vite.pages.config.mjs && node scripts/finalize-pages-build.mjs && node scripts/verify-private-tutor-content.mjs dist-pages",
+    "firestore:rules:deploy": "node scripts/deploy-firestore-rules.mjs",
     "preview": "vinext start",
     "preview:pages": "vite preview --config vite.pages.config.mjs --outDir dist-pages",
     "readings:integrate": "node scripts/integrate-readings.mjs"

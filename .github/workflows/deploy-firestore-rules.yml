@@ -1,0 +1,55 @@
+name: Deploy Firestore rules
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firestore-rules-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: firebase-production
+    env:
+      FIREBASE_PROJECT_ID: project-202-tracker
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROJECT_202_TRACKER }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Require protected Firebase credentials
+        shell: bash
+        run: |
+          if [[ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]]; then
+            echo "::error::The firebase-production environment is missing FIREBASE_SERVICE_ACCOUNT_PROJECT_202_TRACKER."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare temporary Firebase credentials
+        shell: bash
+        run: |
+          credentials="$RUNNER_TEMP/project-202-firebase-service-account.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$credentials"
+          chmod 600 "$credentials"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$credentials" >> "$GITHUB_ENV"
+
+      - name: Deploy and verify Firestore rules target
+        run: npm run firestore:rules:deploy
+
+      - name: Remove temporary Firebase credentials
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/project-202-firebase-service-account.json"

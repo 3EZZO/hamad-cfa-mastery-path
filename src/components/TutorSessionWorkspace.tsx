@@ -21,6 +21,7 @@ import { getSessionTaskId, getWeekSessions, PLAN } from "../data/plan";
 import {
   CloudClientError,
   deleteTutorLiveRun,
+  diagnoseTutorCloudError,
   getCloudErrorMessage,
   getTutorLiveRun,
   importTutorPlaybookPackage,
@@ -39,17 +40,20 @@ import {
   cacheTutorPlaybookOffline,
   cacheTutorRunOffline,
   getTutorOfflineStatus,
+  journalTutorRunAction,
   loadTutorPlaybookOffline,
+  loadTutorRunJournal,
   loadTutorRunOffline,
   removeTutorPlaybookOffline,
+  removeTutorRunJournalAction,
   removeTutorRunOffline,
+  type TutorRunJournalEntry,
 } from "../lib/tutorOffline";
 import type {
   TutorLiveRun,
   TutorLiveRunAction,
   TutorPlaybookPackage,
 } from "../lib/tutorContent";
-import { isTutorLiveRunActionSatisfied } from "../lib/tutorContent";
 import type { PrivateTutorNote, TrackerState } from "../types";
 
 const PLAYBOOK_ID = "hamad-cfa-mastery-session-01";
@@ -86,12 +90,18 @@ type PendingAction = Omit<
 
 interface QueuedCloudMutation {
   scope: string;
+  eventId: string;
   generation: number;
   cancelled: boolean;
   execute: () => Promise<TutorLiveRun>;
   resolve: (run: TutorLiveRun) => void;
   reject: (error: unknown) => void;
   attempts: number;
+}
+
+interface EnqueueActionOptions {
+  eventId?: string;
+  alreadyJournaled?: boolean;
 }
 
 const RETRYABLE_SYNC_ERRORS = new Set<CloudErrorCode>([
@@ -438,6 +448,7 @@ export default function TutorSessionWorkspace({
   const terminalSyncErrorRef = useRef<unknown | null>(null);
   const quarantinedSyncIssueRef = useRef("");
   const startQueuedRef = useRef(false);
+  const restoredJournalRef = useRef<TutorRunJournalEntry[]>([]);
 
   const resetSyncScope = useCallback((nextScope: string, force = false) => {
     if (!force && activeScopeRef.current === nextScope) return;
@@ -457,6 +468,7 @@ export default function TutorSessionWorkspace({
     cloudRunRef.current = null;
     previousSnapshotRef.current = null;
     startQueuedRef.current = false;
+    restoredJournalRef.current = [];
   }, []);
 
   const playbook = useMemo(
@@ -500,6 +512,7 @@ export default function TutorSessionWorkspace({
 
     let cachedPackage: TutorPlaybookPackage | null = null;
     let cachedRun: LiveSessionRunSnapshot | null = null;
+    let cachedJournal: TutorRunJournalEntry[] = [];
     try {
       cachedPackage = await loadTutorPlaybookOffline(userUid, PLAYBOOK_ID);
     } catch {
@@ -509,6 +522,7 @@ export default function TutorSessionWorkspace({
     const selectedPackage = cloudPackage ?? cachedPackage;
     if (sequence !== loadSequenceRef.current) return;
     if (!selectedPackage) {
+      resetSyncScope(`${userUid}:no-private-package`);
       setPrivatePackage(null);
       setOfflineReady(false);
       setLoadMessage(cloudProblem);
@@ -521,11 +535,16 @@ export default function TutorSessionWorkspace({
       selectedPackage.manifest.version,
       selectedPackage.manifest.contentHash
     );
-    resetSyncScope(selectedRunId);
-    try {
-      cachedRun = await loadTutorRunOffline(userUid, selectedRunId);
-    } catch {
-      // The cloud run remains authoritative if device storage is unavailable.
+    resetSyncScope(`${userUid}:${selectedRunId}`);
+    const [cachedRunResult, cachedJournalResult] = await Promise.allSettled([
+      loadTutorRunOffline(userUid, selectedRunId),
+      loadTutorRunJournal(userUid, selectedRunId),
+    ]);
+    if (cachedRunResult.status === "fulfilled") {
+      cachedRun = cachedRunResult.value;
+    }
+    if (cachedJournalResult.status === "fulfilled") {
+      cachedJournal = cachedJournalResult.value;
     }
     const adapted = adaptTutorPlaybookPackage(selectedPackage);
     let cloudRun: TutorLiveRun | null = null;
@@ -543,8 +562,11 @@ export default function TutorSessionWorkspace({
     if (sequence !== loadSequenceRef.current) return;
 
     cloudRunRef.current = cloudRun;
-    startQueuedRef.current = Boolean(cloudRun);
-    previousSnapshotRef.current = cloudSnapshot;
+    restoredJournalRef.current = cachedJournal;
+    startQueuedRef.current = Boolean(
+      cloudRun || cachedJournal.some(entry => entry.action.type === "start")
+    );
+    previousSnapshotRef.current = cachedJournal.length ? restored : cloudSnapshot;
     setPrivatePackage(selectedPackage);
     setInitialRun(restored);
     setWorkspaceEpoch(value => value + 1);
@@ -585,6 +607,7 @@ export default function TutorSessionWorkspace({
         generation === syncGenerationRef.current &&
         saveQueueRef.current.length > 0
       ) {
+        if (terminalSyncErrorRef.current) return;
         const pending = saveQueueRef.current[0]!;
         if (
           pending.cancelled ||
@@ -603,6 +626,14 @@ export default function TutorSessionWorkspace({
           if (generation !== syncGenerationRef.current || pending.cancelled) {
             continue;
           }
+          if (!saved.events.some(event => event.id === pending.eventId)) {
+            throw new CloudClientError("tutor-live-run-conflict");
+          }
+          await removeTutorRunJournalAction(
+            userUid,
+            saved.id,
+            pending.eventId
+          );
           if (saveQueueRef.current[0] === pending) {
             saveQueueRef.current.shift();
           }
@@ -615,14 +646,15 @@ export default function TutorSessionWorkspace({
           ) {
             continue;
           }
-          const cloudError = mapCloudError(error);
+          const cloudError = await diagnoseTutorCloudError(error);
 
           if (cloudError.code === "tutor-live-run-conflict") {
-            saveQueueRef.current.shift();
-            pending.reject(cloudError);
-            quarantinedSyncIssueRef.current =
-              "One stale action was safely skipped after cloud reconciliation. Reload cloud state to verify this device.";
-            continue;
+            terminalSyncErrorRef.current = cloudError;
+            setSyncState("error");
+            setSyncMessage(
+              "A cloud change conflicts with a saved device action. The action remains on this device; retry to reconcile it."
+            );
+            return;
           }
 
           pending.attempts += 1;
@@ -630,20 +662,19 @@ export default function TutorSessionWorkspace({
             cloudError.code === "unknown" &&
             pending.attempts >= MAX_UNKNOWN_RETRIES
           ) {
-            saveQueueRef.current.shift();
-            pending.reject(cloudError);
-            quarantinedSyncIssueRef.current =
-              "One action could not be confirmed after three attempts. Your device copy is safe; retry cloud sync.";
-            continue;
+            terminalSyncErrorRef.current = cloudError;
+            setSyncState("error");
+            setSyncMessage(
+              "One saved device action could not be confirmed after three attempts. It remains queued; retry cloud sync."
+            );
+            return;
           }
 
           if (!RETRYABLE_SYNC_ERRORS.has(cloudError.code)) {
             terminalSyncErrorRef.current = cloudError;
-            const rejected = saveQueueRef.current.splice(0);
-            rejected.forEach(item => item.reject(cloudError));
             setSyncState("error");
             setSyncMessage(
-              `${cloudError.message} The device recovery copy remains safe. Correct access, then retry sync.`
+              `${cloudError.message} Saved device actions remain queued. Correct the reported issue, then retry sync.`
             );
             return;
           }
@@ -685,7 +716,7 @@ export default function TutorSessionWorkspace({
         drainingGenerationRef.current = null;
       }
     }
-  }, []);
+  }, [userUid]);
 
   useEffect(() => {
     const retryPendingActions = () => {
@@ -721,26 +752,47 @@ export default function TutorSessionWorkspace({
   }, [drainSaveQueue, loadWorkspace]);
 
   const enqueueAction = useCallback(
-    (
+    async (
       payload: PendingAction,
-      snapshot: LiveSessionRunSnapshot
+      snapshot: LiveSessionRunSnapshot,
+      options: EnqueueActionOptions = {}
     ): Promise<TutorLiveRun> => {
       if (!playbook || !privatePackage || !snapshot.routeId) {
-        return Promise.reject(new Error("Choose a live-session route first."));
+        throw new Error("Choose a live-session route first.");
       }
-      if (terminalSyncErrorRef.current) {
-        return Promise.reject(terminalSyncErrorRef.current);
-      }
-      const eventId = actionId();
-      const scope = runId;
+      const eventId = options.eventId ?? actionId();
+      const scope = `${userUid}:${runId}`;
       const generation = syncGenerationRef.current;
       const playbookId = privatePackage.manifest.id;
       const playbookVersion = privatePackage.manifest.version;
       const routeId = snapshot.routeId;
       const localElapsedSeconds = snapshotElapsedSeconds(snapshot);
+      if (!options.alreadyJournaled) {
+        try {
+          await journalTutorRunAction(
+            userUid,
+            runId,
+            eventId,
+            payload,
+            snapshot
+          );
+        } catch (error) {
+          setSyncState("error");
+          setSyncMessage(
+            "This action could not be secured in device recovery storage. Free browser storage or close another tracker tab, then retry."
+          );
+          throw error;
+        }
+      }
+      if (
+        generation !== syncGenerationRef.current ||
+        scope !== activeScopeRef.current
+      ) {
+        throw new QueueScopeChangedError();
+      }
       const execute = async (): Promise<TutorLiveRun> => {
         let current =
-          cloudRunRef.current?.id === scope ? cloudRunRef.current : null;
+          cloudRunRef.current?.id === runId ? cloudRunRef.current : null;
         let lastConflict: unknown = new CloudClientError(
           "tutor-live-run-conflict"
         );
@@ -759,7 +811,7 @@ export default function TutorSessionWorkspace({
 
           if (current) {
             const sameIdentity =
-              current.id === scope &&
+              current.id === runId &&
               current.playbookId === playbookId &&
               current.playbookVersion === playbookVersion &&
               current.sessionNumber === session.number &&
@@ -767,18 +819,17 @@ export default function TutorSessionWorkspace({
             if (!sameIdentity) {
               throw new CloudClientError("tutor-live-run-conflict");
             }
-            if (
-              isTutorLiveRunActionSatisfied(current, {
-                id: eventId,
-                type: payload.type,
-              }) ||
-              current.status === "completed" ||
-              current.status === "abandoned"
-            ) {
+            if (current.events.some(event => event.id === eventId)) {
               if (generation === syncGenerationRef.current) {
                 cloudRunRef.current = current;
               }
               return current;
+            }
+            if (
+              current.status === "completed" ||
+              current.status === "abandoned"
+            ) {
+              throw new CloudClientError("tutor-live-run-conflict");
             }
           }
 
@@ -797,7 +848,7 @@ export default function TutorSessionWorkspace({
               : Math.max(current?.elapsedSeconds ?? 0, localElapsedSeconds);
           try {
             const saved = await saveTutorLiveRun({
-              runId: scope,
+              runId,
               playbookId,
               playbookVersion,
               sessionNumber: session.number,
@@ -820,7 +871,7 @@ export default function TutorSessionWorkspace({
               throw cloudError;
             }
             lastConflict = cloudError;
-            const latest = await getTutorLiveRun(scope);
+            const latest = await getTutorLiveRun(runId);
             if (latest?.events.some(event => event.id === eventId)) {
               if (generation === syncGenerationRef.current) {
                 cloudRunRef.current = latest;
@@ -835,6 +886,7 @@ export default function TutorSessionWorkspace({
       const queued = new Promise<TutorLiveRun>((resolve, reject) => {
         saveQueueRef.current.push({
           scope,
+          eventId,
           generation,
           cancelled: false,
           execute,
@@ -844,10 +896,28 @@ export default function TutorSessionWorkspace({
         });
       });
       void drainSaveQueue();
-      return queued;
+      return await queued;
     },
-    [drainSaveQueue, playbook, privatePackage, runId, session.number]
+    [
+      drainSaveQueue,
+      playbook,
+      privatePackage,
+      runId,
+      session.number,
+      userUid,
+    ]
   );
+
+  useEffect(() => {
+    if (!playbook || !privatePackage) return;
+    const restored = restoredJournalRef.current.splice(0);
+    restored.forEach(entry => {
+      void enqueueAction(entry.action, entry.snapshot, {
+        eventId: entry.eventId,
+        alreadyJournaled: true,
+      }).catch(() => undefined);
+    });
+  }, [enqueueAction, playbook, privatePackage, workspaceEpoch]);
 
   const handleRunChange = useCallback(
     (snapshot: LiveSessionRunSnapshot) => {
@@ -1068,7 +1138,7 @@ export default function TutorSessionWorkspace({
       setSyncMessage("Clearing the rehearsal from cloud and device recovery...");
       // A restart deliberately reuses the same deterministic run ID. Force a
       // new queue generation so an old retry cannot race the delete.
-      resetSyncScope(runId, true);
+      resetSyncScope(`${userUid}:${runId}`, true);
       try {
         await deleteTutorLiveRun(runId);
         await removeTutorRunOffline(userUid, runId);

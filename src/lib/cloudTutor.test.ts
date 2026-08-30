@@ -95,6 +95,7 @@ vi.mock("firebase/firestore", () => {
 
 import {
   deleteTutorLiveRun,
+  diagnoseTutorCloudError,
   getTutorLiveRun,
   importTutorPlaybookPackage,
   loadTutorPlaybookPackage,
@@ -344,5 +345,57 @@ describe("tutor-only cloud live-run API", () => {
     await expect(getTutorLiveRun("session-01-2026-09-05")).rejects.toMatchObject(
       { code: "authentication-required" },
     );
+  });
+});
+
+describe("tutor-only permission diagnosis", () => {
+  const denied = { code: "firestore/permission-denied" };
+  const membershipPath = "programs/project-202/members/tutor-uid";
+
+  it("identifies missing and inactive membership", async () => {
+    await expect(diagnoseTutorCloudError(denied)).resolves.toMatchObject({
+      code: "inactive-membership",
+    });
+
+    firebaseHarness.documents.set(membershipPath, {
+      active: false,
+      role: "tutor",
+    });
+    await expect(diagnoseTutorCloudError(denied)).resolves.toMatchObject({
+      code: "inactive-membership",
+    });
+  });
+
+  it("distinguishes a non-tutor member from an active tutor", async () => {
+    firebaseHarness.documents.set(membershipPath, {
+      active: true,
+      role: "student",
+    });
+    await expect(diagnoseTutorCloudError(denied)).resolves.toMatchObject({
+      code: "tutor-role-required",
+    });
+
+    firebaseHarness.documents.set(membershipPath, {
+      active: true,
+      role: "tutor",
+    });
+    const diagnosed = await diagnoseTutorCloudError(denied);
+    expect(diagnosed).toMatchObject({ code: "firestore-contract-rejected" });
+    expect(diagnosed.message).toMatch(
+      /rules or write contract may be out of date/i,
+    );
+  });
+
+  it("preserves invalid membership and unrelated cloud errors", async () => {
+    firebaseHarness.documents.set(membershipPath, {
+      active: true,
+      role: "owner",
+    });
+    await expect(diagnoseTutorCloudError(denied)).resolves.toMatchObject({
+      code: "invalid-membership",
+    });
+    await expect(
+      diagnoseTutorCloudError({ code: "firestore/unavailable" }),
+    ).resolves.toMatchObject({ code: "service-unavailable" });
   });
 });

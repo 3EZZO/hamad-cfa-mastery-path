@@ -120,9 +120,10 @@ describe("Hamad CFA Mastery member validation", () => {
 
 describe("cloud error messages", () => {
   it("maps permissions, credentials, and network errors for the UI", () => {
-    expect(mapCloudError({ code: "firestore/permission-denied" }).code).toBe(
-      "permission-denied",
-    );
+    const denied = mapCloudError({ code: "firestore/permission-denied" });
+    expect(denied.code).toBe("permission-denied");
+    expect(denied.message).not.toMatch(/account is not authorized/i);
+    expect(denied.message).toMatch(/membership and deployed Firestore rules/i);
     expect(mapCloudError({ code: "auth/wrong-password" }).code).toBe(
       "invalid-credentials",
     );
