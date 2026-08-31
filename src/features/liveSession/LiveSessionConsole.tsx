@@ -18,20 +18,25 @@ import {
   type ReactNode,
 } from "react";
 import { LiveSessionRunner } from "./LiveSessionRunner";
+import { evaluateSessionPreflight } from "./sessionPreflight";
 import { isPreSessionRehearsal } from "./sessionLifecycle";
 import { sessionDeckKey } from "./sessionDeckModel";
 import { SessionCloseout } from "./SessionCloseout";
 import { SessionLaunch } from "./SessionLaunch";
+import { SessionPreflightPanel } from "./SessionPreflightPanel";
 import type {
   LiveSessionCloseoutResult,
   LiveSessionConsoleProps,
   LiveSessionEvidence,
   LiveSessionPhase,
   LiveSessionPlaybook,
+  LiveSessionPreflightProbeResult,
   LiveSessionRoute,
   SessionTimerSnapshot,
 } from "./types";
 import { useSessionTimer } from "./useSessionTimer";
+
+const PREFLIGHT_FRESHNESS_MS = 5 * 60 * 1_000;
 
 function preferredRouteId(
   playbook: LiveSessionPlaybook,
@@ -122,11 +127,13 @@ function WorkspaceTools({
   replacingPlaybook,
   onReplacePlaybook,
   onExit,
+  preflight,
 }: Pick<
   LiveSessionConsoleProps,
   "replacingPlaybook" | "onReplacePlaybook" | "onExit"
 > & {
   playbook: LiveSessionPlaybook;
+  preflight?: ReactNode;
 }) {
   const deckCount = Math.max(
     0,
@@ -147,6 +154,7 @@ function WorkspaceTools({
           <strong>{deckCount} decks</strong>
           <small>{playbook.version}</small>
         </div>
+        {preflight}
         {onReplacePlaybook && (
           <button
             type="button"
@@ -176,6 +184,7 @@ function WorkspaceFrame({
   replacingPlaybook,
   onReplacePlaybook,
   onExit,
+  preflight,
   running = false,
   children,
 }: Pick<
@@ -183,6 +192,7 @@ function WorkspaceFrame({
   "replacingPlaybook" | "onReplacePlaybook" | "onExit"
 > & {
   playbook: LiveSessionPlaybook;
+  preflight?: ReactNode;
   running?: boolean;
   children: ReactNode;
 }) {
@@ -195,6 +205,7 @@ function WorkspaceFrame({
             replacingPlaybook={replacingPlaybook}
             onReplacePlaybook={onReplacePlaybook}
             onExit={onExit}
+            preflight={preflight}
           />
         </div>
       )}
@@ -257,6 +268,7 @@ function LiveSessionWorkspace({
   onRetry,
   onPrepareOffline,
   onRemoveOffline,
+  onRunPreflight,
   onReplacePlaybook,
   replacingPlaybook,
   onRunChange,
@@ -289,6 +301,15 @@ function LiveSessionWorkspace({
   const [discardConfirming, setDiscardConfirming] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [discardError, setDiscardError] = useState("");
+  const [calculatorReady, setCalculatorReady] = useState(false);
+  const [timerReady, setTimerReady] = useState(
+    Boolean(initialRun && initialRun.phase !== "launch")
+  );
+  const [preflightProbe, setPreflightProbe] =
+    useState<LiveSessionPreflightProbeResult | null>(null);
+  const [preflightRunning, setPreflightRunning] = useState(false);
+  const [preflightMessage, setPreflightMessage] = useState("");
+  const [preflightClockMs, setPreflightClockMs] = useState(() => Date.now());
   const wasRunningBeforeCloseout = useRef(false);
   const selectedRoute =
     playbook.routes.find(route => route.id === routeId) ?? playbook.routes[0];
@@ -305,6 +326,128 @@ function LiveSessionWorkspace({
     initialSnapshot: initialRun?.timer,
     onSnapshotChange: handleTimerSnapshot,
   });
+
+  useEffect(() => {
+    if (!preflightProbe?.checkedAt) return;
+    setPreflightClockMs(Date.now());
+    const interval = window.setInterval(
+      () => setPreflightClockMs(Date.now()),
+      30_000
+    );
+    return () => window.clearInterval(interval);
+  }, [preflightProbe?.checkedAt]);
+
+  const runPreflight = useCallback(async () => {
+    if (preflightRunning) return;
+    setPreflightRunning(true);
+    setPreflightMessage("");
+    try {
+      if (!onRunPreflight) {
+        setPreflightProbe({
+          authReady: false,
+          userUid: null,
+          membershipReady: false,
+          memberActive: false,
+          role: null,
+          cloudAccess: "denied",
+          offlineReady,
+          checkedAt: new Date().toISOString(),
+          message: "The tutor cloud probe is not available in this deployment.",
+        });
+        return;
+      }
+      const result = await onRunPreflight();
+      setPreflightProbe(result);
+      setPreflightMessage(result.message ?? "");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "The readiness scan could not reach Firebase.";
+      setPreflightProbe({
+        authReady: true,
+        userUid: null,
+        membershipReady: true,
+        memberActive: false,
+        role: null,
+        cloudAccess: "denied",
+        offlineReady,
+        checkedAt: new Date().toISOString(),
+        message,
+      });
+      setPreflightMessage(message);
+    } finally {
+      setPreflightRunning(false);
+    }
+  }, [offlineReady, onRunPreflight, preflightRunning]);
+
+  // The current IndexedDB state is authoritative. A previous probe must not
+  // keep the recovery check green after the tutor removes the cached package.
+  const effectiveOfflineReady = offlineReady;
+  const preflightCheckedMs = preflightProbe?.checkedAt
+    ? Date.parse(preflightProbe.checkedAt)
+    : Number.NaN;
+  const preflightExpired = Boolean(
+    preflightProbe?.cloudAccess === "ready" &&
+    (!Number.isFinite(preflightCheckedMs) ||
+      preflightClockMs - preflightCheckedMs > PREFLIGHT_FRESHNESS_MS)
+  );
+  const effectiveCloudAccess = preflightExpired
+    ? "checking"
+    : (preflightProbe?.cloudAccess ?? "checking");
+  const effectivePreflightMessage = preflightExpired
+    ? "Cloud verification is older than five minutes. Run preflight again."
+    : preflightMessage;
+  const preflightReport = useMemo(
+    () =>
+      evaluateSessionPreflight({
+        authReady: preflightProbe?.authReady ?? false,
+        userUid: preflightProbe?.userUid ?? null,
+        membershipReady: preflightProbe?.membershipReady ?? false,
+        memberActive: preflightProbe?.memberActive ?? false,
+        role: preflightProbe?.role ?? null,
+        cloudAccess: effectiveCloudAccess,
+        playbook,
+        offlineReady: effectiveOfflineReady,
+        syncState,
+        timerReady,
+        calculatorReady,
+        position: {
+          routeId: routeId || null,
+          stageIndex,
+          questionIndex,
+        },
+      }),
+    [
+      calculatorReady,
+      effectiveCloudAccess,
+      effectiveOfflineReady,
+      playbook,
+      preflightProbe,
+      questionIndex,
+      routeId,
+      stageIndex,
+      syncState,
+      timerReady,
+    ]
+  );
+
+  const preflightPanel = (
+    <SessionPreflightPanel
+      compact
+      report={preflightReport}
+      running={preflightRunning}
+      checkedAt={preflightProbe?.checkedAt}
+      message={effectivePreflightMessage}
+      calculatorReady={calculatorReady}
+      timerReady={timerReady}
+      onRun={runPreflight}
+      onCalculatorReadyChange={setCalculatorReady}
+      onTimerReadyChange={setTimerReady}
+      onPrepareOffline={onPrepareOffline}
+      onRemoveOffline={onRemoveOffline}
+    />
+  );
 
   useEffect(() => {
     onRunChange?.({
@@ -421,12 +564,27 @@ function LiveSessionWorkspace({
         replacingPlaybook={replacingPlaybook}
         onReplacePlaybook={onReplacePlaybook}
         onExit={onExit}
+        preflight={preflightPanel}
       >
         <SessionLaunch
           session={session}
           playbook={playbook}
           defaultRouteId={routeId}
           offlineReady={offlineReady}
+          preflightReport={preflightReport}
+          preflightRunning={preflightRunning}
+          preflightCheckedAt={preflightProbe?.checkedAt}
+          preflightMessage={effectivePreflightMessage}
+          calculatorReady={calculatorReady}
+          timerReady={timerReady}
+          onRunPreflight={runPreflight}
+          onCalculatorReadyChange={setCalculatorReady}
+          onTimerReadyChange={setTimerReady}
+          onRouteChange={route => {
+            setRouteId(route.id);
+            setStageIndex(0);
+            setQuestionIndex(0);
+          }}
           onPrepareOffline={onPrepareOffline}
           onRemoveOffline={onRemoveOffline}
           onReplacePlaybook={onReplacePlaybook}
@@ -445,6 +603,7 @@ function LiveSessionWorkspace({
         replacingPlaybook={replacingPlaybook}
         onReplacePlaybook={onReplacePlaybook}
         onExit={onExit}
+        preflight={preflightPanel}
       >
         <SessionCloseout
           session={session}
@@ -466,6 +625,7 @@ function LiveSessionWorkspace({
         replacingPlaybook={replacingPlaybook}
         onReplacePlaybook={onReplacePlaybook}
         onExit={onExit}
+        preflight={preflightPanel}
       >
         <section className="ls-complete" aria-labelledby="ls-complete-title">
           <span className="ls-complete__mark">
@@ -610,6 +770,7 @@ function LiveSessionWorkspace({
       replacingPlaybook={replacingPlaybook}
       onReplacePlaybook={onReplacePlaybook}
       onExit={onExit}
+      preflight={preflightPanel}
       running
     >
       <LiveSessionRunner
@@ -630,6 +791,7 @@ function LiveSessionWorkspace({
             replacingPlaybook={replacingPlaybook}
             onReplacePlaybook={onReplacePlaybook}
             onExit={onExit}
+            preflight={preflightPanel}
           />
         }
         onSyncRetry={onRetry}

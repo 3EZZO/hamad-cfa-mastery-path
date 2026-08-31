@@ -32,7 +32,16 @@ import {
   type LinearSessionPhase,
 } from "./linearSessionFlow";
 import { MasteryRadar } from "./MasteryRadar";
+import {
+  calculateSessionPacing,
+  deriveRecommendedDeckTarget,
+} from "./pacingAssistant";
 import { ReferenceDrawer } from "./ReferenceDrawer";
+import {
+  resolveSessionPacingDisplayState,
+  sessionPacingStateLabel,
+  SessionPacingStatus,
+} from "./SessionPacingStatus";
 import {
   canRecordEvidenceDraft,
   calculateSessionDeckProgress,
@@ -719,6 +728,61 @@ export function LiveSessionRunner({
       }),
     [allDecks, completedDeskIds, evidence]
   );
+  const pacingBreakMinutes = 5;
+  const pacingDurationMinutes = Math.min(180, Math.max(120, route.minutes));
+  const liveTargetDecks = useMemo(
+    () =>
+      Math.max(
+        1,
+        deriveRecommendedDeckTarget({
+          sessionDurationMinutes: pacingDurationMinutes,
+          expectedSeconds: allDecks.map(
+            deck => deck.question?.expectedSeconds ?? null
+          ),
+          breakAllowanceMinutes: pacingBreakMinutes,
+        })
+      ),
+    [allDecks, pacingDurationMinutes]
+  );
+  const completedLiveTargetDecks = useMemo(
+    () =>
+      allDecks.slice(0, liveTargetDecks).filter(deck => isDeckCovered(deck))
+        .length,
+    [allDecks, isDeckCovered, liveTargetDecks]
+  );
+  const pacing = useMemo(
+    () =>
+      calculateSessionPacing({
+        sessionDurationMinutes: pacingDurationMinutes,
+        elapsedMinutes: timer.elapsedMs / 60_000,
+        totalRouteDecks: liveTargetDecks,
+        currentDeck: Math.min(
+          liveTargetDecks,
+          Math.max(1, currentDeck?.globalNumber ?? 1)
+        ),
+        completedDecks: completedLiveTargetDecks,
+        breakAllowanceMinutes: pacingBreakMinutes,
+      }),
+    [
+      completedLiveTargetDecks,
+      currentDeck?.globalNumber,
+      liveTargetDecks,
+      pacingDurationMinutes,
+      timer.elapsedMs,
+    ]
+  );
+  const pacingPaused = timer.status !== "running";
+  const pacingCalibrating =
+    !pacingPaused &&
+    (completedLiveTargetDecks < 2 || timer.elapsedMs < 5 * 60_000);
+  const pacingDisplayState = resolveSessionPacingDisplayState(
+    pacing,
+    completedLiveTargetDecks,
+    liveTargetDecks,
+    pacingPaused,
+    pacingCalibrating
+  );
+  const pacingLabel = sessionPacingStateLabel(pacingDisplayState, pacing);
   const stageProgress = useMemo(
     () =>
       stages.map(item => {
@@ -1072,6 +1136,55 @@ export function LiveSessionRunner({
             </div>
 
             <section
+              className={`ls-pacing-panel is-${pacingDisplayState}`}
+              aria-label="Live session pacing assistant"
+            >
+              <header>
+                <div>
+                  <span>Live pacing assistant</span>
+                  <strong>{pacingLabel}</strong>
+                </div>
+                <div>
+                  <span>Ordered live target</span>
+                  <strong>
+                    {completedLiveTargetDecks} / {liveTargetDecks} decks
+                  </strong>
+                </div>
+              </header>
+              <div
+                className="ls-pacing-panel__bar"
+                role="progressbar"
+                aria-label="Live teaching target progress"
+                aria-valuemin={0}
+                aria-valuemax={liveTargetDecks}
+                aria-valuenow={completedLiveTargetDecks}
+              >
+                <span
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (completedLiveTargetDecks / liveTargetDecks) * 100
+                    )}%`,
+                  }}
+                />
+              </div>
+              <SessionPacingStatus
+                pacing={pacing}
+                completedDecks={completedLiveTargetDecks}
+                targetDecks={liveTargetDecks}
+                paused={pacingPaused}
+                calibrating={pacingCalibrating}
+                showDetails
+              />
+              <p>
+                The full {progress.totalDecks}-deck Tutor Bible remains
+                available. This target is the ordered subset that fits the{" "}
+                {route.minutes}-minute teaching window using each deck&apos;s
+                authored timing estimate and one five-minute break.
+              </p>
+            </section>
+
+            <section
               className="ls-command-search"
               aria-label="Find any playbook item"
             >
@@ -1273,10 +1386,20 @@ export function LiveSessionRunner({
               <ArrowLeft size={18} />
               <span>Previous deck</span>
             </button>
-            <div className="ls-linear-control__status" aria-live="polite">
-              <span>
-                Step {linearStepNumber} of {linearStepTotal}
-              </span>
+            <div className="ls-linear-control__status">
+              <div className="ls-linear-control__meta">
+                <span>
+                  Step {linearStepNumber} of {linearStepTotal}
+                </span>
+                <SessionPacingStatus
+                  pacing={pacing}
+                  completedDecks={completedLiveTargetDecks}
+                  targetDecks={liveTargetDecks}
+                  paused={pacingPaused}
+                  calibrating={pacingCalibrating}
+                  className="ls-pacing-status--linear"
+                />
+              </div>
               <strong>{linearStepLabel}</strong>
               <small>
                 One route, in order. Space performs the blue button.
@@ -1375,10 +1498,10 @@ export function LiveSessionRunner({
           type="button"
           className="ls-mobile-session-dock__next"
           onClick={advanceLinearSequence}
-          aria-label={primaryActionLabel}
+          aria-label={`${primaryActionLabel}. ${pacingLabel}. ${completedLiveTargetDecks} of ${liveTargetDecks} live-target decks complete.`}
         >
           <span>
-            Step {linearStepNumber}/{linearStepTotal}
+            Step {linearStepNumber}/{linearStepTotal} - {pacingLabel}
           </span>
           <strong>{primaryActionLabel}</strong>
           <ArrowRight size={19} />

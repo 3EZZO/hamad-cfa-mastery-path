@@ -14,6 +14,7 @@ import {
   type ErrorCode,
   type LiveSessionCloseoutResult,
   type LiveSessionPlaybook,
+  type LiveSessionPreflightProbeResult,
   type LiveSessionRunSnapshot,
   type SyncPresentation,
 } from "../features/liveSession";
@@ -24,6 +25,7 @@ import {
   diagnoseTutorCloudError,
   getCloudErrorMessage,
   getTutorLiveRun,
+  probeTutorLiveRunAccess,
   importTutorPlaybookPackage,
   loadTutorPlaybookPackage,
   mapCloudError,
@@ -566,7 +568,9 @@ export default function TutorSessionWorkspace({
     startQueuedRef.current = Boolean(
       cloudRun || cachedJournal.some(entry => entry.action.type === "start")
     );
-    previousSnapshotRef.current = cachedJournal.length ? restored : cloudSnapshot;
+    previousSnapshotRef.current = cachedJournal.length
+      ? restored
+      : cloudSnapshot;
     setPrivatePackage(selectedPackage);
     setInitialRun(restored);
     setWorkspaceEpoch(value => value + 1);
@@ -629,11 +633,7 @@ export default function TutorSessionWorkspace({
           if (!saved.events.some(event => event.id === pending.eventId)) {
             throw new CloudClientError("tutor-live-run-conflict");
           }
-          await removeTutorRunJournalAction(
-            userUid,
-            saved.id,
-            pending.eventId
-          );
+          await removeTutorRunJournalAction(userUid, saved.id, pending.eventId);
           if (saveQueueRef.current[0] === pending) {
             saveQueueRef.current.shift();
           }
@@ -724,12 +724,26 @@ export default function TutorSessionWorkspace({
         window.clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
       }
-      if (saveQueueRef.current[0]) saveQueueRef.current[0].attempts = 0;
-      void drainSaveQueue();
+      if (saveQueueRef.current[0]) {
+        saveQueueRef.current[0].attempts = 0;
+        void drainSaveQueue();
+        return;
+      }
+      setSyncState("synced");
+      setSyncMessage("Connection restored. Run preflight to verify Firebase.");
     };
+    const markOffline = () => {
+      setSyncState("offline");
+      setSyncMessage(
+        "Firebase is offline. New actions will remain in device recovery until the connection returns."
+      );
+    };
+    if (!navigator.onLine) markOffline();
     window.addEventListener("online", retryPendingActions);
+    window.addEventListener("offline", markOffline);
     return () => {
       window.removeEventListener("online", retryPendingActions);
+      window.removeEventListener("offline", markOffline);
       if (retryTimerRef.current !== null) {
         window.clearTimeout(retryTimerRef.current);
       }
@@ -898,14 +912,7 @@ export default function TutorSessionWorkspace({
       void drainSaveQueue();
       return await queued;
     },
-    [
-      drainSaveQueue,
-      playbook,
-      privatePackage,
-      runId,
-      session.number,
-      userUid,
-    ]
+    [drainSaveQueue, playbook, privatePackage, runId, session.number, userUid]
   );
 
   useEffect(() => {
@@ -1082,6 +1089,114 @@ export default function TutorSessionWorkspace({
     notify("The private offline playbook was removed from this device.");
   }, [notify, userUid]);
 
+  const runSessionPreflight =
+    useCallback(async (): Promise<LiveSessionPreflightProbeResult> => {
+      const checkedAt = new Date().toISOString();
+      let verifiedOffline = false;
+      if (privatePackage) {
+        try {
+          const status = await getTutorOfflineStatus(userUid, PLAYBOOK_ID);
+          verifiedOffline = Boolean(
+            status.ready &&
+            status.version === privatePackage.manifest.version &&
+            status.contentHash === privatePackage.manifest.contentHash
+          );
+          setOfflineReady(verifiedOffline);
+        } catch {
+          verifiedOffline = false;
+          setOfflineReady(false);
+        }
+      }
+
+      try {
+        // This read is protected by the tutor-only Firestore rule. A successful
+        // null result still proves Auth, membership, role, and rules access.
+        await probeTutorLiveRunAccess(runId);
+        return {
+          authReady: true,
+          userUid,
+          membershipReady: true,
+          memberActive: true,
+          role: "tutor",
+          cloudAccess: "ready",
+          offlineReady: verifiedOffline,
+          checkedAt,
+          message: "Tutor-only Firebase access confirmed.",
+        };
+      } catch (error) {
+        const diagnosed = await diagnoseTutorCloudError(error);
+        if (
+          diagnosed.code === "network-unavailable" ||
+          diagnosed.code === "service-unavailable"
+        ) {
+          return {
+            authReady: true,
+            userUid,
+            membershipReady: true,
+            memberActive: true,
+            role: "tutor",
+            cloudAccess: "unavailable",
+            offlineReady: verifiedOffline,
+            checkedAt,
+            message: diagnosed.message,
+          };
+        }
+        if (diagnosed.code === "authentication-required") {
+          return {
+            authReady: true,
+            userUid: null,
+            membershipReady: true,
+            memberActive: false,
+            role: null,
+            cloudAccess: "denied",
+            offlineReady: verifiedOffline,
+            checkedAt,
+            message: diagnosed.message,
+          };
+        }
+        if (
+          diagnosed.code === "inactive-membership" ||
+          diagnosed.code === "invalid-membership"
+        ) {
+          return {
+            authReady: true,
+            userUid,
+            membershipReady: true,
+            memberActive: false,
+            role: null,
+            cloudAccess: "denied",
+            offlineReady: verifiedOffline,
+            checkedAt,
+            message: diagnosed.message,
+          };
+        }
+        if (diagnosed.code === "tutor-role-required") {
+          return {
+            authReady: true,
+            userUid,
+            membershipReady: true,
+            memberActive: true,
+            role: "student",
+            cloudAccess: "denied",
+            offlineReady: verifiedOffline,
+            checkedAt,
+            message: diagnosed.message,
+          };
+        }
+        return {
+          authReady: true,
+          userUid,
+          membershipReady: true,
+          memberActive: true,
+          role: "tutor",
+          cloudAccess: "denied",
+          offlineReady: verifiedOffline,
+          checkedAt,
+          message: diagnosed.message,
+        };
+      }
+    }, [privatePackage, runId, userUid]);
+
   const completeSession = useCallback(
     (result: LiveSessionCloseoutResult) => {
       updateTracker(current =>
@@ -1135,7 +1250,9 @@ export default function TutorSessionWorkspace({
       }
 
       setSyncState("saving");
-      setSyncMessage("Clearing the rehearsal from cloud and device recovery...");
+      setSyncMessage(
+        "Clearing the rehearsal from cloud and device recovery..."
+      );
       // A restart deliberately reuses the same deterministic run ID. Force a
       // new queue generation so an old retry cannot race the delete.
       resetSyncScope(`${userUid}:${runId}`, true);
@@ -1259,6 +1376,7 @@ export default function TutorSessionWorkspace({
           onRetry={retrySyncNow}
           onPrepareOffline={prepareOffline}
           onRemoveOffline={removeOffline}
+          onRunPreflight={runSessionPreflight}
           onReplacePlaybook={() => fileRef.current?.click()}
           replacingPlaybook={publishing}
           onRunChange={handleRunChange}

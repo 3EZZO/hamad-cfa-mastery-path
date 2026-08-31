@@ -34,4 +34,11 @@ describe("14-inch Session Mode layout contract", () => {
       /\.ls-deck-tools__popover\s*\{[^}]*position:\s*absolute;/s
     );
   });
+
+  it("keeps pacing in the existing 50px action rail and details in an overlay", () => {
+    expect(css).toContain("--ls-laptop-linear-h: 50px");
+    expect(css).toMatch(/\.ls-linear-control__meta\s*\{[^}]*display:\s*flex;/s);
+    expect(css).toMatch(/\.ls-pacing-panel\s*\{[^}]*display:\s*grid;/s);
+    expect(css).not.toMatch(/\.ls-runner\s*\{[^}]*pacing/s);
+  });
 });

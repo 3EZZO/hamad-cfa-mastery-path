@@ -173,6 +173,26 @@ export interface LiveSessionCloseoutResult {
   completedAt: string;
 }
 
+export type LiveSessionCloudAccess =
+  "checking" | "ready" | "unavailable" | "denied";
+
+/**
+ * Result of the tutor-only cloud and recovery probe. The parent workspace owns
+ * this check because it has access to Firebase Auth, Firestore, and IndexedDB;
+ * Session Mode only presents the result.
+ */
+export interface LiveSessionPreflightProbeResult {
+  authReady: boolean;
+  userUid: string | null;
+  membershipReady: boolean;
+  memberActive: boolean;
+  role: "tutor" | "student" | null;
+  cloudAccess: LiveSessionCloudAccess;
+  offlineReady: boolean;
+  checkedAt: string;
+  message?: string;
+}
+
 export interface LiveSessionConsoleProps {
   session: LiveSessionDescriptor;
   playbook: LiveSessionPlaybook | null;
@@ -185,6 +205,7 @@ export interface LiveSessionConsoleProps {
   onRetry?: () => void;
   onPrepareOffline?: () => void | Promise<void>;
   onRemoveOffline?: () => void | Promise<void>;
+  onRunPreflight?: () => Promise<LiveSessionPreflightProbeResult>;
   onReplacePlaybook?: () => void;
   replacingPlaybook?: boolean;
   onRunChange?: (snapshot: LiveSessionRunSnapshot) => void;

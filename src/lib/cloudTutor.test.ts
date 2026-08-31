@@ -60,21 +60,28 @@ vi.mock("firebase/firestore", () => {
       path: segments.join("/"),
     }),
     getDoc: async (reference: { path: string }) => snapshot(reference.path),
+    getDocFromServer: async (reference: { path: string }) =>
+      snapshot(reference.path),
     getFirestore: () => ({ kind: "fake-firestore" }),
     onSnapshot: () => () => {},
     runTransaction: async (
       _firestore: unknown,
       callback: (transaction: {
-        get: (reference: { path: string }) => Promise<ReturnType<typeof snapshot>>;
+        get: (reference: {
+          path: string;
+        }) => Promise<ReturnType<typeof snapshot>>;
         set: (reference: { path: string }, value: unknown) => void;
-      }) => Promise<unknown>,
+      }) => Promise<unknown>
     ) => {
       const staged = new Map<string, unknown>();
       const result = await callback({
-        get: async (reference) => snapshot(reference.path),
-        set: (reference, value) => staged.set(reference.path, structuredClone(value)),
+        get: async reference => snapshot(reference.path),
+        set: (reference, value) =>
+          staged.set(reference.path, structuredClone(value)),
       });
-      staged.forEach((value, path) => firebaseHarness.documents.set(path, value));
+      staged.forEach((value, path) =>
+        firebaseHarness.documents.set(path, value)
+      );
       firebaseHarness.transactionCommits += 1;
       return result;
     },
@@ -85,7 +92,9 @@ vi.mock("firebase/firestore", () => {
           staged.set(reference.path, structuredClone(value));
         },
         commit: async () => {
-          staged.forEach((value, path) => firebaseHarness.documents.set(path, value));
+          staged.forEach((value, path) =>
+            firebaseHarness.documents.set(path, value)
+          );
           firebaseHarness.batchCommits += 1;
         },
       };
@@ -99,6 +108,7 @@ import {
   getTutorLiveRun,
   importTutorPlaybookPackage,
   loadTutorPlaybookPackage,
+  probeTutorLiveRunAccess,
   saveTutorLiveRun,
 } from "./cloud";
 import {
@@ -173,7 +183,7 @@ async function validPackage() {
   }
   parsed.manifest.contentHash = await computeTutorPlaybookManifestContentHash(
     parsed.manifest,
-    parsed.chunks,
+    parsed.chunks
   );
   return parsed;
 }
@@ -182,14 +192,14 @@ function event(
   id: string,
   type: TutorLiveRunAction["type"],
   elapsedSeconds: number,
-  extra: Partial<TutorLiveRunAction> = {},
+  extra: Partial<TutorLiveRunAction> = {}
 ): TutorLiveRunAction {
   return {
     id,
     type,
     elapsedSeconds,
     atClient: new Date(
-      Date.parse("2026-09-05T06:00:00.000Z") + elapsedSeconds * 1_000,
+      Date.parse("2026-09-05T06:00:00.000Z") + elapsedSeconds * 1_000
     ).toISOString(),
     ...extra,
   };
@@ -257,18 +267,18 @@ describe("tutor-only cloud playbook API", () => {
       expect.arrayContaining([
         "programs/project-202/tutorPlaybooks/session-01",
         "programs/project-202/tutorPlaybooks/session-01/chunks/session-01--s01-v1--returns-core",
-      ]),
+      ])
     );
     expect(
-      [...firebaseHarness.documents.keys()].some((path) =>
-        path.includes("/tracker/current"),
-      ),
+      [...firebaseHarness.documents.keys()].some(path =>
+        path.includes("/tracker/current")
+      )
     ).toBe(false);
 
     const loaded = await loadTutorPlaybookPackage("session-01");
     expect(loaded?.manifest.contentHash).toBe(source.manifest.contentHash);
     expect(loaded?.chunks[0]?.stages[0]?.cards[0]?.answer).toBe(
-      "Use the geometric mean.",
+      "Use the geometric mean."
     );
 
     const batchCount = firebaseHarness.batchCommits;
@@ -293,7 +303,7 @@ describe("tutor-only cloud playbook API", () => {
 describe("tutor-only cloud live-run API", () => {
   it("saves meaningful evidence and closeout actions, reads, then deletes", async () => {
     let run = await saveTutorLiveRun(
-      runRequest(0, event("event-01", "start", 0, { stageId: "returns" })),
+      runRequest(0, event("event-01", "start", 0, { stageId: "returns" }))
     );
     run = await saveTutorLiveRun(
       runRequest(
@@ -305,14 +315,14 @@ describe("tutor-only cloud live-run API", () => {
           confidence: 5,
           errorCodes: ["D", "C"],
           note: "High-confidence method-selection error.",
-        }),
-      ),
+        })
+      )
     );
     run = await saveTutorLiveRun(
       runRequest(
         2,
-        event("event-03", "complete", 600, { closeout: closeout() }),
-      ),
+        event("event-03", "complete", 600, { closeout: closeout() })
+      )
     );
 
     expect(run).toMatchObject({ status: "completed", revision: 3 });
@@ -325,6 +335,9 @@ describe("tutor-only cloud live-run API", () => {
 
     const loaded = await getTutorLiveRun("session-01-2026-09-05");
     expect(loaded).toEqual(run);
+    await expect(
+      probeTutorLiveRunAccess("session-01-2026-09-05")
+    ).resolves.toBeUndefined();
     await deleteTutorLiveRun("session-01-2026-09-05");
     expect(firebaseHarness.deletes).toBe(1);
     await expect(getTutorLiveRun("session-01-2026-09-05")).resolves.toBeNull();
@@ -332,19 +345,17 @@ describe("tutor-only cloud live-run API", () => {
 
   it("maps stale revisions and missing authentication to stable client errors", async () => {
     const started = await saveTutorLiveRun(
-      runRequest(0, event("event-01", "start", 0, { stageId: "returns" })),
+      runRequest(0, event("event-01", "start", 0, { stageId: "returns" }))
     );
     expect(started.revision).toBe(1);
     await expect(
-      saveTutorLiveRun(
-        runRequest(0, event("event-02", "pause", 10)),
-      ),
+      saveTutorLiveRun(runRequest(0, event("event-02", "pause", 10)))
     ).rejects.toMatchObject({ code: "tutor-live-run-conflict" });
 
     firebaseHarness.auth.currentUser = null;
-    await expect(getTutorLiveRun("session-01-2026-09-05")).rejects.toMatchObject(
-      { code: "authentication-required" },
-    );
+    await expect(
+      getTutorLiveRun("session-01-2026-09-05")
+    ).rejects.toMatchObject({ code: "authentication-required" });
   });
 });
 
@@ -382,7 +393,7 @@ describe("tutor-only permission diagnosis", () => {
     const diagnosed = await diagnoseTutorCloudError(denied);
     expect(diagnosed).toMatchObject({ code: "firestore-contract-rejected" });
     expect(diagnosed.message).toMatch(
-      /rules or write contract may be out of date/i,
+      /rules or write contract may be out of date/i
     );
   });
 
@@ -395,7 +406,7 @@ describe("tutor-only permission diagnosis", () => {
       code: "invalid-membership",
     });
     await expect(
-      diagnoseTutorCloudError({ code: "firestore/unavailable" }),
+      diagnoseTutorCloudError({ code: "firestore/unavailable" })
     ).resolves.toMatchObject({ code: "service-unavailable" });
   });
 });

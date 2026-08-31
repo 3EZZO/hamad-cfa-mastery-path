@@ -18,6 +18,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocFromServer,
   getFirestore,
   onSnapshot,
   runTransaction,
@@ -213,10 +214,10 @@ function readEnvironmentValue(key: FirebaseEnvironmentKey): string {
 
 export function getCloudConfigurationStatus(): CloudConfigurationStatus {
   const missingKeys = REQUIRED_FIREBASE_ENV_KEYS.filter(
-    (key) => !readEnvironmentValue(key),
+    key => !readEnvironmentValue(key)
   );
   const missingOptionalKeys = OPTIONAL_FIREBASE_ENV_KEYS.filter(
-    (key) => !readEnvironmentValue(key),
+    key => !readEnvironmentValue(key)
   );
 
   return {
@@ -256,8 +257,9 @@ function getFirebaseServices(): FirebaseServices {
   }
   if (cachedServices) return cachedServices;
 
-  const existingApp = getApps().find((app) => app.name === FIREBASE_APP_NAME);
-  const app = existingApp ?? initializeApp(buildFirebaseOptions(), FIREBASE_APP_NAME);
+  const existingApp = getApps().find(app => app.name === FIREBASE_APP_NAME);
+  const app =
+    existingApp ?? initializeApp(buildFirebaseOptions(), FIREBASE_APP_NAME);
   cachedServices = {
     auth: getAuth(app),
     firestore: getFirestore(app),
@@ -272,7 +274,7 @@ function toCloudUser(user: User): CloudUser {
     displayName: user.displayName,
     photoURL: user.photoURL,
     emailVerified: user.emailVerified,
-    providerIds: user.providerData.map((provider) => provider.providerId),
+    providerIds: user.providerData.map(provider => provider.providerId),
   };
 }
 
@@ -290,13 +292,13 @@ export function getCurrentCloudUser(): CloudUser | null {
 
 export function observeAuth(
   onUser: (user: CloudUser | null) => void,
-  onError?: (error: CloudClientError) => void,
+  onError?: (error: CloudClientError) => void
 ): CloudUnsubscribe {
   const { auth } = getFirebaseServices();
   return onAuthStateChanged(
     auth,
-    (user) => onUser(user ? toCloudUser(user) : null),
-    (error) => onError?.(mapCloudError(error)),
+    user => onUser(user ? toCloudUser(user) : null),
+    error => onError?.(mapCloudError(error))
   );
 }
 
@@ -314,14 +316,14 @@ export async function signInWithGoogle(): Promise<CloudUser> {
 
 export async function signInWithEmailPassword(
   email: string,
-  password: string,
+  password: string
 ): Promise<CloudUser> {
   try {
     const { auth } = getFirebaseServices();
     const credential = await signInWithEmailAndPassword(
       auth,
       email.trim(),
-      password,
+      password
     );
     return toCloudUser(credential.user);
   } catch (error) {
@@ -349,10 +351,7 @@ export interface PrivateTutorNotesEnvelope {
   updatedAtClient: string;
 }
 
-export function parseProjectMember(
-  uid: string,
-  value: unknown,
-): ProjectMember {
+export function parseProjectMember(uid: string, value: unknown): ProjectMember {
   if (!isRecord(value)) {
     throw new CloudClientError("invalid-membership");
   }
@@ -402,7 +401,7 @@ function trackerDocument(firestore: Firestore) {
 }
 
 export function parsePrivateTutorNotesEnvelope(
-  value: unknown,
+  value: unknown
 ): PrivateTutorNotesEnvelope {
   if (!isRecord(value)) throw new CloudClientError("invalid-cloud-data");
   const revision = Number(value.revision);
@@ -438,7 +437,7 @@ function tutorPlaybookDocument(firestore: Firestore, playbookId: string) {
 function tutorPlaybookChunkDocument(
   firestore: Firestore,
   playbookId: string,
-  storageId: string,
+  storageId: string
 ) {
   return doc(
     firestore,
@@ -447,7 +446,7 @@ function tutorPlaybookChunkDocument(
     "tutorPlaybooks",
     playbookId,
     "chunks",
-    storageId,
+    storageId
   );
 }
 
@@ -457,13 +456,13 @@ function tutorLiveRunDocument(firestore: Firestore, runId: string) {
 
 export function subscribeToPrivateTutorNotes(
   onEnvelope: (envelope: PrivateTutorNotesEnvelope | null) => void,
-  onError?: (error: CloudClientError) => void,
+  onError?: (error: CloudClientError) => void
 ): CloudUnsubscribe {
   const { auth, firestore } = getFirebaseServices();
   requireAuthenticatedUser(auth);
   return onSnapshot(
     privateTutorNotesDocument(firestore),
-    (snapshot) => {
+    snapshot => {
       if (!snapshot.exists()) return onEnvelope(null);
       try {
         onEnvelope(parsePrivateTutorNotesEnvelope(snapshot.data()));
@@ -471,18 +470,18 @@ export function subscribeToPrivateTutorNotes(
         onError?.(mapCloudError(error));
       }
     },
-    (error) => onError?.(mapCloudError(error)),
+    error => onError?.(mapCloudError(error))
   );
 }
 
 export async function mutatePrivateTutorNotes(
-  recipe: (notes: PrivateTutorNote[]) => PrivateTutorNote[],
+  recipe: (notes: PrivateTutorNote[]) => PrivateTutorNote[]
 ): Promise<PrivateTutorNotesEnvelope> {
   try {
     const { auth, firestore } = getFirebaseServices();
     const user = requireAuthenticatedUser(auth);
     const reference = privateTutorNotesDocument(firestore);
-    return await runTransaction(firestore, async (transaction) => {
+    return await runTransaction(firestore, async transaction => {
       const snapshot = await transaction.get(reference);
       const current = snapshot.exists()
         ? parsePrivateTutorNotesEnvelope(snapshot.data())
@@ -504,14 +503,14 @@ export async function mutatePrivateTutorNotes(
 
 export function observeCurrentProjectMember(
   onMember: (member: ProjectMember | null) => void,
-  onError?: (error: CloudClientError) => void,
+  onError?: (error: CloudClientError) => void
 ): CloudUnsubscribe {
   const { auth, firestore } = getFirebaseServices();
   const user = requireAuthenticatedUser(auth);
 
   return onSnapshot(
     memberDocument(firestore, user.uid),
-    (snapshot) => {
+    snapshot => {
       if (!snapshot.exists()) {
         onMember(null);
         return;
@@ -522,14 +521,14 @@ export function observeCurrentProjectMember(
         onError?.(mapCloudError(error));
       }
     },
-    (error) => onError?.(mapCloudError(error)),
+    error => onError?.(mapCloudError(error))
   );
 }
 
 function createEnvelope(
   state: TrackerState,
   revision: number,
-  updatedBy: string,
+  updatedBy: string
 ): CloudEnvelope {
   const updatedAtClient = new Date().toISOString();
   return {
@@ -542,14 +541,14 @@ function createEnvelope(
 
 export function subscribeToCloudTracker(
   onEnvelope: (envelope: CloudEnvelope | null) => void,
-  onError?: (error: CloudClientError) => void,
+  onError?: (error: CloudClientError) => void
 ): CloudUnsubscribe {
   const { auth, firestore } = getFirebaseServices();
   requireAuthenticatedUser(auth);
 
   return onSnapshot(
     trackerDocument(firestore),
-    (snapshot) => {
+    snapshot => {
       if (!snapshot.exists()) {
         onEnvelope(null);
         return;
@@ -560,12 +559,12 @@ export function subscribeToCloudTracker(
         onError?.(mapCloudError(error));
       }
     },
-    (error) => onError?.(mapCloudError(error)),
+    error => onError?.(mapCloudError(error))
   );
 }
 
 export async function initializeCloudTracker(
-  initialState: TrackerState,
+  initialState: TrackerState
 ): Promise<CloudInitializationResult> {
   try {
     const { auth, firestore } = getFirebaseServices();
@@ -573,7 +572,7 @@ export async function initializeCloudTracker(
     const reference = trackerDocument(firestore);
     const safeInitialState = normalizeState(initialState);
 
-    return await runTransaction(firestore, async (transaction) => {
+    return await runTransaction(firestore, async transaction => {
       const snapshot = await transaction.get(reference);
       if (snapshot.exists()) {
         return {
@@ -593,7 +592,7 @@ export async function initializeCloudTracker(
 
 export async function saveCloudTracker(
   localState: TrackerState,
-  base: CloudRevisionBase | null,
+  base: CloudRevisionBase | null
 ): Promise<CloudSaveResult> {
   try {
     const { auth, firestore } = getFirebaseServices();
@@ -601,7 +600,7 @@ export async function saveCloudTracker(
     const reference = trackerDocument(firestore);
     const safeLocalState = normalizeState(localState);
 
-    return await runTransaction(firestore, async (transaction) => {
+    return await runTransaction(firestore, async transaction => {
       const snapshot = await transaction.get(reference);
       if (!snapshot.exists()) {
         const envelope = createEnvelope(safeLocalState, 1, user.uid);
@@ -625,13 +624,13 @@ export async function saveCloudTracker(
         ? mergeTrackerStates(
             safeBaseState,
             safeLocalState,
-            remoteEnvelope.state,
+            remoteEnvelope.state
           )
         : safeLocalState;
       const envelope = createEnvelope(
         nextState,
         remoteEnvelope.revision + 1,
-        user.uid,
+        user.uid
       );
 
       transaction.set(reference, envelope);
@@ -653,7 +652,7 @@ export async function saveCloudTracker(
  * for an explicitly confirmed import or pre-launch reset.
  */
 export async function replaceCloudTracker(
-  replacementState: TrackerState,
+  replacementState: TrackerState
 ): Promise<CloudEnvelope> {
   try {
     const { auth, firestore } = getFirebaseServices();
@@ -661,7 +660,7 @@ export async function replaceCloudTracker(
     const reference = trackerDocument(firestore);
     const safeState = normalizeState(replacementState);
 
-    return await runTransaction(firestore, async (transaction) => {
+    return await runTransaction(firestore, async transaction => {
       const snapshot = await transaction.get(reference);
       const revision = snapshot.exists()
         ? parseCloudEnvelope(snapshot.data()).revision + 1
@@ -691,14 +690,16 @@ function mapTutorCloudError(error: unknown): CloudClientError {
  * the document ID.
  */
 export async function getTutorPlaybookManifest(
-  playbookIdValue: string,
+  playbookIdValue: string
 ): Promise<TutorPlaybookManifest | null> {
   try {
     const playbookId = parseTutorContentId(playbookIdValue, "playbookId");
     const { auth, firestore } = getFirebaseServices();
     requireAuthenticatedUser(auth);
     const snapshot = await getDoc(tutorPlaybookDocument(firestore, playbookId));
-    return snapshot.exists() ? parseTutorPlaybookManifest(snapshot.data()) : null;
+    return snapshot.exists()
+      ? parseTutorPlaybookManifest(snapshot.data())
+      : null;
   } catch (error) {
     throw mapTutorCloudError(error);
   }
@@ -708,7 +709,7 @@ export async function getTutorPlaybookManifest(
 export async function getTutorPlaybookChunk(
   playbookIdValue: string,
   versionValue: string,
-  chunkIdValue: string,
+  chunkIdValue: string
 ): Promise<TutorPlaybookChunk | null> {
   try {
     const playbookId = parseTutorContentId(playbookIdValue, "playbookId");
@@ -717,12 +718,12 @@ export async function getTutorPlaybookChunk(
     const storageId = buildTutorPlaybookChunkStorageId(
       playbookId,
       version,
-      chunkId,
+      chunkId
     );
     const { auth, firestore } = getFirebaseServices();
     requireAuthenticatedUser(auth);
     const snapshot = await getDoc(
-      tutorPlaybookChunkDocument(firestore, playbookId, storageId),
+      tutorPlaybookChunkDocument(firestore, playbookId, storageId)
     );
     if (!snapshot.exists()) return null;
     const chunk = parseTutorPlaybookChunk(snapshot.data());
@@ -732,7 +733,7 @@ export async function getTutorPlaybookChunk(
       chunk.id !== chunkId
     ) {
       throw new TutorContentValidationError(
-        "The stored tutor chunk does not match its requested path.",
+        "The stored tutor chunk does not match its requested path."
       );
     }
     return chunk;
@@ -746,24 +747,28 @@ export async function getTutorPlaybookChunk(
  * small groups so a large Tutor Bible does not create a request spike.
  */
 export async function loadTutorPlaybookPackage(
-  playbookIdValue: string,
+  playbookIdValue: string
 ): Promise<TutorPlaybookPackage | null> {
   try {
     const manifest = await getTutorPlaybookManifest(playbookIdValue);
     if (!manifest) return null;
     const chunks: TutorPlaybookChunk[] = [];
     const readGroupSize = 10;
-    for (let start = 0; start < manifest.chunkIds.length; start += readGroupSize) {
+    for (
+      let start = 0;
+      start < manifest.chunkIds.length;
+      start += readGroupSize
+    ) {
       const ids = manifest.chunkIds.slice(start, start + readGroupSize);
       const group = await Promise.all(
-        ids.map((chunkId) =>
-          getTutorPlaybookChunk(manifest.id, manifest.version, chunkId),
-        ),
+        ids.map(chunkId =>
+          getTutorPlaybookChunk(manifest.id, manifest.version, chunkId)
+        )
       );
       group.forEach((chunk, index) => {
         if (!chunk) {
           throw new TutorContentValidationError(
-            `Missing published chunk ${ids[index]} for ${manifest.id}.`,
+            `Missing published chunk ${ids[index]} for ${manifest.id}.`
           );
         }
         chunks.push(chunk);
@@ -771,7 +776,7 @@ export async function loadTutorPlaybookPackage(
     }
     const validated = validateTutorPlaybookPackage(manifest, chunks);
     await verifyTutorPlaybookPackageIntegrity(
-      tutorPlaybookPackageToDraft(validated.manifest, validated.chunks),
+      tutorPlaybookPackageToDraft(validated.manifest, validated.chunks)
     );
     return validated;
   } catch (error) {
@@ -785,7 +790,7 @@ export async function loadTutorPlaybookPackage(
  * has been safely written, so a failed import cannot replace a working Bible.
  */
 export async function importTutorPlaybookPackage(
-  packageValue: unknown,
+  packageValue: unknown
 ): Promise<TutorPlaybookPackage> {
   try {
     const draft = await verifyTutorPlaybookPackageIntegrity(packageValue);
@@ -793,7 +798,7 @@ export async function importTutorPlaybookPackage(
     const user = requireAuthenticatedUser(auth);
     const manifestReference = tutorPlaybookDocument(
       firestore,
-      draft.manifest.id,
+      draft.manifest.id
     );
     const initialManifestSnapshot = await getDoc(manifestReference);
     const initialManifest = initialManifestSnapshot.exists()
@@ -805,7 +810,7 @@ export async function importTutorPlaybookPackage(
       initialManifest.contentHash !== draft.manifest.contentHash
     ) {
       throw new TutorContentValidationError(
-        "A published version is immutable. Change the playbook version before republishing changed content.",
+        "A published version is immutable. Change the playbook version before republishing changed content."
       );
     }
     if (
@@ -815,14 +820,14 @@ export async function importTutorPlaybookPackage(
       const existing = await loadTutorPlaybookPackage(draft.manifest.id);
       if (!existing) {
         throw new TutorContentValidationError(
-          "The active playbook manifest exists but its chunks could not be loaded.",
+          "The active playbook manifest exists but its chunks could not be loaded."
         );
       }
       return existing;
     }
 
     const publishedAtClient = new Date().toISOString();
-    const publishedChunks: TutorPlaybookChunk[] = draft.chunks.map((chunk) =>
+    const publishedChunks: TutorPlaybookChunk[] = draft.chunks.map(chunk =>
       parseTutorPlaybookChunk({
         ...chunk,
         playbookId: draft.manifest.id,
@@ -830,26 +835,26 @@ export async function importTutorPlaybookPackage(
         storageId: buildTutorPlaybookChunkStorageId(
           draft.manifest.id,
           draft.manifest.version,
-          chunk.id,
+          chunk.id
         ),
         publishedBy: user.uid,
         publishedAtClient,
-      }),
+      })
     );
 
     const chunksToCreate: TutorPlaybookChunk[] = [];
     for (let start = 0; start < publishedChunks.length; start += 10) {
       const group = publishedChunks.slice(start, start + 10);
       const snapshots = await Promise.all(
-        group.map((chunk) =>
+        group.map(chunk =>
           getDoc(
             tutorPlaybookChunkDocument(
               firestore,
               draft.manifest.id,
-              chunk.storageId,
-            ),
-          ),
-        ),
+              chunk.storageId
+            )
+          )
+        )
       );
       snapshots.forEach((snapshot, index) => {
         const candidate = group[index]!;
@@ -865,7 +870,7 @@ export async function importTutorPlaybookPackage(
           existing.contentHash !== candidate.contentHash
         ) {
           throw new TutorContentValidationError(
-            `Published chunk ${candidate.storageId} conflicts with an existing immutable chunk.`,
+            `Published chunk ${candidate.storageId} conflicts with an existing immutable chunk.`
           );
         }
       });
@@ -876,20 +881,20 @@ export async function importTutorPlaybookPackage(
     // chunks are verified and skipped above.
     for (let start = 0; start < chunksToCreate.length; start += 10) {
       const batch = writeBatch(firestore);
-      chunksToCreate.slice(start, start + 10).forEach((chunk) => {
+      chunksToCreate.slice(start, start + 10).forEach(chunk => {
         batch.set(
           tutorPlaybookChunkDocument(
             firestore,
             draft.manifest.id,
-            chunk.storageId,
+            chunk.storageId
           ),
-          chunk,
+          chunk
         );
       });
       await batch.commit();
     }
 
-    const manifest = await runTransaction(firestore, async (transaction) => {
+    const manifest = await runTransaction(firestore, async transaction => {
       const snapshot = await transaction.get(manifestReference);
       const current = snapshot.exists()
         ? parseTutorPlaybookManifest(snapshot.data())
@@ -905,7 +910,7 @@ export async function importTutorPlaybookPackage(
         )
       ) {
         throw new TutorLiveRunConflictError(
-          "The active Tutor Bible changed while this version was uploading.",
+          "The active Tutor Bible changed while this version was uploading."
         );
       }
       if (
@@ -919,7 +924,7 @@ export async function importTutorPlaybookPackage(
         current.contentHash !== draft.manifest.contentHash
       ) {
         throw new TutorContentValidationError(
-          "A published version is immutable. Use a new playbook version.",
+          "A published version is immutable. Use a new playbook version."
         );
       }
       const next = parseTutorPlaybookManifest({
@@ -933,18 +938,18 @@ export async function importTutorPlaybookPackage(
     });
 
     const activeChunks = await Promise.all(
-      manifest.chunkIds.map((chunkId) =>
-        getTutorPlaybookChunk(manifest.id, manifest.version, chunkId),
-      ),
+      manifest.chunkIds.map(chunkId =>
+        getTutorPlaybookChunk(manifest.id, manifest.version, chunkId)
+      )
     );
-    if (activeChunks.some((chunk) => !chunk)) {
+    if (activeChunks.some(chunk => !chunk)) {
       throw new TutorContentValidationError(
-        "The manifest was published, but a protected chunk could not be verified.",
+        "The manifest was published, but a protected chunk could not be verified."
       );
     }
     return validateTutorPlaybookPackage(
       manifest,
-      activeChunks as TutorPlaybookChunk[],
+      activeChunks as TutorPlaybookChunk[]
     );
   } catch (error) {
     throw mapTutorCloudError(error);
@@ -953,7 +958,7 @@ export async function importTutorPlaybookPackage(
 
 /** Returns one private live-session run by its deterministic ID. */
 export async function getTutorLiveRun(
-  runIdValue: string,
+  runIdValue: string
 ): Promise<TutorLiveRun | null> {
   try {
     const runId = parseTutorContentId(runIdValue, "runId");
@@ -967,19 +972,38 @@ export async function getTutorLiveRun(
 }
 
 /**
+ * Performs a server-only tutor-run read for readiness checks. Unlike getDoc,
+ * this cannot report a cached result while the device is offline; a missing
+ * document still proves that Firebase Auth and the deployed tutor-only rule
+ * accepted the request.
+ */
+export async function probeTutorLiveRunAccess(
+  runIdValue: string
+): Promise<void> {
+  try {
+    const runId = parseTutorContentId(runIdValue, "runId");
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    await getDocFromServer(tutorLiveRunDocument(firestore, runId));
+  } catch (error) {
+    throw mapTutorCloudError(error);
+  }
+}
+
+/**
  * Persists exactly one meaningful tutor action. There is intentionally no
  * timer-tick action: the UI keeps the clock locally and saves starts, pauses,
  * navigation, assessments, repairs, notes, and terminal actions only.
  */
 export async function saveTutorLiveRun(
-  requestValue: TutorLiveRunSaveRequest,
+  requestValue: TutorLiveRunSaveRequest
 ): Promise<TutorLiveRun> {
   try {
     const request = parseTutorLiveRunSaveRequest(requestValue);
     const { auth, firestore } = getFirebaseServices();
     const user = requireAuthenticatedUser(auth);
     const reference = tutorLiveRunDocument(firestore, request.runId);
-    return await runTransaction(firestore, async (transaction) => {
+    return await runTransaction(firestore, async transaction => {
       const snapshot = await transaction.get(reference);
       const current = snapshot.exists()
         ? parseTutorLiveRun(snapshot.data())
@@ -1059,7 +1083,7 @@ export function mapCloudError(error: unknown): CloudClientError {
  * unauthorized.
  */
 export async function diagnoseTutorCloudError(
-  error: unknown,
+  error: unknown
 ): Promise<CloudClientError> {
   const cloudError = mapCloudError(error);
   if (cloudError.code !== "permission-denied") return cloudError;
@@ -1067,7 +1091,9 @@ export async function diagnoseTutorCloudError(
   try {
     const { auth, firestore } = getFirebaseServices();
     const user = requireAuthenticatedUser(auth);
-    const snapshot = await getDoc(memberDocument(firestore, user.uid));
+    const snapshot = await getDocFromServer(
+      memberDocument(firestore, user.uid)
+    );
     if (!snapshot.exists()) {
       return new CloudClientError("inactive-membership", cloudError);
     }
