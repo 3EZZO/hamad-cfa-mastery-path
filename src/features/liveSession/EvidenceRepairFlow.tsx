@@ -5,6 +5,7 @@ import {
   CircleDashed,
   Save,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import type { EvidenceDraft, EvidenceVerdict, ErrorCode } from "./types";
 import { ERROR_CODE_COPY } from "./types";
@@ -15,6 +16,7 @@ export interface EvidenceRepairFlowProps {
   repairInstructions?: string[];
   onChange: (value: EvidenceDraft) => void;
   onRecord: () => void;
+  onClose?: () => void;
 }
 
 const VERDICTS: Array<{
@@ -24,10 +26,34 @@ const VERDICTS: Array<{
   icon: typeof Check;
   shortcut: string;
 }> = [
-  { id: "correct", label: "Secure", detail: "Independent and explained", icon: Check, shortcut: "C" },
-  { id: "partial", label: "Developing", detail: "Sound method, incomplete proof", icon: CircleDashed, shortcut: "L" },
-  { id: "repair", label: "Repair", detail: "Diagnose, correct, retest", icon: CircleAlert, shortcut: "R" },
-  { id: "parked", label: "Defer", detail: "Return before completion", icon: Archive, shortcut: "P" },
+  {
+    id: "correct",
+    label: "Secure",
+    detail: "Independent and explained",
+    icon: Check,
+    shortcut: "C",
+  },
+  {
+    id: "partial",
+    label: "Developing",
+    detail: "Sound method, incomplete proof",
+    icon: CircleDashed,
+    shortcut: "L",
+  },
+  {
+    id: "repair",
+    label: "Repair",
+    detail: "Diagnose, correct, retest",
+    icon: CircleAlert,
+    shortcut: "R",
+  },
+  {
+    id: "parked",
+    label: "Defer",
+    detail: "Return before completion",
+    icon: Archive,
+    shortcut: "P",
+  },
 ];
 
 export function EvidenceRepairFlow({
@@ -36,6 +62,7 @@ export function EvidenceRepairFlow({
   repairInstructions = [],
   onChange,
   onRecord,
+  onClose,
 }: EvidenceRepairFlowProps) {
   const setVerdict = (verdict: EvidenceVerdict) => {
     onChange({
@@ -57,7 +84,7 @@ export function EvidenceRepairFlow({
   const canRecord = Boolean(
     value.verdict &&
       (!needsErrorCode || value.errorCodes.length > 0) &&
-      (!needsParkReason || value.note.trim()),
+      (!needsParkReason || value.note.trim())
   );
 
   return (
@@ -72,7 +99,18 @@ export function EvidenceRepairFlow({
           <p className="ls-eyebrow">Tutor observation</p>
           <h2 id="ls-evidence-title">Record the evidence</h2>
         </div>
-        <ShieldCheck size={20} aria-label="Tutor-only evidence" />
+        {onClose ? (
+          <button
+            className="ls-evidence-close ls-icon-button"
+            type="button"
+            onClick={onClose}
+            aria-label="Return to the teaching panels"
+          >
+            <X size={18} />
+          </button>
+        ) : (
+          <ShieldCheck size={20} aria-label="Tutor-only evidence" />
+        )}
       </header>
       <p className="ls-evidence__target">{targetLabel}</p>
 
@@ -90,7 +128,10 @@ export function EvidenceRepairFlow({
               onClick={() => setVerdict(verdict.id)}
             >
               <Icon size={17} />
-              <span><strong>{verdict.label}</strong><small>{verdict.detail}</small></span>
+              <span>
+                <strong>{verdict.label}</strong>
+                <small>{verdict.detail}</small>
+              </span>
               <kbd>{verdict.shortcut}</kbd>
             </button>
           );
@@ -119,7 +160,10 @@ export function EvidenceRepairFlow({
         <section className="ls-repair" aria-label="Repair path">
           <div className="ls-repair__heading">
             <CircleAlert size={17} />
-            <div><strong>Locate the first broken step</strong><span>Select every code supported by evidence.</span></div>
+            <div>
+              <strong>Locate the first broken step</strong>
+              <span>Select every code supported by evidence.</span>
+            </div>
           </div>
           <div className="ls-error-codes">
             {(Object.keys(ERROR_CODE_COPY) as ErrorCode[]).map(code => (
@@ -132,14 +176,21 @@ export function EvidenceRepairFlow({
                 onClick={() => toggleError(code)}
               >
                 <strong>{code}</strong>
-                <span>{ERROR_CODE_COPY[code].label}<small>{ERROR_CODE_COPY[code].repairCue}</small></span>
+                <span>
+                  {ERROR_CODE_COPY[code].label}
+                  <small>{ERROR_CODE_COPY[code].repairCue}</small>
+                </span>
               </button>
             ))}
           </div>
           {repairInstructions.length > 0 && (
             <div className="ls-repair__script">
               <span>Smallest effective repair</span>
-              <ol>{repairInstructions.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol>
+              <ol>
+                {repairInstructions.map((item, index) => (
+                  <li key={`${index}-${item}`}>{item}</li>
+                ))}
+              </ol>
             </div>
           )}
         </section>
@@ -148,7 +199,9 @@ export function EvidenceRepairFlow({
       <label className="ls-note-field">
         <span>
           Evidence note{" "}
-          <small>{needsParkReason ? "required when deferred" : "optional"}</small>
+          <small>
+            {needsParkReason ? "required when deferred" : "optional"}
+          </small>
         </span>
         <textarea
           rows={3}
@@ -168,10 +221,14 @@ export function EvidenceRepairFlow({
         <Save size={17} /> Save evidence and continue <kbd>Enter</kbd>
       </button>
       {needsErrorCode && !value.errorCodes.length && (
-        <p className="ls-evidence__hint"><CircleAlert size={14} /> Select at least one error code.</p>
+        <p className="ls-evidence__hint">
+          <CircleAlert size={14} /> Select at least one error code.
+        </p>
       )}
       {needsParkReason && !value.note.trim() && (
-        <p className="ls-evidence__hint"><CircleAlert size={14} /> Record why this item is deferred.</p>
+        <p className="ls-evidence__hint">
+          <CircleAlert size={14} /> Record why this item is deferred.
+        </p>
       )}
     </aside>
   );

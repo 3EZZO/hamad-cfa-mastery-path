@@ -10,8 +10,10 @@ import {
   Flag,
   Layers3,
   MonitorUp,
+  Minus,
   Pause,
   Play,
+  Plus,
   RotateCcw,
   Search,
   SlidersHorizontal,
@@ -127,7 +129,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return Boolean(
     target.closest(
-      "input, textarea, select, button, a, [contenteditable='true'], [role='dialog']"
+      "input, textarea, select, button, summary, a, [contenteditable='true'], [role='dialog']"
     )
   );
 }
@@ -240,6 +242,26 @@ export function LiveSessionRunner({
   const [deskElapsedSeconds, setDeskElapsedSeconds] = useState(0);
   const [deskTimerRunning, setDeskTimerRunning] = useState(false);
   const [advanceHint, setAdvanceHint] = useState("");
+  const [readerSize, setReaderSize] = useState(() => {
+    try {
+      const saved = Number(localStorage.getItem("hamad-session-reader-size"));
+      return [1, 1.1, 1.2].includes(saved) ? saved : 1;
+    } catch {
+      return 1;
+    }
+  });
+  const changeReaderSize = (direction: number) => {
+    const next = Math.min(
+      1.2,
+      Math.max(1, Math.round((readerSize + direction * 0.1) * 10) / 10)
+    );
+    setReaderSize(next);
+    try {
+      localStorage.setItem("hamad-session-reader-size", String(next));
+    } catch {
+      /* Session viewing works without storage. */
+    }
+  };
   const searchRef = useRef<HTMLInputElement>(null);
   const toolsRef = useRef<HTMLDetailsElement>(null);
   const flowStep: TeachingFlowStep =
@@ -499,7 +521,9 @@ export function LiveSessionRunner({
             .querySelector<HTMLElement>(`.ls-command-block--${tone}`)
             ?.scrollIntoView({
               behavior: reducedMotion ? "auto" : "smooth",
-              block: "nearest",
+              block: window.matchMedia?.("(max-width: 899px)").matches
+                ? "start"
+                : "nearest",
             });
         }, 0);
       }
@@ -883,7 +907,11 @@ export function LiveSessionRunner({
   }
 
   return (
-    <section className="ls-runner" aria-label={`Live ${session.title}`}>
+    <section
+      className="ls-runner"
+      data-reader-size={readerSize}
+      aria-label={`Live ${session.title}`}
+    >
       <header className="ls-livebar">
         <div className="ls-livebar__identity">
           <span className="ls-live-dot" aria-hidden="true" />
@@ -891,7 +919,7 @@ export function LiveSessionRunner({
             <span>
               Session {String(session.number).padStart(2, "0")} · {route.name}
             </span>
-            <strong>{stage.title}</strong>
+            <strong title={stage.title}>{stage.title}</strong>
           </div>
         </div>
         <MasteryRadar
@@ -980,7 +1008,7 @@ export function LiveSessionRunner({
             type="button"
             onClick={onRequestCloseout}
           >
-            <Flag size={16} /> Complete
+            <Flag size={16} /> Finish session
           </button>
           {sessionTools}
         </div>
@@ -991,7 +1019,7 @@ export function LiveSessionRunner({
           <span>
             Stage {stageIndex + 1} of {stages.length}
           </span>
-          <strong>{stage.label}</strong>
+          <strong title={stage.title}>{stage.title}</strong>
         </div>
         <div className="ls-stage-strip__items">
           {stageProgress.map((item, index) => {
@@ -1002,6 +1030,7 @@ export function LiveSessionRunner({
                 type="button"
                 className={`${index === stageIndex ? "is-current" : ""}${complete ? " is-complete" : ""}`}
                 aria-current={index === stageIndex ? "step" : undefined}
+                aria-label={`Stage ${index + 1}: ${item.title}${complete ? ", covered" : ""}`}
                 title={`${item.label}: ${item.title}`}
                 key={item.id}
                 onClick={() => changePosition(index, 0)}
@@ -1020,7 +1049,7 @@ export function LiveSessionRunner({
           type="button"
           onClick={() => setReferenceOpen(true)}
         >
-          <BookOpenCheck size={16} /> Knowledge desk <kbd>F</kbd>
+          <BookOpenCheck size={16} /> References <kbd>F</kbd>
         </button>
       </nav>
 
@@ -1030,10 +1059,10 @@ export function LiveSessionRunner({
       >
         <div className="ls-deck-console__coverage">
           <div>
-            <span>Curriculum coverage</span>
-            <strong>
-              {progress.coveredDecks} / {progress.totalDecks}
-            </strong>
+            <span>
+              Deck {currentDeck?.globalNumber ?? 1} of {progress.totalDecks}
+            </span>
+            <strong>{progress.coveredDecks} covered</strong>
           </div>
           <div
             className="ls-deck-console__bar"
@@ -1064,12 +1093,39 @@ export function LiveSessionRunner({
           <summary>
             <SlidersHorizontal size={18} />
             <span>
-              <strong>Deck tools</strong>
-              <small>Jump, search, filter, or change queue</small>
+              <strong>Find a deck</strong>
+              <small>Search, pacing & reading settings</small>
             </span>
             <kbd>/</kbd>
           </summary>
           <div className="ls-deck-tools__popover">
+            <div className="ls-reading-settings">
+              <div>
+                <strong>Make yourself comfortable</strong>
+                <span>Adjust the teaching text on this device.</span>
+              </div>
+              <div role="group" aria-label="Teaching text size">
+                <button
+                  type="button"
+                  disabled={readerSize <= 1}
+                  onClick={() => changeReaderSize(-1)}
+                  aria-label="Decrease teaching text size"
+                >
+                  <Minus size={16} />
+                </button>
+                <output aria-live="polite">
+                  {Math.round(readerSize * 100)}%
+                </output>
+                <button
+                  type="button"
+                  disabled={readerSize >= 1.2}
+                  onClick={() => changeReaderSize(1)}
+                  aria-label="Increase teaching text size"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
             <div className="ls-deck-tools__selectors">
               <label className="ls-deck-select">
                 <Layers3 size={17} />
@@ -1219,7 +1275,7 @@ export function LiveSessionRunner({
                     setResultFilter(event.target.value as ResultFilter)
                   }
                 >
-                  <option value="all">All route desks</option>
+                  <option value="all">All teaching decks</option>
                   <option value="uncovered">All uncovered decks</option>
                   <option value="core">Core decks</option>
                   <option value="reinforcement">Reinforcement decks</option>
@@ -1301,7 +1357,7 @@ export function LiveSessionRunner({
                 ) : (
                   <div className="ls-no-results">
                     <Search size={23} />
-                    <strong>No teaching desk matches</strong>
+                    <strong>No decks found</strong>
                     <p>
                       Try fewer words, a formula fragment, or clear the proof
                       filter.
@@ -1441,6 +1497,16 @@ export function LiveSessionRunner({
             }
             onChange={setDraft}
             onRecord={recordEvidence}
+            onClose={() => {
+              selectFlowStep("answer");
+              window.setTimeout(() => {
+                const answerPanel = document.querySelector<HTMLElement>(
+                  ".ls-command-block--answer .ls-panel-step"
+                );
+                answerPanel?.focus({ preventScroll: true });
+                answerPanel?.scrollIntoView({ block: "nearest" });
+              }, 0);
+            }}
           />
         ) : (
           <aside

@@ -125,6 +125,31 @@ to allow the new service worker to update its cached shell.
 
 ## Verification
 
+### Workspace design (September 2026)
+
+The tracker and Session Mode share a cool-white, navy, blue, and teal palette,
+with Sora headings, IBM Plex Sans body text, and IBM Plex Mono formulae.
+
+- **Tracker:** Session Mode is one click away for tutors. The **Tools** menu
+  contains backup download/import, calendar export, and sign-out. Sync remains
+  visible; student permissions are unchanged.
+- **Session Mode:** use **Next** or **Space** to follow the existing sequence.
+  Teach, Ask, and Answer remain visible, and their headings also select a step.
+  **Find a deck** contains search, filters, pacing, and 100/110/120% reading size.
+  Reading size is a device preference, not a change to the private playbook.
+- **Laptop:** all three reading columns fit within the viewport, each scrolling
+  independently. The evidence form opens over the right side at the evidence
+  step; its close button returns to Answer without discarding the draft.
+- **Phone/tablet:** panels stack, with a persistent Next action at the bottom.
+  Secondary controls no longer occupy the entire first screen.
+
+This release changes presentation only: no private JSON upload, Firestore rules
+deployment, data migration, or progress reset is required. Refresh online after
+the Pages deployment. See [visual verification](verification/README.md) for the
+screenshots and interaction-test scope.
+
+### Commands
+
 ```powershell
 npm run typecheck
 npm test

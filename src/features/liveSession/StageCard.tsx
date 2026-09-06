@@ -56,6 +56,7 @@ function CommandBlock({
   tone,
   active,
   sectionRef,
+  onActivate,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -63,6 +64,7 @@ function CommandBlock({
   tone: "explain" | "question" | "answer";
   active: boolean;
   sectionRef: React.RefObject<HTMLElement | null>;
+  onActivate: () => void;
 }) {
   return (
     <section
@@ -70,10 +72,26 @@ function CommandBlock({
       className={`ls-command-block ls-command-block--${tone}${active ? " is-active" : ""}`}
     >
       <header>
-        <span className="ls-command-block__icon" aria-hidden="true">
-          {icon}
-        </span>
-        <span>{label}</span>
+        <button
+          type="button"
+          className="ls-panel-step"
+          aria-current={active ? "step" : undefined}
+          onClick={onActivate}
+        >
+          <span className="ls-command-block__icon" aria-hidden="true">
+            {icon}
+          </span>
+          <strong>{label}</strong>
+          <span className="ls-panel-step__hint">
+            {active
+              ? "Current step"
+              : tone === "explain"
+                ? "Explain the concept"
+                : tone === "question"
+                  ? "Check understanding"
+                  : "Explain the result"}
+          </span>
+        </button>
       </header>
       <div className="ls-command-block__body">{children}</div>
     </section>
@@ -137,7 +155,9 @@ export function StageCard({
       () =>
         flowRefs[step].current?.scrollIntoView({
           behavior: reducedMotion ? "auto" : "smooth",
-          block: "nearest",
+          block: window.matchMedia?.("(max-width: 899px)").matches
+            ? "start"
+            : "nearest",
         }),
       0
     );
@@ -187,32 +207,6 @@ export function StageCard({
         </div>
       </header>
 
-      <nav className="ls-teach-flow" aria-label="Teach, ask, answer workflow">
-        <div>
-          <span>All three panels remain visible</span>
-          <strong>Move deliberately: teach, ask, then answer</strong>
-        </div>
-        {(["teach", "ask", "answer"] as const).map((step, index) => (
-          <button
-            type="button"
-            className={flowStep === step ? "is-current" : ""}
-            aria-current={flowStep === step ? "step" : undefined}
-            onClick={() => moveTo(step)}
-            key={step}
-          >
-            <span>{index + 1}</span>
-            <strong>{step}</strong>
-            <small>
-              {step === "teach"
-                ? "Build the concept"
-                : step === "ask"
-                  ? "Require commitment"
-                  : "Explain the result"}
-            </small>
-          </button>
-        ))}
-      </nav>
-
       <div className="ls-command-grid" aria-label="Tutor command desk">
         <CommandBlock
           icon={<Lightbulb size={19} />}
@@ -220,6 +214,7 @@ export function StageCard({
           tone="explain"
           active={flowStep === "teach"}
           sectionRef={teachRef}
+          onActivate={() => moveTo("teach")}
         >
           <p className="ls-command-lead">{bestExplanation(stage, question)}</p>
           <div className="ls-script-ribbon">
@@ -261,6 +256,7 @@ export function StageCard({
           tone="question"
           active={flowStep === "ask"}
           sectionRef={askRef}
+          onActivate={() => moveTo("ask")}
         >
           <div className="ls-question-copy">
             <div className="ls-question-copy__topline">
@@ -307,6 +303,7 @@ export function StageCard({
           tone="answer"
           active={flowStep === "answer"}
           sectionRef={answerRef}
+          onActivate={() => moveTo("answer")}
         >
           <p className="ls-model-response-cue">
             Say this naturally after Hamad commits to an answer.

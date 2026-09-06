@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CalendarPlus,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
@@ -23,6 +24,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  MoreHorizontal,
   NotebookPen,
   PlayCircle,
   Plus,
@@ -660,6 +662,64 @@ function SignInScreen({
   );
 }
 
+function WorkspaceActions({
+  email,
+  role,
+  children,
+}: {
+  email: string | null;
+  role: "tutor" | "student" | null;
+  children: ReactNode;
+}) {
+  const disclosure = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    const dismiss = (event: PointerEvent) => {
+      if (!disclosure.current?.contains(event.target as Node)) {
+        disclosure.current?.removeAttribute("open");
+      }
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !disclosure.current?.open) return;
+      disclosure.current.open = false;
+      disclosure.current.querySelector("summary")?.focus();
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
+
+  return (
+    <details className="workspace-actions" ref={disclosure}>
+      <summary aria-label="Workspace tools and account">
+        <MoreHorizontal size={19} />
+        <span>Tools</span>
+        <ChevronDown size={13} />
+      </summary>
+      <div
+        className="workspace-actions-panel"
+        onClick={event => {
+          if ((event.target as HTMLElement).closest("button")) {
+            disclosure.current?.removeAttribute("open");
+          }
+        }}
+      >
+        <div className="workspace-account">
+          <span>
+            <ShieldCheck size={15} />{" "}
+            {role === "tutor" ? "Tutor workspace" : "Student workspace"}
+          </span>
+          <strong>{email ?? "Approved account"}</strong>
+        </div>
+        {children}
+      </div>
+    </details>
+  );
+}
+
 function App() {
   const rawProgramWeek = getProgramWeek();
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
@@ -1006,12 +1066,13 @@ function App() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#tracker-content">Skip to content</a>
       <aside className="sidebar">
         <div className="brand-lockup">
           <span className="brand-mark"><Target size={24} /></span>
           <div>
-            <strong>HAMAD CFA MASTERY</strong>
-            <span>Level I Mastery Path</span>
+            <strong>MASTERY PATH</strong>
+            <span>Hamad · CFA Level I</span>
             <small className="creator-credit">Created by Mohamed Ali, CFA</small>
           </div>
         </div>
@@ -1019,7 +1080,7 @@ function App() {
         <div className="sidebar-exam">
           <span>Exam appointment</span>
           <strong>27 FEB 2027</strong>
-          <small>{daysUntilExam()} days to execute</small>
+          <small>{daysUntilExam()} days to prepare</small>
         </div>
 
         <nav className="sidebar-nav" aria-label="Project sections">
@@ -1036,6 +1097,7 @@ function App() {
                     className={cx("nav-button", activeTab === item.id && "is-active")}
                     key={item.id}
                     onClick={() => navigate(item.id)}
+                    aria-current={activeTab === item.id ? "page" : undefined}
                     type="button"
                   >
                     <Icon size={17} />
@@ -1064,40 +1126,44 @@ function App() {
           <div className="mobile-brand">
             <span className="brand-mark"><Target size={20} /></span>
             <div>
-              <strong>HAMAD CFA MASTERY</strong>
-              <span>Level I Mastery Path</span>
+              <strong>MASTERY PATH</strong>
+              <span>Hamad · CFA Level I</span>
               <small className="creator-credit">Created by Mohamed Ali, CFA</small>
             </div>
           </div>
           <div className="topbar-title">
-            <span>HAMAD CFA MASTERY · {TAB_COPY[activeTab].eyebrow}</span>
+            <span>{role === "tutor" ? "Tutor workspace" : "Hamad's study workspace"} · CFA Level I</span>
             <strong>{TAB_COPY[activeTab].title}</strong>
           </div>
           <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
           <div className="data-actions">
-            <span className="role-chip"><ShieldCheck size={14} />{role === "tutor" ? "Tutor" : "Student"}</span>
-            <span className={cx("sync-chip", syncCopy.tone)} title={syncCopy.detail}>
+            <span className={cx("sync-chip", syncCopy.tone)} title={syncCopy.detail} role="status" aria-label={`${syncCopy.label}. ${syncCopy.detail}`}>
               <SyncIcon size={15} />
               <span>{syncCopy.label}</span>
             </span>
-            <button className="button button-ghost" type="button" onClick={handleExport}>
+            {capabilities.canUseLiveSession && (
+              <button className="button button-primary header-session-action" type="button" onClick={() => navigate("live")} title="Open Session Mode" aria-label="Open Session Mode">
+                <PlayCircle size={17} /><span>Session Mode</span>
+              </button>
+            )}
+            <WorkspaceActions email={user.email} role={role}>
+            <button type="button" onClick={handleExport}>
               <Download size={16} />
-              <span>Export</span>
+              <span>Download backup<small>Keep a copy of shared progress</small></span>
             </button>
-            <button className="button button-ghost" type="button" onClick={() => setCalendarDialogOpen(true)}>
+            <button type="button" onClick={() => setCalendarDialogOpen(true)}>
               <CalendarPlus size={16} />
-              <span>Calendar import</span>
+              <span>Add to calendar<small>Session dates and reminders</small></span>
             </button>
             {capabilities.canImportData && <button
-              className="button button-ghost"
               type="button"
               onClick={() => importRef.current?.click()}
             >
               <Upload size={16} />
-              <span>Import</span>
+              <span>Import backup<small>Restore shared tracker data</small></span>
             </button>}
             <button
-              className="button button-ghost"
+              className="workspace-signout"
               type="button"
               onClick={() => void signOut()}
               title={`Sign out ${user.email ?? ""}`.trim()}
@@ -1105,6 +1171,7 @@ function App() {
               <LogOut size={16} />
               <span>Sign out</span>
             </button>
+            </WorkspaceActions>
             <input
               className="visually-hidden"
               ref={importRef}
@@ -1124,6 +1191,7 @@ function App() {
                 className={cx("mobile-nav-button", activeTab === item.id && "is-active")}
                 key={item.id}
                 onClick={() => navigate(item.id)}
+                aria-current={activeTab === item.id ? "page" : undefined}
                 type="button"
               >
                 <Icon size={17} />
@@ -1146,7 +1214,7 @@ function App() {
           </button>
         </nav>
 
-        <div className="page-shell">
+        <div className="page-shell" id="tracker-content" tabIndex={-1}>
           {activeTab !== "dashboard" && activeTab !== "weekly" && <PageHeading tab={activeTab} />}
           {renderView()}
         </div>
@@ -1252,6 +1320,7 @@ function DashboardView({
   );
   const now = todayDateOnly();
   const risks = buildRiskIndicators(tracker, now);
+  const attentionCount = risks.filter(risk => risk.tone !== "green").length;
   const nextMilestone = program.administrativeMilestones.find(
     (milestone) => milestone.date >= now,
   );
@@ -1264,7 +1333,7 @@ function DashboardView({
   const nextTaskStatus = nextTask ? getTaskStatus(nextTask, tracker) : null;
   const nextTaskAction = nextTask?.kind === "session"
     ? role === "tutor"
-      ? "Open approval queue"
+      ? "Open Session Mode"
       : nextTaskStatus === "requested"
         ? "Withdraw request"
         : nextTaskStatus === "returned"
@@ -1290,11 +1359,11 @@ function DashboardView({
             <p className="hero-kicker">YOUR NEXT STEP · WEEK {String(currentWeek).padStart(2, "0")}</p>
             {nextTask ? (
               <>
-                <h1>{nextTask.label}</h1>
-                <p>{humanizeTaskDetail(nextTask.detail)}</p>
+                <h1>{nextTask.kind === "session" ? nextTask.label : nextTask.kind === "evidence" ? "Check your progress" : "Your next study task"}</h1>
+                <p className={nextTask.kind === "session" ? undefined : "hero-task-instruction"}>{nextTask.kind === "session" ? humanizeTaskDetail(nextTask.detail) : nextTask.label}</p>
                 <div className="hero-actions">
                   <button className="button button-accent" type="button" onClick={() => onToggleTask(nextTask.id)}>
-                    <Check size={17} /> {nextTaskAction}
+                    {nextTask.kind === "session" && role === "tutor" ? <PlayCircle size={17} /> : <Check size={17} />} {nextTaskAction}
                   </button>
                   <button className="button button-dark-ghost" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
                     View this week <ChevronRight size={17} />
@@ -1320,11 +1389,10 @@ function DashboardView({
           </aside>
         </div>
         <div className="quick-actions" aria-label="Quick actions">
-          <span>Quick log</span>
-          {role === "tutor" && <button type="button" onClick={() => onNavigate("live")}><PlayCircle size={16} /> Run Session</button>}
-          <button type="button" onClick={() => onNavigate("practice")}><TimerReset size={16} /> Practice</button>
-          <button type="button" onClick={() => onNavigate("sessions")}><GraduationCap size={16} /> Session</button>
-          <button type="button" onClick={() => onNavigate("errors")}><Archive size={16} /> Mistake</button>
+          <span>Keep moving</span>
+          <button type="button" onClick={() => onNavigate("practice")}><TimerReset size={16} /> Log practice</button>
+          <button type="button" onClick={() => onNavigate("sessions")}><GraduationCap size={16} /> Session notes</button>
+          <button type="button" onClick={() => onNavigate("errors")}><Archive size={16} /> Review mistakes</button>
         </div>
       </section>
 
@@ -1359,11 +1427,13 @@ function DashboardView({
         />
       </section>
 
-      <section className="panel risk-panel" aria-label="Automatic coaching signals">
-        <div className="panel-heading">
-          <div><p className="eyebrow">Automatic coaching signals</p><h3>What needs attention now</h3></div>
-          <ShieldCheck size={21} />
-        </div>
+      <details className="panel risk-panel" aria-label="Automatic coaching signals">
+        <summary className="risk-summary">
+          <span className="risk-summary-icon"><ShieldCheck size={21} /></span>
+          <span><strong>Progress check</strong><small>{attentionCount ? `${attentionCount} ${attentionCount === 1 ? "area" : "areas"} to review · Open your coaching signals` : "All areas on track · View coaching signals"}</small></span>
+          <span className="risk-summary-signals" aria-hidden="true">{risks.map((risk) => <i className={`risk-dot-${risk.tone}`} key={risk.id} />)}</span>
+          <ChevronDown size={17} />
+        </summary>
         <div className="risk-grid">
           {risks.map((risk) => (
             <article className={cx("risk-card", `risk-${risk.tone}`)} key={risk.id}>
@@ -1374,7 +1444,7 @@ function DashboardView({
             </article>
           ))}
         </div>
-      </section>
+      </details>
 
       <section className="home-main-grid">
         <article className="panel panel-large">

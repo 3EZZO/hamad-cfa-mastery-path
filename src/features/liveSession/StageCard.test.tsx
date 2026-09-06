@@ -18,9 +18,12 @@ const question: LiveSessionQuestion = {
   kind: "question",
   tier: "core",
   explanation: "Holding-period return combines income and price change.",
-  teachingScript: ["Separate income from capital gain, then divide by beginning value."],
+  teachingScript: [
+    "Separate income from capital gain, then divide by beginning value.",
+  ],
   prompt: "Calculate and interpret the holding-period return.",
-  spokenAnswer: "The holding-period return is 8%, including income and price appreciation.",
+  spokenAnswer:
+    "The holding-period return is 8%, including income and price appreciation.",
   rationale: "The denominator is the beginning investment value.",
   expectedSeconds: 90,
   difficulty: 3,
@@ -37,7 +40,7 @@ describe("StageCard", () => {
         complete={false}
         onFlowStepChange={() => undefined}
         onShowCandidate={() => undefined}
-      />,
+      />
     );
 
     expect(html).toContain("1 · Teach");
@@ -46,6 +49,12 @@ describe("StageCard", () => {
     expect(html).toContain(question.explanation);
     expect(html).toContain(question.prompt);
     expect(html).toContain(question.spokenAnswer);
-    expect(html).toContain('class="ls-command-block ls-command-block--question is-active"');
+    expect(html).toContain(
+      'class="ls-command-block ls-command-block--question is-active"'
+    );
+    expect(html.match(/class="ls-panel-step"/g)).toHaveLength(3);
+    expect(html.match(/aria-current="step"/g)).toHaveLength(1);
+    expect(html).not.toContain('class="ls-teach-flow"');
+    expect(html).not.toContain('aria-expanded="false"');
   });
 });
