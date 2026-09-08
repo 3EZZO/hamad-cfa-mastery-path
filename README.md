@@ -22,7 +22,7 @@ The application is isolated from the surrounding HN3 projects. It has its own de
 - Tutor-only launch checks, a private live-teaching Session Mode, and safe schedule overrides
 - Automatic coaching-risk signals derived from due work, practice evidence, mistakes, and mocks
 - Weekly WhatsApp-ready summaries plus print-to-PDF progress reports
-- Calendar import for all 25 timed tutor checkpoints and administrative milestones, including the separate 27 February exam appointment, with the fixed 09:00 Riyadh start time and selectable reminders
+- Calendar import for all 24 timed tutor checkpoints and administrative milestones, including the separate 27 February exam appointment, with the fixed 09:00 Riyadh start time and selectable reminders
 - Installable Hamad CFA Mastery web app with branded Android, maskable, and iPhone icons
 - Repository-path-aware offline app shell; Firebase resumes synchronization when connectivity returns
 - Authenticated Firestore synchronization between Mohamed and Hamad
