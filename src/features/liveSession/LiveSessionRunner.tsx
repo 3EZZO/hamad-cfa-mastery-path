@@ -916,8 +916,10 @@ export function LiveSessionRunner({
         <div className="ls-livebar__identity">
           <span className="ls-live-dot" aria-hidden="true" />
           <div>
-            <span>
-              Session {String(session.number).padStart(2, "0")} · {route.name}
+            <span title={`${route.name} · ${session.date} · ${session.startTime} Riyadh`}>
+              Session {String(session.number).padStart(2, "0")} · {new Intl.DateTimeFormat("en-GB", {
+                day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+              }).format(new Date(`${session.date}T00:00:00Z`))} · {session.startTime} Riyadh · {route.minutes} min
             </span>
             <strong title={stage.title}>{stage.title}</strong>
           </div>
@@ -928,7 +930,7 @@ export function LiveSessionRunner({
         />
         <div className="ls-clock-cluster" aria-label="Session timers">
           <div className={`ls-clock${timer.expired ? " is-overtime" : ""}`}>
-            <span>{timer.expired ? "Session overtime" : "Session left"}</span>
+            <span>{timer.status === "paused" ? "Timer paused" : timer.expired ? "Session overtime" : "Session left"}</span>
             <time>{timer.display}</time>
           </div>
           <div
@@ -962,6 +964,9 @@ export function LiveSessionRunner({
             type="button"
             disabled={timer.status === "complete"}
             onClick={timer.toggle}
+            title={timer.status === "running"
+              ? "Pause the teaching clock"
+              : "Resume from the last saved teaching time. Time away is not counted."}
             aria-label={
               timer.status === "running"
                 ? "Pause session timer"

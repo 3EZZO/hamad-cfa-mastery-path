@@ -94,6 +94,15 @@ When updating the schedule, preserve these invariants:
 
 ## Local development
 
+Session Mode's appointment is read from the canonical schedule, not the private
+playbook JSON or its historical version identifier. Reopening a run restores a
+paused teaching clock at its last recorded checkpoint. Hiding/leaving the
+workspace or suspending the laptop pauses the clock; press Play to continue.
+Device checkpoints are saved every 30 seconds without cloud writes on timer
+ticks. Offline action replay uses the original capture time, never the time of
+reconnection. These clock repairs preserve the existing playbook, deck coverage,
+proofs and notes; no private JSON re-upload is required after a reschedule.
+
 Requirements: Node.js 20 or newer and npm.
 
 ```powershell

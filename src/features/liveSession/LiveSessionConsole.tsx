@@ -35,6 +35,7 @@ import type {
   SessionTimerSnapshot,
 } from "./types";
 import { useSessionTimer } from "./useSessionTimer";
+import { recoverSessionTimer } from "./sessionClock";
 
 const PREFLIGHT_FRESHNESS_MS = 5 * 60 * 1_000;
 
@@ -294,8 +295,11 @@ function LiveSessionWorkspace({
         sessionDeckKey(entry.stageId, entry.targetId)
       )
   );
-  const [timerSnapshot, setTimerSnapshot] =
-    useState<SessionTimerSnapshot | null>(initialRun?.timer ?? null);
+  const [timerSnapshot, setTimerSnapshot] = useState<SessionTimerSnapshot>(() =>
+    recoverSessionTimer(initialRun?.timer,
+      playbook.routes.find(route => route.id === initialRouteId)?.minutes ?? 150,
+      initialRun?.updatedAt),
+  );
   const [completion, setCompletion] =
     useState<LiveSessionCloseoutResult | null>(initialRun?.closeout ?? null);
   const [discardConfirming, setDiscardConfirming] = useState(false);
@@ -317,13 +321,25 @@ function LiveSessionWorkspace({
     ? (playbook.stagesByRoute[selectedRoute.id] ?? [])
     : [];
 
+  const recoveryRef = useRef({
+    phase, routeId: routeId || null, stageIndex, questionIndex, evidence,
+    completedDeskIds, timer: timerSnapshot, closeout: completion,
+    updatedAt: timerSnapshot.updatedAt,
+  });
+  recoveryRef.current = {
+    phase, routeId: routeId || null, stageIndex, questionIndex, evidence,
+    completedDeskIds, timer: timerSnapshot, closeout: completion,
+    updatedAt: timerSnapshot.updatedAt,
+  };
   const handleTimerSnapshot = useCallback((snapshot: SessionTimerSnapshot) => {
     setTimerSnapshot(snapshot);
-  }, []);
+    // pagehide and unmount cannot wait for the next rendered React effect.
+    onRunChange?.({ ...recoveryRef.current, timer: snapshot, updatedAt: snapshot.updatedAt });
+  }, [onRunChange]);
 
   const timer = useSessionTimer({
     durationMinutes: selectedRoute?.minutes ?? 120,
-    initialSnapshot: initialRun?.timer,
+    initialSnapshot: timerSnapshot,
     onSnapshotChange: handleTimerSnapshot,
   });
 

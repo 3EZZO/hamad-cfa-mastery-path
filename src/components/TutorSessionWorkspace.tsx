@@ -38,6 +38,7 @@ import {
   removeLiveSessionCloseoutArtifacts,
 } from "../lib/liveSessionCloseout";
 import { effectiveSessionDate } from "../lib/schedule";
+import { recordedSessionElapsedMs, recoverLiveSessionClock } from "../features/liveSession/sessionClock";
 import {
   cacheTutorPlaybookOffline,
   cacheTutorRunOffline,
@@ -131,13 +132,7 @@ function syncRetryDelay(attempts: number): number {
 }
 
 function snapshotElapsedSeconds(snapshot: LiveSessionRunSnapshot): number {
-  const timer = snapshot.timer;
-  if (!timer) return 0;
-  let elapsedMs = timer.elapsedBeforeRunMs;
-  if (timer.status === "running" && timer.runningSince) {
-    elapsedMs += Math.max(0, Date.now() - Date.parse(timer.runningSince));
-  }
-  return Math.max(0, Math.floor(elapsedMs / 1_000));
+  return Math.floor(recordedSessionElapsedMs(snapshot) / 1_000);
 }
 
 function positionForSnapshot(
@@ -563,6 +558,11 @@ export default function TutorSessionWorkspace({
       ? tutorRunToSnapshot(cloudRun, adapted)
       : null;
     const restored = newerSnapshot(cloudSnapshot, cachedRun);
+    const recovered = recoverLiveSessionClock(
+      restored,
+      adapted.routes.find(route => route.id === restored?.routeId)?.minutes ?? 150,
+      cloudSnapshot,
+    );
     if (sequence !== loadSequenceRef.current) return;
 
     cloudRunRef.current = cloudRun;
@@ -574,7 +574,7 @@ export default function TutorSessionWorkspace({
       ? restored
       : cloudSnapshot;
     setPrivatePackage(selectedPackage);
-    setInitialRun(restored);
+    setInitialRun(recovered);
     setWorkspaceEpoch(value => value + 1);
     try {
       const status = await getTutorOfflineStatus(userUid, PLAYBOOK_ID);
