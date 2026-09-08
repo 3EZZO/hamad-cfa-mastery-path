@@ -84,8 +84,8 @@ Progress from an older hosting origin does not migrate automatically. Export JSO
 
 When updating the schedule, preserve these invariants:
 
-1. Exactly 26 consecutive Sunday-to-Saturday weeks, beginning 6 September 2026 and ending 27 February 2027.
-2. Exactly 24 consecutively numbered required tutor checkpoints, one in each of Weeks 1-25.
+1. Exactly 25 consecutive Sunday-to-Saturday weeks, beginning 6 September 2026 and ending 27 February 2027.
+2. Exactly 24 consecutively numbered required tutor checkpoints, one in each of Weeks 1-24.
 3. Canonical checkpoints are Saturdays at 09:00 Asia/Riyadh. Session 01 lasts 150 minutes; Sessions 02-24 last 120 minutes.
 4. A tutor-approved exception may move one checkpoint only to the immediately preceding Friday at the same 09:00 time; it never cascades later sessions.
 5. Week 25 has no tutor checkpoint, protects taper and logistics, and presents Saturday 27 February as a separate exam-day milestone and checklist.
