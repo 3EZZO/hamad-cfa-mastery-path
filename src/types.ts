@@ -140,7 +140,7 @@ export interface DiagnosticEntry {
 
 export interface TrackerState {
   version: 1;
-  scheduleVersion: "weekly-saturday-v2";
+  scheduleVersion: "weekly-saturday-v3";
   updatedAt: string;
   taskCompletions: Record<string, boolean>;
   sessionCompletionRequests: Record<string, SessionCompletionRequest>;

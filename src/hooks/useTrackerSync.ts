@@ -38,6 +38,7 @@ import {
   normalizeState,
   savePendingSync,
   saveState,
+  TRACKER_SCHEDULE_VERSION,
   type PendingSync,
 } from "../lib/storage";
 
@@ -133,6 +134,8 @@ export function useTrackerSync(): TrackerSyncController {
   const pendingRef = useRef<PendingSync | null>(loadPendingSync());
   const flushInFlightRef = useRef(false);
   const initializingRef = useRef(false);
+  const canFlushScheduleRef = useRef(false);
+  const scheduleWaitReasonRef = useRef<string | null>(null);
   const flushTimerRef = useRef<number | null>(null);
   const flushRef = useRef<() => Promise<void>>(async () => undefined);
 
@@ -189,6 +192,13 @@ export function useTrackerSync(): TrackerSyncController {
 
   const flushPending = useCallback(async () => {
     if (flushInFlightRef.current || !userRef.current) return;
+    if (!canFlushScheduleRef.current) {
+      if (scheduleWaitReasonRef.current) {
+        setSyncStatus("loading");
+        setSyncError(scheduleWaitReasonRef.current);
+      }
+      return;
+    }
     const captured = pendingRef.current;
     if (!captured) {
       if (onlineNow()) setSyncStatus("synced");
@@ -282,6 +292,8 @@ export function useTrackerSync(): TrackerSyncController {
       (nextUser) => {
         window.clearTimeout(fallbackTimer);
         userRef.current = nextUser;
+        canFlushScheduleRef.current = false;
+        scheduleWaitReasonRef.current = null;
         setUser(nextUser);
         setMember(null);
         setMemberReady(!nextUser);
@@ -310,6 +322,7 @@ export function useTrackerSync(): TrackerSyncController {
     if (!configuration.configured || !user) return;
     setMemberReady(false);
     setMember(null);
+    canFlushScheduleRef.current = false;
 
     return observeCurrentProjectMember(
       (nextMember) => {
@@ -406,8 +419,13 @@ export function useTrackerSync(): TrackerSyncController {
     };
 
     return subscribeToCloudTracker(
-      (envelope) => {
+      (envelope, sourceScheduleVersion) => {
         setAccessDenied(false);
+        const needsMigration = Boolean(envelope && sourceScheduleVersion !== TRACKER_SCHEDULE_VERSION);
+        canFlushScheduleRef.current = member.role === "tutor" || !needsMigration;
+        scheduleWaitReasonRef.current = needsMigration && member.role === "student"
+          ? "Mohamed needs to open the tracker once to apply the updated schedule. Your changes remain saved on this device."
+          : null;
         if (envelope) {
           initializingRef.current = false;
           if (
@@ -416,6 +434,14 @@ export function useTrackerSync(): TrackerSyncController {
             envelope.revision > baseRef.current.revision
           ) {
             acceptEnvelope(envelope.revision, envelope.state);
+          }
+          if (needsMigration && member.role === "tutor" && !pendingRef.current) {
+            // Publish once through the same revision-aware merge as ordinary
+            // edits; never replace or reset the shared tracker baseline.
+            queueState(envelope.state);
+          } else if (needsMigration && member.role === "student") {
+            setSyncStatus("loading");
+            setSyncError(scheduleWaitReasonRef.current);
           }
           return;
         }
@@ -487,6 +513,7 @@ export function useTrackerSync(): TrackerSyncController {
     configuration.configured,
     member,
     memberReady,
+    queueState,
     scheduleFlush,
     setCachedTracker,
     user,

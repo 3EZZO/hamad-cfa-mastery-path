@@ -109,8 +109,11 @@ import {
   importTutorPlaybookPackage,
   loadTutorPlaybookPackage,
   probeTutorLiveRunAccess,
+  parseCloudEnvelope,
+  saveCloudTracker,
   saveTutorLiveRun,
 } from "./cloud";
+import { createDefaultState } from "./storage";
 import {
   computeTutorPlaybookChunkContentHash,
   computeTutorPlaybookManifestContentHash,
@@ -250,6 +253,48 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
+});
+
+describe("September schedule cloud migration", () => {
+  it("publishes v3 through the normal transaction while preserving a concurrent v2 edit", async () => {
+    const path = "programs/project-202/tracker/current";
+    const original = {
+      state: {
+        ...createDefaultState(),
+        scheduleVersion: "weekly-saturday-v2",
+        taskCompletions: { "w21-independent-1": true },
+      },
+      revision: 4,
+      updatedBy: "tutor-uid",
+      updatedAtClient: "2026-09-08T06:00:00.000Z",
+    };
+    const base = parseCloudEnvelope(original);
+    firebaseHarness.documents.set(path, {
+      ...original,
+      revision: 5,
+      state: {
+        ...original.state,
+        taskCompletions: {
+          ...original.state.taskCompletions,
+          "w22-independent-1": true,
+        },
+      },
+    });
+
+    const saved = await saveCloudTracker(base.state, base);
+    expect(saved.merged).toBe(true);
+    expect(saved.envelope.revision).toBe(6);
+    expect(saved.envelope.state.scheduleVersion).toBe("weekly-saturday-v3");
+    expect(saved.envelope.state.taskCompletions).toMatchObject({
+      "w20-independent-1": true,
+      "w21-independent-1": true,
+      "legacy-v2-w21-independent-1": true,
+      "legacy-v2-w22-independent-1": true,
+    });
+    expect(firebaseHarness.documents.get(path)).toEqual(saved.envelope);
+    expect(firebaseHarness.transactionCommits).toBe(1);
+    expect(firebaseHarness.deletes).toBe(0);
+  });
 });
 
 describe("tutor-only cloud playbook API", () => {

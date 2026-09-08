@@ -18,20 +18,20 @@ describe("weekly report generator", () => {
     const state = createDefaultState();
     state.sessionCompletionRequests["w1-session-1"] = {
       taskId: "w1-session-1",
-      requestedAt: "2026-09-05T08:00:00.000Z",
+      requestedAt: "2026-09-12T08:00:00.000Z",
     };
     state.sessionCompletionReviews["w1-session-1"] = {
       taskId: "w1-session-1",
-      requestedAt: "2026-09-05T08:00:00.000Z",
-      reviewedAt: "2026-09-05T09:00:00.000Z",
+      requestedAt: "2026-09-12T08:00:00.000Z",
+      reviewedAt: "2026-09-12T09:00:00.000Z",
       status: "approved",
       note: "Evidence reviewed.",
     };
     state.practiceLogs.push({
-      id: "p1", date: "2026-09-03", topic: "Quantitative Methods",
+      id: "p1", date: "2026-09-10", topic: "Quantitative Methods",
       attempted: 40, correct: 30, source: "LES", note: "Baseline", confidence: 3,
     });
-    const report = buildWeeklyReport(PLAN[0], state, "2026-09-05");
+    const report = buildWeeklyReport(PLAN[0], state, "2026-09-12");
     expect(report.week).toBe(1);
     expect(report.completedTasks).toBe(1);
     expect(report.practiceAttempted).toBe(40);
@@ -39,7 +39,7 @@ describe("weekly report generator", () => {
   });
 
   it("formats a WhatsApp-friendly summary and printable one-page document", () => {
-    const report = buildWeeklyReport(PLAN[0], createDefaultState(), "2026-08-13");
+    const report = buildWeeklyReport(PLAN[0], createDefaultState(), "2026-08-20");
     expect(formatWeeklyReportText(report)).toContain(
       "HAMAD CFA MASTERY - WEEK 01 REPORT",
     );
@@ -53,7 +53,7 @@ describe("weekly report generator", () => {
     const report = buildWeeklyReport(
       PLAN[0],
       createDefaultState(),
-      "2026-08-13",
+      "2026-08-20",
     );
     const write = vi.fn();
     const remove = vi.fn();

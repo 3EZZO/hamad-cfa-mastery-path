@@ -98,7 +98,7 @@ refuses to continue if the secret is absent, writes the credential only to the
 runner's temporary directory, removes it after the job, and uses the same pinned
 deployment wrapper and release-target verification as the local command.
 
-When a release changes both rules and the web client, deploy the rules first, then deploy Pages. The confirmed 5 September plan requires `scheduleVersion = weekly-saturday-v2` on the next write. Sign in as Mohamed first after the Pages deployment so the tutor account can publish the migrated or reset baseline before Hamad uses the updated tracker.
+When a release changes both rules and the web client, deploy the rules first, then deploy Pages. The confirmed 12 September plan requires `scheduleVersion = weekly-saturday-v3` on the next write. Sign in as Mohamed first after deployment: the client automatically queues a revision-aware migration, preserving evidence. Students wait for that migrated cloud snapshot before their queued edits can sync. No reset or playbook re-upload is required.
 
 ## 5. Configure and verify locally
 
@@ -207,7 +207,7 @@ That directory is gitignored. Keep it that way. Never move the artifact, Tutor B
 2. Open the production Pages URL and sign in as Mohamed. Confirm the membership role is `tutor` and the tracker reports **Synced**.
 3. Open **Session Mode**. If no active Session 01 package exists, choose **Choose private playbook JSON**.
 4. Select `output/json/Hamad_CFA_Level_I_Session_01_Private_Playbook.json`. The client validates the entire file before upload, writes immutable versioned chunks first, and activates the manifest only after every required chunk is present.
-5. Return to Session Mode and verify the Session 01 launch screen shows Saturday, 5 September 2026 at 09:00 Asia/Riyadh and recommends the 150-minute route. Sessions 02-25 remain 120 minutes.
+5. Return to Session Mode and verify the Session 01 launch screen shows Saturday, 12 September 2026 at 09:00 Asia/Riyadh and recommends the 150-minute route. Sessions 02-24 remain 120 minutes.
 6. Sign in as Hamad in a separate browser and confirm **Session Mode**, **Tutor Admin**, and all private playbook/run paths remain unavailable. Do not share Mohamed's browser session or downloaded JSON with Hamad.
 
 Republishing an unchanged package is safe: integrity hashes prevent a partial or conflicting version from silently replacing active content. To publish a revised lesson, generate a new validated version and import it from the tutor account; do not edit Firestore chunks by hand.
@@ -235,18 +235,18 @@ Data belongs to a browser origin, so the old hosted tracker and the new GitHub P
 
 Do not import the same legacy backup independently from both accounts. The first verified import becomes the shared cloud baseline.
 
-### Weekly-plan reset for the September 2026 launch
+### Preserving progress for the 12 September 2026 launch
 
-The confirmed client marks the 25-checkpoint Saturday plan as `weekly-saturday-v2`. When it reads an older snapshot, including the provisional `weekly-saturday-v1` plan, it keeps independent evidence such as practice, mistakes, mocks, shared notes, and topic mastery, but clears schedule-bound task completion, session logs, approvals, obsolete pre-launch assessment data, and overrides so old session IDs or dates cannot be mistaken for the agreed checkpoints.
+The confirmed client marks the 24-checkpoint Saturday plan as `weekly-saturday-v3`. The explicit v2 migration keeps Session 1's progress and private live-run identity, preserves actual session-log dates, maps later session numbers and mock weeks, and retains original completion/approval entries under `legacy-v2-` audit keys. Neither former S19 nor S20 alone approves the newly combined review. Larger mock question targets require new completion evidence. Superseded overrides remain as audit notes. Browser recovery copies preserve the original local, pending and cloud snapshots under `project-202-before-september-12-*`.
 
-No genuine course work has begun for this launch, so use the clean authoritative path:
+Use the non-destructive migration path:
 
 1. Deploy the revised `firestore.rules` before the Pages build.
 2. Deploy Pages, then open the updated URL as Mohamed; do not ask Hamad to open it yet.
-3. Wait for **Synced**, open **Tutor Admin**, and select **Export and reset**.
-4. Enter `RESET HAMAD MASTERY` exactly. The tracker downloads a JSON recovery copy before replacing the shared state.
-5. Wait for **Synced** again, refresh, and confirm Session 01 is Saturday 5 September 2026 at 09:00 for 150 minutes, Session 25 is Saturday 20 February 2027 at 09:00 for 120 minutes, and the 27 February exam is a separate session-free milestone.
-6. Only then ask Hamad to sign in. Confirm his second device shows the same clean baseline.
+3. Wait for **Synced**. The tutor's normal cloud-save transaction applies the migration automatically, including any pending edits. Do not use Export and reset.
+4. Refresh and confirm Session 01 is Saturday 12 September 2026 at 09:00 for 150 minutes, Session 24 is Saturday 20 February 2027 at 09:00 for 120 minutes, and the 27 February exam is a separate session-free milestone.
+5. Ask Hamad to refresh. If he opened first, his changes remain queued until Mohamed's migration arrives, then resume syncing.
+6. Refresh the installed PWA to load the new app shell. Existing private playbook content and offline data remain valid; no playbook JSON re-upload is needed.
 
 Delete any previously imported legacy Project 202 calendar events before importing the newly generated `hamad-cfa-mastery-calendar.ics` file, otherwise obsolete sessions from the old schedule may remain.
 
@@ -257,8 +257,8 @@ Delete any previously imported legacy Project 202 calendar events before importi
 - The `members` allowlist is the access boundary. An authenticated but unlisted Firebase user cannot read or change tracker data.
 - Membership `role` is also enforced by Firestore Rules, not only hidden or disabled in the interface. Keep Mohamed's role exactly `tutor` and Hamad's exactly `student`.
 - Import, reset, session scheduling, tutor-session records, session approval, playbook publishing, private live runs, topic mastery, mock administration, and private tutor notes are tutor-controlled. Hamad may complete independent/evidence tasks, request or withdraw session completion, record confidence-rated practice and mistakes, and manage shared notes.
-- Every cloud snapshot and imported backup is normalized before rendering. Malformed evidence records are discarded, numeric/text fields are bounded, duplicate record IDs are removed, and schedule overrides are accepted only when all 25 checkpoints remain in their original program week and before the exam. The only valid exception is the Friday immediately before that checkpoint's canonical Saturday, still at 09:00 and with a tutor reason.
-- Firestore Rules enforce roles, top-level types, collection limits, revision/timestamp consistency, the `weekly-saturday-v2` schedule version, and the fixed Session 01-25 override-key space. Because the tracker intentionally remains one Firestore document, Rules cannot iterate through every object in its large evidence arrays; the application normalizer is the detailed record-shape boundary and JSON export remains the recovery path.
+- Every cloud snapshot and imported backup is normalized before rendering. Malformed evidence records are discarded, numeric/text fields are bounded, duplicate record IDs are removed, and schedule overrides are accepted only when all 24 checkpoints remain in their original program week and before the exam. The only valid exception is the Friday immediately before that checkpoint's canonical Saturday, still at 09:00 and with a tutor reason.
+- Firestore Rules enforce roles, top-level types, collection limits and revision/timestamp consistency. During rollout they accept v2 and v3 but forbid downgrading v3, including from an old tutor tab. Only the tutor can migrate the shared schedule. Up to 64 approval entries retain historical audit pairs alongside active approvals; the current application accepts Session 01-24 overrides. Because the tracker intentionally remains one Firestore document, Rules cannot iterate through every object in its large evidence arrays; the application normalizer is the detailed record-shape boundary and JSON export remains a recovery path.
 - Keep the database in Spark limits by synchronizing the single tracker document only when state changes, not on a timer.
 - Session Mode follows the same principle: only meaningful run actions are written to Firestore; the visible timer advances locally.
 - The optional private offline playbook is stored only in Mohamed's browser profile after an explicit **Prepare offline** action. It is not a substitute for Firestore authorization, it does not synchronize between devices, and it should be removed before a device changes hands.

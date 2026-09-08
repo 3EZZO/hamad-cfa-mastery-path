@@ -28,6 +28,7 @@ import {
 import type { PrivateTutorNote, TrackerState } from "../types";
 import { mergeTrackerStates } from "./stateMerge";
 import { normalizePrivateTutorNotes, normalizeState } from "./storage";
+import { preservePreRescheduleBackup } from "./scheduleMigration";
 import type { ProjectRole } from "./permissions";
 import {
   applyTutorLiveRunAction,
@@ -540,7 +541,7 @@ function createEnvelope(
 }
 
 export function subscribeToCloudTracker(
-  onEnvelope: (envelope: CloudEnvelope | null) => void,
+  onEnvelope: (envelope: CloudEnvelope | null, sourceScheduleVersion?: unknown) => void,
   onError?: (error: CloudClientError) => void
 ): CloudUnsubscribe {
   const { auth, firestore } = getFirebaseServices();
@@ -554,7 +555,9 @@ export function subscribeToCloudTracker(
         return;
       }
       try {
-        onEnvelope(parseCloudEnvelope(snapshot.data()));
+        const raw = snapshot.data();
+        if (raw.state?.scheduleVersion === "weekly-saturday-v2") preservePreRescheduleBackup("cloud", raw);
+        onEnvelope(parseCloudEnvelope(raw), raw.state?.scheduleVersion);
       } catch (error) {
         onError?.(mapCloudError(error));
       }

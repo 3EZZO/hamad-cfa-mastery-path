@@ -1,6 +1,6 @@
-// Refresh public app-shell assets for the unified workspace design.
+// Refresh the public schedule for the confirmed 12 September start.
 // Tutor playbooks and progress remain in their separate data stores.
-const VERSION = "hamad-mastery-pwa-v9";
+const VERSION = "hamad-mastery-pwa-v10";
 const APP_SCOPE = new URL(self.registration.scope);
 const APP_BASE = APP_SCOPE.pathname.endsWith("/")
   ? APP_SCOPE.pathname

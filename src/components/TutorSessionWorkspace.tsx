@@ -59,6 +59,8 @@ import type {
 import type { PrivateTutorNote, TrackerState } from "../types";
 
 const PLAYBOOK_ID = "hamad-cfa-mastery-session-01";
+// Opaque persisted identity: retain across reschedules to preserve cloud and
+// offline rehearsal runs. The displayed appointment comes from the plan.
 const RUN_ID_BASE = "hamad-cfa-mastery-session-01-2026-09-05";
 const MAX_PRIVATE_PACKAGE_BYTES = 8 * 1024 * 1024;
 const DESK_COMPLETE_NOTE = "[[session-desk-complete:v1]]";

@@ -14,10 +14,11 @@ import type {
 } from "../types";
 import { isValidDateOnly } from "./dates";
 import { validateEffectiveSessionSchedule } from "./schedule";
+import { migrateSeptemberSchedule, preservePreRescheduleBackup, TRACKER_SCHEDULE_VERSION } from "./scheduleMigration";
+export { TRACKER_SCHEDULE_VERSION } from "./scheduleMigration";
 
 export const STORAGE_KEY = "project-202-tracker-v1";
 export const PENDING_SYNC_KEY = "project-202-pending-sync-v1";
-export const TRACKER_SCHEDULE_VERSION = "weekly-saturday-v2" as const;
 
 export interface PendingSync {
   version: 1;
@@ -231,7 +232,7 @@ function normalizeSessionCompletionRequests(
 ): Record<string, SessionCompletionRequest> {
   if (!isRecord(value)) return {};
   const result: Record<string, SessionCompletionRequest> = {};
-  for (const [key, raw] of Object.entries(value).slice(0, SESSION_COUNT)) {
+  for (const [key, raw] of Object.entries(value).slice(0, 64)) {
     if (!isRecord(raw) || key.length > 120 || raw.taskId !== key) continue;
     const requestedAt = validTimestamp(raw.requestedAt, "");
     if (!requestedAt) continue;
@@ -245,7 +246,7 @@ function normalizeSessionCompletionReviews(
 ): Record<string, SessionCompletionReview> {
   if (!isRecord(value)) return {};
   const result: Record<string, SessionCompletionReview> = {};
-  for (const [key, raw] of Object.entries(value).slice(0, SESSION_COUNT)) {
+  for (const [key, raw] of Object.entries(value).slice(0, 64)) {
     if (
       !isRecord(raw) ||
       key.length > 120 ||
@@ -404,6 +405,9 @@ export function normalizeState(value: unknown): TrackerState {
     throw new Error("This is not a valid Hamad CFA Mastery version 1 backup.");
   }
 
+  value = migrateSeptemberSchedule(value);
+  if (!isRecord(value)) throw new Error("Invalid tracker snapshot.");
+
   const defaults = createDefaultState();
   const usesCurrentSchedule =
     value.scheduleVersion === TRACKER_SCHEDULE_VERSION;
@@ -463,7 +467,9 @@ export function loadState(): TrackerState {
   const saved = window.localStorage.getItem(STORAGE_KEY);
   if (!saved) return createDefaultState();
   try {
-    return normalizeState(JSON.parse(saved));
+    const parsed = JSON.parse(saved);
+    if (parsed.scheduleVersion === "weekly-saturday-v2") preservePreRescheduleBackup("local", parsed);
+    return normalizeState(parsed);
   } catch {
     return createDefaultState();
   }
@@ -480,6 +486,7 @@ export function loadPendingSync(): PendingSync | null {
   if (!saved) return null;
   try {
     const value = JSON.parse(saved) as Partial<PendingSync>;
+    if (JSON.stringify(value).includes('"weekly-saturday-v2"')) preservePreRescheduleBackup("pending", value);
     if (
       value.version !== 1 ||
       !Number.isInteger(value.baseRevision) ||

@@ -5,14 +5,14 @@ import { buildRiskIndicators } from "./risk";
 
 describe("automatic coaching risks", () => {
   it("does not raise performance alarms before launch", () => {
-    const indicators = buildRiskIndicators(createDefaultState(), "2026-08-13");
+    const indicators = buildRiskIndicators(createDefaultState(), "2026-08-20");
     expect(indicators).toHaveLength(1);
     expect(indicators[0].tone).toBe("green");
     expect(indicators[0].id).toBe("prelaunch");
   });
 
   it("detects overdue work and missing practice after launch", () => {
-    const indicators = buildRiskIndicators(createDefaultState(), "2026-09-13");
+    const indicators = buildRiskIndicators(createDefaultState(), "2026-09-20");
     expect(indicators.some((item) => item.id === "overdue-work" && item.tone === "red")).toBe(true);
     expect(indicators.some((item) => item.id === "practice-gap")).toBe(true);
     expect(indicators.some((item) => item.id === "diagnostic-missing")).toBe(false);
@@ -25,27 +25,27 @@ describe("automatic coaching risks", () => {
       if (task.kind === "session") {
         state.sessionCompletionRequests[task.id] = {
           taskId: task.id,
-          requestedAt: "2026-09-05T12:00:00.000Z",
+          requestedAt: "2026-09-12T12:00:00.000Z",
         };
       } else {
         state.taskCompletions[task.id] = true;
       }
     }
 
-    let indicator = buildRiskIndicators(state, "2026-09-06")
+    let indicator = buildRiskIndicators(state, "2026-09-13")
       .find((item) => item.id === "overdue-work");
     expect(indicator?.title).toContain("1 overdue required item");
 
     for (const task of tasks.filter((candidate) => candidate.kind === "session")) {
       state.sessionCompletionReviews[task.id] = {
         taskId: task.id,
-        requestedAt: "2026-09-05T12:00:00.000Z",
-        reviewedAt: "2026-09-05T14:00:00.000Z",
+        requestedAt: "2026-09-12T12:00:00.000Z",
+        reviewedAt: "2026-09-12T14:00:00.000Z",
         status: "approved",
         note: "Evidence reviewed.",
       };
     }
-    indicator = buildRiskIndicators(state, "2026-09-06")
+    indicator = buildRiskIndicators(state, "2026-09-13")
       .find((item) => item.id === "overdue-work");
     expect(indicator).toBeUndefined();
   });
@@ -54,7 +54,7 @@ describe("automatic coaching risks", () => {
     const state = createDefaultState();
     state.practiceLogs.push({
       id: "p1",
-      date: "2026-09-04",
+      date: "2026-09-11",
       topic: "Quantitative Methods",
       attempted: 40,
       correct: 22,
@@ -62,7 +62,7 @@ describe("automatic coaching risks", () => {
       note: "Baseline",
       confidence: 3,
     });
-    const indicators = buildRiskIndicators(state, "2026-09-05");
+    const indicators = buildRiskIndicators(state, "2026-09-12");
     expect(indicators.find((item) => item.id === "practice-accuracy")?.tone).toBe("red");
   });
 
@@ -70,15 +70,15 @@ describe("automatic coaching risks", () => {
     const state = createDefaultState();
     state.practiceLogs.push(
       {
-        id: "prior", date: "2026-08-27", topic: "Quantitative Methods",
+        id: "prior", date: "2026-09-03", topic: "Quantitative Methods",
         attempted: 50, correct: 45, source: "LES", note: "Prior window", confidence: 4,
       },
       {
-        id: "recent", date: "2026-09-12", topic: "Quantitative Methods",
+        id: "recent", date: "2026-09-19", topic: "Quantitative Methods",
         attempted: 50, correct: 35, source: "LES", note: "Recent window", confidence: 3,
       },
     );
-    const decline = buildRiskIndicators(state, "2026-09-20")
+    const decline = buildRiskIndicators(state, "2026-09-27")
       .find((item) => item.id === "practice-decline");
     expect(decline?.tone).toBe("red");
     expect(decline?.detail).toContain("20 percentage points");
@@ -88,30 +88,30 @@ describe("automatic coaching risks", () => {
     const state = createDefaultState();
     state.errorEntries.push({
       id: "e1",
-      date: "2026-09-06",
+      date: "2026-09-13",
       topic: "Quantitative Methods",
       category: "Concept gap",
       summary: "Return convention",
       correction: "Name the period first.",
-      revisitDate: "2026-09-08",
+      revisitDate: "2026-09-15",
       resolved: false,
     });
-    expect(buildRiskIndicators(state, "2026-09-08").some((item) => item.id === "due-retests")).toBe(true);
+    expect(buildRiskIndicators(state, "2026-09-15").some((item) => item.id === "due-retests")).toBe(true);
   });
 
   it("keeps unresolved mistakes visible before their retest becomes due", () => {
     const state = createDefaultState();
     state.errorEntries.push({
       id: "e1",
-      date: "2026-09-06",
+      date: "2026-09-13",
       topic: "Quantitative Methods",
       category: "Concept gap",
       summary: "Return convention",
       correction: "Name the period first.",
-      revisitDate: "2026-09-10",
+      revisitDate: "2026-09-17",
       resolved: false,
     });
-    expect(buildRiskIndicators(state, "2026-09-08").some((item) => item.id === "open-mistakes")).toBe(true);
+    expect(buildRiskIndicators(state, "2026-09-15").some((item) => item.id === "open-mistakes")).toBe(true);
   });
 
   it("uses the mock's selected milestone instead of array position", () => {
@@ -122,7 +122,7 @@ describe("automatic coaching risks", () => {
       label: "Final rehearsal",
       score: 70,
       note: "",
-      milestoneWeek: 25,
+      milestoneWeek: 24,
     });
     const gap = buildRiskIndicators(state, "2027-02-20")
       .find((item) => item.id === "mock-gap");

@@ -1,6 +1,6 @@
 # Hamad's CFA Level I Mastery Path
 
-**Hamad's CFA Level I Mastery Path** is a mobile-first study tracker for a 26-week private coaching program running from 30 August 2026 through the 27 February 2027 CFA Level I exam appointment. The first tutor checkpoint is Saturday, 5 September 2026 at 09:00 Asia/Riyadh.
+**Hamad's CFA Level I Mastery Path** is a mobile-first study tracker for a 25-week private coaching program running from 6 September 2026 through the 27 February 2027 CFA Level I exam appointment. The first tutor checkpoint is Saturday, 12 September 2026 at 09:00 Asia/Riyadh.
 
 Created by Mohamed, CFA.
 
@@ -9,10 +9,11 @@ The application is isolated from the surrounding HN3 projects. It has its own de
 ## Program design
 
 - All 102 learning modules in the official public 2027 CFA Level I topic outline, assigned once in published order as independent study
-- 25 consecutively numbered Saturday tutor checkpoints at 09:00 Asia/Riyadh from 5 September 2026 through 20 February 2027: the opening Quant masterclass is 150 minutes and Sessions 02-25 are 120 minutes
-- Week 26 is a protected independent taper and exam-execution week, with a separate checklist and no tutor session on the 27 February exam day
+- 24 consecutively numbered Saturday tutor checkpoints at 09:00 Asia/Riyadh from 12 September 2026 through 20 February 2027: the opening Quant masterclass is 150 minutes and Sessions 02-24 are 120 minutes
+- Week 25 is a protected independent taper and exam-execution week, with a separate checklist and no tutor session on the 27 February exam day
 - Session 01 begins with direct Quantitative Methods instruction and moves through modelling, guided application, hard questioning, repair, and mastery checks; the obsolete prior-attempt diagnostic has been removed
 - Curriculum coverage is assigned through Session 17, followed by integration, seven independent mock-and-repair cycles, and the final taper
+- The dedicated deep-repair checkpoint is integrated into Session 19's Mock 2 debrief. Its practice volume is distributed across all seven mock weeks; the overall 6,630-question target is unchanged.
 - Weekly completion checklists, evidence gates, independent work, and question targets
 - Tutor-session, confidence-rated practice, mock, mistake, and note logs
 - Student session-completion requests with explicit tutor approval/return workflow
@@ -44,7 +45,7 @@ The operating flow is:
 3. Open **Session Mode**. If Session 01 has not yet been published, choose **Choose private playbook JSON** and select the generated JSON.
 4. The importer validates the complete package before publishing its manifest and versioned chunks to tutor-only Firestore paths. A failed or incomplete upload never activates a partial lesson.
 5. Before travelling to the lesson, open Session Mode while online and choose **Prepare offline**. Confirm the interface reports **Offline copy ready** on the exact laptop or phone that will be used. This private IndexedDB copy is per tutor account and per device; it is not part of the PWA application shell and is never synchronized to Hamad.
-6. On Saturday, 5 September 2026, complete the calculator/workspace preflight, select the recommended 150-minute route, and start at 09:00 Asia/Riyadh. Later checkpoints use their planned 120-minute route.
+6. On Saturday, 12 September 2026, complete the calculator/workspace preflight, select the recommended 150-minute route, and start at 09:00 Asia/Riyadh. Later checkpoints use their planned 120-minute route.
 7. During teaching, use search and filters to reach a command desk quickly. Every desk keeps the explanation, realistic prompt, and spoken answer in view at the same time; evidence and repair actions are saved without turning timer ticks into database writes.
 8. Complete the closeout in Session Mode. Detailed run evidence stays tutor-only; only the intended safe progress summary is copied into the shared tracker.
 
@@ -72,7 +73,7 @@ Progress from an older hosting origin does not migrate automatically. Export JSO
 
 ## Canonical data
 
-- `src/data/plan.json` is the source of truth for all 26 weeks and 25 tutor checkpoints. Each week includes its phase, dates, outcomes, checkpoint schedule when applicable, independent work, question target, mastery gate, and mock milestone.
+- `src/data/plan.json` is the source of truth for all 25 weeks and 24 tutor checkpoints. Each week includes its phase, dates, outcomes, checkpoint schedule when applicable, independent work, question target, mastery gate, and mock milestone.
 - `src/data/readings.json` contains the 102-module official 2027 outline catalog and its session assignments.
 - `src/data/program.json` contains the exam appointment, cadence, Practical Skills Module, and administrative milestone metadata.
 - `scripts/build-2027-data.py` reproducibly generates the plan and reading data.
@@ -83,11 +84,11 @@ Progress from an older hosting origin does not migrate automatically. Export JSO
 
 When updating the schedule, preserve these invariants:
 
-1. Exactly 26 consecutive Sunday-to-Saturday weeks, beginning 30 August 2026 and ending 27 February 2027.
-2. Exactly 25 consecutively numbered required tutor checkpoints, one in each of Weeks 1-25.
-3. Canonical checkpoints are Saturdays at 09:00 Asia/Riyadh. Session 01 lasts 150 minutes; Sessions 02-25 last 120 minutes.
+1. Exactly 26 consecutive Sunday-to-Saturday weeks, beginning 6 September 2026 and ending 27 February 2027.
+2. Exactly 24 consecutively numbered required tutor checkpoints, one in each of Weeks 1-25.
+3. Canonical checkpoints are Saturdays at 09:00 Asia/Riyadh. Session 01 lasts 150 minutes; Sessions 02-24 last 120 minutes.
 4. A tutor-approved exception may move one checkpoint only to the immediately preceding Friday at the same 09:00 time; it never cascades later sessions.
-5. Week 26 has no tutor checkpoint, protects taper and logistics, and presents Saturday 27 February as a separate exam-day milestone and checklist.
+5. Week 25 has no tutor checkpoint, protects taper and logistics, and presents Saturday 27 February as a separate exam-day milestone and checklist.
 6. All 102 official modules appear exactly once and in published order, beginning with Quantitative Methods Module 1.
 7. Full-length mocks are independent tasks; numbered tutor checkpoints prepare, debrief, and repair them.
 
@@ -159,7 +160,7 @@ npm run build:pages
 
 Tests protect calendar boundaries, cadence, session numbering, curriculum order and completeness, reading-to-session mappings, mock progression, role capabilities, private playbook validation, Firestore rule contracts, backup normalization, and PWA registration helpers. The Pages build also fails unless its manifest, service worker, branded icon set, and installation metadata are present, and its privacy audit rejects known private Tutor Bible material from the static artifact.
 
-Calendar export opens a settings dialog before download. The canonical checkpoint time is fixed at 09:00 `Asia/Riyadh`; only reminder lead times are configurable and stored in that browser. The resulting `.ics` file ends Session 01 at 11:30 from its 150-minute duration and Sessions 02-25 at 11:00 from their 120-minute durations. It follows any tutor-approved same-week Friday exception, embeds display reminders, and leaves deadlines as all-day events. It is a calendar import file, not an email invitation.
+Calendar export opens a settings dialog before download. The canonical checkpoint time is fixed at 09:00 `Asia/Riyadh`; only reminder lead times are configurable and stored in that browser. The resulting `.ics` file ends Session 01 at 11:30 from its 150-minute duration and Sessions 02-24 at 11:00 from their 120-minute durations. It follows any tutor-approved same-week Friday exception, embeds display reminders, and leaves deadlines as all-day events. It is a calendar import file, not an email invitation.
 
 ## Deployment
 

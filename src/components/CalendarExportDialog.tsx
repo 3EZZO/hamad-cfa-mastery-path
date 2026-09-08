@@ -151,6 +151,9 @@ export default function CalendarExportDialog({
           </div>
 
           <aside className="calendar-dialog-note">
+            If you imported the earlier schedule, remove those tracker events
+            (or the dedicated tracker calendar) before importing this replacement.
+            The file will not automatically remove the old Session 25.
             This creates a <strong>calendar import file</strong>, not email
             invitations. Session end times are calculated from each planned
             duration; important deadlines remain all-day reminders.

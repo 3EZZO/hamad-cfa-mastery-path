@@ -1,15 +1,15 @@
 {
   "brand": "Hamad's CFA Level I Mastery Path",
-  "programStart": "2026-08-30",
-  "firstTutorSession": "2026-09-05",
+  "programStart": "2026-09-06",
+  "firstTutorSession": "2026-09-12",
   "examAppointment": "2027-02-27",
   "tutoringRhythm": {
     "standard": ["Saturday 09:00 checkpoint"],
     "time": "09:00",
     "timeZone": "Asia/Riyadh",
-    "checkpointWeeks": 25,
+    "checkpointWeeks": 24,
     "independentExamWeek": 1,
-    "totalSessions": 25
+    "totalSessions": 24
   },
   "examWindow": {
     "startDate": "2027-02-22",
