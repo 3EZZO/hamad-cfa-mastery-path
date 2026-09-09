@@ -74,9 +74,9 @@ export function SessionLaunch({
 }: SessionLaunchProps) {
   const initialRoute = useMemo(
     () =>
-      playbook.routes.find(route => route.id === defaultRouteId) ??
-      playbook.routes.find(route => route.recommended) ??
-      playbook.routes[0],
+      playbook.routes.find(route => route.id === defaultRouteId && !route.referenceOnly) ??
+      playbook.routes.find(route => route.recommended && !route.referenceOnly) ??
+      playbook.routes.find(route => !route.referenceOnly),
     [defaultRouteId, playbook.routes]
   );
   const [routeId, setRouteId] = useState(initialRoute?.id ?? "");
@@ -171,7 +171,7 @@ export function SessionLaunch({
           <span className="ls-step-number">1</span> Choose today&apos;s route
         </legend>
         <div className="ls-route-grid">
-          {playbook.routes.map(route => {
+          {playbook.routes.filter(route => !route.referenceOnly).map(route => {
             const selected = route.id === selectedRoute?.id;
             const routeStages = playbook.stagesByRoute[route.id] ?? [];
             const routeItems = routeStages.reduce(

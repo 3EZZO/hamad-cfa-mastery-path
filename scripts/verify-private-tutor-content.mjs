@@ -3,8 +3,8 @@ import path from "node:path";
 
 const outputDirectory = path.resolve(process.argv[2] || "dist-pages");
 const forbiddenFilePatterns = [
-  /Hamad_CFA_Level_I_Session_01_Quant_Tutor_Playbook\.pdf$/i,
-  /session[-_]?01.*playbook.*\.json$/i,
+  /Hamad_CFA_Level_I_Session_\d+_.*Tutor_Playbook\.pdf$/i,
+  /session[-_]?\d+.*playbook.*\.json$/i,
   /tutor[-_]?bible.*\.(?:pdf|json)$/i,
 ];
 const forbiddenContentMarkers = [

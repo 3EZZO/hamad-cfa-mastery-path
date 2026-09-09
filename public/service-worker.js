@@ -1,6 +1,6 @@
-// Refresh the public schedule for the confirmed 12 September start.
+// Add isolated Session 2 workspaces and the full private teaching library.
 // Tutor playbooks and progress remain in their separate data stores.
-const VERSION = "hamad-mastery-pwa-v11";
+const VERSION = "hamad-mastery-pwa-v12";
 const APP_SCOPE = new URL(self.registration.scope);
 const APP_BASE = APP_SCOPE.pathname.endsWith("/")
   ? APP_SCOPE.pathname

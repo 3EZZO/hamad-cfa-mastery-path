@@ -38,6 +38,10 @@ export interface LiveSessionRoute {
   description: string;
   promise?: string;
   recommended?: boolean;
+  /** Count captured from the validated manifest, not the rendered list. */
+  expectedDeckCount?: number;
+  curated?: boolean;
+  referenceOnly?: boolean;
 }
 
 /**
@@ -108,6 +112,7 @@ export interface LiveSessionPlaybook {
   routes: LiveSessionRoute[];
   stagesByRoute: Record<string, LiveSessionStage[]>;
   references: LiveSessionReference[];
+  libraryStages?: LiveSessionStage[];
 }
 
 export interface LiveSessionEvidence {
@@ -194,6 +199,7 @@ export interface LiveSessionPreflightProbeResult {
 }
 
 export interface LiveSessionConsoleProps {
+  active?: boolean;
   session: LiveSessionDescriptor;
   playbook: LiveSessionPlaybook | null;
   loadState?: LiveSessionLoadState;

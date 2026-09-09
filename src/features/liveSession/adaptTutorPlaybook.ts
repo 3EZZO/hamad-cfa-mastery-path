@@ -180,9 +180,20 @@ export function adaptTutorPlaybookPackage(
         minutes: route.totalMinutes,
         description: `${deckCount} Teach–Ask–Answer decks · ${route.stageIds.length} stages · ${proofCount} independent mastery proofs.`,
         recommended: route.id === value.manifest.defaultRouteId,
+        expectedDeckCount: route.stageIds.reduce((sum, stageId) => sum +
+          (route.cardIdsByStage?.[stageId]?.length ?? stageById.get(stageId)?.cards.length ?? 0), 0),
+        curated: Boolean(route.cardIdsByStage) && deckCount < sourceStages
+          .filter(stage => routedStageIds.has(stage.id))
+          .reduce((sum, stage) => sum + stage.cards.length, 0),
+        referenceOnly: route.totalMinutes > 180,
       };
     }),
     stagesByRoute,
+    libraryStages: sourceStages.filter(stage => routedStageIds.has(stage.id)).map((stage, index) => ({
+      id: stage.id, order: index + 1, label: `Stage ${String(index + 1).padStart(2, "0")}`,
+      title: stage.title, durationMinutes: 0, objective: stage.objective,
+      questions: stage.cards.map((card, cardIndex) => adaptCard(card, stage, cardIndex)),
+    })),
     references: sourceStages.flatMap(stage => {
       const isRoutedStage = routedStageIds.has(stage.id);
       return stage.cards

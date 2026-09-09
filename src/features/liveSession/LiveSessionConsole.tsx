@@ -36,6 +36,7 @@ import type {
 } from "./types";
 import { useSessionTimer } from "./useSessionTimer";
 import { recoverSessionTimer } from "./sessionClock";
+import { TeachingLibrary } from "./TeachingLibrary";
 
 const PREFLIGHT_FRESHNESS_MS = 5 * 60 * 1_000;
 
@@ -45,13 +46,13 @@ function preferredRouteId(
 ): string {
   if (
     initialRouteId &&
-    playbook.routes.some(route => route.id === initialRouteId)
+    playbook.routes.some(route => route.id === initialRouteId && !route.referenceOnly)
   ) {
     return initialRouteId;
   }
   return (
-    playbook.routes.find(route => route.recommended)?.id ??
-    playbook.routes[0]?.id ??
+    playbook.routes.find(route => route.recommended && !route.referenceOnly)?.id ??
+    playbook.routes.find(route => !route.referenceOnly)?.id ??
     ""
   );
 }
@@ -156,6 +157,7 @@ function WorkspaceTools({
           <small>{playbook.version}</small>
         </div>
         {preflight}
+        <TeachingLibrary stages={playbook.libraryStages ?? []} />
         {onReplacePlaybook && (
           <button
             type="button"
@@ -240,7 +242,7 @@ export function LiveSessionConsole(props: LiveSessionConsoleProps) {
           <p className="ls-eyebrow">Tutor library</p>
           <h2>No playbook is published yet</h2>
           <p>
-            Publish the private Session 01 package, then return here. Nothing
+            Publish this session's private package, then return here. Nothing
             has been exposed to the student.
           </p>
           {onExit && (
@@ -260,6 +262,7 @@ export function LiveSessionConsole(props: LiveSessionConsoleProps) {
 }
 
 function LiveSessionWorkspace({
+  active = true,
   session,
   playbook,
   initialRun,
@@ -342,6 +345,10 @@ function LiveSessionWorkspace({
     initialSnapshot: timerSnapshot,
     onSnapshotChange: handleTimerSnapshot,
   });
+
+  useEffect(() => {
+    if (!active && timer.status === "running") timer.pause();
+  }, [active, timer.status, timer.pause]);
 
   useEffect(() => {
     if (!preflightProbe?.checkedAt) return;
@@ -490,6 +497,7 @@ function LiveSessionWorkspace({
   ]);
 
   const handleStart = (route: LiveSessionRoute) => {
+    if (route.referenceOnly || !preflightReport.canStart) return;
     setRouteId(route.id);
     setStageIndex(0);
     setQuestionIndex(0);
@@ -561,6 +569,10 @@ function LiveSessionWorkspace({
       setDiscarding(false);
     }
   };
+
+  // The workspace and cloud queue stay mounted, but no hidden keyboard handlers
+  // or candidate/reference views may act on an inactive session.
+  if (!active) return null;
 
   if (!selectedRoute || !playbook.routes.length) {
     return (

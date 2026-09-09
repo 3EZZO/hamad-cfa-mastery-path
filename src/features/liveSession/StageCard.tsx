@@ -28,7 +28,7 @@ export interface StageCardProps {
   flowStep: TeachingFlowStep;
   complete: boolean;
   onFlowStepChange: (step: TeachingFlowStep) => void;
-  onShowCandidate: () => void;
+  onShowCandidate?: () => void;
 }
 
 function TextList({
@@ -280,13 +280,13 @@ export function StageCard({
                 <TextList items={question.hints} ordered />
               </div>
             ) : null}
-            <button
+            {onShowCandidate && <button
               className="ls-button ls-button--candidate"
               type="button"
               onClick={onShowCandidate}
             >
               <MonitorUp size={17} /> Present to Hamad
-            </button>
+            </button>}
             <button
               className="ls-flow-forward"
               type="button"

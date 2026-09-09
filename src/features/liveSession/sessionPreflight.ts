@@ -255,10 +255,13 @@ function syncHealthCheck(input: SessionPreflightInput): SessionPreflightCheck {
 export function evaluateSessionPreflight(
   input: SessionPreflightInput
 ): SessionPreflightReport {
+  const route = input.playbook?.routes.find(item => item.id === input.position.routeId);
+  const routeExpected = route?.expectedDeckCount;
   const expectedDeckCount =
     Number.isInteger(input.expectedDeckCount) && input.expectedDeckCount! > 0
       ? input.expectedDeckCount!
-      : SESSION_PREFLIGHT_DECK_TARGET;
+      : Number.isInteger(routeExpected) && routeExpected! > 0
+        ? routeExpected! : SESSION_PREFLIGHT_DECK_TARGET;
   const deckCount = countSessionRouteDecks(
     input.playbook,
     input.position.routeId
@@ -270,7 +273,7 @@ export function evaluateSessionPreflight(
 
   const checks: SessionPreflightCheck[] = [
     tutorAccessCheck(input),
-    deckCount === expectedDeckCount
+    deckCount === expectedDeckCount && !route?.referenceOnly
       ? check(
           "playbook",
           "Private playbook",
@@ -280,7 +283,7 @@ export function evaluateSessionPreflight(
       : check(
           "playbook",
           "Private playbook",
-          deckCount
+          route?.referenceOnly ? "The complete library is for reference. Choose a 120- or 150-minute teaching route." : deckCount
             ? `Expected ${expectedDeckCount} decks, but this playbook contains ${deckCount}.`
             : "No usable private teaching decks are available.",
           "blocked"

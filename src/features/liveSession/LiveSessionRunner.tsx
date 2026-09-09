@@ -758,7 +758,7 @@ export function LiveSessionRunner({
     () =>
       Math.max(
         1,
-        deriveRecommendedDeckTarget({
+        route.curated ? allDecks.length : deriveRecommendedDeckTarget({
           sessionDurationMinutes: pacingDurationMinutes,
           expectedSeconds: allDecks.map(
             deck => deck.question?.expectedSeconds ?? null
@@ -766,7 +766,7 @@ export function LiveSessionRunner({
           breakAllowanceMinutes: pacingBreakMinutes,
         })
       ),
-    [allDecks, pacingDurationMinutes]
+    [allDecks, pacingDurationMinutes, route.curated]
   );
   const completedLiveTargetDecks = useMemo(
     () =>

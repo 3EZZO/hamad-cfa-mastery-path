@@ -171,6 +171,29 @@ Tests protect calendar boundaries, cadence, session numbering, curriculum order 
 
 Calendar export opens a settings dialog before download. The canonical checkpoint time is fixed at 09:00 `Asia/Riyadh`; only reminder lead times are configurable and stored in that browser. The resulting `.ics` file ends Session 01 at 11:30 from its 150-minute duration and Sessions 02-24 at 11:00 from their 120-minute durations. It follows any tutor-approved same-week Friday exception, embeds display reminders, and leaves deadlines as all-day events. It is a calendar import file, not an email invitation.
 
+## Session 2 private playbook
+
+In **Session Mode**, use the top selector to choose **Session 02**. Upload
+`Hamad_CFA_Level_I_Session_02_Private_Playbook.json` from the private setup screen
+or **Session tools → Update playbook**. The uploaded version should be
+`s02-2026-09-09-v1`. Prepare its offline copy on each device you will teach from.
+Session 1 does not need to be uploaded again.
+
+- **120 minutes:** 48 curated decks. **150 minutes:** 60 curated decks.
+- **Session tools → Full teaching library:** all 120 decks, searchable by module,
+  concept, question, or answer. This reference view does not advance the live
+  route, record evidence, or change the session's position. It is not a 360-minute
+  launch option. The 24 other reference entries remain under **References**.
+- **Switching sessions:** pauses the outgoing timer and retains its position,
+  evidence, notes, and pending cloud journal. A paused timer resumes only when
+  you press Play. The two sessions use distinct cloud/offline run identities.
+- **Imports:** identity and hashes are checked before any cloud publication;
+  a wrong-session file is rejected without replacing a working playbook.
+
+This release requires no Firebase rule change, schedule migration, or Session 1
+progress reset. Keep private JSON files out of this public repository. Tests use
+synthetic content only.
+
 ## Deployment
 
 GitHub Pages is the permanent static host, and Firebase Spark provides Authentication and Firestore persistence. `npm run build:pages` creates the Pages-aware artifact in `dist-pages/`. `.github/workflows/deploy-pages.yml` reads the four public Firebase Web App values from GitHub repository variables, obtains the current base path from GitHub Pages, tests the project, builds it, and deploys after a push to `main`. The generated asset and PWA paths therefore adapt to a later repository rename or custom-domain root.

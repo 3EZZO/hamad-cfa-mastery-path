@@ -18,7 +18,10 @@ import {
   type LiveSessionRunSnapshot,
   type SyncPresentation,
 } from "../features/liveSession";
-import { getSessionTaskId, getWeekSessions, PLAN } from "../data/plan";
+import {
+  getTutorSession, TUTOR_SESSION_NUMBERS, tutorSessionRunId,
+  validateSessionImport, type TutorSessionNumber,
+} from "../lib/tutorSessionCatalog";
 import {
   CloudClientError,
   deleteTutorLiveRun,
@@ -59,17 +62,9 @@ import type {
 } from "../lib/tutorContent";
 import type { PrivateTutorNote, TrackerState } from "../types";
 
-const PLAYBOOK_ID = "hamad-cfa-mastery-session-01";
-// Opaque persisted identity: retain across reschedules to preserve cloud and
-// offline rehearsal runs. The displayed appointment comes from the plan.
-const RUN_ID_BASE = "hamad-cfa-mastery-session-01-2026-09-05";
 const MAX_PRIVATE_PACKAGE_BYTES = 8 * 1024 * 1024;
 const DESK_COMPLETE_NOTE = "[[session-desk-complete:v1]]";
 const DESK_REOPEN_NOTE = "[[session-desk-reopen:v1]]";
-
-function liveRunId(version: string, contentHash: string): string {
-  return `${RUN_ID_BASE}-${version}-${contentHash.slice(0, 12)}`;
-}
 
 type UpdateTracker = (recipe: (current: TrackerState) => TrackerState) => void;
 
@@ -307,6 +302,7 @@ function actionId(): string {
 }
 
 function PrivateSetup({
+  sessionLabel,
   state,
   message,
   busy,
@@ -314,6 +310,7 @@ function PrivateSetup({
   onRetry,
   onExit,
 }: {
+  sessionLabel: string;
   state: "ready" | "error";
   message: string;
   busy: boolean;
@@ -332,7 +329,7 @@ function PrivateSetup({
         </div>
         <p className="ls-eyebrow">One-time tutor setup</p>
         <h1 id="private-setup-title">
-          Publish the private Session 01 Tutor Bible
+          Open your {sessionLabel} playbook
         </h1>
         <p className="ls-private-setup__lead">
           Choose the generated private JSON package from this computer. It is
@@ -350,7 +347,7 @@ function PrivateSetup({
             <span>01</span>
             <div>
               <strong>Select</strong>
-              <p>Open the Session 01 private playbook JSON.</p>
+              <p>Open the {sessionLabel} private playbook JSON.</p>
             </div>
           </article>
           <article>
@@ -411,14 +408,55 @@ function PrivateSetup({
   );
 }
 
-export default function TutorSessionWorkspace({
+export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps) {
+  const [selected, setSelected] = useState<TutorSessionNumber>(1);
+  const [visited, setVisited] = useState<TutorSessionNumber[]>([1]);
+  return (
+    <div className="ls-session-hub">
+      <nav className="ls-session-switcher" aria-label="Choose tutoring session">
+        <span>Session Mode</span>
+        {TUTOR_SESSION_NUMBERS.map(number => {
+          const entry = getTutorSession(number);
+          const date = effectiveSessionDate(entry.session, props.tracker.sessionOverrides);
+          return (
+            <button key={number} type="button" aria-pressed={selected === number}
+              onClick={() => {
+                setVisited(current => current.includes(number) ? current : [...current, number]);
+                setSelected(number);
+              }}>
+              {entry.label}
+              <small>{new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`))}</small>
+            </button>
+          );
+        })}
+        <small>Switching pauses the timer. Each session keeps its own progress.</small>
+      </nav>
+      {visited.map(number => (
+        <section key={`${props.userUid}:${number}`} hidden={selected !== number}>
+          {/* Keep visited workspaces mounted so pending cloud journals can drain.
+              Their runners unmount and clocks pause when inactive. */}
+          <SessionWorkspace {...props} sessionNumber={number} active={selected === number} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function SessionWorkspace({
+  sessionNumber,
+  active,
   userUid,
   tracker,
   updateTracker,
   updatePrivateTutorNotes,
   notify,
   onExit,
-}: TutorSessionWorkspaceProps) {
+}: TutorSessionWorkspaceProps & { sessionNumber: TutorSessionNumber; active: boolean }) {
+  const catalog = useMemo(() => getTutorSession(sessionNumber), [sessionNumber]);
+  const PLAYBOOK_ID = catalog.playbookId;
+  const sessionLabel = catalog.label;
+  const liveRunId = useCallback((version: string, hash: string) =>
+    tutorSessionRunId(sessionNumber, version, hash), [sessionNumber]);
   const [privatePackage, setPrivatePackage] =
     useState<TutorPlaybookPackage | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
@@ -448,6 +486,7 @@ export default function TutorSessionWorkspace({
   const quarantinedSyncIssueRef = useRef("");
   const startQueuedRef = useRef(false);
   const restoredJournalRef = useRef<TutorRunJournalEntry[]>([]);
+  const disposedRef = useRef(false);
 
   const resetSyncScope = useCallback((nextScope: string, force = false) => {
     if (!force && activeScopeRef.current === nextScope) return;
@@ -474,16 +513,16 @@ export default function TutorSessionWorkspace({
     () => (privatePackage ? adaptTutorPlaybookPackage(privatePackage) : null),
     [privatePackage]
   );
-  const firstWeek = PLAN[0]!;
-  const session = getWeekSessions(firstWeek)[0]!;
+  const firstWeek = catalog.week;
+  const session = catalog.session;
   const sessionDate = effectiveSessionDate(session, tracker.sessionOverrides);
   const runId = privatePackage
     ? liveRunId(
         privatePackage.manifest.version,
         privatePackage.manifest.contentHash
       )
-    : RUN_ID_BASE;
-  const sessionTaskId = getSessionTaskId(firstWeek, session);
+    : catalog.runIdBase;
+  const sessionTaskId = catalog.taskId;
   const descriptor = useMemo(
     () => ({
       id: runId,
@@ -598,11 +637,19 @@ export default function TutorSessionWorkspace({
       setSyncState("offline");
       setSyncMessage("Using the private device-local offline recovery copy.");
     }
-  }, [resetSyncScope, userUid]);
+  }, [resetSyncScope, userUid, PLAYBOOK_ID, liveRunId]);
 
   useEffect(() => {
+    disposedRef.current = false;
     void loadWorkspace();
-  }, [loadWorkspace]);
+    return () => {
+      disposedRef.current = true;
+      loadSequenceRef.current += 1;
+      // A sign-out or leaving Session Mode stops this queue. Durable actions
+      // remain in the original UID/run journal for the next authorized visit.
+      resetSyncScope("disposed", true);
+    };
+  }, [loadWorkspace, resetSyncScope]);
 
   const drainSaveQueue = useCallback(async () => {
     const generation = syncGenerationRef.current;
@@ -933,6 +980,7 @@ export default function TutorSessionWorkspace({
       void cacheTutorRunOffline(userUid, runId, snapshot).catch(
         () => undefined
       );
+      if (disposedRef.current) return;
       const previous = previousSnapshotRef.current;
       previousSnapshotRef.current = snapshot;
       if (!playbook || !snapshot.routeId) return;
@@ -1082,14 +1130,14 @@ export default function TutorSessionWorkspace({
     if (!privatePackage) return;
     const status = await cacheTutorPlaybookOffline(userUid, privatePackage);
     setOfflineReady(status.ready);
-    notify("Private Session 01 content is ready offline on this device.");
-  }, [notify, privatePackage, userUid]);
+    notify(`Private ${sessionLabel} content is ready offline on this device.`);
+  }, [notify, privatePackage, userUid, sessionLabel]);
 
   const removeOffline = useCallback(async () => {
     await removeTutorPlaybookOffline(userUid, PLAYBOOK_ID);
     setOfflineReady(false);
     notify("The private offline playbook was removed from this device.");
-  }, [notify, userUid]);
+  }, [notify, userUid, PLAYBOOK_ID]);
 
   const runSessionPreflight =
     useCallback(async (): Promise<LiveSessionPreflightProbeResult> => {
@@ -1197,7 +1245,7 @@ export default function TutorSessionWorkspace({
           message: diagnosed.message,
         };
       }
-    }, [privatePackage, runId, userUid]);
+    }, [privatePackage, runId, userUid, PLAYBOOK_ID]);
 
   const completeSession = useCallback(
     (result: LiveSessionCloseoutResult) => {
@@ -1212,7 +1260,7 @@ export default function TutorSessionWorkspace({
           taskId: sessionTaskId,
         })
       );
-      const privateNote = buildLiveSessionPrivateNote(result, sessionDate);
+      const privateNote = buildLiveSessionPrivateNote(result, sessionDate, sessionNumber);
       if (privateNote) {
         void updatePrivateTutorNotes(notes => [
           privateNote,
@@ -1225,11 +1273,13 @@ export default function TutorSessionWorkspace({
         });
       }
       notify(
-        "Session 01 is saved on this device. Cloud closeout is syncing in the background."
+        `${sessionLabel} is saved on this device. Cloud closeout is syncing in the background.`
       );
     },
     [
       firstWeek.week,
+      sessionLabel,
+      sessionNumber,
       notify,
       session.number,
       session.title,
@@ -1278,7 +1328,7 @@ export default function TutorSessionWorkspace({
         })
       );
 
-      const privateNote = buildLiveSessionPrivateNote(result, sessionDate);
+      const privateNote = buildLiveSessionPrivateNote(result, sessionDate, sessionNumber);
       if (privateNote) {
         try {
           await updatePrivateTutorNotes(notes =>
@@ -1295,9 +1345,9 @@ export default function TutorSessionWorkspace({
       setInitialRun(null);
       setWorkspaceEpoch(value => value + 1);
       setSyncState("synced");
-      setSyncMessage("Fresh Session 01 launch is ready on this device.");
+      setSyncMessage(`Fresh ${sessionLabel} launch is ready on this device.`);
       notify(
-        "Pre-session rehearsal cleared. Session 01 is ready to start fresh."
+        `Pre-session rehearsal cleared. ${sessionLabel} is ready to start fresh.`
       );
     },
     [
@@ -1306,6 +1356,8 @@ export default function TutorSessionWorkspace({
       runId,
       sessionDate,
       sessionTaskId,
+      sessionLabel,
+      sessionNumber,
       updatePrivateTutorNotes,
       updateTracker,
       userUid,
@@ -1323,27 +1375,26 @@ export default function TutorSessionWorkspace({
           );
         }
         const value: unknown = JSON.parse(await file.text());
-        const published = await importTutorPlaybookPackage(value);
-        if (published.manifest.id !== PLAYBOOK_ID) {
-          throw new Error(
-            "Choose the Session 01 Hamad CFA Mastery playbook package."
-          );
-        }
+        const validated = await validateSessionImport(value, sessionNumber);
+        const published = await importTutorPlaybookPackage(validated);
         await cacheTutorPlaybookOffline(userUid, published);
         await loadWorkspace();
         notify(
           `Private Tutor Bible ${published.manifest.version} published with protected offline recovery.`
         );
       } catch (error) {
-        setLoadState("error");
-        setLoadMessage(getCloudErrorMessage(error));
+        // A rejected upload must not close a working lesson or lose its position.
+        if (!privatePackage) {
+          setLoadState("error");
+          setLoadMessage(getCloudErrorMessage(error));
+        }
         notify(getCloudErrorMessage(error), "warning");
       } finally {
         setPublishing(false);
         if (fileRef.current) fileRef.current.value = "";
       }
     },
-    [loadWorkspace, notify, userUid]
+    [loadWorkspace, notify, userUid, sessionNumber, privatePackage]
   );
 
   return (
@@ -1358,6 +1409,7 @@ export default function TutorSessionWorkspace({
         />
       ) : !privatePackage || !playbook ? (
         <PrivateSetup
+          sessionLabel={sessionLabel}
           state={loadState === "error" ? "error" : "ready"}
           message={loadMessage}
           busy={publishing}
@@ -1368,6 +1420,7 @@ export default function TutorSessionWorkspace({
       ) : (
         <LiveSessionConsole
           key={`${runId}:${workspaceEpoch}`}
+          active={active}
           session={descriptor}
           playbook={playbook}
           loadState="ready"

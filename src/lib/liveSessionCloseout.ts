@@ -205,7 +205,10 @@ export function removeLiveSessionCloseoutArtifacts({
   // Do not erase a mastery value that Mohamed changed after the rehearsal.
   if (
     derivedMastery > 0 &&
-    topicMastery["Quantitative Methods"] === derivedMastery
+    topicMastery["Quantitative Methods"] === derivedMastery &&
+    // Without a score ownership ledger, preserve mastery when another session
+    // exists. Equal scores do not prove this rehearsal owns the shared value.
+    !tracker.sessionLogs.some(item => item.id !== sessionLogId)
   ) {
     delete topicMastery["Quantitative Methods"];
   }
@@ -229,6 +232,7 @@ export function removeLiveSessionCloseoutArtifacts({
 export function buildLiveSessionPrivateNote(
   result: LiveSessionCloseoutResult,
   date: string,
+  sessionNumber = 1,
 ): {
   id: string;
   date: string;
@@ -243,7 +247,7 @@ export function buildLiveSessionPrivateNote(
     id: `${safeId(result.sessionId)}-private-note`,
     date,
     category: "Shared tutor note",
-    title: "Session 01 private closeout",
+    title: `Session ${String(sessionNumber).padStart(2, "0")} private closeout`,
     body,
     updatedAt: result.completedAt,
   };

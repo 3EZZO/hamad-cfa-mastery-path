@@ -127,7 +127,8 @@ describe("applyLiveSessionCloseout", () => {
     expect(cleaned.sessionLogs).toEqual([unrelatedSession]);
     expect(cleaned.practiceLogs).toHaveLength(0);
     expect(cleaned.errorEntries).toHaveLength(0);
-    expect(cleaned.topicMastery["Quantitative Methods"]).toBeUndefined();
+    // Another session exists: a matching score is not ownership evidence.
+    expect(cleaned.topicMastery["Quantitative Methods"]).toBe(78);
     expect(cleanedTwice).toEqual(cleaned);
   });
 
@@ -154,5 +155,22 @@ describe("applyLiveSessionCloseout", () => {
     });
 
     expect(cleaned.topicMastery["Quantitative Methods"]).toBe(82);
+  });
+
+  it("keeps Session 1 records and mastery when a Session 2 rehearsal is discarded", () => {
+    const first = applyLiveSessionCloseout({ tracker: createDefaultState(), result,
+      sessionNumber: 1, week: 1, date: "2026-09-12", title: "Quant I", taskId: "w1-session-1" });
+    const secondResult = { ...result, sessionId: "session-02-run", routeId: "s02-core-120" };
+    const second = applyLiveSessionCloseout({ tracker: first, result: secondResult,
+      sessionNumber: 2, week: 2, date: "2026-09-19", title: "Quant II", taskId: "w2-session-1" });
+    expect(second.sessionLogs.find(item => item.sessionNumber === 2)).toMatchObject({ date: "2026-09-19", week: 2 });
+    expect(buildLiveSessionPrivateNote(secondResult, "2026-09-19", 2)?.title).toBe("Session 02 private closeout");
+    const cleaned = removeLiveSessionCloseoutArtifacts({ tracker: second, result: secondResult, taskId: "w2-session-1" });
+    expect(cleaned.sessionLogs).toEqual(first.sessionLogs);
+    expect(cleaned.practiceLogs).toEqual(first.practiceLogs);
+    expect(cleaned.errorEntries).toEqual(first.errorEntries);
+    expect(cleaned.taskCompletions["w1-session-1"]).toBe(true);
+    expect(cleaned.taskCompletions["w2-session-1"]).toBeUndefined();
+    expect(cleaned.topicMastery).toEqual(first.topicMastery);
   });
 });
