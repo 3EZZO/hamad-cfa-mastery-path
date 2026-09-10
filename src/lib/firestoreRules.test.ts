@@ -47,15 +47,25 @@ describe("private tutor Firestore rule boundary", () => {
     expect(runs).toContain("allow delete: if activeProject202Role('tutor')");
     expect(runs).not.toContain("activeProject202Role('student')");
     expect(rules).toContain(
-      "request.resource.data.events.size() == resource.data.events.size() + 1"
+      "data.events.size() == previous.events.size() + 1"
     );
     expect(rules).toContain("event.type != 'start'");
     expect(rules).toContain("event.result != 'repair'");
-    expect(rules).toContain("resource.data.status in ['running', 'paused']");
+    expect(rules).toContain("previous.status in ['running', 'paused']");
     expect(rules).toContain(
-      "request.resource.data.status == resource.data.status"
+      "data.status == previous.status"
     );
     expect(rules).not.toContain("!(event.result in ['partial', 'repair'])");
+  });
+
+  it("caches live-run maps instead of exhausting the rule expression budget", () => {
+    const liveValidation = blockBetween("function validTutorLiveRun(runId)", "match /programs/project-202/tutorPrivate/notes");
+    // Each function binds the map once. The Rules API regression suite verifies
+    // actual saves; this guard prevents reintroducing repeated long paths.
+    expect(liveValidation).not.toMatch(/request\.resource\.data\./);
+    expect(liveValidation).not.toMatch(/(?<!request\.)resource\.data\./);
+    expect(liveValidation).toContain("let fields = event.keys();");
+    expect(liveValidation).toContain("fields.hasAll(['stageId', 'cardId', 'result', 'confidence', 'errorCodes'])");
   });
 
   it("keeps a final deny-all rule for anonymous and unrecognized paths", () => {

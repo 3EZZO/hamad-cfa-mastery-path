@@ -19,11 +19,23 @@ service cloud.firestore {
         ).data.role in ['tutor', 'student'];
     }
 
+    function activeProject202RoleData(role) {
+      let member = get(
+        /databases/$(database)/documents/programs/project-202/members/$(request.auth.uid)
+      ).data;
+      return member.active == true
+        && member.role in ['tutor', 'student']
+        && member.role == role;
+    }
+
     function activeProject202Role(role) {
-      return activeProject202Member()
-        && get(
+      // Validate the same membership once instead of evaluating its document
+      // path three times inside each otherwise valid teaching save.
+      return signedIn()
+        && exists(
           /databases/$(database)/documents/programs/project-202/members/$(request.auth.uid)
-        ).data.role == role;
+        )
+        && activeProject202RoleData(role);
     }
 
     function validOptionalTrackerState() {
@@ -357,7 +369,10 @@ service cloud.firestore {
     }
 
     function validTutorLiveRun(runId) {
-      return request.resource.data.keys().hasOnly([
+      // Cache the document map: repeated field paths can exhaust the Rules
+      // 1,000-expression budget even for a valid, small teaching action.
+      let data = request.resource.data;
+      return data.keys().hasOnly([
           'schemaVersion',
           'id',
           'playbookId',
@@ -375,62 +390,62 @@ service cloud.firestore {
           'updatedBy',
           'updatedAtClient'
         ])
-        && request.resource.data.schemaVersion == 1
-        && request.resource.data.id == runId
-        && request.resource.data.playbookId is string
-        && request.resource.data.playbookId.size() > 0
-        && request.resource.data.playbookId.size() <= 80
-        && request.resource.data.playbookVersion is string
-        && request.resource.data.playbookVersion.size() > 0
-        && request.resource.data.playbookVersion.size() <= 80
-        && request.resource.data.sessionNumber is int
-        && request.resource.data.sessionNumber >= 1
-        && request.resource.data.sessionNumber <= 25
-        && request.resource.data.routeId is string
-        && request.resource.data.routeId.size() > 0
-        && request.resource.data.routeId.size() <= 80
-        && request.resource.data.status in [
+        && data.schemaVersion == 1
+        && data.id == runId
+        && data.playbookId is string
+        && data.playbookId.size() > 0
+        && data.playbookId.size() <= 80
+        && data.playbookVersion is string
+        && data.playbookVersion.size() > 0
+        && data.playbookVersion.size() <= 80
+        && data.sessionNumber is int
+        && data.sessionNumber >= 1
+        && data.sessionNumber <= 25
+        && data.routeId is string
+        && data.routeId.size() > 0
+        && data.routeId.size() <= 80
+        && data.status in [
           'running', 'paused', 'completed', 'abandoned'
         ]
-        && request.resource.data.currentStageId is string
-        && request.resource.data.currentStageId.size() > 0
-        && request.resource.data.currentStageId.size() <= 80
+        && data.currentStageId is string
+        && data.currentStageId.size() > 0
+        && data.currentStageId.size() <= 80
         && (
-          request.resource.data.currentCardId == null
+          data.currentCardId == null
           || (
-            request.resource.data.currentCardId is string
-            && request.resource.data.currentCardId.size() > 0
-            && request.resource.data.currentCardId.size() <= 80
+            data.currentCardId is string
+            && data.currentCardId.size() > 0
+            && data.currentCardId.size() <= 80
           )
         )
-        && request.resource.data.elapsedSeconds is int
-        && request.resource.data.elapsedSeconds >= 0
-        && request.resource.data.elapsedSeconds <= 28800
-        && request.resource.data.startedAtClient is string
-        && request.resource.data.startedAtClient.size() <= 40
+        && data.elapsedSeconds is int
+        && data.elapsedSeconds >= 0
+        && data.elapsedSeconds <= 28800
+        && data.startedAtClient is string
+        && data.startedAtClient.size() <= 40
         && (
-          request.resource.data.endedAtClient == null
+          data.endedAtClient == null
           || (
-            request.resource.data.endedAtClient is string
-            && request.resource.data.endedAtClient.size() <= 40
+            data.endedAtClient is string
+            && data.endedAtClient.size() <= 40
           )
         )
-        && request.resource.data.events is list
-        && request.resource.data.events.size() >= 1
-        && request.resource.data.events.size() <= 1000
-        && request.resource.data.revision is int
-        && request.resource.data.revision > 0
-        && request.resource.data.updatedBy == request.auth.uid
-        && request.resource.data.updatedAtClient is string
-        && request.resource.data.updatedAtClient.size() <= 40
+        && data.events is list
+        && data.events.size() >= 1
+        && data.events.size() <= 1000
+        && data.revision is int
+        && data.revision > 0
+        && data.updatedBy == request.auth.uid
+        && data.updatedAtClient is string
+        && data.updatedAtClient.size() <= 40
         && (
           (
-            request.resource.data.status in ['completed', 'abandoned']
-            && request.resource.data.endedAtClient is string
+            data.status in ['completed', 'abandoned']
+            && data.endedAtClient is string
           )
           || (
-            request.resource.data.status in ['running', 'paused']
-            && request.resource.data.endedAtClient == null
+            data.status in ['running', 'paused']
+            && data.endedAtClient == null
           )
         );
     }
@@ -473,11 +488,13 @@ service cloud.firestore {
     }
 
     function validTutorLiveRunEvent(event) {
+      let fields = event.keys();
+      let type = event.type;
       return event is map
-        && event.keys().hasAll([
+        && fields.hasAll([
           'id', 'type', 'atClient', 'elapsedSeconds'
         ])
-        && event.keys().hasOnly([
+        && fields.hasOnly([
           'id',
           'type',
           'atClient',
@@ -493,7 +510,7 @@ service cloud.firestore {
         && event.id is string
         && event.id.size() > 0
         && event.id.size() <= 80
-        && event.type in [
+        && type in [
           'start',
           'pause',
           'resume',
@@ -511,7 +528,7 @@ service cloud.firestore {
         && event.elapsedSeconds >= 0
         && event.elapsedSeconds <= 28800
         && (
-          !event.keys().hasAny(['stageId'])
+          !fields.hasAny(['stageId'])
           || (
             event.stageId is string
             && event.stageId.size() > 0
@@ -519,7 +536,7 @@ service cloud.firestore {
           )
         )
         && (
-          !event.keys().hasAny(['cardId'])
+          !fields.hasAny(['cardId'])
           || event.cardId == null
           || (
             event.cardId is string
@@ -528,11 +545,11 @@ service cloud.firestore {
           )
         )
         && (
-          !event.keys().hasAny(['result'])
+          !fields.hasAny(['result'])
           || event.result in ['correct', 'partial', 'repair', 'parked']
         )
         && (
-          !event.keys().hasAny(['confidence'])
+          !fields.hasAny(['confidence'])
           || (
             event.confidence is int
             && event.confidence >= 1
@@ -540,7 +557,7 @@ service cloud.firestore {
           )
         )
         && (
-          !event.keys().hasAny(['errorCodes'])
+          !fields.hasAny(['errorCodes'])
           || (
             event.errorCodes is list
             && event.errorCodes.size() <= 8
@@ -550,7 +567,7 @@ service cloud.firestore {
           )
         )
         && (
-          !event.keys().hasAny(['note'])
+          !fields.hasAny(['note'])
           || (
             event.note is string
             && event.note.size() > 0
@@ -558,167 +575,127 @@ service cloud.firestore {
           )
         )
         && (
-          !event.keys().hasAny(['closeout'])
+          !fields.hasAny(['closeout'])
           || validTutorLiveRunCloseout(event.closeout)
         )
         && (
-          !(event.type in ['start', 'navigate'])
-          || event.keys().hasAll(['stageId'])
-        )
-        && (
-          !(event.type in ['assessment', 'repair'])
-          || event.keys().hasAll(['stageId', 'cardId'])
-        )
-        && (
-          event.type == 'assessment'
-          || !event.keys().hasAny(['result', 'confidence'])
-        )
-        && (
-          event.type != 'assessment'
-          || event.keys().hasAll(['result', 'confidence', 'errorCodes'])
-        )
-        && (
-          event.type in ['assessment', 'repair']
-          || !event.keys().hasAny(['errorCodes'])
-        )
-        && (
-          event.type != 'repair'
-          || (
-            event.keys().hasAll(['errorCodes'])
-            && event.errorCodes.size() >= 1
+          type == 'assessment' ? (
+            fields.hasAll(['stageId', 'cardId', 'result', 'confidence', 'errorCodes'])
+            && !fields.hasAny(['closeout'])
+            && (event.result != 'correct' || event.errorCodes.size() == 0)
+            && (event.result != 'repair' || event.errorCodes.size() >= 1)
+            && (event.result != 'parked' || fields.hasAll(['note']))
+          ) : (
+            !fields.hasAny(['result', 'confidence'])
+            && (
+              type == 'repair' ? (
+                fields.hasAll(['stageId', 'cardId', 'errorCodes'])
+                && event.errorCodes.size() >= 1
+                && !fields.hasAny(['closeout'])
+              ) : (
+                !fields.hasAny(['errorCodes'])
+                && (
+                  type == 'complete' ? fields.hasAll(['closeout'])
+                  : (
+                    !fields.hasAny(['closeout'])
+                    && (
+                      type in ['start', 'navigate'] ? fields.hasAll(['stageId'])
+                      : type == 'note' ? fields.hasAll(['note'])
+                      : true
+                    )
+                  )
+                )
+              )
+            )
           )
-        )
-        && (
-          event.type != 'assessment'
-          || event.result != 'correct'
-          || event.errorCodes.size() == 0
-        )
-        && (
-          event.type != 'assessment'
-          || event.result != 'repair'
-          || event.errorCodes.size() >= 1
-        )
-        && (
-          event.type != 'assessment'
-          || event.result != 'parked'
-          || event.keys().hasAll(['note'])
-        )
-        && (
-          event.type != 'note'
-          || event.keys().hasAll(['note'])
-        )
-        && (
-          event.type == 'complete'
-          || !event.keys().hasAny(['closeout'])
-        )
-        && (
-          event.type != 'complete'
-          || event.keys().hasAll(['closeout'])
         );
     }
 
     function validTutorLiveRunCreateEvent() {
-      return validTutorLiveRunEvent(request.resource.data.events[0])
-        && request.resource.data.events[0].type == 'start'
-        && request.resource.data.events[0].elapsedSeconds == 0
-        && request.resource.data.elapsedSeconds == 0
-        && request.resource.data.currentStageId
-          == request.resource.data.events[0].stageId
+      let data = request.resource.data;
+      let event = data.events[0];
+      return validTutorLiveRunEvent(event)
+        && event.type == 'start'
+        && event.elapsedSeconds == 0
+        && data.elapsedSeconds == 0
+        && data.currentStageId
+          == event.stageId
         && (
           (
-            request.resource.data.events[0].keys().hasAny(['cardId'])
-            && request.resource.data.currentCardId
-              == request.resource.data.events[0].cardId
+            event.keys().hasAny(['cardId'])
+            && data.currentCardId
+              == event.cardId
           )
           || (
-            !request.resource.data.events[0].keys().hasAny(['cardId'])
-            && request.resource.data.currentCardId == null
+            !event.keys().hasAny(['cardId'])
+            && data.currentCardId == null
           )
         )
-        && request.resource.data.startedAtClient
-          == request.resource.data.events[0].atClient
-        && request.resource.data.updatedAtClient
-          == request.resource.data.events[0].atClient;
+        && data.startedAtClient
+          == event.atClient
+        && data.updatedAtClient
+          == event.atClient;
     }
 
     function validTutorLiveRunLatestEvent() {
-      let event = request.resource.data.events[
-        request.resource.data.events.size() - 1
+      let data = request.resource.data;
+      let previous = resource.data;
+      let event = data.events[
+        data.events.size() - 1
       ];
       return validTutorLiveRunEvent(event)
         && event.type != 'start'
-        && event.elapsedSeconds == request.resource.data.elapsedSeconds
-        && event.atClient == request.resource.data.updatedAtClient
+        && event.elapsedSeconds == data.elapsedSeconds
+        && event.atClient == data.updatedAtClient
+        && data.currentStageId == event.get('stageId', previous.currentStageId)
+        && data.currentCardId == event.get('cardId', previous.currentCardId)
         && (
-          !event.keys().hasAny(['stageId'])
-          || request.resource.data.currentStageId == event.stageId
-        )
-        && (
-          event.keys().hasAny(['stageId'])
-          || request.resource.data.currentStageId == resource.data.currentStageId
-        )
-        && (
-          !event.keys().hasAny(['cardId'])
-          || request.resource.data.currentCardId == event.cardId
-        )
-        && (
-          event.keys().hasAny(['cardId'])
-          || request.resource.data.currentCardId == resource.data.currentCardId
-        )
-        && (
-          (
-            event.type == 'pause'
-            && resource.data.status == 'running'
-            && request.resource.data.status == 'paused'
-            && request.resource.data.endedAtClient == null
+          event.type == 'pause' ? (
+            previous.status == 'running'
+            && data.status == 'paused'
+            && data.endedAtClient == null
           )
-          || (
-            event.type == 'resume'
-            && resource.data.status == 'paused'
-            && request.resource.data.status == 'running'
-            && request.resource.data.endedAtClient == null
+          : event.type == 'resume' ? (
+            previous.status == 'paused'
+            && data.status == 'running'
+            && data.endedAtClient == null
           )
-          || (
-            event.type == 'complete'
-            && request.resource.data.status == 'completed'
-            && request.resource.data.endedAtClient == event.atClient
+          : event.type == 'complete' ? (
+            data.status == 'completed'
+            && data.endedAtClient == event.atClient
           )
-          || (
-            event.type == 'abandon'
-            && request.resource.data.status == 'abandoned'
-            && request.resource.data.endedAtClient == event.atClient
+          : event.type == 'abandon' ? (
+            data.status == 'abandoned'
+            && data.endedAtClient == event.atClient
           )
-          || (
-            event.type == 'note'
-            && request.resource.data.status == resource.data.status
-            && request.resource.data.endedAtClient == null
-          )
-          || (
+          : (
             event.type in [
-              'navigate', 'assessment', 'repair'
+              'note', 'navigate', 'assessment', 'repair'
             ]
             // Pausing controls elapsed time only. The tutor may still record
             // teaching evidence or move desks while discussion is paused.
-            && resource.data.status in ['running', 'paused']
-            && request.resource.data.status == resource.data.status
-            && request.resource.data.endedAtClient == null
+            && previous.status in ['running', 'paused']
+            && data.status == previous.status
+            && data.endedAtClient == null
           )
         );
     }
 
     function validTutorLiveRunUpdate() {
-      return request.resource.data.revision == resource.data.revision + 1
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.playbookId == resource.data.playbookId
-        && request.resource.data.playbookVersion == resource.data.playbookVersion
-        && request.resource.data.sessionNumber == resource.data.sessionNumber
-        && request.resource.data.routeId == resource.data.routeId
-        && request.resource.data.startedAtClient == resource.data.startedAtClient
-        && request.resource.data.elapsedSeconds >= resource.data.elapsedSeconds
+      let data = request.resource.data;
+      let previous = resource.data;
+      return data.revision == previous.revision + 1
+        && data.id == previous.id
+        && data.playbookId == previous.playbookId
+        && data.playbookVersion == previous.playbookVersion
+        && data.sessionNumber == previous.sessionNumber
+        && data.routeId == previous.routeId
+        && data.startedAtClient == previous.startedAtClient
+        && data.elapsedSeconds >= previous.elapsedSeconds
         // Every cloud save must append exactly one meaningful event. Timer
         // ticks alone therefore cannot write or consume the free quota.
-        && request.resource.data.events.size() == resource.data.events.size() + 1
-        && resource.data.status in ['running', 'paused'];
+        && data.events.size() == previous.events.size() + 1
+        && previous.status in ['running', 'paused'];
     }
 
     match /programs/project-202/tutorPrivate/notes {
