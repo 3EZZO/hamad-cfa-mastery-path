@@ -1561,6 +1561,12 @@ function RoadmapView({
 
   return (
     <div className="view-stack">
+      <details className="tracker-secondary-tools">
+        <summary>
+          <span>Plan overview & filters</span>
+          <small>{phase} · {visibleWeeks.length} weeks shown</small>
+        </summary>
+        <div className="tracker-secondary-tools__content">
       <section className="roadmap-summary panel">
         <div><strong>{PLAN.length}</strong><span>structured weeks</span></div>
         <div><strong>{plannedSessions.length}</strong><span>numbered tutor sessions</span></div>
@@ -1584,8 +1590,10 @@ function RoadmapView({
             {PHASES.map((item) => <option key={item}>{item}</option>)}
           </select>
         </label>
-        <p>Click any week to open the full coaching contract.</p>
+        <p>Open a week below to see its sessions and study tasks.</p>
       </div>
+        </div>
+      </details>
 
       <section className="timeline">
         {visibleWeeks.map((week) => {
@@ -2355,6 +2363,12 @@ function TutorAdminView({
         <div className="panel-heading"><div><p className="eyebrow">Tutor approval</p><h3>Session completion queue</h3></div><CircleCheckBig size={21} /></div>
         {pendingSessionRequests.length ? <div className="entry-list">{pendingSessionRequests.map(({ task, request }) => <article className="approval-entry" key={task.id}><div><strong>{task.label}</strong><span>Requested {request ? new Date(request.requestedAt).toLocaleString() : ""}</span></div><div className="inline-actions"><button className="button button-primary" type="button" onClick={() => reviewSessionRequest(task.id, "approved")}><Check size={16} /> Approve</button><button className="button button-secondary" type="button" onClick={() => reviewSessionRequest(task.id, "returned")}><RotateCcw size={16} /> Return</button></div></article>)}</div> : <EmptyState icon={CircleCheckBig} title="No approvals waiting">Hamad's session-completion requests will appear here.</EmptyState>}
       </section>
+      <details className="tracker-secondary-tools">
+        <summary>
+          <span>Schedule, readiness & recovery</span>
+          <small>{Object.keys(tracker.sessionOverrides).length} changed dates · Tutor controls</small>
+        </summary>
+        <div className="tracker-secondary-tools__content">
       <section className="panel launch-control-panel">
         <div className="panel-heading"><div><p className="eyebrow">Pre-launch control</p><h3>Four live checks before the first session</h3></div><ShieldCheck size={21} /></div>
         <div className="launch-check-grid">
@@ -2402,6 +2416,8 @@ function TutorAdminView({
         <div><p className="eyebrow">Protected recovery control</p><h3>Export, then reset all shared progress</h3><p>Use only before genuine course work begins. This creates a local JSON recovery copy before replacing the synchronized tracker on every device.</p></div>
         <button className="button button-danger" type="button" disabled={authoritativeReplaceBusy || syncStatus !== "synced"} onClick={() => void resetSharedProgress()}><Trash2 size={16} />{authoritativeReplaceBusy ? "Resetting..." : "Export and reset"}</button>
       </section>
+        </div>
+      </details>
     </div>
   );
 }

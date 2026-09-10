@@ -9,14 +9,14 @@ describe("14-inch Session Mode layout contract", () => {
       /\.live-session--running\s*\{[^}]*height:\s*100dvh;[^}]*overflow:\s*hidden;/s
     );
     expect(css).toContain(
-      "grid-template-rows: auto auto auto auto minmax(0, 1fr)"
+      "grid-template-rows: auto auto auto minmax(0, 1fr)"
     );
   });
 
   it("defines compact geometry for common 14-inch laptop heights", () => {
     expect(css).toContain("@media (min-width: 900px) and (max-height: 900px)");
     expect(css).toContain("--ls-laptop-livebar-h: 64px");
-    expect(css).toContain("--ls-laptop-stagebar-h: 44px");
+    expect(css).not.toContain("--ls-laptop-stagebar-h");
     expect(css).toContain("--ls-laptop-deckbar-h: 48px");
   });
 

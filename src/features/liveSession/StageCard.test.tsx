@@ -30,6 +30,14 @@ const question: LiveSessionQuestion = {
 };
 
 describe("StageCard", () => {
+  it("retains the complete title and objective with an explicit objective disclosure", () => {
+    const html = renderToStaticMarkup(
+      <StageCard stage={stage} question={question} questionIndex={0} flowStep="teach" complete={false} onFlowStepChange={() => undefined} />
+    );
+    expect(html).toContain(question.title);
+    expect(html).toContain('<details class="ls-deck-objective"><summary>Teaching objective</summary>');
+    expect(html).toContain(stage.objective);
+  });
   it("keeps Teach, Ask, and Answer content visible in one tutor view", () => {
     const html = renderToStaticMarkup(
       <StageCard

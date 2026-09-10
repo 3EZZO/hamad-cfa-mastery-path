@@ -169,7 +169,12 @@ export function StageCard({
         <div className="ls-stage-card__identity">
           <p className="ls-eyebrow">{stage.label}</p>
           <h2 id="ls-stage-title">{question?.title || stage.title}</h2>
-          <p>{stage.objective}</p>
+          {stage.objective && (
+            <details className="ls-deck-objective">
+              <summary>Teaching objective</summary>
+              <p>{stage.objective}</p>
+            </details>
+          )}
         </div>
         <div
           className="ls-item-meta"

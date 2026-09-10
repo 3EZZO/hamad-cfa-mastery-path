@@ -130,12 +130,14 @@ function WorkspaceTools({
   onReplacePlaybook,
   onExit,
   preflight,
+  embedded = false,
 }: Pick<
   LiveSessionConsoleProps,
   "replacingPlaybook" | "onReplacePlaybook" | "onExit"
 > & {
   playbook: LiveSessionPlaybook;
   preflight?: ReactNode;
+  embedded?: boolean;
 }) {
   const deckCount = Math.max(
     0,
@@ -144,12 +146,7 @@ function WorkspaceTools({
     )
   );
 
-  return (
-    <details className="ls-workspace-tools">
-      <summary>
-        <Settings2 size={16} />
-        <span>Session tools</span>
-      </summary>
+  const content = (
       <div className="ls-workspace-tools__menu">
         <div className="ls-workspace-tools__identity">
           <span>Active private playbook</span>
@@ -178,6 +175,15 @@ function WorkspaceTools({
           </button>
         )}
       </div>
+  );
+  return embedded ? (
+    <section className="ls-workspace-tools ls-workspace-tools--embedded" aria-label="Playbook and readiness">
+      {content}
+    </section>
+  ) : (
+    <details className="ls-workspace-tools">
+      <summary><Settings2 size={16} /><span>Session tools</span></summary>
+      {content}
     </details>
   );
 }
@@ -815,6 +821,7 @@ function LiveSessionWorkspace({
         syncMessage={syncMessage}
         sessionTools={
           <WorkspaceTools
+            embedded
             playbook={playbook}
             replacingPlaybook={replacingPlaybook}
             onReplacePlaybook={onReplacePlaybook}

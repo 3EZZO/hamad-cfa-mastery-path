@@ -1001,62 +1001,14 @@ export function LiveSessionRunner({
             </span>
           )}
           <button
-            className="ls-icon-button"
-            type="button"
-            onClick={() => setShortcutsOpen(value => !value)}
-            aria-label="Show keyboard shortcuts"
-          >
-            <Command size={19} />
-          </button>
-          <button
             className="ls-button ls-button--quiet"
             type="button"
             onClick={onRequestCloseout}
           >
             <Flag size={16} /> Finish session
           </button>
-          {sessionTools}
         </div>
       </header>
-
-      <nav className="ls-stage-strip" aria-label="Session stages">
-        <div className="ls-stage-strip__progress">
-          <span>
-            Stage {stageIndex + 1} of {stages.length}
-          </span>
-          <strong title={stage.title}>{stage.title}</strong>
-        </div>
-        <div className="ls-stage-strip__items">
-          {stageProgress.map((item, index) => {
-            const complete =
-              item.deckCount > 0 && item.coveredCount >= item.deckCount;
-            return (
-              <button
-                type="button"
-                className={`${index === stageIndex ? "is-current" : ""}${complete ? " is-complete" : ""}`}
-                aria-current={index === stageIndex ? "step" : undefined}
-                aria-label={`Stage ${index + 1}: ${item.title}${complete ? ", covered" : ""}`}
-                title={`${item.label}: ${item.title}`}
-                key={item.id}
-                onClick={() => changePosition(index, 0)}
-              >
-                {complete ? (
-                  <CheckCircle2 size={15} />
-                ) : (
-                  <span>{index + 1}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <button
-          className="ls-button ls-button--quiet"
-          type="button"
-          onClick={() => setReferenceOpen(true)}
-        >
-          <BookOpenCheck size={16} /> References <kbd>F</kbd>
-        </button>
-      </nav>
 
       <section
         className="ls-deck-console"
@@ -1098,12 +1050,50 @@ export function LiveSessionRunner({
           <summary>
             <SlidersHorizontal size={18} />
             <span>
-              <strong>Find a deck</strong>
-              <small>Search, pacing & reading settings</small>
+              <strong>Session tools</strong>
+              <small>Stage {stageIndex + 1} of {stages.length} · Find a deck, pacing & settings</small>
             </span>
             <kbd>/</kbd>
           </summary>
           <div className="ls-deck-tools__popover">
+            <nav className="ls-stage-strip" aria-label="Session stages">
+              <div className="ls-stage-strip__progress">
+                <span>Stage {stageIndex + 1} of {stages.length}</span>
+                <strong>{stage.title}</strong>
+              </div>
+              <div className="ls-stage-strip__items">
+                {stageProgress.map((item, index) => {
+                  const complete = item.deckCount > 0 && item.coveredCount >= item.deckCount;
+                  return (
+                    <button
+                      type="button"
+                      className={`${index === stageIndex ? "is-current" : ""}${complete ? " is-complete" : ""}`}
+                      aria-current={index === stageIndex ? "step" : undefined}
+                      aria-label={`Stage ${index + 1}: ${item.title}${complete ? ", covered" : ""}`}
+                      title={`${item.label}: ${item.title}`}
+                      key={item.id}
+                      onClick={() => {
+                        changePosition(index, 0);
+                        if (toolsRef.current) toolsRef.current.open = false;
+                      }}
+                    >
+                      {complete ? <CheckCircle2 size={15} /> : <span>{index + 1}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+            <button
+              className="ls-button ls-button--quiet"
+              type="button"
+              onClick={() => {
+                setShortcutsOpen(value => !value);
+                if (toolsRef.current) toolsRef.current.open = false;
+              }}
+              aria-expanded={shortcutsOpen}
+            >
+              <Command size={19} /> Keyboard shortcuts
+            </button>
             <div className="ls-reading-settings">
               <div>
                 <strong>Make yourself comfortable</strong>
@@ -1371,8 +1361,16 @@ export function LiveSessionRunner({
                 )}
               </section>
             )}
+            {sessionTools}
           </div>
         </details>
+        <button
+          className="ls-button ls-button--quiet ls-reference-shortcut"
+          type="button"
+          onClick={() => setReferenceOpen(true)}
+        >
+          <BookOpenCheck size={16} /> References <kbd>F</kbd>
+        </button>
       </section>
 
       {shortcutsOpen && (
