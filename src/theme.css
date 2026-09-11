@@ -1,0 +1,237 @@
+/* Explicit, device-local dark theme. Light styles remain unchanged.
+   Slate reading surfaces, blue actions, teal questions, violet answers. */
+.data-actions .theme-toggle,
+.ls-session-switcher button.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  flex-shrink: 0; min-height: 44px; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--border, #dce4ed); background: var(--surface, #fff);
+  color: var(--ink, #132c44); font: inherit; font-size: .875rem; cursor: pointer;
+}
+.data-actions .theme-toggle:hover, .ls-session-switcher button.theme-toggle:hover {
+  background: var(--surface-2, #f7f9fc);
+}
+.theme-toggle svg { flex-shrink: 0; }
+.ls-session-switcher > small { min-width: 0; flex: 1; }
+@media (min-width: 601px) and (max-width: 1100px) {
+  .ls-session-switcher > small { display: none; }
+  .ls-session-switcher button.theme-toggle { margin-left: auto; }
+}
+.theme-toggle:focus-visible { outline: 3px solid #8db0f5; outline-offset: 3px; }
+@media (max-width: 700px) {
+  .data-actions .theme-toggle span, .ls-session-switcher .theme-toggle span { display: none; }
+  .data-actions .theme-toggle, .ls-session-switcher button.theme-toggle { width: 44px; padding: 8px; }
+}
+
+html:root[data-theme="dark"] {
+  color-scheme: dark;
+  color: #e5edf5; background: #101c2a;
+  --ink: #e5edf5; --ink-2: #c4d2e0; --muted: #a9bacd;
+  --paper: #101c2a; --surface: #192b3d; --surface-2: #203448;
+  --border: #455b72; --forest-soft: #233c61; --gold-pale: #233c61;
+  --gold: #a8c5ff; --gold-bright: #a8c5ff;
+  --green: #87d9c8; --green-pale: #193f3c;
+  --danger: #ffabb6; --danger-pale: #492d3c;
+  --shadow: 0 20px 55px #0004; --shadow-soft: 0 8px 24px #0003;
+  --theme-blue: #a8c5ff; --theme-teal: #87d9c8; --theme-violet: #c9bcff;
+  --theme-amber: #f1ce88; --theme-amber-bg: #423724;
+  --chart-grid: #455b72; --chart-tick: #a9bacd;
+  --chart-score: #87d9c8; --chart-target: #f1ce88;
+}
+html:root[data-theme="dark"] body,
+html:root[data-theme="dark"] :is(.access-screen, .session-mode-loader) {
+  background: #101c2a; color: var(--ink);
+}
+html:root[data-theme="dark"] :is(
+  .topbar, .panel, .metric-card, .access-card, .button-google, .tracker-secondary-tools,
+  .workspace-actions > summary, .workspace-actions-panel, .mobile-nav, .mobile-more-sheet,
+  .calendar-dialog, .session-mode-loader > section, .log-entry, .note-entry, .error-entry,
+  .practice-entry, .mock-entry, .checkbox-field, .topic-selector label, .task-row,
+  .session-plan-card, .readiness-panel, .milestone-card, .backup-panel,
+  .button-secondary, .button-ghost, .icon-button
+) { background: var(--surface); color: var(--ink); border-color: var(--border); }
+html:root[data-theme="dark"] :is(input, select, textarea),
+html:root[data-theme="dark"] :is(.form-panel, .access-form) :is(input, select, textarea) {
+  background: #142333; color: var(--ink); border-color: var(--border);
+  color-scheme: dark; accent-color: #81adff;
+}
+html:root[data-theme="dark"] :is(input, textarea)::placeholder { color: var(--muted); opacity: 1; }
+html:root[data-theme="dark"] :is(.task-row.is-complete, .error-entry.is-resolved, .curriculum-note,
+  .calendar-dialog-intro, .risk-card, .launch-check.is-complete, .status-positive,
+  .task-status-approved, .task-status-complete, .sync-chip.is-synced, .backup-sync-status.is-synced) {
+  color: var(--theme-teal); background: var(--green-pale); border-color: #497d72;
+}
+html:root[data-theme="dark"] :is(.local-banner, .reading-audit-banner, .disclaimer-card,
+  .risk-amber, .launch-check:not(.is-complete), .calendar-dialog-note, .private-note-entry,
+  .reschedule-note, .task-status-requested, .status-gold, .sync-chip.is-saving,
+  .backup-sync-status.is-saving, .sync-recovery-notice) {
+  color: var(--theme-amber); background: var(--theme-amber-bg); border-color: #95794b;
+}
+html:root[data-theme="dark"] :is(.risk-red, .danger-zone, .access-error, .status-danger,
+  .task-status-returned, .sync-chip.is-error, .backup-sync-status.is-error) {
+  color: var(--danger); background: var(--danger-pale); border-color: #9c6474;
+}
+html:root[data-theme="dark"] :is(.risk-card > span, .risk-amber > span, .risk-red > span) { color: inherit; }
+html:root[data-theme="dark"] :is(.status-muted, .task-status, .backup-sync-status.is-offline,
+  .sync-chip.is-offline, .session-plan-card.is-optional) {
+  color: var(--muted); background: var(--surface-2);
+}
+html:root[data-theme="dark"] :is(.metric-top, .access-footnote, .access-divider,
+  .tracker-secondary-tools > summary small, .is-complete .task-label, .reading-pending,
+  .reading-pending.reading-no-new, .entry-form label span em, .topic-index, .slider-labels) { color: var(--muted); }
+html:root[data-theme="dark"] :is(.text-button, .eyebrow, .mini-label, .metric-top svg,
+  .workspace-actions-panel > button > svg, .session-mode-loader p) { color: var(--theme-blue); }
+html:root[data-theme="dark"] :is(.week-chip, .timeline-index, .mobile-nav-button.is-active,
+  .mobile-more-button.is-active, .workspace-actions[open] > summary,
+  .workspace-actions-panel > button:hover) { color: var(--theme-blue); background: #233c61; }
+html:root[data-theme="dark"] .risk-summary-icon { background: var(--green-pale); color: var(--theme-teal); }
+html:root[data-theme="dark"] .progress-track { background: #354c63; }
+html:root[data-theme="dark"] .progress-fill { background: #81adff; }
+html:root[data-theme="dark"] .progress-green { background: #87d9c8; }
+html:root[data-theme="dark"] :is(.practice-score, .mock-score, .task-check, .button-danger) { color: #fff; }
+html:root[data-theme="dark"] .task-check { background: #142333; border-color: #718aa0; }
+html:root[data-theme="dark"] .is-complete .task-check { background: #17645b; }
+html:root[data-theme="dark"] .hero-actions .button-accent { color: #fff; background: #315fce; border-color: #7296e7; }
+
+/* Variables cover both the workspace and its body-mounted library/dialog portals. */
+html:root[data-theme="dark"] .live-session {
+  color-scheme: dark;
+  --ls-navy: #e5edf5; --ls-navy-2: #c4d2e0; --ls-ink: #e5edf5;
+  --ls-slate: #c4d2e0; --ls-muted: #a9bacd; --ls-cloud: #101c2a;
+  --ls-line: #455b72; --ls-line-strong: #6d86a0;
+  --ls-teal: #87d9c8; --ls-teal-deep: #87d9c8;
+  --ls-green: #87d9c8; --ls-green-pale: #193f3c;
+  --ls-amber: #f1ce88; --ls-amber-pale: #423724;
+  --ls-red: #ffabb6; --ls-red-pale: #492d3c;
+  --ls-violet: #c9bcff; --ls-violet-pale: #322f4b;
+  --ls-shadow: 0 24px 70px #0005; --ls-shadow-soft: 0 10px 30px #0003;
+  color: var(--ink); background: var(--paper);
+}
+html:root[data-theme="dark"] .live-session.ls-library-backdrop { background: #07111dd9; }
+html:root[data-theme="dark"] :is(.ls-library, .ls-launch, .ls-private-setup,
+  .ls-deck-console, .ls-runner__grid, .ls-command-search, .ls-closeout__metrics,
+  .ls-candidate, .ls-reference-drawer, .ls-panel-jumps) { background: var(--paper); color: var(--ink); }
+html:root[data-theme="dark"] .live-session :is(
+  .ls-button--quiet, .ls-icon-button, .ls-private-setup__card, .ls-route-card,
+  .ls-route-card__check, .ls-preflight__grid > label, .ls-offline-card, .ls-checkbox,
+  .ls-offline-card__icon, .ls-preflight-panel, .ls-preflight-check,
+  .ls-preflight-panel__actions > label, .ls-preflight-panel__remove,
+  .ls-stage-strip, .ls-deck-tools, .ls-deck-tools > summary, .ls-deck-tools__popover,
+  .ls-deck-console__coverage, .ls-deck-select, .ls-command-search > label, .ls-filter-control,
+  .ls-search-results, .ls-search-results__list > button, .ls-stage-card,
+  .ls-stage-card__header, .ls-command-grid, .ls-command-block__body,
+  .ls-item-meta span, .ls-coaching-drawer .ls-coaching-rail, .ls-evidence,
+  .ls-verdict, .ls-repair__script, .ls-candidate__options li, .ls-reference-search,
+  .ls-reference-groups button, .ls-reference-list details, .ls-closeout__metrics article,
+  .ls-mastery-list > article, .ls-closeout__footer, .ls-linear-control,
+  .ls-count-legend > dl, .ls-panel-jumps button, .ls-reading-settings [role="group"]
+) { background: var(--surface); color: var(--ink); border-color: var(--border); }
+html:root[data-theme="dark"] .live-session :is(.ls-note-field textarea, .ls-field textarea,
+  .ls-field input, .ls-library input, .ls-library select, .ls-error-codes button) {
+  background: #142333; color: var(--ink); border-color: var(--border);
+}
+html:root[data-theme="dark"] .live-session :is(.ls-livebar, .ls-evidence__header,
+  .ls-closeout__header, .ls-candidate__header, .ls-teach-flow, .ls-proof-rail,
+  .ls-proof-rail li > span, .ls-proof-rail li > strong, .ls-formula-stack, .ls-launch__mark,
+  .ls-workspace-tools[open] > summary) { background: #132c44; color: #e5edf5; }
+html:root[data-theme="dark"] .live-session :is(.ls-livebar, .ls-closeout__header) :is(.ls-button--quiet, .ls-icon-button) {
+  color: #e5edf5; background: #203b55; border-color: #6d86a0;
+}
+html:root[data-theme="dark"] .live-session :is(.ls-launch__session-card, .ls-linear-control__back,
+  .ls-reading-settings, .ls-reading-settings button, .ls-preflight-panel__header,
+  .ls-preflight-panel__actions, .ls-preflight-check__icon, .ls-shortcuts,
+  .ls-shortcuts button, .ls-coaching-rail, .ls-coaching-drawer,
+  .ls-coaching-drawer > summary, .ls-pacing-status__rail > span,
+  .ls-pacing-status--linear .ls-pacing-status__rail > span,
+  .ls-stage-strip__items button, .ls-pacing-panel, .ls-mobile-session-dock > button:first-child) {
+  background: var(--surface-2); color: var(--ink);
+}
+html:root[data-theme="dark"] .live-session :is(.ls-library__header p,
+  .ls-count-legend dd, .ls-rehearsal-entry p, .ls-launch__session-card p,
+  .ls-launch__version small) { color: var(--muted); }
+html:root[data-theme="dark"] .live-session :is(.ls-count-legend > summary,
+  .ls-panel-step, .ls-command-block--explain > header) { color: var(--theme-blue); }
+html:root[data-theme="dark"] .live-session .ls-command-block > header,
+html:root[data-theme="dark"] .live-session .ls-command-block__body .ls-script-ribbon {
+  color: var(--theme-blue); background: #203550;
+}
+html:root[data-theme="dark"] .live-session :is(.ls-command-block__icon, .ls-reference-icon) { background: #2a4364; }
+html:root[data-theme="dark"] .live-session .ls-command-block--question > header,
+html:root[data-theme="dark"] .live-session .ls-command-block__body .ls-hints,
+html:root[data-theme="dark"] .live-session :is(.ls-question-options li, .ls-flow-forward) {
+  background: #193a3c; color: var(--ink);
+}
+html:root[data-theme="dark"] .live-session .ls-command-block--question .ls-panel-step { color: var(--theme-teal); }
+html:root[data-theme="dark"] .live-session .ls-command-block--question .ls-command-block__icon { background: #24514f; }
+html:root[data-theme="dark"] .live-session .ls-command-block--answer > header,
+html:root[data-theme="dark"] .live-session .ls-command-block__body .ls-spoken-answer {
+  background: #322f4b; color: var(--ink);
+}
+html:root[data-theme="dark"] .live-session .ls-command-block--answer .ls-panel-step { color: var(--theme-violet); }
+html:root[data-theme="dark"] .live-session .ls-command-block--answer .ls-command-block__icon { background: #454063; }
+html:root[data-theme="dark"] .live-session .ls-command-block__body :is(.ls-depth-note, .ls-board-cue) { background: var(--surface-2); }
+html:root[data-theme="dark"] .live-session .ls-command-block__body .ls-formula-stack code {
+  background: #142333; color: #c9e1ff;
+}
+html:root[data-theme="dark"] .live-session :is(.ls-route-card.is-selected,
+  .ls-button--quiet:not(:disabled):hover, .ls-icon-button:not(:disabled):hover,
+  .ls-search-results__list > button:hover, .ls-complete__sync--saving,
+  .ls-deck-tools[open] > summary, .ls-offline-card button) { background: #233c61; color: var(--theme-blue); }
+html:root[data-theme="dark"] .live-session :is(.ls-route-card em, .ls-button--candidate,
+  .ls-complete__sync, .ls-preflight__grid > label.is-ready, .ls-offline-card.is-ready,
+  .ls-preflight-panel__actions > label.is-ready, .ls-stage-strip__items button.is-complete) {
+  background: var(--green-pale); color: var(--theme-teal);
+}
+html:root[data-theme="dark"] .live-session :is(.ls-repair, .ls-advance-hint,
+  .ls-rehearsal-reset__confirm, .ls-complete__sync--offline, .ls-complete__sync--error,
+  .ls-pacing-panel.is-paused, .ls-pacing-panel.is-calibrating, .ls-error-codes button.is-selected) {
+  background: var(--theme-amber-bg); color: var(--theme-amber);
+}
+html:root[data-theme="dark"] .live-session :is(.ls-rehearsal-reset__confirm > p,
+  .ls-pacing-status--linear.is-paused .ls-pacing-status__rail strong,
+  .ls-pacing-status--linear.is-calibrating .ls-pacing-status__rail strong) { color: var(--theme-amber); }
+html:root[data-theme="dark"] .live-session :is(.ls-private-setup__alert, .ls-trap-callout, .ls-pacing-panel.is-behind) {
+  background: var(--danger-pale); color: var(--danger);
+}
+html:root[data-theme="dark"] .live-session .ls-pacing-status--linear:not(.is-behind):not(.is-paused):not(.is-calibrating) .ls-pacing-status__rail strong { color: var(--theme-teal); }
+html:root[data-theme="dark"] .live-session .ls-pacing-status--linear.is-behind .ls-pacing-status__rail strong { color: var(--danger); }
+html:root[data-theme="dark"] .ls-rehearsal-banner { color: #dfd0ff; background: #36294b; border-color: #8875aa; }
+html:root[data-theme="dark"] .live-session :is(.ls-deck-console__bar, .ls-pacing-panel__bar) { background: #455b72; }
+html:root[data-theme="dark"] .live-session :is(.ls-stage-strip__items button.is-current,
+  .ls-panel-jumps button[aria-pressed="true"], .ls-reference-groups button.is-selected) {
+  background: #315fce; color: #fff; border-color: #81adff;
+}
+html:root[data-theme="dark"] .live-session .ls-command-block__body { scrollbar-color: #718aa0 var(--surface); }
+/* Keep active verdicts and the floating evidence rail distinct from neutral cards. */
+html:root[data-theme="dark"] .live-session--running .ls-runner__grid.has-evidence-rail.is-evidence-step .ls-evidence {
+  background: var(--surface); color: var(--ink);
+}
+html:root[data-theme="dark"] .live-session .ls-verdict--correct.is-selected,
+html:root[data-theme="dark"] .live-session .ls-mastery-choice--green.is-selected {
+  background: var(--green-pale); color: var(--theme-teal); border-color: var(--theme-teal);
+}
+html:root[data-theme="dark"] .live-session .ls-verdict--partial.is-selected {
+  background: #322f4b; color: var(--theme-violet); border-color: var(--theme-violet);
+}
+html:root[data-theme="dark"] .live-session .ls-verdict--repair.is-selected,
+html:root[data-theme="dark"] .live-session .ls-mastery-choice--amber.is-selected {
+  background: var(--theme-amber-bg); color: var(--theme-amber); border-color: var(--theme-amber);
+}
+html:root[data-theme="dark"] .live-session .ls-verdict--parked.is-selected,
+html:root[data-theme="dark"] .live-session .ls-mastery-choice--red.is-selected {
+  background: var(--danger-pale); color: var(--danger); border-color: var(--danger);
+}
+html:root[data-theme="dark"] .live-session .ls-button--danger { background: #a52f43; color: #fff; }
+html:root[data-theme="dark"] .live-session .ls-search-results__list em.is-open { background: var(--surface-2); }
+html:root[data-theme="dark"] .live-session :is(.ls-teach-flow > button.is-current > span,
+  .ls-proof-rail li.is-passed > span, .is-ready .ls-checkbox, .is-ready .ls-offline-card__icon) { color: #101c2a; }
+html:root[data-theme="dark"] .live-session :is(.ls-proof-rail li.is-passed > span,
+  .is-ready .ls-checkbox, .is-ready .ls-offline-card__icon) { background: var(--theme-teal); }
+html:root[data-theme="dark"] :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid #a8c5ff; outline-offset: 2px; box-shadow: 0 0 0 2px #101c2a;
+}
+html:root[data-theme="dark"] .live-session .ls-command-block__body:focus-visible { outline-offset: -3px; }
+@media (forced-colors: active) {
+  html:root[data-theme="dark"] :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline-color: Highlight;
+  }
+}

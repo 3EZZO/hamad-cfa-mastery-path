@@ -98,6 +98,7 @@ import {
   useTrackerSync,
 } from "./hooks/useTrackerSync";
 import CalendarExportDialog from "./components/CalendarExportDialog";
+import { ThemeProvider, ThemeToggle } from "./components/ThemeToggle";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
@@ -1136,6 +1137,7 @@ function App() {
           </div>
           <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
           <div className="data-actions">
+            <ThemeToggle />
             <span className={cx("sync-chip", syncCopy.tone)} title={syncCopy.detail} role={syncStatus === "error" || syncStatus === "offline" ? undefined : "status"} aria-atomic="true" aria-label={`${syncCopy.label}. ${syncCopy.detail}`}>
               <SyncIcon size={15} />
               <span>{syncCopy.label}</span>
@@ -2610,5 +2612,5 @@ function MiniMetric({ label, value, icon: Icon }: { label: string; value: string
 }
 
 export default function AppWithDialogs() {
-  return <AppDialogProvider><App /></AppDialogProvider>;
+  return <ThemeProvider><AppDialogProvider><App /></AppDialogProvider></ThemeProvider>;
 }

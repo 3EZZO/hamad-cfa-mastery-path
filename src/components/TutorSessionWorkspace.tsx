@@ -6,6 +6,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 import {
   adaptTutorPlaybookPackage,
   isPreSessionRehearsal,
@@ -430,6 +431,7 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
           );
         })}
         <small>Switching pauses the timer. Each session keeps its own progress.</small>
+        <ThemeToggle />
       </nav>
       {visited.map(number => (
         <section key={`${props.userUid}:${number}`} hidden={selected !== number}>

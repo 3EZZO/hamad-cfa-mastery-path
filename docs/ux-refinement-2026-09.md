@@ -121,6 +121,12 @@ After P2–P7 pass the revised gate, publish through the existing GitHub Pages w
 - Darkened semantic green/amber/teal text variants within the existing palette, added dual-tone visible keyboard focus and retained forced-colour support. Automated calculations cover 12 authored text/background pairs at 4.5:1 and focus pairs at 3:1; this is not an exhaustive rendered-page accessibility certification.
 - Validation: **230/230 application tests**, **118/118 non-persistent rule-engine tests**, TypeScript, production Pages build, PWA verification and private-content audit passed. The build's existing large-chunk advisory remains non-blocking. Live keyboard/rendering, browser zoom, screen-reader announcements and device-specific darkening remain unverified; no additional user setup is required.
 
+## Requested optional dark theme
+
+- Added a visible theme button in the tracker's top bar and Session Mode's session switcher. Both use one shared preference, saved only on this browser/device, with changes reflected across open tabs. Default remains light; the user can switch back at any time.
+- Added explicit slate dark surfaces with blue teaching, teal question and violet answer accents, including library portals, forms, dialogs, status/recovery notices, rehearsal and mock charts. No colour inversion or operating-system setting changes are used. A small pre-paint initializer restores the saved preference; blocked storage falls back to an in-memory preference.
+- Theme changes do not remount the active session, alter its position/timer or write tracker/cloud records. No playbook upload is needed. Added six preference/markup/contrast tests; all 237 application tests passed. Live visual and assistive-technology verification remains unverified under the existing agreement.
+
 ## Protected boundaries
 
 No changes in this change set to Firestore rules, cloud client, sync queues, permission guards, playbook schema, private JSON files or user records. Do not clear storage, re-import playbooks or reset live sessions to review these UI changes.
