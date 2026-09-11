@@ -54,6 +54,7 @@ import {
   type SessionDeck,
 } from "./sessionDeckModel";
 import { StageCard } from "./StageCard";
+import { SessionCountLegend, SESSION_TERMS } from "./sessionGlossary";
 import type { SessionTimerController } from "./useSessionTimer";
 import { formatSessionTime } from "./useSessionTimer";
 import type {
@@ -74,6 +75,7 @@ export interface LiveSessionRunnerProps {
   route: LiveSessionRoute;
   stages: LiveSessionStage[];
   references: LiveSessionReference[];
+  libraryDecks?: number;
   timer: SessionTimerController;
   evidence: LiveSessionEvidence[];
   completedDeskIds: string[];
@@ -161,10 +163,10 @@ function deckMatchesQueue(deck: SessionDeck, mode: QueueMode): boolean {
 }
 
 function queueName(mode: QueueMode): string {
-  if (mode === "all") return "All curriculum decks";
+  if (mode === "all") return "All route decks";
   if (mode === "core-plus") return "Core + reinforcement";
-  if (mode === "stretch") return "Stretch proofs";
-  return "Core session queue";
+  if (mode === "stretch") return "Stretch decks";
+  return "Core decks";
 }
 
 const REFERENCE_STOP_WORDS = new Set([
@@ -208,6 +210,7 @@ export function LiveSessionRunner({
   route,
   stages,
   references,
+  libraryDecks,
   timer,
   evidence,
   completedDeskIds,
@@ -471,9 +474,10 @@ export function LiveSessionRunner({
   );
 
   const openCandidateView = useCallback(() => {
+    if (!(question?.prompt || stage.ask?.[0])) return;
     selectFlowStep("ask");
     setCandidateOpen(true);
-  }, [selectFlowStep]);
+  }, [question?.prompt, stage.ask, selectFlowStep]);
 
   const focusEvidencePanel = useCallback(() => {
     setDeskTimerRunning(false);
@@ -1017,9 +1021,9 @@ export function LiveSessionRunner({
         <div className="ls-deck-console__coverage">
           <div>
             <span>
-              Deck {currentDeck?.globalNumber ?? 1} of {progress.totalDecks}
+              Route deck {currentDeck?.globalNumber ?? 1} of {progress.totalDecks}
             </span>
-            <strong>{progress.coveredDecks} covered</strong>
+            <strong>{SESSION_TERMS.covered.label}: {progress.coveredDecks}</strong>
           </div>
           <div
             className="ls-deck-console__bar"
@@ -1040,11 +1044,12 @@ export function LiveSessionRunner({
             />
           </div>
           <small>
-            {progress.recordedProofs} / {progress.totalProofs} proofs recorded
+            {SESSION_TERMS.proofs.label}: {progress.recordedProofs} / {progress.totalProofs} recorded
             {progress.needsAttentionProofs
               ? ` · ${progress.needsAttentionProofs} need attention`
               : " · no recorded proof needs attention"}
           </small>
+          <SessionCountLegend counts={{ library: libraryDecks, route: progress.totalDecks, queue: queueDecks.length, target: liveTargetDecks, covered: progress.coveredDecks, proofs: `${progress.recordedProofs} / ${progress.totalProofs} recorded` }} />
         </div>
         <details className="ls-deck-tools" ref={toolsRef}>
           <summary>
@@ -1154,17 +1159,17 @@ export function LiveSessionRunner({
               </label>
               <label className="ls-deck-select ls-deck-select--queue">
                 <SlidersHorizontal size={17} />
-                <span>Next / previous queue</span>
+                <span>{SESSION_TERMS.queue.label} · Next / Previous</span>
                 <select
                   value={queueMode}
                   onChange={event =>
                     setQueueMode(event.target.value as QueueMode)
                   }
                 >
-                  <option value="core">Core session queue</option>
+                  <option value="core">Core decks</option>
                   <option value="core-plus">Core + reinforcement</option>
-                  <option value="stretch">Stretch proofs</option>
-                  <option value="all">All curriculum decks</option>
+                  <option value="stretch">Stretch decks</option>
+                  <option value="all">All route decks</option>
                 </select>
                 <small>
                   {queueDecks.length} decks · {queueName(queueMode)}
@@ -1196,7 +1201,7 @@ export function LiveSessionRunner({
                   <strong>{pacingLabel}</strong>
                 </div>
                 <div>
-                  <span>Ordered live target</span>
+                  <span>{SESSION_TERMS.target.label}</span>
                   <strong>
                     {completedLiveTargetDecks} / {liveTargetDecks} decks
                   </strong>
@@ -1421,13 +1426,13 @@ export function LiveSessionRunner({
         <main className="ls-runner__main">
           <div className="ls-proof-progress">
             <span>
-              Deck {currentDeck?.globalNumber ?? 1} of {allDecks.length}
+              Route deck {currentDeck?.globalNumber ?? 1} of {allDecks.length}
               {question?.tier ? ` · ${question.tier}` : ""}
               {deskComplete ? " · covered" : " · open"}
             </span>
             <span>
               {stageTargetCount
-                ? `${stageEvidenceCount} of ${stageTargetCount} stage proofs recorded`
+                ? `${stageEvidenceCount} of ${stageTargetCount} stage assessment proofs recorded`
                 : "Teaching stage · no formal proof required"}
             </span>
           </div>
@@ -1581,7 +1586,7 @@ export function LiveSessionRunner({
         open={candidateOpen}
         sessionLabel={`Session ${String(session.number).padStart(2, "0")}`}
         stageLabel={stage.title}
-        prompt={question?.prompt ?? stage.ask?.[0] ?? stage.objective}
+        prompt={question?.prompt || stage.ask?.[0] || ""}
         options={question?.options}
         timeDisplay={deskDisplay}
         onClose={() => {

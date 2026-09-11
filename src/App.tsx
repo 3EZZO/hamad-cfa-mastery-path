@@ -136,6 +136,7 @@ interface NavItem {
   label: string;
   mobileLabel: string;
   icon: LucideIcon;
+  hint?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -147,12 +148,12 @@ const NAV_ITEMS: NavItem[] = [
   },
   { id: "roadmap", label: "Study Plan", mobileLabel: "Plan", icon: CalendarDays },
   { id: "weekly", label: "This Week", mobileLabel: "Week", icon: ListChecks },
-  { id: "sessions", label: "Session Notes", mobileLabel: "Sessions", icon: GraduationCap },
+  { id: "sessions", label: "Session Notes", mobileLabel: "Sessions", icon: GraduationCap, hint: "Lesson outcomes & homework" },
   { id: "practice", label: "Practice", mobileLabel: "Practice", icon: TimerReset },
-  { id: "mastery", label: "Topic Progress", mobileLabel: "Topics", icon: Gauge },
+  { id: "mastery", label: "Topic Progress", mobileLabel: "Topics", icon: Gauge, hint: "Mastery by subject" },
   { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
-  { id: "errors", label: "Mistake Review", mobileLabel: "Mistakes", icon: Archive },
-  { id: "notes", label: "Notes & Data", mobileLabel: "Notes", icon: NotebookPen },
+  { id: "errors", label: "Mistake Review", mobileLabel: "Mistakes", icon: Archive, hint: "Corrections & retests" },
+  { id: "notes", label: "Notes & Data", mobileLabel: "Notes", icon: NotebookPen, hint: "General notes & backups" },
   { id: "live", label: "Session Mode", mobileLabel: "Teach", icon: PlayCircle },
   { id: "coach", label: "Tutor Admin", mobileLabel: "Admin", icon: UserCog },
 ];
@@ -201,7 +202,7 @@ const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: str
   sessions: {
     eyebrow: "Tutor accountability",
     title: "Session Notes",
-    description: "Record what changed and what must happen next.",
+    description: "Record each lesson's outcomes, homework and next steps.",
   },
   practice: {
     eyebrow: "Volume with feedback",
@@ -211,7 +212,7 @@ const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: str
   mastery: {
     eyebrow: "Honest topic evidence",
     title: "Topic Progress",
-    description: "A living view of confidence supported by results—not feeling.",
+    description: "Review each subject's practice results and tutor-assessed mastery.",
   },
   mocks: {
     eyebrow: "Performance under conditions",
@@ -226,7 +227,7 @@ const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: str
   notes: {
     eyebrow: "Reflection and continuity",
     title: "Notes & Data",
-    description: "Keep tutor decisions, commitments, live sync, and recovery tools in one place.",
+    description: "Keep general notes and commitments; check sync or manage backups.",
   },
   live: {
     eyebrow: "Private teaching command desk",
@@ -1101,7 +1102,7 @@ function App() {
                     type="button"
                   >
                     <Icon size={17} />
-                    <span>{item.label}</span>
+                    <span>{item.label}{item.hint && <small className="nav-task-hint">{item.hint}</small>}</span>
                   </button>
                 );
               })}

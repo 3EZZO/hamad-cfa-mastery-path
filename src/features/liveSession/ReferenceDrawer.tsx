@@ -82,7 +82,7 @@ export function ReferenceDrawer({
         <header>
           <div>
             <p className="ls-eyebrow">Private knowledge system</p>
-            <h2 id="ls-reference-title">Knowledge desk</h2>
+            <h2 id="ls-reference-title">References</h2>
           </div>
           <button className="ls-icon-button" type="button" onClick={onClose} aria-label="Close reference drawer">
             <X size={20} />

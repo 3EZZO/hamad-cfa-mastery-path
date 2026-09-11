@@ -22,7 +22,7 @@ export function MasteryRadar({ evidence, total }: MasteryRadarProps) {
   const safeTotal = Math.max(1, total);
   const circumference = 201.06;
   const dash = Math.min(circumference, (summary.recorded / safeTotal) * circumference);
-  const label = `Proof Radar: ${summary.recorded} of ${total} mastery proofs recorded; ${summary.correct} secure, ${summary.partial} developing, ${summary.repair} repair, ${summary.parked} deferred.`;
+  const label = `Proof Radar: ${summary.recorded} of ${total} assessment proofs recorded; ${summary.correct} secure, ${summary.partial} developing, ${summary.repair} repair, ${summary.parked} deferred.`;
 
   return (
     <div className="ls-mastery-radar" role="img" aria-label={label} title={label}>

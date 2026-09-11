@@ -34,7 +34,7 @@ export function TeachingLibrary({ stages }: { stages: LiveSessionStage[] }) {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}>
-        <LibraryBig size={17} /> Full teaching library · {decks.length} decks
+        <LibraryBig size={17} /> Full teaching library · {decks.length} library decks
       </button>
       {open &&
         createPortal(

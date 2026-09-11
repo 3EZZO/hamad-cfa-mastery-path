@@ -126,7 +126,7 @@ export function SessionPacingStatus({
       <span className="ls-pacing-status__rail" aria-hidden="true">
         <strong>{label}</strong>
         <span aria-hidden="true">
-          {completedDecks}/{targetDecks}
+          Target {completedDecks}/{targetDecks}
         </span>
         {projection && <small aria-hidden="true">{projection}</small>}
       </span>

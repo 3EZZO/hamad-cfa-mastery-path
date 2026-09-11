@@ -5158,6 +5158,15 @@ summary:focus-visible {
 }
 
 /* P1: secondary plan/admin controls share one predictable disclosure. */
+.nav-task-hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-weight: 400;
+  color: #c6d7e5;
+  white-space: normal;
+}
 .tracker-secondary-tools {
   border: 1px solid #ced9e4;
   border-radius: 16px;

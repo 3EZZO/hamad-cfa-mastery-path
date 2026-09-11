@@ -10,6 +10,7 @@ import {
 import { useMemo, useState } from "react";
 import type { SessionPreflightReport } from "./sessionPreflight";
 import { SessionPreflightPanel } from "./SessionPreflightPanel";
+import { SessionCountLegend, libraryDeckCount } from "./sessionGlossary";
 import type {
   LiveSessionDescriptor,
   LiveSessionPlaybook,
@@ -210,8 +211,7 @@ export function SessionLaunch({
                 <strong>{route.name}</strong>
                 <p>{route.description}</p>
                 <small>
-                  {routeStages.length} stages - {routeProofs} mastery proofs -{" "}
-                  {routeItems} teaching decks
+                  {routeStages.length} stages · {routeItems} route decks · {routeProofs} assessment proofs
                 </small>
                 {route.recommended && <em>Recommended</em>}
               </label>
@@ -220,6 +220,7 @@ export function SessionLaunch({
         </div>
       </fieldset>
 
+      <SessionCountLegend counts={{ library: libraryDeckCount(playbook), route: itemCount, proofs: proofCount }} />
       <fieldset className="ls-preflight">
         <legend>
           <span className="ls-step-number">2</span> Verify the teaching station
@@ -245,7 +246,7 @@ export function SessionLaunch({
           <span>Selected route</span>
           <strong>
             {selectedRoute?.name ?? "Choose a route"} - {stageCount} stages -{" "}
-            {proofCount} proofs - {itemCount} decks
+            {itemCount} route decks - {proofCount} assessment proofs
           </strong>
         </div>
         <button

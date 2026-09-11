@@ -118,8 +118,7 @@ function bestAnswer(question?: LiveSessionQuestion): string {
   return (
     question?.spokenAnswer ||
     question?.answer ||
-    question?.rationale ||
-    "Ask for the decision rule, calculation path, and interpretation in that order."
+    ""
   );
 }
 
@@ -145,6 +144,8 @@ export function StageCard({
   const askRef = useRef<HTMLElement>(null);
   const answerRef = useRef<HTMLElement>(null);
   const flowRefs = { teach: teachRef, ask: askRef, answer: answerRef };
+  const suppliedPrompt = question?.prompt || stage.ask?.[0];
+  const suppliedAnswer = bestAnswer(question);
 
   const moveTo = (step: TeachingFlowStep) => {
     onFlowStepChange(step);
@@ -265,10 +266,10 @@ export function StageCard({
         >
           <div className="ls-question-copy">
             <div className="ls-question-copy__topline">
-              <span>{question?.label ?? `Proof ${questionIndex + 1}`}</span>
+              <span>{question?.label ?? `${question?.kind === "question" ? "Assessment proof" : "Teaching check"} ${questionIndex + 1}`}</span>
               {question?.id && <code>{question.id}</code>}
             </div>
-            <h3>{question?.prompt ?? stage.ask?.[0] ?? stage.objective}</h3>
+            {suppliedPrompt && <h3>{suppliedPrompt}</h3>}
             {question?.options?.length ? (
               <ol className="ls-question-options">
                 {question.options.map((option, index) => (
@@ -285,7 +286,7 @@ export function StageCard({
                 <TextList items={question.hints} ordered />
               </div>
             ) : null}
-            {onShowCandidate && <button
+            {onShowCandidate && suppliedPrompt && <button
               className="ls-button ls-button--candidate"
               type="button"
               onClick={onShowCandidate}
@@ -310,12 +311,13 @@ export function StageCard({
           sectionRef={answerRef}
           onActivate={() => moveTo("answer")}
         >
-          <p className="ls-model-response-cue">
+          {suppliedAnswer && <><p className="ls-model-response-cue">
             Say this naturally after Hamad commits to an answer.
           </p>
           <blockquote className="ls-spoken-answer">
-            {bestAnswer(question)}
+            {suppliedAnswer}
           </blockquote>
+          </>}
           {question?.answer &&
           question.spokenAnswer &&
           question.answer !== question.spokenAnswer ? (

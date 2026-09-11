@@ -37,6 +37,7 @@ import type {
 import { useSessionTimer } from "./useSessionTimer";
 import { recoverSessionTimer } from "./sessionClock";
 import { TeachingLibrary } from "./TeachingLibrary";
+import { libraryDeckCount, SESSION_TERMS } from "./sessionGlossary";
 
 const PREFLIGHT_FRESHNESS_MS = 5 * 60 * 1_000;
 
@@ -139,18 +140,11 @@ function WorkspaceTools({
   preflight?: ReactNode;
   embedded?: boolean;
 }) {
-  const deckCount = Math.max(
-    0,
-    ...Object.values(playbook.stagesByRoute).map(stages =>
-      stages.reduce((total, stage) => total + (stage.questions?.length ?? 0), 0)
-    )
-  );
-
   const content = (
       <div className="ls-workspace-tools__menu">
         <div className="ls-workspace-tools__identity">
           <span>Active private playbook</span>
-          <strong>{deckCount} decks</strong>
+          <strong>{libraryDeckCount(playbook)} {SESSION_TERMS.library.label.toLowerCase()}</strong>
           <small>{playbook.version}</small>
         </div>
         {preflight}
@@ -812,6 +806,7 @@ function LiveSessionWorkspace({
         route={selectedRoute}
         stages={stages}
         references={playbook.references}
+        libraryDecks={libraryDeckCount(playbook)}
         timer={timer}
         evidence={evidence}
         completedDeskIds={completedDeskIds}

@@ -5279,6 +5279,16 @@
 }
 
 /* P1: one secondary-controls panel; keep teaching content in the viewport. */
+/* P2: a touch/keyboard-accessible legend, not a hover-only tooltip. */
+.ls-count-legend { position: relative; font-size: 0.875rem; }
+.ls-count-legend > summary { cursor: pointer; display: flex; align-items: center; gap: 5px; min-height: 28px; color: #315fce; }
+.ls-count-legend > dl { margin: 8px 0; padding: 14px; background: #fff; color: #132c44; border: 1px solid #b5c6d6; border-radius: 12px; }
+.ls-count-legend dt { display: flex; gap: 12px; justify-content: space-between; font-weight: 600; }
+.ls-count-legend dd { margin: 3px 0 12px; color: #5b6d80; line-height: 1.5; }
+.ls-count-legend dd:last-child { margin-bottom: 0; }
+.ls-deck-console__coverage .ls-count-legend { grid-column: 1 / -1; }
+.ls-deck-console__coverage .ls-count-legend > dl { position: absolute; z-index: 110; top: 100%; left: 0; width: min(480px, calc(100vw - 56px)); max-height: 55dvh; overflow-y: auto; box-shadow: 0 12px 40px #132c4433; }
+.ls-count-legend summary:focus-visible { outline: 3px solid #315fce; outline-offset: 2px; }
 .ls-workspace-tools--embedded .ls-workspace-tools__menu {
   position: static;
   width: auto;

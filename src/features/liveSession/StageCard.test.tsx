@@ -30,6 +30,12 @@ const question: LiveSessionQuestion = {
 };
 
 describe("StageCard", () => {
+  it("does not invent an answer or turn a stage objective into a question", () => {
+    const html = renderToStaticMarkup(<StageCard stage={stage} question={{ id: "empty", title: "Empty fixture", prompt: "" }} questionIndex={0} flowStep="teach" complete={false} onFlowStepChange={() => undefined} onShowCandidate={() => undefined} />);
+    expect(html).not.toContain("Ask for the decision rule");
+    expect(html).not.toContain('class="ls-spoken-answer"');
+    expect(html).not.toContain("Present to Hamad");
+  });
   it("retains the complete title and objective with an explicit objective disclosure", () => {
     const html = renderToStaticMarkup(
       <StageCard stage={stage} question={question} questionIndex={0} flowStep="teach" complete={false} onFlowStepChange={() => undefined} />
