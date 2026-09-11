@@ -51,6 +51,20 @@ async function renderRunner() {
 }
 
 describe("P1 consolidated session controls", () => {
+  it("P7 announces timer state changes, not changing seconds", async () => {
+    const props = await renderRunner();
+    const announcement = () => tree!.root.findAllByType("p").find(node => node.props.role === "status" && node.children[0] === "Session timer ")!.children.join("");
+    const original = announcement();
+    await act(async () => tree!.update(<LiveSessionRunner {...props} timer={{ ...props.timer, display: "02:29:59", elapsedMs: 1000 }} />));
+    expect(announcement()).toBe(original);
+    await act(async () => tree!.update(<LiveSessionRunner {...props} timer={{ ...props.timer, status: "running" }} />));
+    expect(announcement()).toContain("Session timer running");
+  });
+  it("P7 gives every rendered runner button an accessible name", async () => {
+    await renderRunner();
+    const text = (node: unknown): string => typeof node === "string" || typeof node === "number" ? String(node) : node && typeof node === "object" && "children" in node ? (node as { children: unknown[] }).children.map(text).join("") : "";
+    for (const button of tree!.root.findAllByType("button")) expect(button.props["aria-label"] || text(button), button.props.className).toBeTruthy();
+  });
   it("P5 prevents rehearsal entry from discarding an unrecorded evidence draft", async () => {
     const props = await renderRunner();
     const button = () => tree!.root.findAllByType("button").find(node => node.children.includes("Rehearse without saving"))!;

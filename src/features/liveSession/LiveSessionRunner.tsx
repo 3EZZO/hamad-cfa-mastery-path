@@ -136,7 +136,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return Boolean(
     target.closest(
-      "input, textarea, select, button, summary, a, [contenteditable='true'], [role='dialog']"
+      "input, textarea, select, button, summary, a, [contenteditable='true'], [role='dialog'], [role='alertdialog']"
     )
   );
 }
@@ -254,6 +254,7 @@ export function LiveSessionRunner({
   const [deskElapsedSeconds, setDeskElapsedSeconds] = useState(0);
   const [deskTimerRunning, setDeskTimerRunning] = useState(false);
   const [advanceHint, setAdvanceHint] = useState("");
+  const [evidenceAnnouncement, setEvidenceAnnouncement] = useState("");
   const [readerSize, setReaderSize] = useState(() => {
     if (!persistPreferences) return 1;
     try {
@@ -430,11 +431,13 @@ export function LiveSessionRunner({
       recordedAt: new Date().toISOString(),
     });
     onDeskCompletionChange(currentDeskKey, true);
+    setEvidenceAnnouncement(`${mode === "rehearsal" ? "Practice" : "Tutor"} evidence recorded: ${targetLabel}. ${mode === "rehearsal" ? "Nothing is saved." : "Check sync status for cloud confirmation."}`);
     setDraft(EMPTY_DRAFT);
     moveForward(true);
   }, [
     currentDeskKey,
     draft,
+    mode,
     evidenceTarget,
     moveForward,
     onDeskCompletionChange,
@@ -929,6 +932,8 @@ export function LiveSessionRunner({
       aria-label={`Live ${session.title}`}
     >
       <header className="ls-livebar">
+        <p className="ls-sr-only" role="status" aria-live="polite" aria-atomic="true">Session timer {timer.status}{timer.expired ? "; planned time has elapsed" : ""}. Response timer {deskTimerRunning ? "running" : "paused"}.</p>
+        <p className="ls-sr-only" role="status" aria-live="polite" aria-atomic="true">{evidenceAnnouncement}</p>
         <div className="ls-livebar__identity">
           <span className="ls-live-dot" aria-hidden="true" />
           <div>
@@ -1010,6 +1015,8 @@ export function LiveSessionRunner({
           ) : (
             <span
               className={`ls-sync ls-sync--${syncState}`}
+              role={syncState === "error" || syncState === "offline" ? undefined : "status"}
+              aria-atomic="true"
             >
               <SyncIcon size={15} /> {syncCopy(syncState).label}
             </span>

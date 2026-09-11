@@ -14,7 +14,7 @@ import {
   Route,
   Sparkles,
 } from "lucide-react";
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import type {
   LiveSessionQuestion,
   LiveSessionStage,
@@ -66,6 +66,7 @@ function CommandBlock({
   sectionRef: React.RefObject<HTMLElement | null>;
   onActivate: () => void;
 }) {
+  const headingId = useId();
   return (
     <section
       ref={sectionRef}
@@ -81,7 +82,7 @@ function CommandBlock({
           <span className="ls-command-block__icon" aria-hidden="true">
             {icon}
           </span>
-          <strong>{label}</strong>
+          <strong id={headingId}>{label}</strong>
           <span className="ls-panel-step__hint">
             {active
               ? "Current step"
@@ -93,7 +94,7 @@ function CommandBlock({
           </span>
         </button>
       </header>
-      <div className="ls-command-block__body">{children}</div>
+      <div className="ls-command-block__body" tabIndex={0} role="region" aria-labelledby={headingId}>{children}</div>
     </section>
   );
 }
@@ -131,6 +132,7 @@ export function StageCard({
   onFlowStepChange,
   onShowCandidate,
 }: StageCardProps) {
+  const titleId = useId();
   const listenFor = question?.listenFor?.length
     ? question.listenFor
     : stage.listenFor;
@@ -165,11 +167,11 @@ export function StageCard({
   };
 
   return (
-    <article className="ls-stage-card" aria-labelledby="ls-stage-title">
+    <article className="ls-stage-card" aria-labelledby={titleId}>
       <header className="ls-stage-card__header">
         <div className="ls-stage-card__identity">
           <p className="ls-eyebrow">{stage.label}</p>
-          <h2 id="ls-stage-title">{question?.title || stage.title}</h2>
+          <h2 id={titleId}>{question?.title || stage.title}</h2>
           {stage.objective && (
             <details className="ls-deck-objective">
               <summary>Teaching objective</summary>

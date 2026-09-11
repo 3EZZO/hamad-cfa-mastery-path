@@ -17,7 +17,7 @@
   --gold-pale: #e9effc;
   --muted: #5b6d80;
   --border: #dce4ed;
-  --green: #087e83;
+  --green: #066570;
   --green-pale: #e1f2ef;
   --danger: #b1444d;
   --danger-pale: #fbe9eb;
@@ -5222,6 +5222,12 @@ summary:focus-visible {
 .app-decision-dialog { width: min(100% - 2rem, 34rem); }
 .app-decision-dialog .calendar-dialog-header h2 { flex: 1; }
 .app-decision-dialog .calendar-dialog-intro { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* P7: opaque two-tone focus stays visible on light and navy surfaces. */
+:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid #315fce; outline-offset: 2px; box-shadow: 0 0 0 2px #fff;
+}
+@media (forced-colors: active) { :focus-visible { outline: 3px solid Highlight; } }
 .sync-recovery-notice { display: flex; align-items: center; gap: .75rem; padding: .875rem 1rem; border: 1px solid #c4a16c; border-radius: .75rem; background: #fff2d5; color: #583806; text-align: left; }
 .sync-recovery-notice > svg { flex: 0 0 auto; }
 .sync-recovery-notice > div { flex: 1; min-width: 0; }

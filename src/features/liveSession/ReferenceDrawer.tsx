@@ -93,6 +93,7 @@ export function ReferenceDrawer({
           <input
             ref={searchRef}
             type="search"
+            aria-label="Search references"
             value={query}
             placeholder="Find a concept, formula, repair, or question ID"
             onChange={event => setQuery(event.target.value)}

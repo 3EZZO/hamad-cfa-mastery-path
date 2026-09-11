@@ -25,7 +25,7 @@ Baseline verified 10 September: 195 application tests, TypeScript check, and 118
 | P4 | Inline recovery/sync guidance and prominent retry | Implemented; automated gate passed |
 | P5 | Explicit memory-only full-workflow rehearsal | Implemented; automated gate passed |
 | P6 | Source-level theme fixes, proportional reading sizes, laptop/mobile adaptation | Implemented; automated gate passed; device appearance unverified |
-| P7 | Contrast, dialogs/focus, accessible controls and announcements | Pending |
+| P7 | Contrast, dialogs/focus, accessible controls and announcements | Implemented; automated gate passed; live assistive-technology verification unverified |
 
 ### Revised validation agreement — no user setup required
 
@@ -45,7 +45,7 @@ For P6, preserve the authored light palette and investigate application-owned CS
 
 For P7, complete the source and automated accessibility review, including computed contrast for authored colour pairs, keyboard/dialog interaction tests and status markup. Report any real-browser or screen-reader gaps instead of claiming a complete device audit.
 
-After P2–P7 pass the revised gate, publish through the existing GitHub Pages workflow and verify deployment completion. Do not publish private playbook JSON, move hosting platforms, require a JSON re-upload or change user records. The next implementation task is **P2: consistent terminology and count explanations**.
+After P2–P7 pass the revised gate, publish through the existing GitHub Pages workflow and verify deployment completion. Do not publish private playbook JSON, move hosting platforms, require a JSON re-upload or change user records. All implementation stages have passed the automated gate; the remaining release step is the existing GitHub Pages deployment.
 
 ## P1 — before / after and rationale
 
@@ -111,6 +111,14 @@ After P2–P7 pass the revised gate, publish through the existing GitHub Pages w
 - Added a sticky mobile Teach/Ask/Answer jump strip; all three panels remain present. Reader buttons and touch controls have 44px minimum height.
 - Preserved the light palette and declared `color-scheme: only light` plus page metadata to opt out of browser auto-darkening. No authored dark theme or dark overlay on the reading surface was found. This does **not** establish or fix a forced-dark browser extension/OS setting on the user's device.
 - Validation: 220 application cases passed after a focused correction retaining the original single-current-step assertion; TypeScript, Pages/private-content audit and 118 rules cases passed. Source contracts reviewed for 390×844, 1366×768, 1536×864 and 1920×1080 CSS viewports. Actual rendering at those sizes, 200% browser zoom and Chrome/Edge/Safari/device darkening remain unverified.
+
+## P7 — focus, contrast and accessible status
+
+- Consolidated calendar and mobile-navigation dialogs on the existing shared focus controller. It skips hidden/inert/disabled controls and closed disclosure contents, traps only the topmost dialog, recaptures escaped focus and restores a valid opener without resetting focus on timer rerenders.
+- Added unique, named keyboard-scrollable Teach/Ask/Answer regions, an explicit reference-search label, deferred-evidence guidance associations and accessible progress values. Existing control actions are unchanged.
+- Timer announcements describe state changes rather than every second. Evidence announcements distinguish practice from live recording and do not claim cloud confirmation. Inline sync recovery retains its own announcement.
+- Darkened semantic green/amber/teal text variants within the existing palette, added dual-tone visible keyboard focus and retained forced-colour support. Automated calculations cover 12 authored text/background pairs at 4.5:1 and focus pairs at 3:1; this is not an exhaustive rendered-page accessibility certification.
+- Validation: **230/230 application tests**, **118/118 non-persistent rule-engine tests**, TypeScript, production Pages build, PWA verification and private-content audit passed. The build's existing large-chunk advisory remains non-blocking. Live keyboard/rendering, browser zoom, screen-reader announcements and device-specific darkening remain unverified; no additional user setup is required.
 
 ## Protected boundaries
 

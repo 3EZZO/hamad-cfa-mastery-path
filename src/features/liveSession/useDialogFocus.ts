@@ -6,12 +6,28 @@ const FOCUSABLE_SELECTOR = [
   "input:not([disabled])",
   "select:not([disabled])",
   "textarea:not([disabled])",
+  "summary",
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
-function focusableElements(container: HTMLElement): HTMLElement[] {
+const dialogStack: HTMLElement[] = [];
+
+export function isElementAvailable(element: HTMLElement): boolean {
+  if (element.closest("[hidden], [inert], [aria-hidden='true']")) return false;
+  for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+    const style = window.getComputedStyle(node);
+    if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") return false;
+    if (node.tagName === "DETAILS" && !node.hasAttribute("open")) {
+      const summary = node.querySelector(":scope > summary");
+      if (!summary?.contains(element)) return false;
+    }
+  }
+  return true;
+}
+
+export function focusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-    element => !element.hidden && element.getAttribute("aria-hidden") !== "true",
+    element => element.tabIndex >= 0 && !element.matches(":disabled") && isElementAvailable(element),
   );
 }
 
@@ -40,9 +56,16 @@ export function useDialogFocus(
         ? document.activeElement
         : null;
     const dialog = dialogRef.current;
-    (initialFocusRef.current ?? dialog)?.focus();
+    if (!dialog) return;
+    dialogStack.push(dialog);
+    const focusFirst = () => {
+      const initial = initialFocusRef.current;
+      (initial && isElementAvailable(initial) ? initial : focusableElements(dialog)[0] ?? dialog).focus();
+    };
+    focusFirst();
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (dialogStack.at(-1) !== dialog) return;
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
@@ -70,10 +93,21 @@ export function useDialogFocus(
       }
     };
 
+    const containFocus = (event: FocusEvent) => {
+      if (dialogStack.at(-1) === dialog && !dialog.contains(event.target as Node)) focusFirst();
+    };
+
     document.addEventListener("keydown", handleKeyDown, true);
+    document.addEventListener("focusin", containFocus, true);
     return () => {
       document.removeEventListener("keydown", handleKeyDown, true);
-      if (trigger?.isConnected) trigger.focus();
+      document.removeEventListener("focusin", containFocus, true);
+      const wasTop = dialogStack.at(-1) === dialog;
+      const index = dialogStack.lastIndexOf(dialog);
+      if (index >= 0) dialogStack.splice(index, 1);
+      const top = dialogStack.at(-1);
+      if (wasTop && trigger?.isConnected && isElementAvailable(trigger) && (!top || top.contains(trigger))) trigger.focus();
+      else if (wasTop && top) (focusableElements(top)[0] ?? top).focus();
     };
   }, [dialogRef, initialFocusRef, open]);
 }

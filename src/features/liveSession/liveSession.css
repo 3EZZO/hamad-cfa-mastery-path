@@ -91,9 +91,9 @@
   --ls-muted: #5b6d80;
   --ls-line: #dae3ec;
   --ls-line-strong: #9eb7cb;
-  --ls-green: #13875d;
+  --ls-green: #0f704c;
   --ls-green-pale: #e2f6ed;
-  --ls-amber: #a96709;
+  --ls-amber: #8a5408;
   --ls-amber-pale: #fff2d5;
   --ls-red: #b23b4a;
   --ls-red-pale: #fee9ed;
@@ -5461,3 +5461,15 @@
   .live-session--running .ls-runner[data-reader-size="1.2"] { overflow-y: auto; }
   .ls-runner[data-reader-size="1.2"] .ls-command-grid { min-height: 16rem; }
 }
+
+/* P7: semantic text contrast and dual-surface keyboard focus. */
+.live-session .ls-stage-strip__items button.is-complete,
+.live-session .ls-deck-console__coverage strong,
+.live-session .ls-stage-card__identity .ls-eyebrow { color: var(--ls-teal-deep); }
+.live-session :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid #315fce; outline-offset: 2px; box-shadow: 0 0 0 2px #fff;
+}
+.live-session .ls-command-block__body:focus-visible { outline-offset: -3px; }
+.live-session .ls-livebar :is(button, a):focus-visible { outline-color: #dceef4; box-shadow: 0 0 0 2px #132c44; }
+.ls-rehearsal-entry p { margin: .5rem 0; color: #5b6d80; }
+@media (forced-colors: active) { .live-session :focus-visible { outline: 3px solid Highlight; } }

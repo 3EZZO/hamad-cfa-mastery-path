@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import type { EvidenceDraft, EvidenceVerdict, ErrorCode } from "./types";
+import { useId } from "react";
 import { ERROR_CODE_COPY } from "./types";
 
 export interface EvidenceRepairFlowProps {
@@ -66,6 +67,8 @@ export function EvidenceRepairFlow({
   onRecord,
   onClose,
 }: EvidenceRepairFlowProps) {
+  const errorHintId = useId();
+  const deferHintId = useId();
   const setVerdict = (verdict: EvidenceVerdict) => {
     onChange({
       ...value,
@@ -167,7 +170,7 @@ export function EvidenceRepairFlow({
               <span>Select every code supported by evidence.</span>
             </div>
           </div>
-          <div className="ls-error-codes">
+          <div className="ls-error-codes" role="group" aria-label="Error codes" aria-describedby={needsErrorCode && !value.errorCodes.length ? errorHintId : undefined}>
             {(Object.keys(ERROR_CODE_COPY) as ErrorCode[]).map(code => (
               <button
                 type="button"
@@ -207,6 +210,8 @@ export function EvidenceRepairFlow({
         </span>
         <textarea
           rows={3}
+          aria-required={needsParkReason}
+          aria-describedby={needsParkReason && !value.note.trim() ? deferHintId : undefined}
           maxLength={500}
           placeholder="Record what Hamad said, wrote, calculated, or corrected."
           value={value.note}
@@ -223,12 +228,12 @@ export function EvidenceRepairFlow({
         <Save size={17} /> {mode === "rehearsal" ? "Practice evidence and continue" : "Save evidence and continue"} <kbd>Enter</kbd>
       </button>
       {needsErrorCode && !value.errorCodes.length && (
-        <p className="ls-evidence__hint">
+        <p className="ls-evidence__hint" id={errorHintId} role="status">
           <CircleAlert size={14} /> Select at least one error code.
         </p>
       )}
       {needsParkReason && !value.note.trim() && (
-        <p className="ls-evidence__hint">
+        <p className="ls-evidence__hint" id={deferHintId} role="status">
           <CircleAlert size={14} /> Record why this item is deferred.
         </p>
       )}

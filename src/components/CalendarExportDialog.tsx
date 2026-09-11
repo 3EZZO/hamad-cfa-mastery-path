@@ -1,5 +1,6 @@
 import { CalendarPlus, Clock3, X } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useDialogFocus } from "../features/liveSession/useDialogFocus";
 import {
   loadCalendarExportPreferences,
   saveCalendarExportPreferences,
@@ -38,24 +39,12 @@ export default function CalendarExportDialog({
     loadCalendarExportPreferences,
   );
   const firstFieldRef = useRef<HTMLInputElement>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocus(open, dialogRef, firstFieldRef, onClose);
 
   useEffect(() => {
     if (!open) return;
     setPreferences(loadCalendarExportPreferences());
-    const timer = window.setTimeout(() => firstFieldRef.current?.focus(), 0);
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCloseRef.current();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("keydown", closeOnEscape);
-    };
   }, [open]);
 
   if (!open) return null;
@@ -70,6 +59,8 @@ export default function CalendarExportDialog({
   return (
     <div className="calendar-dialog-backdrop" onMouseDown={onClose}>
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         aria-labelledby="calendar-export-title"
         aria-modal="true"
         className="calendar-dialog"

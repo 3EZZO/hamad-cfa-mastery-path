@@ -100,6 +100,7 @@ import {
 import CalendarExportDialog from "./components/CalendarExportDialog";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
+import { useDialogFocus } from "./features/liveSession/useDialogFocus";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
@@ -338,7 +339,7 @@ function masteryBand(score: number): { label: string; tone: string } {
 
 function ProgressBar({ value, tone = "gold" }: { value: number; tone?: string }) {
   return (
-    <div className="progress-track" aria-label={`${Math.round(value)} percent`}>
+    <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={clamp(value)} aria-label={`${Math.round(clamp(value))} percent`}>
       <span
         className={cx("progress-fill", `progress-${tone}`)}
         style={{ width: `${clamp(value)}%` }}
@@ -730,6 +731,9 @@ function App() {
   const [selectedWeek, setSelectedWeek] = useState(initialWeek);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
+  const mobileDialogRef = useRef<HTMLElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
+  useDialogFocus(mobileMoreOpen, mobileDialogRef, mobileCloseRef, () => setMobileMoreOpen(false));
   const {
     tracker,
     updateTracker,
@@ -770,15 +774,6 @@ function App() {
     const timer = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(timer);
   }, [toast]);
-
-  useEffect(() => {
-    if (!mobileMoreOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileMoreOpen(false);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [mobileMoreOpen]);
 
   if (!cloudConfigured) {
     return <CloudConfigurationScreen missingKeys={missingConfiguration} />;
@@ -1141,7 +1136,7 @@ function App() {
           </div>
           <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
           <div className="data-actions">
-            <span className={cx("sync-chip", syncCopy.tone)} title={syncCopy.detail} role="status" aria-label={`${syncCopy.label}. ${syncCopy.detail}`}>
+            <span className={cx("sync-chip", syncCopy.tone)} title={syncCopy.detail} role={syncStatus === "error" || syncStatus === "offline" ? undefined : "status"} aria-atomic="true" aria-label={`${syncCopy.label}. ${syncCopy.detail}`}>
               <SyncIcon size={15} />
               <span>{syncCopy.label}</span>
             </span>
@@ -1229,6 +1224,8 @@ function App() {
         <div className="mobile-more-backdrop" onClick={() => setMobileMoreOpen(false)}>
           <section
             className="mobile-more-sheet"
+            ref={mobileDialogRef}
+            tabIndex={-1}
             id="mobile-more-menu"
             role="dialog"
             aria-modal="true"
@@ -1237,7 +1234,7 @@ function App() {
           >
             <header>
               <div><span>HAMAD CFA MASTERY</span><strong>More tools</strong></div>
-              <button className="icon-button" type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close menu"><X size={19} /></button>
+              <button ref={mobileCloseRef} className="icon-button" type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close menu"><X size={19} /></button>
             </header>
             <div className="mobile-more-grid">
               {MOBILE_MORE_IDS.filter(
