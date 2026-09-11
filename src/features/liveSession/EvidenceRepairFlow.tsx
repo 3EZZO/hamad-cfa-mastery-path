@@ -11,6 +11,7 @@ import type { EvidenceDraft, EvidenceVerdict, ErrorCode } from "./types";
 import { ERROR_CODE_COPY } from "./types";
 
 export interface EvidenceRepairFlowProps {
+  mode?: "live" | "rehearsal";
   targetLabel: string;
   value: EvidenceDraft;
   repairInstructions?: string[];
@@ -57,6 +58,7 @@ const VERDICTS: Array<{
 ];
 
 export function EvidenceRepairFlow({
+  mode = "live",
   targetLabel,
   value,
   repairInstructions = [],
@@ -218,7 +220,7 @@ export function EvidenceRepairFlow({
         disabled={!canRecord}
         onClick={onRecord}
       >
-        <Save size={17} /> Save evidence and continue <kbd>Enter</kbd>
+        <Save size={17} /> {mode === "rehearsal" ? "Practice evidence and continue" : "Save evidence and continue"} <kbd>Enter</kbd>
       </button>
       {needsErrorCode && !value.errorCodes.length && (
         <p className="ls-evidence__hint">

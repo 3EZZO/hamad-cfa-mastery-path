@@ -5394,3 +5394,11 @@
 }
 .ls-livebar > .sync-recovery-notice { grid-column: 1 / -1; width: 100%; }
 .ls-complete .sync-recovery-notice { margin: 1rem auto; max-width: 42rem; }
+.ls-rehearsal { border: 3px solid #7056a2; }
+.ls-rehearsal-banner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; background: #eee8f6; color: #422b68; border-bottom: 2px solid #7056a2; }
+.ls-rehearsal-banner strong, .ls-rehearsal-banner span { display: block; }
+.ls-rehearsal-banner span { font-size: .875rem; line-height: 1.45; margin-top: .2rem; }
+.ls-rehearsal-badge { padding: .5rem; border: 1px solid #d4c4f4; border-radius: .5rem; color: #eee8f6; font-weight: 700; }
+.live-session.ls-rehearsal.live-session--running { display: flex; flex-direction: column; min-height: 0; height: var(--ls-workspace-height, 100dvh); }
+.live-session.ls-rehearsal > .ls-runner { flex: 1; min-height: 0; height: auto; }
+@media (max-width: 899px) { .ls-rehearsal-banner { flex-wrap: wrap; } .live-session.ls-rehearsal.live-session--running { height: auto; min-height: 100dvh; } }

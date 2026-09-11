@@ -20,6 +20,7 @@ import type {
 } from "./types";
 
 export interface SessionCloseoutProps {
+  mode?: "live" | "rehearsal";
   session: LiveSessionDescriptor;
   route: LiveSessionRoute;
   stages: LiveSessionStage[];
@@ -53,6 +54,7 @@ export function inferMastery(
 }
 
 export function SessionCloseout({
+  mode = "live",
   session,
   route,
   stages,
@@ -134,12 +136,12 @@ export function SessionCloseout({
     <form className="ls-closeout" onSubmit={submit} aria-labelledby="ls-closeout-title">
       <header className="ls-closeout__header">
         <button className="ls-button ls-button--quiet" type="button" onClick={onBack}>
-          <ArrowLeft size={17} /> Return to session
+          <ArrowLeft size={17} /> {mode === "rehearsal" ? "Return to rehearsal" : "Return to session"}
         </button>
         <div>
           <p className="ls-eyebrow">Evidence before completion</p>
-          <h1 id="ls-closeout-title">Close Session {String(session.number).padStart(2, "0")}</h1>
-          <p>Review the evidence once. The tracker records the final decisions.</p>
+          <h1 id="ls-closeout-title">{mode === "rehearsal" ? "Close rehearsal" : "Close Session"} {String(session.number).padStart(2, "0")}</h1>
+          <p>{mode === "rehearsal" ? "Practice reviewing the evidence. These decisions will not be saved." : "Review the evidence once. The tracker records the final decisions."}</p>
         </div>
         <span className="ls-closeout__private"><ShieldCheck size={17} /> Tutor view</span>
       </header>
@@ -182,7 +184,7 @@ export function SessionCloseout({
       <section className="ls-closeout__section">
         <div className="ls-section-heading">
           <span>2</span>
-          <div><h2>Shared session record</h2><p>These fields can flow directly into Session Notes and the weekly plan.</p></div>
+          <div><h2>{mode === "rehearsal" ? "Practice session record" : "Shared session record"}</h2><p>{mode === "rehearsal" ? "These practice fields stay in memory and are discarded on exit." : "These fields can flow directly into Session Notes and the weekly plan."}</p></div>
         </div>
         <div className="ls-closeout__form-grid">
           <label className="ls-field ls-field--wide">
@@ -202,16 +204,16 @@ export function SessionCloseout({
             <input required maxLength={300} value={delayedRetest} onChange={event => setDelayedRetest(event.target.value)} placeholder="Date, question set, and release threshold" />
           </label>
           <label className="ls-field">
-            <span>Private tutor note <small>never shown to Hamad</small></span>
+            <span>Private tutor note <small>{mode === "rehearsal" ? "practice only — not saved" : "never shown to Hamad"}</small></span>
             <input maxLength={500} value={privateTutorNote} onChange={event => setPrivateTutorNote(event.target.value)} placeholder="Optional coaching observation" />
           </label>
         </div>
       </section>
 
       <footer className="ls-closeout__footer">
-        <div><Save size={18} /><span><strong>One clean save</strong><small>Evidence, mastery, mistakes, and next actions remain synchronized.</small></span></div>
+        <div><Save size={18} /><span><strong>{mode === "rehearsal" ? "Practice only" : "One clean save"}</strong><small>{mode === "rehearsal" ? "No evidence, progress or notes will be saved." : "Evidence, mastery, mistakes, and next actions remain synchronized."}</small></span></div>
         <button className="ls-button ls-button--primary ls-button--large" type="submit" disabled={saving}>
-          <Check size={18} /> {saving ? "Saving session…" : "Save and finish"}
+          <Check size={18} /> {mode === "rehearsal" ? "Finish rehearsal without saving" : saving ? "Saving session…" : "Save and finish"}
         </button>
       </footer>
     </form>

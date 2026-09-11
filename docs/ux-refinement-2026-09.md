@@ -23,7 +23,7 @@ Baseline verified 10 September: 195 application tests, TypeScript check, and 118
 | P2 | Shared count glossary, destination naming and task subtitles | Implemented; automated gate passed; visual verification unverified |
 | P3 | Styled confirmations/prompts; preserve existing decisions | Implemented; automated gate passed |
 | P4 | Inline recovery/sync guidance and prominent retry | Implemented; automated gate passed |
-| P5 | Explicit memory-only full-workflow rehearsal | Pending |
+| P5 | Explicit memory-only full-workflow rehearsal | Implemented; automated gate passed |
 | P6 | Source-level theme fixes, proportional reading sizes, laptop/mobile adaptation | Pending; actual-device diagnosis excluded from the mandatory gate |
 | P7 | Contrast, dialogs/focus, accessible controls and announcements | Pending |
 
@@ -96,6 +96,13 @@ After P2–P7 pass the revised gate, publish through the existing GitHub Pages w
 - Added a shared inline recovery notice to the tracker (including mobile), Session Mode header and completed-session screen. Failure details are no longer hidden in hover titles; Retry sync is an explicit primary action.
 - Supplied error details are preserved. Offline/missing-detail states give connection/access guidance without suggesting storage deletion. Existing queue/retry callbacks remain unchanged.
 - Validation: 211 application tests, TypeScript, Pages build/private-content audit and 118 non-persistent rules cases passed. Live rendering/touch and screen-reader announcement behavior remain unverified.
+
+## P5 — isolated rehearsal
+
+- Added a visually distinct rehearsal workspace using the actual runner, timers, evidence controls and closeout form. It receives only playbook/session/route data and an exit callback; all practice state stays in React memory. Reader preferences are neither read nor written in rehearsal.
+- Available from launch and completed-session tools, and running-session tools when no unrecorded evidence draft exists. Closeout does not offer rehearsal, protecting its unsaved form fields.
+- Entry pauses a running live timer through the existing checkpoint behavior; this is one legitimate live pause, not a rehearsal write. Practice actions do not call live run/completion/delete handlers. Exit restores saved live position/evidence/coverage with the live timer paused; switching sessions discards rehearsal.
+- Validation: 217 application cases covered by the full pass plus focused corrections/additions; actual Next/Space, four verdicts, timer, closeout/back, re-entry and host isolation tested. TypeScript, Pages/private-content audit and 118 non-persistent rules cases passed. Live rendering remains unverified.
 
 ## Protected boundaries
 

@@ -39,6 +39,7 @@ import { useSessionTimer } from "./useSessionTimer";
 import { recoverSessionTimer } from "./sessionClock";
 import { TeachingLibrary } from "./TeachingLibrary";
 import { libraryDeckCount, SESSION_TERMS } from "./sessionGlossary";
+import { RehearsalWorkspace } from "./RehearsalWorkspace";
 
 const PREFLIGHT_FRESHNESS_MS = 5 * 60 * 1_000;
 
@@ -133,6 +134,7 @@ function WorkspaceTools({
   onExit,
   preflight,
   embedded = false,
+  onRehearse,
 }: Pick<
   LiveSessionConsoleProps,
   "replacingPlaybook" | "onReplacePlaybook" | "onExit"
@@ -140,6 +142,7 @@ function WorkspaceTools({
   playbook: LiveSessionPlaybook;
   preflight?: ReactNode;
   embedded?: boolean;
+  onRehearse?: () => void;
 }) {
   const content = (
       <div className="ls-workspace-tools__menu">
@@ -149,6 +152,7 @@ function WorkspaceTools({
           <small>{playbook.version}</small>
         </div>
         {preflight}
+        {onRehearse && <button type="button" onClick={onRehearse}>Rehearse without saving</button>}
         <TeachingLibrary stages={playbook.libraryStages ?? []} />
         {onReplacePlaybook && (
           <button
@@ -190,6 +194,7 @@ function WorkspaceFrame({
   onExit,
   preflight,
   running = false,
+  onRehearse,
   children,
 }: Pick<
   LiveSessionConsoleProps,
@@ -198,6 +203,7 @@ function WorkspaceFrame({
   playbook: LiveSessionPlaybook;
   preflight?: ReactNode;
   running?: boolean;
+  onRehearse?: () => void;
   children: ReactNode;
 }) {
   return (
@@ -210,6 +216,7 @@ function WorkspaceFrame({
             onReplacePlaybook={onReplacePlaybook}
             onExit={onExit}
             preflight={preflight}
+            onRehearse={onRehearse}
           />
         </div>
       )}
@@ -259,7 +266,20 @@ export function LiveSessionConsole(props: LiveSessionConsoleProps) {
       </div>
     );
   }
-  return <LiveSessionWorkspace {...props} playbook={playbook} />;
+  return <SessionWorkspaceHost {...props} playbook={playbook} />;
+}
+
+function SessionWorkspaceHost(props: LiveSessionConsoleProps & { playbook: LiveSessionPlaybook }) {
+  const [practiceRoute, setPracticeRoute] = useState<LiveSessionRoute | null>(null);
+  const active = props.active !== false;
+  useEffect(() => { if (!active) setPracticeRoute(null); }, [active]);
+  return <>
+    <LiveSessionWorkspace {...props} active={active && !practiceRoute} onOpenRehearsal={setPracticeRoute} />
+    {active && practiceRoute && <RehearsalWorkspace
+      key={`${props.session.id}:${practiceRoute.id}`} session={props.session}
+      playbook={props.playbook} route={practiceRoute} onExit={() => setPracticeRoute(null)}
+    />}
+  </>;
 }
 
 function LiveSessionWorkspace({
@@ -280,7 +300,8 @@ function LiveSessionWorkspace({
   onComplete,
   onDiscardRehearsal,
   onExit,
-}: LiveSessionConsoleProps & { playbook: LiveSessionPlaybook }) {
+  onOpenRehearsal,
+}: LiveSessionConsoleProps & { playbook: LiveSessionPlaybook; onOpenRehearsal: (route: LiveSessionRoute) => void }) {
   const initialRouteId = preferredRouteId(playbook, initialRun?.routeId);
   const [phase, setPhase] = useState<LiveSessionPhase>(
     initialRun?.phase ?? "launch"
@@ -594,6 +615,7 @@ function LiveSessionWorkspace({
         onReplacePlaybook={onReplacePlaybook}
         onExit={onExit}
         preflight={preflightPanel}
+        onRehearse={() => onOpenRehearsal(selectedRoute)}
       >
         <SessionLaunch
           session={session}
@@ -619,6 +641,7 @@ function LiveSessionWorkspace({
           onReplacePlaybook={onReplacePlaybook}
           replacingPlaybook={replacingPlaybook}
           onStart={handleStart}
+          onRehearse={onOpenRehearsal}
           onExit={onExit}
         />
       </WorkspaceFrame>
@@ -655,6 +678,7 @@ function LiveSessionWorkspace({
         onReplacePlaybook={onReplacePlaybook}
         onExit={onExit}
         preflight={preflightPanel}
+        onRehearse={() => onOpenRehearsal(selectedRoute)}
       >
         <section className="ls-complete" aria-labelledby="ls-complete-title">
           <span className="ls-complete__mark">
@@ -826,6 +850,7 @@ function LiveSessionWorkspace({
           />
         }
         onSyncRetry={onRetry}
+        onRehearse={() => onOpenRehearsal(selectedRoute)}
         onEvidence={entry => setEvidence(current => [...current, entry])}
         onDeskCompletionChange={(deskKey, complete) => {
           setCompletedDeskIds(current => {

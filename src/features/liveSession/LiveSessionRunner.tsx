@@ -72,6 +72,8 @@ import type {
 } from "./types";
 
 export interface LiveSessionRunnerProps {
+  mode?: "live" | "rehearsal";
+  persistPreferences?: boolean;
   session: LiveSessionDescriptor;
   route: LiveSessionRoute;
   stages: LiveSessionStage[];
@@ -85,6 +87,7 @@ export interface LiveSessionRunnerProps {
   syncState?: SyncPresentation;
   syncMessage?: string;
   sessionTools?: ReactNode;
+  onRehearse?: () => void;
   onEvidence: (entry: LiveSessionEvidence) => void;
   onDeskCompletionChange: (deskKey: string, complete: boolean) => void;
   onPositionChange?: (stageIndex: number, questionIndex: number) => void;
@@ -220,12 +223,15 @@ export function LiveSessionRunner({
   syncState = "synced",
   syncMessage,
   sessionTools,
+  onRehearse,
   onEvidence,
   onDeskCompletionChange,
   onPositionChange,
   onSyncRetry,
   onRequestCloseout,
   onExit,
+  mode = "live",
+  persistPreferences = true,
 }: LiveSessionRunnerProps) {
   const safeInitialStage = Math.min(
     Math.max(0, initialStageIndex),
@@ -236,6 +242,7 @@ export function LiveSessionRunner({
     Math.max(0, initialQuestionIndex)
   );
   const [draft, setDraft] = useState<EvidenceDraft>(EMPTY_DRAFT);
+  const hasUnrecordedDraft = Boolean(draft.verdict || draft.note || draft.errorCodes.length || draft.confidence !== 3);
   const [candidateOpen, setCandidateOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -247,6 +254,7 @@ export function LiveSessionRunner({
   const [deskTimerRunning, setDeskTimerRunning] = useState(false);
   const [advanceHint, setAdvanceHint] = useState("");
   const [readerSize, setReaderSize] = useState(() => {
+    if (!persistPreferences) return 1;
     try {
       const saved = Number(localStorage.getItem("hamad-session-reader-size"));
       return [1, 1.1, 1.2].includes(saved) ? saved : 1;
@@ -260,6 +268,7 @@ export function LiveSessionRunner({
       Math.max(1, Math.round((readerSize + direction * 0.1) * 10) / 10)
     );
     setReaderSize(next);
+    if (!persistPreferences) return;
     try {
       localStorage.setItem("hamad-session-reader-size", String(next));
     } catch {
@@ -880,14 +889,14 @@ export function LiveSessionRunner({
           ? "Next: explain answer"
           : "Next: record evidence"
       : linearAction.kind === "record-evidence"
-        ? "Save evidence & next"
+        ? mode === "rehearsal" ? "Practice evidence & next" : "Save evidence & next"
         : linearAction.kind === "focus-evidence"
           ? "Complete evidence details"
           : hasNextQueueDeck || nextOpenDeck
             ? currentDeckCovered
               ? "Next deck"
               : "Cover & next deck"
-            : "Finish session";
+            : mode === "rehearsal" ? "Finish rehearsal" : "Finish session";
 
   if (!stage) {
     return (
@@ -986,7 +995,7 @@ export function LiveSessionRunner({
           </button>
         </div>
         <div className="ls-livebar__actions">
-          {(syncState === "error" || syncState === "offline") && onSyncRetry ? (
+          {mode === "rehearsal" ? <span className="ls-rehearsal-badge">Practice only</span> : (syncState === "error" || syncState === "offline") && onSyncRetry ? (
             <button
               className={`ls-sync ls-sync--${syncState}`}
               type="button"
@@ -1008,10 +1017,10 @@ export function LiveSessionRunner({
             type="button"
             onClick={onRequestCloseout}
           >
-            <Flag size={16} /> Finish session
+            <Flag size={16} /> {mode === "rehearsal" ? "Finish rehearsal" : "Finish session"}
           </button>
         </div>
-        <SyncRecoveryNotice state={syncState} message={syncMessage} onRetry={onSyncRetry} />
+        {mode === "live" && <SyncRecoveryNotice state={syncState} message={syncMessage} onRetry={onSyncRetry} />}
       </header>
 
       <section
@@ -1367,6 +1376,10 @@ export function LiveSessionRunner({
               </section>
             )}
             {sessionTools}
+            {onRehearse && <div className="ls-rehearsal-entry">
+              <button type="button" className="ls-button ls-button--quiet" disabled={hasUnrecordedDraft} onClick={() => { if (!hasUnrecordedDraft) onRehearse(); }}>Rehearse without saving</button>
+              {hasUnrecordedDraft && <p>Record the current evidence draft before entering rehearsal.</p>}
+            </div>}
           </div>
         </details>
         <button
@@ -1498,6 +1511,7 @@ export function LiveSessionRunner({
 
         {evidenceTarget ? (
           <EvidenceRepairFlow
+            mode={mode}
             targetLabel={targetLabel}
             value={draft}
             repairInstructions={

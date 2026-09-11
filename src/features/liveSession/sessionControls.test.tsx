@@ -2,6 +2,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveSessionRunner, type LiveSessionRunnerProps } from "./LiveSessionRunner";
 import { StageCard } from "./StageCard";
+import { EvidenceRepairFlow } from "./EvidenceRepairFlow";
 import { ReferenceDrawer } from "./ReferenceDrawer";
 import { adaptTutorPlaybookPackage } from "./adaptTutorPlaybook";
 import { syntheticPlaybook } from "../../testFixtures/tutorPlaybooks";
@@ -42,6 +43,7 @@ async function renderRunner() {
     },
     onEvidence: vi.fn(), onDeskCompletionChange: vi.fn(),
     onPositionChange: vi.fn(), onRequestCloseout: vi.fn(),
+    onRehearse: vi.fn(),
     sessionTools: <button type="button">Existing playbook controls</button>,
   };
   await act(async () => { tree = create(<LiveSessionRunner {...props} />); });
@@ -49,6 +51,15 @@ async function renderRunner() {
 }
 
 describe("P1 consolidated session controls", () => {
+  it("P5 prevents rehearsal entry from discarding an unrecorded evidence draft", async () => {
+    const props = await renderRunner();
+    const button = () => tree!.root.findAllByType("button").find(node => node.children.includes("Rehearse without saving"))!;
+    expect(button().props.disabled).toBe(false);
+    await act(async () => tree!.root.findByType(EvidenceRepairFlow).props.onChange({ verdict: "parked", note: "Unsaved note", confidence: 3, errorCodes: [] }));
+    expect(button().props.disabled).toBe(true);
+    await act(async () => button().props.onClick());
+    expect(props.onRehearse).not.toHaveBeenCalled();
+  });
   it("keeps stages and existing workspace actions in a single closed tools panel", async () => {
     await renderRunner();
     const tools = tree!.root.find(node => node.type === "details" && node.props.className === "ls-deck-tools");

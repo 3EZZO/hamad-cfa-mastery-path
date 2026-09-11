@@ -37,6 +37,7 @@ export interface SessionLaunchProps {
   onReplacePlaybook?: () => void;
   replacingPlaybook?: boolean;
   onStart: (route: LiveSessionRoute) => void;
+  onRehearse?: (route: LiveSessionRoute) => void;
   onExit?: () => void;
 }
 
@@ -71,6 +72,7 @@ export function SessionLaunch({
   onReplacePlaybook,
   replacingPlaybook = false,
   onStart,
+  onRehearse,
   onExit,
 }: SessionLaunchProps) {
   const initialRoute = useMemo(
@@ -242,6 +244,7 @@ export function SessionLaunch({
       </fieldset>
 
       <footer className="ls-launch__footer">
+        {onRehearse && selectedRoute && <button className="ls-button ls-button--quiet" type="button" onClick={() => onRehearse(selectedRoute)}>Rehearse without saving</button>}
         <div>
           <span>Selected route</span>
           <strong>
