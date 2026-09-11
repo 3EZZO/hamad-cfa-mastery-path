@@ -54,6 +54,7 @@ import {
   type SessionDeck,
 } from "./sessionDeckModel";
 import { StageCard } from "./StageCard";
+import { SessionReadingContext } from "./SessionReadingContext";
 import { SyncRecoveryNotice } from "../../components/SyncRecoveryNotice";
 import { SessionCountLegend, SESSION_TERMS } from "./sessionGlossary";
 import type { SessionTimerController } from "./useSessionTimer";
@@ -921,6 +922,7 @@ export function LiveSessionRunner({
   }
 
   return (
+    <SessionReadingContext.Provider value={readerSize}>
     <section
       className="ls-runner"
       data-reader-size={readerSize}
@@ -1628,5 +1630,6 @@ export function LiveSessionRunner({
         onClose={() => setReferenceOpen(false)}
       />
     </section>
+    </SessionReadingContext.Provider>
   );
 }

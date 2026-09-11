@@ -213,6 +213,9 @@ export function StageCard({
         </div>
       </header>
 
+      <nav className="ls-panel-jumps" aria-label="Jump to teaching panel">
+        {(["teach", "ask", "answer"] as TeachingFlowStep[]).map(step => <button key={step} type="button" aria-pressed={flowStep === step} onClick={() => moveTo(step)}>{step === "teach" ? "Teach" : step === "ask" ? "Ask" : "Answer"}</button>)}
+      </nav>
       <div className="ls-command-grid" aria-label="Tutor command desk">
         <CommandBlock
           icon={<Lightbulb size={19} />}

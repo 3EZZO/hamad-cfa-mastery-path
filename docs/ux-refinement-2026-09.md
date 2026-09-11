@@ -24,7 +24,7 @@ Baseline verified 10 September: 195 application tests, TypeScript check, and 118
 | P3 | Styled confirmations/prompts; preserve existing decisions | Implemented; automated gate passed |
 | P4 | Inline recovery/sync guidance and prominent retry | Implemented; automated gate passed |
 | P5 | Explicit memory-only full-workflow rehearsal | Implemented; automated gate passed |
-| P6 | Source-level theme fixes, proportional reading sizes, laptop/mobile adaptation | Pending; actual-device diagnosis excluded from the mandatory gate |
+| P6 | Source-level theme fixes, proportional reading sizes, laptop/mobile adaptation | Implemented; automated gate passed; device appearance unverified |
 | P7 | Contrast, dialogs/focus, accessible controls and announcements | Pending |
 
 ### Revised validation agreement — no user setup required
@@ -103,6 +103,14 @@ After P2–P7 pass the revised gate, publish through the existing GitHub Pages w
 - Available from launch and completed-session tools, and running-session tools when no unrecorded evidence draft exists. Closeout does not offer rehearsal, protecting its unsaved form fields.
 - Entry pauses a running live timer through the existing checkpoint behavior; this is one legitimate live pause, not a rehearsal write. Practice actions do not call live run/completion/delete handlers. Exit restores saved live position/evidence/coverage with the live timer paused; switching sessions discards rehearsal.
 - Validation: 217 application cases covered by the full pass plus focused corrections/additions; actual Next/Space, four verdicts, timer, closeout/back, re-entry and host isolation tested. TypeScript, Pages/private-content audit and 118 non-persistent rules cases passed. Live rendering remains unverified.
+
+## P6 — proportional reading and responsive layout
+
+- Replaced fixed Session Mode font sizes with a shared 100/110/120% scale across 204 declarations. Secondary metadata has a 13px baseline floor, controls a 14px floor and reading text a 16px baseline. The same reader setting reaches the portal library through UI-only context.
+- Control rows grow to fit text; normal laptop/desktop layouts retain three independently scrolling panels. Short-height/enlarged-text conditions allow outer reflow rather than clipping.
+- Added a sticky mobile Teach/Ask/Answer jump strip; all three panels remain present. Reader buttons and touch controls have 44px minimum height.
+- Preserved the light palette and declared `color-scheme: only light` plus page metadata to opt out of browser auto-darkening. No authored dark theme or dark overlay on the reading surface was found. This does **not** establish or fix a forced-dark browser extension/OS setting on the user's device.
+- Validation: 220 application cases passed after a focused correction retaining the original single-current-step assertion; TypeScript, Pages/private-content audit and 118 rules cases passed. Source contracts reviewed for 390×844, 1366×768, 1536×864 and 1920×1080 CSS viewports. Actual rendering at those sizes, 200% browser zoom and Chrome/Edge/Safari/device darkening remain unverified.
 
 ## Protected boundaries
 

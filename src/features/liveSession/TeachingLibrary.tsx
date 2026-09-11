@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowRight, LibraryBig, Search, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
+import { SessionReadingContext } from "./SessionReadingContext";
 import { createPortal } from "react-dom";
 import { flattenSessionDecks } from "./sessionDeckModel";
 import { StageCard } from "./StageCard";
@@ -7,6 +8,7 @@ import type { LiveSessionStage, TeachingFlowStep } from "./types";
 import { useDialogFocus } from "./useDialogFocus";
 
 export function TeachingLibrary({ stages }: { stages: LiveSessionStage[] }) {
+  const readerSize = useContext(SessionReadingContext);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [stageId, setStageId] = useState("");
@@ -38,7 +40,7 @@ export function TeachingLibrary({ stages }: { stages: LiveSessionStage[] }) {
       </button>
       {open &&
         createPortal(
-          <div className="live-session ls-library-backdrop">
+          <div className="live-session ls-library-backdrop" data-reader-size={readerSize}>
             <section
               ref={dialogRef}
               className="ls-library"
