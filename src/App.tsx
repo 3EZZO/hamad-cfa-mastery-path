@@ -2323,7 +2323,12 @@ function TutorAdminView({
       if (!await dialog.confirm(summary)) return;
       updateTracker((current) => ({
         ...current,
-        sessionOverrides: result.overrides,
+        sessionOverrides: cascadeReschedule(
+          current.sessionOverrides,
+          selectedSession,
+          newDate,
+          rescheduleReason,
+        ).overrides,
       }));
       setRescheduleReason("");
       notify(

@@ -89,6 +89,7 @@ After P2–P7 pass the revised gate, publish through the existing GitHub Pages w
 - Replaced all 11 native confirm/prompt calls with one styled dialog provider using the existing calendar-modal pattern, focus trap, Escape/backdrop cancellation and focus restoration.
 - Confirmations retain their original messages and decisions; prompts retain defaults, exact text and null cancellation. The optional return-note cancellation still submits an empty note, as before. Reset still requires the exact phrase and downloads the backup before replacing progress.
 - Pending decisions cancel when their view/account/navigation scope exits; no cloud or permissions code changed.
+- Final release audit correction: approved rescheduling recomputes overrides from the current state, retaining unrelated remote schedule updates received while the asynchronous confirmation was open. Pre-dialog validation and confirmation wording are preserved.
 - Validation: 208 application tests (six new dialog tests), TypeScript, Pages build/private-content audit and 118 non-persistent rules cases passed. Actual keyboard/rendered-browser behavior remains unverified.
 
 ## P4 — visible recovery

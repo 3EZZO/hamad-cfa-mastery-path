@@ -56,4 +56,11 @@ describe("P3 styled decisions", () => {
     expect(app).toContain('confirmation !== "RESET HAMAD MASTERY"');
     expect(app.indexOf("downloadBackup(tracker);", app.indexOf("const resetSharedProgress"))).toBeLessThan(app.indexOf("await replaceTrackerAuthoritatively(createDefaultState())"));
   });
+  it("applies approved rescheduling to current overrides, not a pre-dialog snapshot", () => {
+    const app = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
+    const handler = app.slice(app.indexOf("const submitReschedule"), app.indexOf("const restoreSchedule"));
+    const approved = handler.slice(handler.indexOf("await dialog.confirm(summary)"));
+    expect(approved).toMatch(/updateTracker\(\(current\) => \(\{[\s\S]*sessionOverrides: cascadeReschedule\(\s*current\.sessionOverrides,/);
+    expect(approved).not.toContain("sessionOverrides: result.overrides");
+  });
 });
