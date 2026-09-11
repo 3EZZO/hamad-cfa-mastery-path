@@ -21,7 +21,7 @@ Baseline verified 10 September: 195 application tests, TypeScript check, and 118
 | --- | --- | --- |
 | P1 | Consolidate controls; reduce chrome; expose full titles | Implemented locally; automated gate passed; visual verification deferred |
 | P2 | Shared count glossary, destination naming and task subtitles | Implemented; automated gate passed; visual verification unverified |
-| P3 | Styled confirmations/prompts; preserve existing decisions | Pending |
+| P3 | Styled confirmations/prompts; preserve existing decisions | Implemented; automated gate passed |
 | P4 | Inline recovery/sync guidance and prominent retry | Pending |
 | P5 | Explicit memory-only full-workflow rehearsal | Pending |
 | P6 | Source-level theme fixes, proportional reading sizes, laptop/mobile adaptation | Pending; actual-device diagnosis excluded from the mandatory gate |
@@ -83,6 +83,13 @@ After P2–P7 pass the revised gate, publish through the existing GitHub Pages w
 - Empty question/answer fields are omitted; candidate presentation cannot substitute an objective for a missing question. Uploaded teaching content is unchanged.
 - Validation: 202 application tests, TypeScript, Pages build/private-content audit and 118 non-persistent rules cases passed. Candidate-view omission received a final narrow regression check.
 - Live rendering and screen-reader use remain unverified under the revised agreement. No JSON re-upload is required.
+
+## P3 — consistent decisions
+
+- Replaced all 11 native confirm/prompt calls with one styled dialog provider using the existing calendar-modal pattern, focus trap, Escape/backdrop cancellation and focus restoration.
+- Confirmations retain their original messages and decisions; prompts retain defaults, exact text and null cancellation. The optional return-note cancellation still submits an empty note, as before. Reset still requires the exact phrase and downloads the backup before replacing progress.
+- Pending decisions cancel when their view/account/navigation scope exits; no cloud or permissions code changed.
+- Validation: 208 application tests (six new dialog tests), TypeScript, Pages build/private-content audit and 118 non-persistent rules cases passed. Actual keyboard/rendered-browser behavior remains unverified.
 
 ## Protected boundaries
 

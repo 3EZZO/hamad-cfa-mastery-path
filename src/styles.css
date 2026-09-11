@@ -5217,3 +5217,7 @@ summary:focus-visible {
     gap: 6px;
   }
 }
+.app-decision-backdrop { z-index: 1000; }
+.app-decision-dialog { width: min(100% - 2rem, 34rem); }
+.app-decision-dialog .calendar-dialog-header h2 { flex: 1; }
+.app-decision-dialog .calendar-dialog-intro { white-space: pre-wrap; overflow-wrap: anywhere; }

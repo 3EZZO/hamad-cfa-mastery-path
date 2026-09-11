@@ -98,6 +98,7 @@ import {
   useTrackerSync,
 } from "./hooks/useTrackerSync";
 import CalendarExportDialog from "./components/CalendarExportDialog";
+import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
@@ -756,6 +757,7 @@ function App() {
     privateNotesError,
     updatePrivateTutorNotes,
   } = useTrackerSync();
+  const dialog = useAppDialog(`${user?.uid ?? "signed-out"}:${role}:${activeTab}`);
   const [toast, setToast] = useState<{
     message: string;
     tone: "success" | "warning";
@@ -849,7 +851,7 @@ function App() {
     }
     try {
       const imported = await readBackup(file);
-      const approved = window.confirm(
+      const approved = await dialog.confirm(
         "Importing this backup will replace the current shared progress and sync it to every device. Continue?",
       );
       if (!approved) return;
@@ -1792,6 +1794,7 @@ function SessionLogView({
   notify: Notify;
   canManage: boolean;
 }) {
+  const dialog = useAppDialog();
   const initialPlannedSession =
     getWeekSessions(PLAN[currentWeek - 1]!)[0] ??
     PLANNED_SESSIONS.at(-1)!.session;
@@ -1819,8 +1822,8 @@ function SessionLogView({
     notify("Tutor session logged.");
   };
 
-  const remove = (id: string) => {
-    if (!window.confirm("Delete this session log?")) return;
+  const remove = async (id: string) => {
+    if (!await dialog.confirm("Delete this session log?")) return;
     updateTracker((current) => ({ ...current, sessionLogs: current.sessionLogs.filter((entry) => entry.id !== id) }));
   };
 
@@ -1887,6 +1890,7 @@ function PracticeLogView({
   updateTracker: UpdateTracker;
   notify: Notify;
 }) {
+  const dialog = useAppDialog();
   const [form, setForm] = useState({
     date: todayDateOnly(),
     topic: TOPICS[0] as string,
@@ -1914,8 +1918,8 @@ function PracticeLogView({
     notify("Practice block logged.");
   };
 
-  const remove = (id: string) => {
-    if (!window.confirm("Delete this practice block?")) return;
+  const remove = async (id: string) => {
+    if (!await dialog.confirm("Delete this practice block?")) return;
     updateTracker((current) => ({ ...current, practiceLogs: current.practiceLogs.filter((entry) => entry.id !== id) }));
   };
 
@@ -2031,6 +2035,7 @@ function MockView({
   notify: Notify;
   canManage: boolean;
 }) {
+  const dialog = useAppDialog();
   const [form, setForm] = useState({
     date: todayDateOnly(),
     milestoneWeek: null as number | null,
@@ -2061,8 +2066,8 @@ function MockView({
     notify("Mock score logged.");
   };
 
-  const remove = (id: string) => {
-    if (!window.confirm("Delete this mock score?")) return;
+  const remove = async (id: string) => {
+    if (!await dialog.confirm("Delete this mock score?")) return;
     updateTracker((current) => ({ ...current, mockScores: current.mockScores.filter((entry) => entry.id !== id) }));
   };
 
@@ -2138,6 +2143,7 @@ function ErrorVaultView({
   updateTracker: UpdateTracker;
   notify: Notify;
 }) {
+  const dialog = useAppDialog();
   const [form, setForm] = useState({
     date: todayDateOnly(),
     topic: TOPICS[0] as string,
@@ -2161,8 +2167,8 @@ function ErrorVaultView({
     updateTracker((current) => ({ ...current, errorEntries: current.errorEntries.map((entry) => entry.id === id ? { ...entry, resolved: !entry.resolved } : entry) }));
   };
 
-  const remove = (id: string) => {
-    if (!window.confirm("Delete this error-vault entry?")) return;
+  const remove = async (id: string) => {
+    if (!await dialog.confirm("Delete this error-vault entry?")) return;
     updateTracker((current) => ({ ...current, errorEntries: current.errorEntries.filter((entry) => entry.id !== id) }));
   };
 
@@ -2224,6 +2230,7 @@ function TutorAdminView({
   syncStatus: TrackerSyncStatus;
   notify: Notify;
 }) {
+  const dialog = useAppDialog();
   const effectiveSessions = getEffectiveSessions(tracker.sessionOverrides);
   const [selectedSession, setSelectedSession] = useState(1);
   const selected = effectiveSessions.find(
@@ -2268,16 +2275,17 @@ function TutorAdminView({
       .filter((entry) => entry.request && getTaskStatus(entry.task, tracker) === "requested"),
   );
 
-  const reviewSessionRequest = (
+  const reviewSessionRequest = async (
     taskId: string,
     status: "approved" | "returned",
   ) => {
+    const note = status === "returned"
+      ? await dialog.prompt("Optional follow-up note for Hamad:", "Please review the session action points.") ?? ""
+      : "";
+    if (!dialog.active()) return;
     updateTracker((current) => {
       const request = current.sessionCompletionRequests[taskId];
       if (!request) return current;
-      const note = status === "returned"
-        ? window.prompt("Optional follow-up note for Hamad:", "Please review the session action points.") ?? ""
-        : "";
       return {
         ...current,
         sessionCompletionReviews: {
@@ -2303,7 +2311,7 @@ function TutorAdminView({
     if (entry) setNewDate(entry.effectiveDate);
   };
 
-  const submitReschedule = (event: FormEvent) => {
+  const submitReschedule = async (event: FormEvent) => {
     event.preventDefault();
     try {
       const result = cascadeReschedule(
@@ -2313,7 +2321,7 @@ function TutorAdminView({
         rescheduleReason,
       );
       const summary = `Move Session ${String(selectedSession).padStart(2, "0")} to ${newDate} at ${CHECKPOINT_TIME}?`;
-      if (!window.confirm(summary)) return;
+      if (!await dialog.confirm(summary)) return;
       updateTracker((current) => ({
         ...current,
         sessionOverrides: result.overrides,
@@ -2329,8 +2337,8 @@ function TutorAdminView({
     }
   };
 
-  const restoreSchedule = () => {
-    if (!window.confirm(`Restore Session ${String(selectedSession).padStart(2, "0")} to its canonical Saturday?`)) return;
+  const restoreSchedule = async () => {
+    if (!await dialog.confirm(`Restore Session ${String(selectedSession).padStart(2, "0")} to its canonical Saturday?`)) return;
     updateTracker((current) => ({
       ...current,
       sessionOverrides: restoreCanonicalSession(
@@ -2342,9 +2350,10 @@ function TutorAdminView({
   };
 
   const resetSharedProgress = async () => {
-    const confirmation = window.prompt(
+    const confirmation = await dialog.prompt(
       "A JSON backup will download first. To erase all shared progress on every device, type RESET HAMAD MASTERY",
     );
+    if (!dialog.active()) return;
     if (confirmation !== "RESET HAMAD MASTERY") {
       notify("Reset cancelled. The confirmation text did not match.", "warning");
       return;
@@ -2462,6 +2471,7 @@ function NotesView({
     recipe: (notes: PrivateTutorNote[]) => PrivateTutorNote[],
   ) => Promise<void>;
 }) {
+  const dialog = useAppDialog();
   const [form, setForm] = useState({
     date: todayDateOnly(),
     category: NOTE_CATEGORIES[0],
@@ -2496,7 +2506,7 @@ function NotesView({
   };
 
   const removePrivate = async (id: string) => {
-    if (!window.confirm("Delete this private tutor note?")) return;
+    if (!await dialog.confirm("Delete this private tutor note?")) return;
     try {
       await updatePrivateTutorNotes((notes) => notes.filter((entry) => entry.id !== id));
       notify("Private tutor note deleted.");
@@ -2505,8 +2515,8 @@ function NotesView({
     }
   };
 
-  const remove = (id: string) => {
-    if (!window.confirm("Delete this note?")) return;
+  const remove = async (id: string) => {
+    if (!await dialog.confirm("Delete this note?")) return;
     updateTracker((current) => ({ ...current, notes: current.notes.filter((entry) => entry.id !== id) }));
   };
 
@@ -2595,4 +2605,6 @@ function MiniMetric({ label, value, icon: Icon }: { label: string; value: string
   );
 }
 
-export default App;
+export default function AppWithDialogs() {
+  return <AppDialogProvider><App /></AppDialogProvider>;
+}
