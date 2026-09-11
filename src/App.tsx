@@ -99,6 +99,7 @@ import {
 } from "./hooks/useTrackerSync";
 import CalendarExportDialog from "./components/CalendarExportDialog";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
+import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
@@ -1185,6 +1186,7 @@ function App() {
           </div>
         </header>
 
+        <SyncRecoveryNotice state={syncStatus} message={syncError} onRetry={retrySync} />
         <nav className="mobile-nav" aria-label="Primary project sections">
           {MOBILE_PRIMARY_IDS.map((id) => {
             const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;

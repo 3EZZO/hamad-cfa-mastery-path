@@ -5221,3 +5221,11 @@ summary:focus-visible {
 .app-decision-dialog { width: min(100% - 2rem, 34rem); }
 .app-decision-dialog .calendar-dialog-header h2 { flex: 1; }
 .app-decision-dialog .calendar-dialog-intro { white-space: pre-wrap; overflow-wrap: anywhere; }
+.sync-recovery-notice { display: flex; align-items: center; gap: .75rem; padding: .875rem 1rem; border: 1px solid #c4a16c; border-radius: .75rem; background: #fff2d5; color: #583806; text-align: left; }
+.sync-recovery-notice > svg { flex: 0 0 auto; }
+.sync-recovery-notice > div { flex: 1; min-width: 0; }
+.sync-recovery-notice strong { display: block; font-size: .9375rem; }
+.sync-recovery-notice p { margin: .25rem 0 0; color: inherit; font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+.sync-recovery-notice button { flex: 0 0 auto; min-height: 44px; }
+.main-shell > .sync-recovery-notice { margin: .75rem 1rem; }
+@media (max-width: 599px) { .sync-recovery-notice { flex-wrap: wrap; } .sync-recovery-notice button { width: 100%; } }

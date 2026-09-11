@@ -18,6 +18,7 @@ import {
   type ReactNode,
 } from "react";
 import { LiveSessionRunner } from "./LiveSessionRunner";
+import { SyncRecoveryNotice } from "../../components/SyncRecoveryNotice";
 import { evaluateSessionPreflight } from "./sessionPreflight";
 import { isPreSessionRehearsal } from "./sessionLifecycle";
 import { sessionDeckKey } from "./sessionDeckModel";
@@ -689,7 +690,6 @@ function LiveSessionWorkspace({
           <div
             className={`ls-complete__sync ls-complete__sync--${syncState}`}
             role="status"
-            title={syncMessage}
           >
             {syncState === "synced" ? (
               <CheckCircle2 size={18} />
@@ -705,6 +705,7 @@ function LiveSessionWorkspace({
               </button>
             )}
           </div>
+          <SyncRecoveryNotice state={syncState} message={syncMessage} onRetry={onRetry} />
           <div className="ls-complete__assurance">
             <ShieldCheck size={18} />
             <span>

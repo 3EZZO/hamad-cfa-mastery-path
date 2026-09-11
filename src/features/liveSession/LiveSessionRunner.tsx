@@ -54,6 +54,7 @@ import {
   type SessionDeck,
 } from "./sessionDeckModel";
 import { StageCard } from "./StageCard";
+import { SyncRecoveryNotice } from "../../components/SyncRecoveryNotice";
 import { SessionCountLegend, SESSION_TERMS } from "./sessionGlossary";
 import type { SessionTimerController } from "./useSessionTimer";
 import { formatSessionTime } from "./useSessionTimer";
@@ -991,7 +992,6 @@ export function LiveSessionRunner({
               type="button"
               onClick={onSyncRetry}
               aria-label={`${syncCopy(syncState).label}. Retry synchronization.`}
-              title={syncMessage}
             >
               <SyncIcon size={15} /> {syncCopy(syncState).label}
               <small>Retry</small>
@@ -999,7 +999,6 @@ export function LiveSessionRunner({
           ) : (
             <span
               className={`ls-sync ls-sync--${syncState}`}
-              title={syncMessage}
             >
               <SyncIcon size={15} /> {syncCopy(syncState).label}
             </span>
@@ -1012,6 +1011,7 @@ export function LiveSessionRunner({
             <Flag size={16} /> Finish session
           </button>
         </div>
+        <SyncRecoveryNotice state={syncState} message={syncMessage} onRetry={onSyncRetry} />
       </header>
 
       <section
