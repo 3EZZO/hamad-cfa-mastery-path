@@ -58,6 +58,7 @@ vi.mock("../features/liveSession", async importOriginal => ({
 let tree: ReactTestRenderer | undefined;
 let s1: TutorPlaybookPackage;
 let s2: TutorPlaybookPackage;
+let s3: TutorPlaybookPackage;
 const notify = vi.fn();
 
 beforeEach(async () => {
@@ -70,10 +71,16 @@ beforeEach(async () => {
     clearTimeout,
   });
   vi.stubGlobal("navigator", { onLine: true });
-  [s1, s2] = await Promise.all([syntheticPlaybook(1), syntheticPlaybook(2)]);
-  mocks.load.mockImplementation(async (id: string) =>
-    id === s1.manifest.id ? s1 : s2
-  );
+  [s1, s2, s3] = await Promise.all([
+    syntheticPlaybook(1),
+    syntheticPlaybook(2),
+    syntheticPlaybook(3),
+  ]);
+  mocks.load.mockImplementation(async (id: string) => {
+    if (id === s1.manifest.id) return s1;
+    if (id === s2.manifest.id) return s2;
+    return s3;
+  });
   mocks.cache.mockResolvedValue({ ready: true });
   mocks.cacheRun.mockResolvedValue(undefined);
   mocks.journal.mockResolvedValue(undefined);
@@ -128,6 +135,18 @@ describe("Session Mode workspace isolation", () => {
     expect(mocks.load).toHaveBeenCalledTimes(2);
     expect(mocks.removeRun).not.toHaveBeenCalled();
     expect(mocks.removePackage).not.toHaveBeenCalled();
+  });
+
+  it("opens Session 03 in an isolated workspace with its planned 150-minute appointment", async () => {
+    await mount();
+    await choose(3);
+    expect(consoleFor(1).props.active).toBe(false);
+    expect(consoleFor(3).props.active).toBe(true);
+    expect(consoleFor(3).props.playbook.id).toBe(getTutorSession(3).playbookId);
+    expect(consoleFor(3).props.session).toMatchObject({
+      number: 3,
+      date: "2026-09-26",
+    });
   });
 
   it("rejects a wrong-session upload before any cloud or offline publication, retaining the live console", async () => {

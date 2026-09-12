@@ -14,6 +14,10 @@ describe("session catalog and import boundary", () => {
     );
     expect(getTutorSession(1).session.date).toBe("2026-09-12");
     expect(getTutorSession(2).session.date).toBe("2026-09-19");
+    expect(getTutorSession(3).session).toMatchObject({
+      date: "2026-09-26",
+      durationMinutes: 150,
+    });
     expect(getTutorSession(2).taskId).not.toBe(getTutorSession(1).taskId);
     expect(tutorSessionRunId(2, "v1", "a".repeat(64))).not.toBe(
       tutorSessionRunId(1, "v1", "a".repeat(64))
@@ -31,6 +35,13 @@ describe("session catalog and import boundary", () => {
       s2.chunks
     );
     await expect(validateSessionImport(s2, 2)).rejects.toThrow("Session 02");
+  });
+  it("accepts the Session 03 identity only in the Session 03 workspace", async () => {
+    const s3 = asDraft(await syntheticPlaybook(3));
+    await expect(validateSessionImport(s3, 3)).resolves.toMatchObject({
+      manifest: { sessionNumber: 3 },
+    });
+    await expect(validateSessionImport(s3, 2)).rejects.toThrow("Session 02");
   });
   it("rejects changed private content rather than publishing a corrupt package", async () => {
     const s2 = asDraft(await syntheticPlaybook(2));

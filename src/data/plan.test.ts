@@ -30,7 +30,7 @@ describe("canonical 25-week official 2027 plan", () => {
     expect(PLAN.at(-1)?.session1).toBeUndefined();
   });
 
-  it("uses one Saturday checkpoint in Weeks 1-24 with the 150-minute opening masterclass", () => {
+  it("uses one Saturday checkpoint in Weeks 1-24 with agreed 150-minute Sessions 1 and 3", () => {
     expect(sessions).toHaveLength(24);
     expect(sessions.map((session) => session.number)).toEqual(
       Array.from({ length: 24 }, (_, index) => index + 1),
@@ -41,7 +41,7 @@ describe("canonical 25-week official 2027 plan", () => {
       expect(weekSessions[0]).toMatchObject({
         day: "Saturday",
         label: "Saturday 09:00 checkpoint",
-        durationMinutes: week.week === 1 ? 150 : 120,
+        durationMinutes: week.week === 1 || week.week === 3 ? 150 : 120,
         requirement: "required",
         date: week.endDate,
       });

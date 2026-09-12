@@ -1,7 +1,7 @@
 import { getSessionTaskId, getWeekSessions, PLAN } from "../data/plan";
 import { verifyTutorPlaybookPackageIntegrity } from "./tutorContent";
 
-export const TUTOR_SESSION_NUMBERS = [1, 2] as const;
+export const TUTOR_SESSION_NUMBERS = [1, 2, 3] as const;
 export type TutorSessionNumber = (typeof TUTOR_SESSION_NUMBERS)[number];
 
 export function getTutorSession(number: TutorSessionNumber) {
