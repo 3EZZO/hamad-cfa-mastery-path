@@ -93,6 +93,7 @@ export function PracticeBankAdmin({ notify }: {
         <BookOpenCheck size={21} />
       </div>
       <p className="practice-bank-admin__intro">Upload only student-safe, independently authored practice JSON. Published versions are immutable and contain no private tutor fields.</p>
+      <p className="practice-bank-admin__intro">You can select several validated JSON files and publish the entire batch in one operation.</p>
       <input ref={input} type="file" accept="application/json,.json" multiple hidden onChange={event => void upload(event.target.files)} />
       <button className="button button-primary" type="button" disabled={busy} onClick={() => input.current?.click()}><CloudUpload size={17} />{busy ? "Publishing…" : "Publish practice JSON"}</button>
       {error && <p className="form-error" role="alert"><CircleAlert size={16} />{error}</p>}
