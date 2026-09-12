@@ -13,6 +13,7 @@ const PENDING = "pending";
 
 export interface PendingPracticeWrite {
   id: string;
+  uid: string;
   kind: "state" | "run";
   value: PracticeQuestionState | PracticeRun;
 }
@@ -114,8 +115,9 @@ export async function queuePracticeWrite(write: PendingPracticeWrite): Promise<v
   await put(PENDING, write.id, write);
 }
 
-export function loadPendingPracticeWrites(): Promise<PendingPracticeWrite[]> {
-  return getAll(PENDING);
+export async function loadPendingPracticeWrites(uid: string): Promise<PendingPracticeWrite[]> {
+  const pending = await getAll<PendingPracticeWrite>(PENDING);
+  return pending.filter(write => write.uid === uid);
 }
 
 export function removePendingPracticeWrite(id: string): Promise<void> {

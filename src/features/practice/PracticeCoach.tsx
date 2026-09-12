@@ -158,7 +158,7 @@ export function PracticeCoach({
     kind: "state" | "run",
     value: PracticeQuestionState | PracticeRun
   ) => {
-    const pendingId = `${kind}:${kind === "state" ? (value as PracticeQuestionState).questionId : (value as PracticeRun).id}`;
+    const pendingId = `${uid}:${kind}:${kind === "state" ? (value as PracticeQuestionState).questionId : (value as PracticeRun).id}`;
     try {
       setSync("saving");
       if (kind === "state") await savePracticeQuestionState(uid, value as PracticeQuestionState);
@@ -166,16 +166,16 @@ export function PracticeCoach({
       await removePendingPracticeWrite(pendingId);
       setSync("synced");
     } catch {
-      await queuePracticeWrite({ id: pendingId, kind, value });
+      await queuePracticeWrite({ id: pendingId, uid, kind, value });
       setSync(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
     }
   }, [uid]);
 
   const flushPending = useCallback(async () => {
-    const pending = await loadPendingPracticeWrites();
+    const pending = await loadPendingPracticeWrites(uid);
     if (!pending.length) return;
     for (const write of pending) await writeCloud(write.kind, write.value);
-  }, [writeCloud]);
+  }, [uid, writeCloud]);
 
   useEffect(() => {
     let active = true;
