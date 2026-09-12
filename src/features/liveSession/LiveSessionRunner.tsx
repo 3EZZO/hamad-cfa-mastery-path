@@ -415,6 +415,29 @@ export function LiveSessionRunner({
     if (previous) navigateToDeck(previous);
   }, [currentDeck, navigateToDeck, queueDecks]);
 
+  const moveToAdjacentRouteDeck = useCallback(
+    (direction: -1 | 1) => {
+      if (!currentDeck) return;
+      if (hasUnrecordedDraft) {
+        setAdvanceHint(
+          "Save or clear the current evidence draft before changing decks."
+        );
+        return;
+      }
+      const adjacentDeck = allDecks[currentDeck.globalIndex + direction];
+      if (adjacentDeck) {
+        navigateToDeck(adjacentDeck);
+        return;
+      }
+      setAdvanceHint(
+        direction > 0
+          ? "You are already on the final deck in this route."
+          : "You are already on the first deck in this route."
+      );
+    },
+    [allDecks, currentDeck, hasUnrecordedDraft, navigateToDeck]
+  );
+
   const recordEvidence = useCallback(() => {
     const verdict = draft.verdict;
     if (!stage || !evidenceTarget || !verdict || !canRecordEvidenceDraft(draft))
@@ -590,6 +613,19 @@ export function LiveSessionRunner({
         return;
       }
       if (isInteractiveTarget(event.target)) return;
+      if (
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        (event.key === "ArrowLeft" || event.key === "ArrowRight")
+      ) {
+        event.preventDefault();
+        if (!event.repeat) {
+          moveToAdjacentRouteDeck(event.key === "ArrowRight" ? 1 : -1);
+        }
+        return;
+      }
       const key = event.key.toLowerCase();
       if (key === " ") {
         event.preventDefault();
@@ -645,6 +681,7 @@ export function LiveSessionRunner({
     candidateOpen,
     draft.verdict,
     goPrevious,
+    moveToAdjacentRouteDeck,
     openCandidateView,
     recordEvidence,
     referenceOpen,
@@ -1406,6 +1443,12 @@ export function LiveSessionRunner({
             <kbd>Space</kbd> continue
           </span>
           <span>
+            <kbd>←</kbd> previous deck
+          </span>
+          <span>
+            <kbd>→</kbd> next deck
+          </span>
+          <span>
             <kbd>T</kbd> timer
           </span>
           <span>
@@ -1488,7 +1531,7 @@ export function LiveSessionRunner({
               </div>
               <strong>{linearStepLabel}</strong>
               <small>
-                One route, in order. Space performs the blue button.
+                Space performs the blue button. ←/→ move by deck.
               </small>
             </div>
             <button

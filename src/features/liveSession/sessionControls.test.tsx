@@ -12,6 +12,7 @@ let tree: ReactTestRenderer | undefined;
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal("HTMLElement", class HTMLElement {});
   vi.stubGlobal("window", {
     addEventListener: vi.fn(), removeEventListener: vi.fn(), scrollTo: vi.fn(),
     setTimeout: vi.fn(), setInterval, clearInterval,
@@ -104,5 +105,52 @@ describe("P1 consolidated session controls", () => {
     const references = tree!.root.findAllByType("button").find(button => button.props.className?.includes("ls-reference-shortcut"))!;
     await act(async () => references.props.onClick());
     expect(tree!.root.findByType(ReferenceDrawer).props.open).toBe(true);
+  });
+
+  it("moves between adjacent route decks with the arrow keys", async () => {
+    const props = await renderRunner();
+    const latestKeyHandler = () => {
+      const calls = vi.mocked(window.addEventListener).mock.calls.filter(
+        ([eventName]) => eventName === "keydown"
+      );
+      return calls.at(-1)![1] as EventListener;
+    };
+    const press = async (key: "ArrowLeft" | "ArrowRight") => {
+      const preventDefault = vi.fn();
+      await act(async () => latestKeyHandler()({
+        key, target: null, repeat: false, altKey: false, ctrlKey: false,
+        metaKey: false, shiftKey: false, preventDefault,
+      } as unknown as KeyboardEvent));
+      expect(preventDefault).toHaveBeenCalledOnce();
+    };
+
+    await press("ArrowRight");
+    expect(props.onPositionChange).toHaveBeenLastCalledWith(0, 1);
+    expect(tree!.root.findByType(StageCard).props.flowStep).toBe("teach");
+    expect(props.onDeskCompletionChange).not.toHaveBeenCalled();
+
+    await press("ArrowLeft");
+    expect(props.onPositionChange).toHaveBeenLastCalledWith(0, 0);
+    expect(props.onDeskCompletionChange).not.toHaveBeenCalled();
+  });
+
+  it("protects an unsaved evidence draft from arrow navigation", async () => {
+    const props = await renderRunner();
+    await act(async () => tree!.root.findByType(EvidenceRepairFlow).props.onChange({
+      verdict: "parked", note: "Retain this draft", confidence: 3, errorCodes: [],
+    }));
+    const calls = vi.mocked(window.addEventListener).mock.calls.filter(
+      ([eventName]) => eventName === "keydown"
+    );
+    const handler = calls.at(-1)![1] as EventListener;
+    await act(async () => handler({
+      key: "ArrowRight", target: null, repeat: false, altKey: false,
+      ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: vi.fn(),
+    } as unknown as KeyboardEvent));
+
+    expect(props.onPositionChange).toHaveBeenLastCalledWith(0, 0);
+    expect(tree!.root.findAllByProps({ role: "status" }).some(node =>
+      node.children.join("").includes("Save or clear the current evidence draft")
+    )).toBe(true);
   });
 });
