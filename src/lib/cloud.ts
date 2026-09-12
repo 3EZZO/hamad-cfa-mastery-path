@@ -616,7 +616,7 @@ export function subscribeToCloudTracker(
       }
       try {
         const raw = snapshot.data();
-        if (raw.state?.scheduleVersion === "weekly-saturday-v2") preservePreRescheduleBackup("cloud", raw);
+        if (["weekly-saturday-v2", "weekly-saturday-v3"].includes(raw.state?.scheduleVersion)) preservePreRescheduleBackup("cloud", raw);
         onEnvelope(parseCloudEnvelope(raw), raw.state?.scheduleVersion);
       } catch (error) {
         onError?.(mapCloudError(error));

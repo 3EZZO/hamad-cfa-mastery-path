@@ -93,6 +93,7 @@ export function buildRiskIndicators(
   today: string,
 ): RiskIndicator[] {
   const firstSession =
+    getEffectiveSessions(tracker.sessionOverrides)[0]?.session.deliveryDates?.[0] ??
     getEffectiveSessions(tracker.sessionOverrides)[0]?.effectiveDate ??
     PLAN[0]!.startDate;
   if (today < firstSession) {

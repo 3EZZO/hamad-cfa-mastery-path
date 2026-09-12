@@ -120,7 +120,7 @@ service cloud.firestore {
     function studentPreservesScheduleVersion() {
       return (
           !resource.data.state.keys().hasAny(['scheduleVersion'])
-          && request.resource.data.state.scheduleVersion == 'weekly-saturday-v3'
+          && request.resource.data.state.scheduleVersion == 'weekly-saturday-v4'
         )
         || (
           resource.data.state.keys().hasAny(['scheduleVersion'])
@@ -171,7 +171,7 @@ service cloud.firestore {
           'notes'
         ])
         && request.resource.data.state.version == 1
-        && request.resource.data.state.scheduleVersion in ['weekly-saturday-v2', 'weekly-saturday-v3']
+        && request.resource.data.state.scheduleVersion in ['weekly-saturday-v2', 'weekly-saturday-v3', 'weekly-saturday-v4']
         && request.resource.data.state.updatedAt is string
         && request.resource.data.state.updatedAt.size() <= 40
         && request.resource.data.state.updatedAt
@@ -228,8 +228,8 @@ service cloud.firestore {
         && validTrackerEnvelope()
         // Old open tabs cannot overwrite the migrated schedule, even for tutors.
         && (!resource.data.state.keys().hasAny(['scheduleVersion'])
-          || resource.data.state.scheduleVersion != 'weekly-saturday-v3'
-          || request.resource.data.state.scheduleVersion == 'weekly-saturday-v3')
+          || resource.data.state.scheduleVersion != 'weekly-saturday-v4'
+          || request.resource.data.state.scheduleVersion == 'weekly-saturday-v4')
         && request.resource.data.revision == resource.data.revision + 1
         && (
           activeProject202Role('tutor')

@@ -1,7 +1,7 @@
 import { addDays, isValidDateOnly } from "./dates";
 
-export const TRACKER_SCHEDULE_VERSION = "weekly-saturday-v3" as const;
-export const PRE_RESCHEDULE_BACKUP_KEY = "project-202-before-september-12";
+export const TRACKER_SCHEDULE_VERSION = "weekly-saturday-v4" as const;
+export const PRE_RESCHEDULE_BACKUP_KEY = "project-202-before-september-18";
 type RecordValue = Record<string, unknown>;
 const record = (value: unknown): value is RecordValue =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -56,7 +56,7 @@ function migrateTaskMap(value: unknown, approval = false): RecordValue {
 }
 
 /** Deterministic, idempotent migration for local, cloud and queued snapshots. */
-export function migrateSeptemberSchedule(value: RecordValue): RecordValue {
+function migrateV2ToV3(value: RecordValue): RecordValue {
   if (value.scheduleVersion !== "weekly-saturday-v2") return value;
   const completions = migrateTaskMap(value.taskCompletions);
   const oldCompletions = record(value.taskCompletions) ? value.taskCompletions : {};
@@ -91,7 +91,7 @@ export function migrateSeptemberSchedule(value: RecordValue): RecordValue {
   }
   return {
     ...value,
-    scheduleVersion: TRACKER_SCHEDULE_VERSION,
+    scheduleVersion: "weekly-saturday-v3",
     taskCompletions: completions,
     sessionCompletionRequests: migrateTaskMap(value.sessionCompletionRequests, true),
     sessionCompletionReviews: migrateTaskMap(value.sessionCompletionReviews, true),
@@ -106,4 +106,70 @@ export function migrateSeptemberSchedule(value: RecordValue): RecordValue {
         : item
     ) : value.mockScores,
   };
+}
+
+function delayedTaskId(id: string): string | null {
+  const match = /^w(\d+)-(.*)$/.exec(id);
+  if (!match) return id;
+  const week = Number(match[1]);
+  const suffix = match[2]!;
+  if (week <= 22) return `w${week + 1}-${suffix}`;
+  if (week === 25) return id;
+  return null;
+}
+
+function migrateV3TaskMap(value: unknown, approval = false): RecordValue {
+  if (!record(value)) return {};
+  const result: RecordValue = {};
+  for (const [key, item] of Object.entries(value)) {
+    const archivedKey = `legacy-v3-${key}`;
+    result[archivedKey] = approval && record(item)
+      ? { ...item, taskId: archivedKey }
+      : item;
+    const mappedKey = delayedTaskId(key);
+    if (mappedKey) {
+      result[mappedKey] = approval && record(item)
+        ? { ...item, taskId: mappedKey }
+        : item;
+    }
+  }
+  return result;
+}
+
+function migrateV3ToV4(value: RecordValue): RecordValue {
+  if (value.scheduleVersion !== "weekly-saturday-v3") return value;
+  const notes = Array.isArray(value.notes) ? [...value.notes] : [];
+  if (record(value.sessionOverrides)) {
+    for (const [key, item] of Object.entries(value.sessionOverrides)) {
+      if (!record(item)) continue;
+      notes.push({
+        id: `schedule-v3-override-${key}`,
+        date: "2026-09-12",
+        category: "Shared tutor note",
+        title: `Previous schedule: Session ${String(key).padStart(2, "0")}`,
+        body: JSON.stringify(item).slice(0, 2000),
+      });
+    }
+  }
+  return {
+    ...value,
+    scheduleVersion: TRACKER_SCHEDULE_VERSION,
+    taskCompletions: migrateV3TaskMap(value.taskCompletions),
+    sessionCompletionRequests: migrateV3TaskMap(value.sessionCompletionRequests, true),
+    sessionCompletionReviews: migrateV3TaskMap(value.sessionCompletionReviews, true),
+    sessionOverrides: {},
+    notes,
+    mockScores: Array.isArray(value.mockScores)
+      ? value.mockScores.map(item => {
+          if (!record(item) || !Number.isInteger(item.milestoneWeek)) return item;
+          const week = Number(item.milestoneWeek);
+          return { ...item, milestoneWeek: week <= 22 ? week + 1 : week <= 24 ? 24 : week };
+        })
+      : value.mockScores,
+  };
+}
+
+/** Deterministic, idempotent migration for local, cloud and queued snapshots. */
+export function migrateSeptemberSchedule(value: RecordValue): RecordValue {
+  return migrateV3ToV4(migrateV2ToV3(value));
 }

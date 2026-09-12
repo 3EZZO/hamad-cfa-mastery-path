@@ -75,6 +75,15 @@ type UpdatePrivateTutorNotes = (
 
 type Notify = (message: string, tone?: "success" | "warning") => void;
 
+function compactSessionDate(value: string, includeYear = false): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    ...(includeYear ? { year: "numeric" as const } : {}),
+    timeZone: "UTC",
+  }).format(new Date(`${value}T12:00:00Z`));
+}
+
 interface TutorSessionWorkspaceProps {
   userUid: string;
   tracker: TrackerState;
@@ -419,6 +428,7 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
         {TUTOR_SESSION_NUMBERS.map(number => {
           const entry = getTutorSession(number);
           const date = effectiveSessionDate(entry.session, props.tracker.sessionOverrides);
+          const dates = entry.session.deliveryDates ?? [date];
           return (
             <button key={number} type="button" aria-pressed={selected === number}
               onClick={() => {
@@ -426,7 +436,7 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
                 setSelected(number);
               }}>
               {entry.label}
-              <small>{new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`))}</small>
+              <small>{dates.map(value => compactSessionDate(value)).join(" + ")}</small>
             </button>
           );
         })}
@@ -531,11 +541,14 @@ function SessionWorkspace({
       number: session.number,
       title: session.title,
       date: sessionDate,
+      dateLabel: session.deliveryDates?.length
+        ? session.deliveryDates.map(value => compactSessionDate(value, true)).join(" + ")
+        : undefined,
       startTime: "09:00",
       candidateName: "Hamad Al Sagheer",
       topic: "Quantitative Methods",
     }),
-    [runId, session.date, session.number, session.title, sessionDate]
+    [runId, session.date, session.deliveryDates, session.number, session.title, sessionDate]
   );
 
   const loadWorkspace = useCallback(async () => {

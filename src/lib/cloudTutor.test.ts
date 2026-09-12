@@ -256,7 +256,7 @@ afterEach(() => {
 });
 
 describe("September schedule cloud migration", () => {
-  it("publishes v3 through the normal transaction while preserving a concurrent v2 edit", async () => {
+  it("publishes v4 through the normal transaction while preserving a concurrent v2 edit", async () => {
     const path = "programs/project-202/tracker/current";
     const original = {
       state: {
@@ -284,10 +284,10 @@ describe("September schedule cloud migration", () => {
     const saved = await saveCloudTracker(base.state, base);
     expect(saved.merged).toBe(true);
     expect(saved.envelope.revision).toBe(6);
-    expect(saved.envelope.state.scheduleVersion).toBe("weekly-saturday-v3");
+    expect(saved.envelope.state.scheduleVersion).toBe("weekly-saturday-v4");
     expect(saved.envelope.state.taskCompletions).toMatchObject({
-      "w20-independent-1": true,
       "w21-independent-1": true,
+      "w22-independent-1": true,
       "legacy-v2-w21-independent-1": true,
       "legacy-v2-w22-independent-1": true,
     });

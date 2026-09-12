@@ -40,25 +40,25 @@ afterEach(() => {
 });
 
 describe("Hamad CFA Mastery calendar export", () => {
-  it("exports all 24 checkpoints and every milestone", () => {
+  it("exports 23 checkpoints with two events for the split first session", () => {
     const events = getProject202CalendarEvents(undefined, {}, PREFERENCES);
     const sessions = events.filter((event) => event.kind === "tutor-session");
     const milestones = events.filter(
       (event) => event.kind === "administrative-milestone",
     );
 
-    expect(sessions).toHaveLength(program.tutoringRhythm.totalSessions);
+    expect(sessions).toHaveLength(program.tutoringRhythm.totalSessions + 1);
     expect(milestones).toHaveLength(program.administrativeMilestones.length);
     expect(sessions[0]).toMatchObject({
-      uid: "project-202-session-01@project-202-tracker",
-      startDate: "2026-09-12",
+      uid: "project-202-session-01-part-1@project-202-tracker",
+      startDate: "2026-09-18",
       startTime: "09:00",
-      endTime: "11:30",
+      endTime: "10:15",
       timeZone: "Asia/Riyadh",
       reminderMinutes: 90,
     });
     expect(sessions.at(-1)).toMatchObject({
-      uid: "project-202-session-24@project-202-tracker",
+      uid: "project-202-session-23@project-202-tracker",
       startDate: "2027-02-20",
       startTime: "09:00",
       endTime: "11:00",
@@ -74,7 +74,7 @@ describe("Hamad CFA Mastery calendar export", () => {
     });
     const unfolded = unfold(calendar);
     const expectedEvents =
-      program.tutoringRhythm.totalSessions +
+      program.tutoringRhythm.totalSessions + 1 +
       program.administrativeMilestones.length;
 
     expect(calendar.startsWith("BEGIN:VCALENDAR\r\nVERSION:2.0\r\n")).toBe(true);
@@ -82,8 +82,8 @@ describe("Hamad CFA Mastery calendar export", () => {
     expect(unfolded.match(/BEGIN:VEVENT/g)).toHaveLength(expectedEvents);
     expect(unfolded.match(/BEGIN:VALARM/g)).toHaveLength(expectedEvents);
     expect(unfolded).toContain("TZID:Asia/Riyadh");
-    expect(unfolded).toContain("DTSTART;TZID=Asia/Riyadh:20260912T090000");
-    expect(unfolded).toContain("DTEND;TZID=Asia/Riyadh:20260912T113000");
+    expect(unfolded).toContain("DTSTART;TZID=Asia/Riyadh:20260918T090000");
+    expect(unfolded).toContain("DTEND;TZID=Asia/Riyadh:20260918T101500");
     expect(unfolded).toContain("TRIGGER:-PT90M");
     expect(unfolded).toContain("DTSTART;VALUE=DATE:20270116");
     expect(unfolded).not.toContain("ATTENDEE");
@@ -93,24 +93,24 @@ describe("Hamad CFA Mastery calendar export", () => {
     const overrides = cascadeReschedule(
       {},
       2,
-      "2026-09-18",
+      "2026-09-25",
       "Travel",
       "2026-08-21T00:00:00.000Z",
     ).overrides;
     const event = getProject202CalendarEvents(undefined, overrides, PREFERENCES)
       .find((item) => item.uid.includes("session-02"));
     expect(event).toMatchObject({
-      startDate: "2026-09-18",
+      startDate: "2026-09-25",
       startTime: "09:00",
-      endDate: "2026-09-18",
-      endTime: "11:00",
+      endDate: "2026-09-25",
+      endTime: "11:30",
     });
   });
 
   it("keeps stable UIDs when a checkpoint uses the Friday exception", () => {
     const canonical = getProject202CalendarEvents(undefined, {}, PREFERENCES)
       .find((event) => event.uid.includes("session-02"));
-    const overrides = cascadeReschedule({}, 2, "2026-09-18", "Travel").overrides;
+    const overrides = cascadeReschedule({}, 2, "2026-09-25", "Travel").overrides;
     const changed = getProject202CalendarEvents(undefined, overrides, PREFERENCES)
       .find((event) => event.uid.includes("session-02"));
     expect(changed?.uid).toBe(canonical?.uid);
@@ -136,10 +136,10 @@ describe("Hamad CFA Mastery calendar export", () => {
       }),
     );
     expect(unfolded).toContain(
-      "SUMMARY:Hamad CFA Mastery - Session 01: Quant Masterclass I: returns\\, benchmarking\\, and time value",
+      "SUMMARY:Hamad CFA Mastery - Session 01 - Part 1 of 2: Quant Masterclass I: returns\\, benchmarking\\, and time value",
     );
     expect(unfolded).toMatch(
-      /DESCRIPTION:Session 01 of 24\\nWeek 01 - .*\\nRhythm: Saturday checkpoint/,
+      /DESCRIPTION:Session 01 of 23 - Part 1 of 2\\nWeek 02 - .*\\nRhythm: Friday exception/,
     );
   });
 

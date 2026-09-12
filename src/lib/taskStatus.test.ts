@@ -6,7 +6,7 @@ import { getTaskStatus, isTaskComplete } from "./taskStatus";
 describe("task completion approval", () => {
   it("keeps sessions incomplete until a matching tutor review approves them", () => {
     const state = createDefaultState();
-    const session = getPlanTasks(PLAN[0]!).find(
+    const session = getPlanTasks(PLAN[1]!).find(
       (task) => task.kind === "session",
     )!;
     state.taskCompletions[session.id] = true;

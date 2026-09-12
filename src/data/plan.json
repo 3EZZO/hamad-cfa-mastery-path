@@ -4,6 +4,31 @@
     "week": 1,
     "startDate": "2026-09-06",
     "endDate": "2026-09-12",
+    "focus": "Session 01 preparation and calculator readiness",
+    "topics": [
+      "Quantitative Methods"
+    ],
+    "outcomes": [
+      "Prepare the assigned Session 01 readings, calculator, and working setup for the two-part checkpoint on 18-19 September.",
+      "Keep the tracker, error log, and delayed-retest queue current."
+    ],
+    "independentStudy": [
+      "Confirm the Session 01 readings, calculator settings, batteries, and working setup.",
+      "Preview the return, benchmarking, and time-value vocabulary before the two-part checkpoint."
+    ],
+    "questionTarget": 0,
+    "masteryGate": "Prepare the assigned Session 01 readings, calculator, and working setup for the two-part checkpoint on 18-19 September.",
+    "mockMilestone": {
+      "label": "Weekly evidence gate",
+      "targetScore": null,
+      "instruction": "Prepare the assigned Session 01 readings, calculator, and working setup for the two-part checkpoint on 18-19 September."
+    }
+  },
+  {
+    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
+    "week": 2,
+    "startDate": "2026-09-13",
+    "endDate": "2026-09-19",
     "focus": "Quantitative Methods I: returns, benchmarking, and time value",
     "topics": [
       "Quantitative Methods"
@@ -28,27 +53,31 @@
       "instruction": "Explain each return type, benchmark choice, and time-value step, then clear 75% on a fresh foundation set."
     },
     "session1": {
-      "label": "Saturday 09:00 checkpoint",
+      "label": "Friday-Saturday split checkpoint",
       "title": "Quant Masterclass I: returns, benchmarking, and time value",
       "objective": "Teach Quant Modules M001-M004 immediately through modelled examples, guided reconstruction, independent proof, adaptive repair, and a focused closing assignment.",
       "durationMinutes": 150,
       "number": 1,
       "requirement": "required",
-      "date": "2026-09-12",
+      "date": "2026-09-19",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m001",
         "cfa-2027-outline-m002",
         "cfa-2027-outline-m003",
         "cfa-2027-outline-m004"
+      ],
+      "deliveryDates": [
+        "2026-09-18",
+        "2026-09-19"
       ]
     }
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 2,
-    "startDate": "2026-09-13",
-    "endDate": "2026-09-19",
+    "week": 3,
+    "startDate": "2026-09-20",
+    "endDate": "2026-09-26",
     "focus": "Quantitative Methods II: distributions, inference, portfolio risk, and simulation",
     "topics": [
       "Quantitative Methods"
@@ -77,10 +106,10 @@
       "label": "Saturday 09:00 checkpoint",
       "title": "Weekly checkpoint: Quantitative Methods II: distributions, inference, portfolio risk, and simulation",
       "objective": "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment.",
-      "durationMinutes": 120,
+      "durationMinutes": 150,
       "number": 2,
       "requirement": "required",
-      "date": "2026-09-19",
+      "date": "2026-09-26",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m005",
@@ -93,9 +122,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 3,
-    "startDate": "2026-09-20",
-    "endDate": "2026-09-26",
+    "week": 4,
+    "startDate": "2026-09-27",
+    "endDate": "2026-10-03",
     "focus": "Quantitative Methods III and Economics I: data science, firms, cycles, policy, and geopolitics",
     "topics": [
       "Quantitative Methods",
@@ -130,7 +159,7 @@
       "durationMinutes": 150,
       "number": 3,
       "requirement": "required",
-      "date": "2026-09-26",
+      "date": "2026-10-03",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m010",
@@ -145,9 +174,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 4,
-    "startDate": "2026-09-27",
-    "endDate": "2026-10-03",
+    "week": 5,
+    "startDate": "2026-10-04",
+    "endDate": "2026-10-10",
     "focus": "Economics II and Corporate Issuers: trade, currencies, governance, liquidity, and capital allocation",
     "topics": [
       "Economics",
@@ -185,7 +214,7 @@
       "durationMinutes": 120,
       "number": 4,
       "requirement": "required",
-      "date": "2026-10-03",
+      "date": "2026-10-10",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m017",
@@ -203,9 +232,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 5,
-    "startDate": "2026-10-04",
-    "endDate": "2026-10-10",
+    "week": 6,
+    "startDate": "2026-10-11",
+    "endDate": "2026-10-17",
     "focus": "Financial Statement Analysis I: statements and cash-flow linkage",
     "topics": [
       "Financial Statement Analysis"
@@ -237,7 +266,7 @@
       "durationMinutes": 120,
       "number": 5,
       "requirement": "required",
-      "date": "2026-10-10",
+      "date": "2026-10-17",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m027",
@@ -250,9 +279,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 6,
-    "startDate": "2026-10-11",
-    "endDate": "2026-10-17",
+    "week": 7,
+    "startDate": "2026-10-18",
+    "endDate": "2026-10-24",
     "focus": "Financial Statement Analysis II: assets, liabilities, tax, and reporting quality",
     "topics": [
       "Financial Statement Analysis"
@@ -284,7 +313,7 @@
       "durationMinutes": 120,
       "number": 6,
       "requirement": "required",
-      "date": "2026-10-17",
+      "date": "2026-10-24",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m032",
@@ -297,9 +326,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 7,
-    "startDate": "2026-10-18",
-    "endDate": "2026-10-24",
+    "week": 8,
+    "startDate": "2026-10-25",
+    "endDate": "2026-10-31",
     "focus": "Financial Statement Analysis III: techniques and modeling",
     "topics": [
       "Financial Statement Analysis"
@@ -328,7 +357,7 @@
       "durationMinutes": 120,
       "number": 7,
       "requirement": "required",
-      "date": "2026-10-24",
+      "date": "2026-10-31",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m037",
@@ -338,9 +367,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 8,
-    "startDate": "2026-10-25",
-    "endDate": "2026-10-31",
+    "week": 9,
+    "startDate": "2026-11-01",
+    "endDate": "2026-11-07",
     "focus": "Equity Investments I: instruments, rights, trading, and return sources",
     "topics": [
       "Equity Investments"
@@ -371,7 +400,7 @@
       "durationMinutes": 120,
       "number": 8,
       "requirement": "required",
-      "date": "2026-10-31",
+      "date": "2026-11-07",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m039",
@@ -383,9 +412,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 9,
-    "startDate": "2026-11-01",
-    "endDate": "2026-11-07",
+    "week": 10,
+    "startDate": "2026-11-08",
+    "endDate": "2026-11-14",
     "focus": "Equity Investments II: valuation and forecasting",
     "topics": [
       "Equity Investments"
@@ -417,7 +446,7 @@
       "durationMinutes": 120,
       "number": 9,
       "requirement": "required",
-      "date": "2026-11-07",
+      "date": "2026-11-14",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m043",
@@ -430,9 +459,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 10,
-    "startDate": "2026-11-08",
-    "endDate": "2026-11-14",
+    "week": 11,
+    "startDate": "2026-11-15",
+    "endDate": "2026-11-21",
     "focus": "Equity Investments III: company analysis, research reports, and factor models",
     "topics": [
       "Equity Investments"
@@ -462,7 +491,7 @@
       "durationMinutes": 120,
       "number": 10,
       "requirement": "required",
-      "date": "2026-11-14",
+      "date": "2026-11-21",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m048",
@@ -473,9 +502,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 11,
-    "startDate": "2026-11-15",
-    "endDate": "2026-11-21",
+    "week": 12,
+    "startDate": "2026-11-22",
+    "endDate": "2026-11-28",
     "focus": "Fixed Income I: instruments, markets, valuation, and yields",
     "topics": [
       "Fixed Income"
@@ -509,7 +538,7 @@
       "durationMinutes": 120,
       "number": 11,
       "requirement": "required",
-      "date": "2026-11-21",
+      "date": "2026-11-28",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m051",
@@ -524,9 +553,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 12,
-    "startDate": "2026-11-22",
-    "endDate": "2026-11-28",
+    "week": 13,
+    "startDate": "2026-11-29",
+    "endDate": "2026-12-05",
     "focus": "Fixed Income II: curves, floating-rate instruments, duration, and convexity",
     "topics": [
       "Fixed Income"
@@ -558,7 +587,7 @@
       "durationMinutes": 120,
       "number": 12,
       "requirement": "required",
-      "date": "2026-11-28",
+      "date": "2026-12-05",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m058",
@@ -571,9 +600,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 13,
-    "startDate": "2026-11-29",
-    "endDate": "2026-12-05",
+    "week": 14,
+    "startDate": "2026-12-06",
+    "endDate": "2026-12-12",
     "focus": "Fixed Income III: empirical risk, credit, securitization, ABS, and MBS",
     "topics": [
       "Fixed Income"
@@ -607,7 +636,7 @@
       "durationMinutes": 120,
       "number": 13,
       "requirement": "required",
-      "date": "2026-12-05",
+      "date": "2026-12-12",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m063",
@@ -622,9 +651,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 14,
-    "startDate": "2026-12-06",
-    "endDate": "2026-12-12",
+    "week": 15,
+    "startDate": "2026-12-13",
+    "endDate": "2026-12-19",
     "focus": "Derivatives: instruments, pricing, valuation, parity, and binomial logic",
     "topics": [
       "Derivatives"
@@ -661,7 +690,7 @@
       "durationMinutes": 120,
       "number": 14,
       "requirement": "required",
-      "date": "2026-12-12",
+      "date": "2026-12-19",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m070",
@@ -679,9 +708,9 @@
   },
   {
     "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 15,
-    "startDate": "2026-12-13",
-    "endDate": "2026-12-19",
+    "week": 16,
+    "startDate": "2026-12-20",
+    "endDate": "2026-12-26",
     "focus": "Alternative Investments and Portfolio Management I: structures, returns, diversifiers, and portfolio risk",
     "topics": [
       "Alternative Investments",
@@ -718,7 +747,7 @@
       "durationMinutes": 120,
       "number": 15,
       "requirement": "required",
-      "date": "2026-12-19",
+      "date": "2026-12-26",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m080",
@@ -734,10 +763,10 @@
     }
   },
   {
-    "phase": "Phase 1 | Official 2027 Curriculum Coverage",
-    "week": 16,
-    "startDate": "2026-12-20",
-    "endDate": "2026-12-26",
+    "phase": "Phase 2 | Coverage Close and Integration Gate",
+    "week": 17,
+    "startDate": "2026-12-27",
+    "endDate": "2027-01-02",
     "focus": "Portfolio Management II and Ethics I: construction, behavior, trust, professionalism, and market integrity",
     "topics": [
       "Portfolio Management",
@@ -773,7 +802,7 @@
       "durationMinutes": 120,
       "number": 16,
       "requirement": "required",
-      "date": "2026-12-26",
+      "date": "2027-01-02",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m089",
@@ -788,10 +817,10 @@
     }
   },
   {
-    "phase": "Phase 2 | Coverage Close and Integration Gate",
-    "week": 17,
-    "startDate": "2026-12-27",
-    "endDate": "2027-01-02",
+    "phase": "Phase 3 | Mock and Repair Campaign",
+    "week": 18,
+    "startDate": "2027-01-03",
+    "endDate": "2027-01-09",
     "focus": "Ethics II, full-curriculum integration, and the 102-module coverage gate",
     "topics": [
       "Ethical and Professional Standards",
@@ -825,7 +854,7 @@
       "durationMinutes": 120,
       "number": 17,
       "requirement": "required",
-      "date": "2027-01-02",
+      "date": "2027-01-09",
       "day": "Saturday",
       "readings": [
         "cfa-2027-outline-m097",
@@ -839,9 +868,9 @@
   },
   {
     "phase": "Phase 3 | Mock and Repair Campaign",
-    "week": 18,
-    "startDate": "2027-01-03",
-    "endDate": "2027-01-09",
+    "week": 19,
+    "startDate": "2027-01-10",
+    "endDate": "2027-01-16",
     "focus": "Mock 1: establish the full-exam execution baseline",
     "topics": [
       "Mixed Curriculum"
@@ -870,16 +899,16 @@
       "durationMinutes": 120,
       "number": 18,
       "requirement": "required",
-      "date": "2027-01-09",
+      "date": "2027-01-16",
       "day": "Saturday",
       "readings": []
     }
   },
   {
     "phase": "Phase 3 | Mock and Repair Campaign",
-    "week": 19,
-    "startDate": "2027-01-10",
-    "endDate": "2027-01-16",
+    "week": 20,
+    "startDate": "2027-01-17",
+    "endDate": "2027-01-23",
     "focus": "Mock 2 and deep repair: eliminate recurring errors and rebuild the scoring floor",
     "topics": [
       "Mixed Curriculum"
@@ -911,16 +940,16 @@
       "durationMinutes": 120,
       "number": 19,
       "requirement": "required",
-      "date": "2027-01-16",
+      "date": "2027-01-23",
       "day": "Saturday",
       "readings": []
     }
   },
   {
     "phase": "Phase 3 | Mock and Repair Campaign",
-    "week": 20,
-    "startDate": "2027-01-17",
-    "endDate": "2027-01-23",
+    "week": 21,
+    "startDate": "2027-01-24",
+    "endDate": "2027-01-30",
     "focus": "Mock 3: build a stable scoring floor",
     "topics": [
       "Mixed Curriculum"
@@ -949,16 +978,16 @@
       "durationMinutes": 120,
       "number": 20,
       "requirement": "required",
-      "date": "2027-01-23",
+      "date": "2027-01-30",
       "day": "Saturday",
       "readings": []
     }
   },
   {
     "phase": "Phase 3 | Mock and Repair Campaign",
-    "week": 21,
-    "startDate": "2027-01-24",
-    "endDate": "2027-01-30",
+    "week": 22,
+    "startDate": "2027-01-31",
+    "endDate": "2027-02-06",
     "focus": "Mock 4: convert knowledge into timed performance",
     "topics": [
       "Mixed Curriculum"
@@ -987,16 +1016,16 @@
       "durationMinutes": 120,
       "number": 21,
       "requirement": "required",
-      "date": "2027-01-30",
+      "date": "2027-02-06",
       "day": "Saturday",
       "readings": []
     }
   },
   {
     "phase": "Phase 3 | Mock and Repair Campaign",
-    "week": 22,
-    "startDate": "2027-01-31",
-    "endDate": "2027-02-06",
+    "week": 23,
+    "startDate": "2027-02-07",
+    "endDate": "2027-02-13",
     "focus": "Mock 5: readiness under pressure",
     "topics": [
       "Mixed Curriculum"
@@ -1025,44 +1054,6 @@
       "durationMinutes": 120,
       "number": 22,
       "requirement": "required",
-      "date": "2027-02-06",
-      "day": "Saturday",
-      "readings": []
-    }
-  },
-  {
-    "phase": "Phase 3 | Mock and Repair Campaign",
-    "week": 23,
-    "startDate": "2027-02-07",
-    "endDate": "2027-02-13",
-    "focus": "Mock 6: prove repeatable readiness",
-    "topics": [
-      "Mixed Curriculum"
-    ],
-    "outcomes": [
-      "Two recent mocks show a stable readiness range and no critical topic floor remains hidden.",
-      "Keep the tracker, error log, and delayed-retest queue current."
-    ],
-    "independentStudy": [
-      "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
-      "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
-      "Complete the week's 390-question target and log each reviewed block in the tracker.",
-      "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
-    ],
-    "questionTarget": 390,
-    "masteryGate": "Two recent mocks show a stable readiness range and no critical topic floor remains hidden.",
-    "mockMilestone": {
-      "label": "Mock 6",
-      "targetScore": 70,
-      "instruction": "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint."
-    },
-    "session1": {
-      "label": "Saturday 09:00 checkpoint",
-      "title": "Mock 6 checkpoint and forensic repair",
-      "objective": "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment.",
-      "durationMinutes": 120,
-      "number": 23,
-      "requirement": "required",
       "date": "2027-02-13",
       "day": "Saturday",
       "readings": []
@@ -1073,22 +1064,22 @@
     "week": 24,
     "startDate": "2027-02-14",
     "endDate": "2027-02-20",
-    "focus": "Mock 7: final proof and taper handoff",
+    "focus": "Mock 6, Mock 7, and final forensic repair",
     "topics": [
       "Mixed Curriculum"
     ],
     "outcomes": [
-      "The final evidence supports taper; unresolved items are narrow, explicit, and low-risk.",
+      "Complete and debrief Mocks 6 and 7, close the final high-value repair clusters, and freeze the exam execution plan.",
       "Keep the tracker, error log, and delayed-retest queue current."
     ],
     "independentStudy": [
       "Complete the full mock independently under two-session exam conditions before Saturday's checkpoint.",
       "Finish a first-pass mock debrief: classify every material miss and flag the three highest-value repair clusters.",
-      "Complete the week's 380-question target and log each reviewed block in the tracker.",
+      "Complete the week's 770-question target and log each reviewed block in the tracker.",
       "Classify every material miss, write one correction rule, and schedule delayed retrieval before the next checkpoint."
     ],
-    "questionTarget": 380,
-    "masteryGate": "The final evidence supports taper; unresolved items are narrow, explicit, and low-risk.",
+    "questionTarget": 770,
+    "masteryGate": "Complete and debrief Mocks 6 and 7, close the final high-value repair clusters, and freeze the exam execution plan.",
     "mockMilestone": {
       "label": "Mock 7",
       "targetScore": 72,
@@ -1099,7 +1090,7 @@
       "title": "Mock 7 checkpoint and forensic repair",
       "objective": "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment.",
       "durationMinutes": 120,
-      "number": 24,
+      "number": 23,
       "requirement": "required",
       "date": "2027-02-20",
       "day": "Saturday",

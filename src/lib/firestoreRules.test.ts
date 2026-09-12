@@ -14,9 +14,9 @@ function blockBetween(start: string, end: string): string {
 
 describe("private tutor Firestore rule boundary", () => {
   it("accepts the September migration without permitting a schema downgrade or student schedule change", () => {
-    expect(rules).toContain("scheduleVersion in ['weekly-saturday-v2', 'weekly-saturday-v3']");
-    expect(rules).toContain("resource.data.state.scheduleVersion != 'weekly-saturday-v3'");
-    expect(rules).toContain("request.resource.data.state.scheduleVersion == 'weekly-saturday-v3'");
+    expect(rules).toContain("scheduleVersion in ['weekly-saturday-v2', 'weekly-saturday-v3', 'weekly-saturday-v4']");
+    expect(rules).toContain("resource.data.state.scheduleVersion != 'weekly-saturday-v4'");
+    expect(rules).toContain("request.resource.data.state.scheduleVersion == 'weekly-saturday-v4'");
     const studentVersion = blockBetween("function studentPreservesScheduleVersion()", "function validTrackerEnvelope()");
     expect(studentVersion).toContain("== resource.data.state.scheduleVersion");
     expect(rules).toContain("sessionCompletionReviews.size() <= 64");

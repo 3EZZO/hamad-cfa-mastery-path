@@ -26,6 +26,7 @@ export interface LiveSessionDescriptor {
   number: number;
   title: string;
   date: string;
+  dateLabel?: string;
   startTime: string;
   candidateName: string;
   topic: string;

@@ -21,27 +21,33 @@ describe("canonical 25-week official 2027 plan", () => {
     }
   });
 
-  it("begins tutoring Saturday 12 September and preserves exam day", () => {
+  it("begins the split first session on 18 September and preserves exam day", () => {
     expect(program.programStart).toBe("2026-09-06");
-    expect(program.firstTutorSession).toBe("2026-09-12");
+    expect(program.firstTutorSession).toBe("2026-09-18");
     expect(program.examAppointment).toBe("2027-02-27");
-    expect(sessions[0]?.date).toBe(program.firstTutorSession);
+    expect(sessions[0]).toMatchObject({
+      date: "2026-09-19",
+      deliveryDates: [program.firstTutorSession, "2026-09-19"],
+    });
     expect(sessions.at(-1)?.date).toBe("2027-02-20");
     expect(PLAN.at(-1)?.session1).toBeUndefined();
   });
 
-  it("uses one Saturday checkpoint in Weeks 1-24 with agreed 150-minute Sessions 1 and 3", () => {
-    expect(sessions).toHaveLength(24);
+  it("uses 23 checkpoints in Weeks 2-24 with a split first session", () => {
+    expect(sessions).toHaveLength(23);
     expect(sessions.map((session) => session.number)).toEqual(
-      Array.from({ length: 24 }, (_, index) => index + 1),
+      Array.from({ length: 23 }, (_, index) => index + 1),
     );
-    for (const week of PLAN.slice(0, 24)) {
+    expect(getWeekSessions(PLAN[0]!)).toHaveLength(0);
+    for (const week of PLAN.slice(1, 24)) {
       const weekSessions = getWeekSessions(week);
       expect(weekSessions).toHaveLength(1);
       expect(weekSessions[0]).toMatchObject({
         day: "Saturday",
-        label: "Saturday 09:00 checkpoint",
-        durationMinutes: week.week === 1 || week.week === 3 ? 150 : 120,
+        label: week.week === 2
+          ? "Friday-Saturday split checkpoint"
+          : "Saturday 09:00 checkpoint",
+        durationMinutes: week.week <= 4 ? 150 : 120,
         requirement: "required",
         date: week.endDate,
       });
@@ -50,9 +56,9 @@ describe("canonical 25-week official 2027 plan", () => {
     expect(program.tutoringRhythm).toMatchObject({
       time: "09:00",
       timeZone: "Asia/Riyadh",
-      checkpointWeeks: 24,
+      checkpointWeeks: 23,
       independentExamWeek: 1,
-      totalSessions: 24,
+      totalSessions: 23,
     });
   });
 
@@ -92,7 +98,7 @@ describe("canonical 25-week official 2027 plan", () => {
     );
     expect(getPlanTasks(PLAN[0]!)[0]?.kind).toBe("independent");
     expect(
-      getPlanTasks(PLAN[0]!).findIndex((task) => task.kind === "session"),
+      getPlanTasks(PLAN[1]!).findIndex((task) => task.kind === "session"),
     ).toBeGreaterThan(0);
   });
 
@@ -101,7 +107,7 @@ describe("canonical 25-week official 2027 plan", () => {
     for (const topic of TOPICS) expect(covered.has(topic)).toBe(true);
   });
 
-  it("contains seven independent full-mock campaigns and an exam-week taper", () => {
+  it("contains seven mock campaigns with the final two combined before taper", () => {
     const mockWeeks = PLAN.filter(
       (week) => /^Mock \d$/.test(week.mockMilestone?.label ?? ""),
     );
@@ -111,18 +117,18 @@ describe("canonical 25-week official 2027 plan", () => {
       "Mock 3",
       "Mock 4",
       "Mock 5",
-      "Mock 6",
       "Mock 7",
     ]);
     expect(mockWeeks.map((week) => week.week)).toEqual([
-      18, 19, 20, 21, 22, 23, 24,
+      19, 20, 21, 22, 23, 24,
     ]);
     expect(mockWeeks.map((week) => week.mockMilestone?.targetScore)).toEqual([
-      60, 63, 65, 67, 69, 70, 72,
+      60, 63, 65, 67, 69, 72,
     ]);
     expect(PLAN.at(-1)?.mockMilestone?.label).toBe("Exam execution gate");
-    expect(PLAN[18]?.focus).toContain("deep repair");
-    expect(PLAN[18]?.independentStudy.join(" ")).toContain("delayed retests");
+    expect(PLAN[23]?.focus).toContain("Mock 6, Mock 7");
+    expect(PLAN[19]?.focus).toContain("deep repair");
+    expect(PLAN[19]?.independentStudy.join(" ")).toContain("delayed retests");
     expect(program.examDayChecklist).toHaveLength(3);
     expect(program.administrativeMilestones.at(-1)).toMatchObject({
       date: "2027-02-27",

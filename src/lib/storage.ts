@@ -468,7 +468,7 @@ export function loadState(): TrackerState {
   if (!saved) return createDefaultState();
   try {
     const parsed = JSON.parse(saved);
-    if (parsed.scheduleVersion === "weekly-saturday-v2") preservePreRescheduleBackup("local", parsed);
+    if (["weekly-saturday-v2", "weekly-saturday-v3"].includes(parsed.scheduleVersion)) preservePreRescheduleBackup("local", parsed);
     return normalizeState(parsed);
   } catch {
     return createDefaultState();
@@ -486,7 +486,7 @@ export function loadPendingSync(): PendingSync | null {
   if (!saved) return null;
   try {
     const value = JSON.parse(saved) as Partial<PendingSync>;
-    if (JSON.stringify(value).includes('"weekly-saturday-v2"')) preservePreRescheduleBackup("pending", value);
+    if (/"weekly-saturday-v[23]"/.test(JSON.stringify(value))) preservePreRescheduleBackup("pending", value);
     if (
       value.version !== 1 ||
       !Number.isInteger(value.baseRevision) ||

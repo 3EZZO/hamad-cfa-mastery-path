@@ -7,10 +7,11 @@ import {
 } from "./schedule";
 
 describe("fixed weekly checkpoint scheduling", () => {
-  it("uses 24 canonical Saturdays before exam week", () => {
+  it("uses 23 canonical checkpoints before exam week", () => {
     const sessions = getEffectiveSessions({});
-    expect(sessions).toHaveLength(24);
-    expect(sessions[0]?.effectiveDate).toBe("2026-09-12");
+    expect(sessions).toHaveLength(23);
+    expect(sessions[0]?.effectiveDate).toBe("2026-09-19");
+    expect(sessions[0]?.session.deliveryDates).toEqual(["2026-09-18", "2026-09-19"]);
     expect(sessions.at(-1)?.effectiveDate).toBe("2027-02-20");
     expect(sessions.every((entry) => entry.session.day === "Saturday")).toBe(
       true,
@@ -21,20 +22,20 @@ describe("fixed weekly checkpoint scheduling", () => {
     const result = cascadeReschedule(
       {},
       2,
-      "2026-09-18",
+      "2026-09-25",
       "Student travel",
       "2026-08-21T00:00:00.000Z",
     );
     expect(result.changedSessionNumbers).toEqual([2]);
     expect(result.overrides["2"]).toEqual({
       sessionNumber: 2,
-      date: "2026-09-18",
+      date: "2026-09-25",
       reason: "Student travel",
       updatedAt: "2026-08-21T00:00:00.000Z",
     });
     expect(result.finalSessionDate).toBe("2027-02-20");
     expect(getEffectiveSessions(result.overrides)[2]?.effectiveDate).toBe(
-      "2026-09-26",
+      "2026-10-03",
     );
   });
 
@@ -42,14 +43,14 @@ describe("fixed weekly checkpoint scheduling", () => {
     const first = cascadeReschedule(
       {},
       2,
-      "2026-09-18",
+      "2026-09-25",
       "Original approved reason",
       "2026-08-21T00:00:00.000Z",
     );
     const repeated = cascadeReschedule(
       first.overrides,
       2,
-      "2026-09-18",
+      "2026-09-25",
       "Replacement reason",
       "2026-08-22T00:00:00.000Z",
     );
@@ -61,13 +62,13 @@ describe("fixed weekly checkpoint scheduling", () => {
     const moved = cascadeReschedule(
       {},
       2,
-      "2026-09-18",
+      "2026-09-25",
       "Travel",
     );
     const restored = cascadeReschedule(
       moved.overrides,
       2,
-      "2026-09-19",
+      "2026-09-26",
       "Restored",
     );
     expect(restored.changedSessionNumbers).toEqual([2]);
@@ -75,20 +76,20 @@ describe("fixed weekly checkpoint scheduling", () => {
   });
 
   it("rejects other weekdays, other Saturdays, and exam day", () => {
-    expect(() => cascadeReschedule({}, 2, "2026-09-17", "Thursday"))
+    expect(() => cascadeReschedule({}, 2, "2026-09-24", "Thursday"))
       .toThrow(/planned Saturday|preceding Friday/i);
-    expect(() => cascadeReschedule({}, 2, "2026-09-26", "Wrong week"))
+    expect(() => cascadeReschedule({}, 2, "2026-10-03", "Wrong week"))
       .toThrow(/planned Saturday|preceding Friday/i);
     expect(() => cascadeReschedule({}, 24, "2027-02-27", "Exam day"))
-      .toThrow(/before exam day/i);
+      .toThrow(/valid tutor session/i);
   });
 
   it("restores only the selected checkpoint to its canonical Saturday", () => {
-    const first = cascadeReschedule({}, 2, "2026-09-18", "Travel").overrides;
+    const first = cascadeReschedule({}, 2, "2026-09-25", "Travel").overrides;
     const second = cascadeReschedule(
       first,
       4,
-      "2026-10-02",
+      "2026-10-09",
       "Travel",
     ).overrides;
     expect(restoreCanonicalSession(second, 4)).toEqual({ "2": second["2"] });
@@ -96,7 +97,7 @@ describe("fixed weekly checkpoint scheduling", () => {
   });
 
   it("validates the complete effective schedule", () => {
-    const valid = cascadeReschedule({}, 2, "2026-09-18", "Travel").overrides;
+    const valid = cascadeReschedule({}, 2, "2026-09-25", "Travel").overrides;
     expect(() => validateEffectiveSessionSchedule(valid)).not.toThrow();
     expect(() =>
       validateEffectiveSessionSchedule({

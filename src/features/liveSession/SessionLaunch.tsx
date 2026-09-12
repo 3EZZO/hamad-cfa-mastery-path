@@ -157,7 +157,7 @@ export function SessionLaunch({
           <span className="ls-kicker">{session.topic}</span>
           <h2>{session.title}</h2>
           <p>
-            {displayDate(session.date)} at {session.startTime} -{" "}
+            {session.dateLabel ?? displayDate(session.date)} at {session.startTime} -{" "}
             {session.candidateName}
           </p>
         </div>

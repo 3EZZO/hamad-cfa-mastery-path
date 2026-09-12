@@ -1162,8 +1162,8 @@ export function LiveSessionRunner({
         <div className="ls-livebar__identity">
           <span className="ls-live-dot" aria-hidden="true" />
           <div>
-            <span title={`${route.name} · ${session.date} · ${session.startTime} Riyadh`}>
-              Session {String(session.number).padStart(2, "0")} · {new Intl.DateTimeFormat("en-GB", {
+            <span title={`${route.name} · ${session.dateLabel ?? session.date} · ${session.startTime} Riyadh`}>
+              Session {String(session.number).padStart(2, "0")} · {session.dateLabel ?? new Intl.DateTimeFormat("en-GB", {
                 day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
               }).format(new Date(`${session.date}T00:00:00Z`))} · {session.startTime} Riyadh · {route.minutes} min
             </span>

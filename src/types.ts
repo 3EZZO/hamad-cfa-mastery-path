@@ -7,6 +7,7 @@ export interface PlanSession {
   requirement: "required";
   date: string;
   day: string;
+  deliveryDates?: string[];
   readings: string[];
 }
 
@@ -140,7 +141,7 @@ export interface DiagnosticEntry {
 
 export interface TrackerState {
   version: 1;
-  scheduleVersion: "weekly-saturday-v3";
+  scheduleVersion: "weekly-saturday-v4";
   updatedAt: string;
   taskCompletions: Record<string, boolean>;
   sessionCompletionRequests: Record<string, SessionCompletionRequest>;

@@ -771,7 +771,7 @@ def scheduled_weeks() -> list[dict]:
     mock_two["sessions"] = [*mock_two["sessions"], *repair["sessions"]]
     mock_two["masteryGate"] = "Debrief Mock 2 and rank recurring errors by frequency, value, confidence, and repairability. Reteach the highest-value clusters, verify transfer on fresh mixed questions, and clear delayed retests with no topic floor below 65%."
 
-    return [
+    original = [
         *opening,
         *WEEKS[4:14],
         alternatives_and_portfolio,
@@ -779,6 +779,31 @@ def scheduled_weeks() -> list[dict]:
         coverage_close_and_integration,
         *mock_and_taper,
     ]
+
+    # Session 01 was postponed and is now delivered as one resumable
+    # checkpoint across Friday 18 and Saturday 19 September. Shift the
+    # teaching cadence by one week, retain the exam-week taper, and combine
+    # the final two mock reviews so no tutoring session lands on exam day.
+    preparation = {
+        "focus": "Session 01 preparation and calculator readiness",
+        "topics": ["Quantitative Methods"],
+        "sessions": [],
+        "independentStudy": [
+            "Confirm the Session 01 readings, calculator settings, batteries, and working setup.",
+            "Preview the return, benchmarking, and time-value vocabulary before the two-part checkpoint.",
+        ],
+        "questionTarget": 0,
+        "masteryGate": "Prepare the assigned Session 01 readings, calculator, and working setup for the two-part checkpoint on 18-19 September.",
+    }
+    combined_final_review = {
+        **original[22],
+        "focus": "Mock 6, Mock 7, and final forensic repair",
+        "sessions": [*original[22]["sessions"], *original[23]["sessions"]],
+        "questionTarget": original[22]["questionTarget"] + original[23]["questionTarget"],
+        "masteryGate": "Complete and debrief Mocks 6 and 7, close the final high-value repair clusters, and freeze the exam execution plan.",
+        "mock": 7,
+    }
+    return [preparation, *original[:22], combined_final_review, original[24]]
 
 
 def phase_for_week(week_number: int) -> str:
@@ -840,14 +865,14 @@ def build() -> tuple[list[dict], dict]:
         ]
         assigned_reading_ids = [title_to_id[title] for title in assigned_titles]
 
-        independent_study = [
+        independent_study = blueprint.get("independentStudy", [
             (
                 f"Study official 2027 Module {record_by_id[reading_id]['number']:03d}: "
                 f"{record_by_id[reading_id]['title']} in the Learning Ecosystem, "
                 "then write a concise recall note."
             )
             for reading_id in assigned_reading_ids
-        ]
+        ])
         if blueprint.get("mock"):
             independent_study.extend(
                 [
@@ -863,11 +888,11 @@ def build() -> tuple[list[dict], dict]:
                     "Execute the rehearsed exam-day routine on Saturday 27 February 2027.",
                 ]
             )
-        elif not assigned_reading_ids:
+        elif week_number != 1 and not assigned_reading_ids:
             independent_study.append(
                 "Complete the assigned timed mixed assessment or repair set before Saturday's checkpoint."
             )
-        if week_number < 25:
+        if 1 < week_number < 25:
             independent_study.extend(
                 [
                     f"Complete the week's {blueprint['questionTarget']}-question target and log each reviewed block in the tracker.",
@@ -913,16 +938,15 @@ def build() -> tuple[list[dict], dict]:
             },
         }
 
-        # The first 24 weeks end with one fixed Saturday checkpoint. Week 25 is
-        # reserved for independent taper and the Saturday exam appointment, so
-        # no tutoring session is placed on exam day.
-        if week_number <= 24:
+        # Week 1 is preparation only. Weeks 2-24 contain the 23 tutor
+        # checkpoints that fit before the fixed Saturday exam appointment.
+        if 2 <= week_number <= 24:
             session_number += 1
             for reading_id in assigned_reading_ids:
                 record_by_id[reading_id]["sessionNumbers"].append(session_number)
             checkpoint_kind = (
                 "Quant Masterclass I: returns, benchmarking, and time value"
-                if week_number == 1
+                if week_number == 2
                 else "Mock 2 checkpoint, deep repair, and transfer verification"
                 if blueprint.get("mock") == 2
                 else f"Mock {blueprint['mock']} checkpoint and forensic repair"
@@ -931,7 +955,7 @@ def build() -> tuple[list[dict], dict]:
             )
             checkpoint_objective = (
                 "Teach Quant Modules M001-M004 immediately through modelled examples, guided reconstruction, independent proof, adaptive repair, and a focused closing assignment."
-                if week_number == 1
+                if week_number == 2
                 else blueprint["masteryGate"]
                 if blueprint.get("mock") == 2
                 else "Audit the independent full-mock evidence, reteach the highest-value error clusters, verify transfer on fresh questions, and issue the next repair assignment."
@@ -939,20 +963,22 @@ def build() -> tuple[list[dict], dict]:
                 else "Test the assigned work, reteach the highest-value gaps, verify the mastery gate on fresh questions, and issue the next independent-study assignment."
             )
             week["session1"] = {
-                "label": "Saturday 09:00 checkpoint",
+                "label": "Friday-Saturday split checkpoint" if session_number == 1 else "Saturday 09:00 checkpoint",
                 "title": checkpoint_kind,
                 "objective": checkpoint_objective,
-                "durationMinutes": 150 if week_number == 1 else 120,
+                "durationMinutes": 150 if session_number <= 3 else 120,
                 "number": session_number,
                 "requirement": "required",
                 "date": week_end.isoformat(),
                 "day": "Saturday",
                 "readings": assigned_reading_ids,
             }
+            if session_number == 1:
+                week["session1"]["deliveryDates"] = ["2026-09-18", "2026-09-19"]
         weeks.append(week)
 
-    if session_number != 24:
-        raise ValueError(f"Expected 24 tutoring checkpoints, found {session_number}")
+    if session_number != 23:
+        raise ValueError(f"Expected 23 tutoring checkpoints, found {session_number}")
     missing = [record["id"] for record in module_records if not record["sessionNumbers"]]
     if missing:
         raise ValueError(f"Unassigned official modules: {missing}")

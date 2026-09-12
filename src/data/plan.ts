@@ -50,10 +50,12 @@ export function getPlanTasks(
       const cadenceLabel = isFridayException
         ? "Friday 09:00 exception"
         : session.label;
+      const deliveryDate =
+        session.deliveryDates?.join(" and ") ?? override?.date ?? session.date;
       return {
         id: `${weekPrefix}-session-${index + 1}`,
         label: session.title,
-        detail: `Session ${String(session.number).padStart(2, "0")} | ${cadenceLabel} | ${override?.date ?? session.date} | ${session.durationMinutes} minutes`,
+        detail: `Session ${String(session.number).padStart(2, "0")} | ${cadenceLabel} | ${deliveryDate} | ${session.durationMinutes} minutes total`,
         kind: "session",
         optional: false,
       };

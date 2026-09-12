@@ -12,10 +12,13 @@ describe("session catalog and import boundary", () => {
     expect(tutorSessionRunId(1, "v1", "a".repeat(64))).toBe(
       "hamad-cfa-mastery-session-01-2026-09-05-v1-aaaaaaaaaaaa"
     );
-    expect(getTutorSession(1).session.date).toBe("2026-09-12");
-    expect(getTutorSession(2).session.date).toBe("2026-09-19");
+    expect(getTutorSession(1).session).toMatchObject({
+      date: "2026-09-19",
+      deliveryDates: ["2026-09-18", "2026-09-19"],
+    });
+    expect(getTutorSession(2).session.date).toBe("2026-09-26");
     expect(getTutorSession(3).session).toMatchObject({
-      date: "2026-09-26",
+      date: "2026-10-03",
       durationMinutes: 150,
     });
     expect(getTutorSession(2).taskId).not.toBe(getTutorSession(1).taskId);

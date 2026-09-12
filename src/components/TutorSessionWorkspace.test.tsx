@@ -127,7 +127,7 @@ describe("Session Mode workspace isolation", () => {
     expect(consoleFor(2).props.playbook.id).toBe(getTutorSession(2).playbookId);
     expect(consoleFor(2).props.session).toMatchObject({
       number: 2,
-      date: "2026-09-19",
+      date: "2026-09-26",
     });
     expect(consoleFor(2).props.session.id).not.toBe(firstId);
     await choose(1);
@@ -145,7 +145,7 @@ describe("Session Mode workspace isolation", () => {
     expect(consoleFor(3).props.playbook.id).toBe(getTutorSession(3).playbookId);
     expect(consoleFor(3).props.session).toMatchObject({
       number: 3,
-      date: "2026-09-26",
+      date: "2026-10-03",
     });
   });
 

@@ -319,51 +319,51 @@ export function getProject202CalendarEvents(
 ): Project202CalendarEvent[] {
   const safePreferences = normalizeCalendarExportPreferences(preferences);
   const sessionEvents = PLAN.flatMap((week) =>
-    getWeekSessions(week).map((session): TimedProject202CalendarEvent => {
+    getWeekSessions(week).flatMap((session): TimedProject202CalendarEvent[] => {
       const sessionNumber = padSessionNumber(session.number);
       const effectiveDate = effectiveSessionDate(session, sessionOverrides);
       const override = sessionOverrides[String(session.number)];
       const startTime = sessionStartTime(safePreferences);
-      const end = addMinutesToLocalDateTime(
-        effectiveDate,
-        startTime,
-        session.durationMinutes,
-      );
       const moduleTitles = resolveReadingIds(session.readings).map(
         (reading) => reading.title,
       );
-      const description = [
-        `Session ${sessionNumber} of ${program.tutoringRhythm.totalSessions}`,
-        `Week ${String(week.week).padStart(2, "0")} - ${week.phase}`,
-        `Rhythm: ${sessionDayLabel(effectiveDate)}`,
-        `Duration: ${session.durationMinutes} minutes`,
-        `Objective: ${session.objective}`,
-        `Weekly focus: ${week.focus}`,
-        `Topics: ${week.topics.join(", ")}`,
-        ...(moduleTitles.length
-          ? [`Official 2027 modules: ${moduleTitles.join("; ")}`]
-          : []),
-        ...(override && override.date !== session.date
-          ? [`Rescheduled from ${session.date}: ${override.reason}`]
-          : []),
-        `Tracker: ${trackerUrl}`,
-      ].join("\n");
-
-      return {
-        uid: `project-202-session-${sessionNumber}@${UID_DOMAIN}`,
-        kind: "tutor-session",
-        startDate: effectiveDate,
-        startTime,
-        endDate: end.date,
-        endTime: end.time,
-        timeZone: PROJECT_202_CALENDAR_TIME_ZONE,
-        reminderMinutes: safePreferences.sessionReminderMinutes,
-        summary: `Hamad CFA Mastery - Session ${sessionNumber}: ${session.title}`,
-        description,
-        alarmDescription: `Hamad CFA Mastery Session ${sessionNumber} starts soon. Open the tracker and prepare the assigned evidence.`,
-        categories: ["Hamad CFA Mastery", "CFA Level I", "Tutoring"],
-        transparent: false,
-      };
+      const dates = override ? [effectiveDate] : session.deliveryDates ?? [effectiveDate];
+      const partMinutes = Math.round(session.durationMinutes / dates.length);
+      return dates.map((date, index) => {
+        const end = addMinutesToLocalDateTime(date, startTime, partMinutes);
+        const partLabel = dates.length > 1 ? ` - Part ${index + 1} of ${dates.length}` : "";
+        const description = [
+          `Session ${sessionNumber} of ${program.tutoringRhythm.totalSessions}${partLabel}`,
+          `Week ${String(week.week).padStart(2, "0")} - ${week.phase}`,
+          `Rhythm: ${sessionDayLabel(date)}`,
+          `Duration: ${partMinutes} minutes (${session.durationMinutes} minutes total)`,
+          `Objective: ${session.objective}`,
+          `Weekly focus: ${week.focus}`,
+          `Topics: ${week.topics.join(", ")}`,
+          ...(moduleTitles.length
+            ? [`Official 2027 modules: ${moduleTitles.join("; ")}`]
+            : []),
+          ...(override && override.date !== session.date
+            ? [`Rescheduled from ${session.date}: ${override.reason}`]
+            : []),
+          `Tracker: ${trackerUrl}`,
+        ].join("\n");
+        return {
+          uid: `project-202-session-${sessionNumber}${dates.length > 1 ? `-part-${index + 1}` : ""}@${UID_DOMAIN}`,
+          kind: "tutor-session",
+          startDate: date,
+          startTime,
+          endDate: end.date,
+          endTime: end.time,
+          timeZone: PROJECT_202_CALENDAR_TIME_ZONE,
+          reminderMinutes: safePreferences.sessionReminderMinutes,
+          summary: `Hamad CFA Mastery - Session ${sessionNumber}${partLabel}: ${session.title}`,
+          description,
+          alarmDescription: `Hamad CFA Mastery Session ${sessionNumber}${partLabel} starts soon. Open the tracker and prepare the assigned evidence.`,
+          categories: ["Hamad CFA Mastery", "CFA Level I", "Tutoring"],
+          transparent: false,
+        };
+      });
     }),
   );
 
