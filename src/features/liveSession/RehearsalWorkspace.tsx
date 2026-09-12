@@ -38,6 +38,7 @@ export function RehearsalWorkspace({ session, playbook, route, onExit }: {
     />}
     {phase === "closeout" && <SessionCloseout
       mode="rehearsal" session={session} route={route} stages={stages} evidence={evidence}
+      completedDeskIds={covered}
       actualMinutes={Math.max(1, Math.round(timer.elapsedMs / 60_000))}
       onBack={() => { setPhase("running"); if (wasRunning.current) timer.resume(); }}
       onSubmit={() => { timer.finish(); setPhase("complete"); }}

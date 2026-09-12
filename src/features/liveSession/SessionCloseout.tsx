@@ -8,7 +8,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
-import { latestEvidenceByTarget } from "./sessionDeckModel";
+import {
+  flattenSessionDecks,
+  latestEvidenceByTarget,
+} from "./sessionDeckModel";
 import type {
   LiveSessionCloseoutResult,
   LiveSessionDescriptor,
@@ -25,6 +28,8 @@ export interface SessionCloseoutProps {
   route: LiveSessionRoute;
   stages: LiveSessionStage[];
   evidence: LiveSessionEvidence[];
+  completedDeskIds?: string[];
+  syncState?: "synced" | "saving" | "offline" | "error";
   actualMinutes: number;
   onBack: () => void;
   onSubmit: (result: LiveSessionCloseoutResult) => void | Promise<void>;
@@ -59,6 +64,8 @@ export function SessionCloseout({
   route,
   stages,
   evidence,
+  completedDeskIds = [],
+  syncState = "synced",
   actualMinutes,
   onBack,
   onSubmit,
@@ -83,6 +90,7 @@ export function SessionCloseout({
   const [delayedRetest, setDelayedRetest] = useState("");
   const [privateTutorNote, setPrivateTutorNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [openItemsAcknowledged, setOpenItemsAcknowledged] = useState(false);
   const targetIds = useMemo(
     () =>
       new Set(
@@ -103,6 +111,16 @@ export function SessionCloseout({
   const partial = proofEvidence.filter(item => item.verdict === "partial").length;
   const repairs = proofEvidence.filter(item => item.verdict === "repair").length;
   const parked = proofEvidence.filter(item => item.verdict === "parked").length;
+  const routeDecks = useMemo(() => flattenSessionDecks(stages), [stages]);
+  const coveredKeys = new Set(completedDeskIds);
+  const assessedTargets = new Set(proofEvidence.map(item => item.targetId));
+  const coveredDecks = routeDecks.filter(
+    deck => coveredKeys.has(deck.key) || assessedTargets.has(deck.targetId)
+  ).length;
+  const openDecks = Math.max(0, routeDecks.length - coveredDecks);
+  const unresolvedItems = partial + repairs + parked + openDecks;
+  const hasUnresolvedItems = unresolvedItems > 0;
+  const requiresAcknowledgement = mode === "live" && unresolvedItems > 0;
 
   const changeDecision = (stageId: string, decision: MasteryDecision) => {
     setMastery(current =>
@@ -112,6 +130,7 @@ export function SessionCloseout({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (requiresAcknowledgement && !openItemsAcknowledged) return;
     setSaving(true);
     try {
       await onSubmit({
@@ -152,6 +171,34 @@ export function SessionCloseout({
         <article className="is-partial"><CircleAlert size={18} /><span><strong>{partial}</strong><small>developing proofs</small></span></article>
         <article className="is-warning"><CircleAlert size={18} /><span><strong>{repairs}</strong><small>repairs</small></span></article>
         <article className="is-danger"><ClipboardCheck size={18} /><span><strong>{parked}</strong><small>deferred</small></span></article>
+      </section>
+
+      <section className={`ls-closeout__readiness${hasUnresolvedItems ? " has-open-items" : " is-ready"}`} aria-label="Completion readiness">
+        <div>
+          <strong>{coveredDecks} of {routeDecks.length} route decks covered</strong>
+          <span className="ls-closeout__readiness-detail">
+            {openDecks} open · {repairs} repair · {parked} deferred · cloud {syncState}
+          </span>
+        </div>
+        {requiresAcknowledgement ? (
+          <label>
+            <input
+              type="checkbox"
+              checked={openItemsAcknowledged}
+              onChange={event => setOpenItemsAcknowledged(event.target.checked)}
+            />
+            I reviewed the open and unresolved items and intentionally want to close this session.
+          </label>
+        ) : hasUnresolvedItems ? (
+          <p>Rehearsal closeout remains available so you can practise the complete workflow.</p>
+        ) : (
+          <p className="ls-closeout__ready"><Check size={17} /> Completion checks are clear.</p>
+        )}
+        {syncState !== "synced" && (
+          <p className="ls-closeout__warning" role="status">
+            The device recovery copy remains available. Keep this page open until cloud status returns to Synced when possible.
+          </p>
+        )}
       </section>
 
       <section className="ls-closeout__section">
@@ -212,7 +259,7 @@ export function SessionCloseout({
 
       <footer className="ls-closeout__footer">
         <div><Save size={18} /><span><strong>{mode === "rehearsal" ? "Practice only" : "One clean save"}</strong><small>{mode === "rehearsal" ? "No evidence, progress or notes will be saved." : "Evidence, mastery, mistakes, and next actions remain synchronized."}</small></span></div>
-        <button className="ls-button ls-button--primary ls-button--large" type="submit" disabled={saving}>
+        <button className="ls-button ls-button--primary ls-button--large" type="submit" disabled={saving || (requiresAcknowledgement && !openItemsAcknowledged)}>
           <Check size={18} /> {mode === "rehearsal" ? "Finish rehearsal without saving" : saving ? "Saving session…" : "Save and finish"}
         </button>
       </footer>

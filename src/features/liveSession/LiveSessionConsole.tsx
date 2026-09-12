@@ -662,6 +662,8 @@ function LiveSessionWorkspace({
           route={selectedRoute}
           stages={stages}
           evidence={evidence}
+          completedDeskIds={completedDeskIds}
+          syncState={syncState}
           actualMinutes={Math.max(1, Math.round(timer.elapsedMs / 60_000))}
           onBack={returnToSession}
           onSubmit={finish}

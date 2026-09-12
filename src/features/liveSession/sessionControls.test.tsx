@@ -107,6 +107,23 @@ describe("P1 consolidated session controls", () => {
     expect(tree!.root.findByType(ReferenceDrawer).props.open).toBe(true);
   });
 
+  it("offers a laptop focus mode and a complete route map inside Session tools", async () => {
+    await renderRunner();
+    const runner = () => tree!.root.find(node => node.props.className === "ls-runner");
+    const focus = tree!.root.findAllByType("button").find(
+      button => button.props["aria-label"] === "Enter laptop focus mode"
+    )!;
+    expect(runner().props["data-focus"]).toBe("false");
+    await act(async () => focus.props.onClick());
+    expect(runner().props["data-focus"]).toBe("true");
+
+    const routeMap = tree!.root.find(
+      node => node.props["aria-label"] === "Session route map"
+    );
+    expect(routeMap.findAllByType("button").length).toBeGreaterThan(100);
+    expect(routeMap.findAllByProps({ "aria-current": "step" })).toHaveLength(1);
+  });
+
   it("moves between adjacent route decks with the arrow keys", async () => {
     const props = await renderRunner();
     const latestKeyHandler = () => {

@@ -9,6 +9,9 @@ import {
   Command,
   Flag,
   Layers3,
+  Map,
+  Maximize2,
+  Minimize2,
   MonitorUp,
   Minus,
   Pause,
@@ -106,6 +109,13 @@ type ResultFilter =
   | "open"
   | EvidenceVerdict;
 type QueueMode = "core" | "core-plus" | "all" | "stretch";
+type SessionDensity = "compact" | "comfortable";
+
+interface SessionWorkspaceMemory {
+  deckKey?: string;
+  phase?: LinearSessionPhase;
+  scrollByDeck?: Record<string, Partial<Record<TeachingFlowStep, number>>>;
+}
 
 interface CommandDeskResult {
   key: string;
@@ -124,6 +134,23 @@ const EMPTY_DRAFT: EvidenceDraft = {
   errorCodes: [],
   note: "",
 };
+
+function readLocalValue<T>(key: string, fallback: T): T {
+  try {
+    const value = localStorage.getItem(key);
+    return value === null ? fallback : (JSON.parse(value) as T);
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLocalValue(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* Session Mode remains usable when device storage is unavailable. */
+  }
+}
 
 function makeEvidenceId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -238,6 +265,20 @@ export function LiveSessionRunner({
     Math.max(0, initialStageIndex),
     Math.max(0, stages.length - 1)
   );
+  const initialStage = stages[safeInitialStage];
+  const initialQuestion = initialStage?.questions?.[
+    Math.max(0, initialQuestionIndex)
+  ];
+  const initialDeckKey = sessionDeckKey(
+    initialStage?.id ?? "unknown",
+    initialQuestion?.id ?? initialStage?.id ?? "unknown"
+  );
+  const workspaceStorageKey = `hamad-session-workspace:${session.id}:${route.id}`;
+  const workspaceMemoryRef = useRef<SessionWorkspaceMemory>(
+    persistPreferences
+      ? readLocalValue<SessionWorkspaceMemory>(workspaceStorageKey, {})
+      : {}
+  );
   const [stageIndex, setStageIndex] = useState(safeInitialStage);
   const [questionIndex, setQuestionIndex] = useState(
     Math.max(0, initialQuestionIndex)
@@ -250,7 +291,42 @@ export function LiveSessionRunner({
   const [query, setQuery] = useState("");
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
   const [queueMode, setQueueMode] = useState<QueueMode>("all");
-  const [linearPhase, setLinearPhase] = useState<LinearSessionPhase>("teach");
+  const [linearPhase, setLinearPhase] = useState<LinearSessionPhase>(() =>
+    workspaceMemoryRef.current.deckKey === initialDeckKey &&
+    workspaceMemoryRef.current.phase
+      ? workspaceMemoryRef.current.phase
+      : "teach"
+  );
+  const [focusMode, setFocusMode] = useState(false);
+  const [density, setDensity] = useState<SessionDensity>(() =>
+    persistPreferences
+      ? readLocalValue<SessionDensity>(
+          "hamad-session-density",
+          "comfortable"
+        )
+      : "comfortable"
+  );
+  const [highContrast, setHighContrast] = useState(() =>
+    persistPreferences
+      ? readLocalValue("hamad-session-high-contrast", false)
+      : false
+  );
+  const [hideCoaching, setHideCoaching] = useState(() =>
+    persistPreferences
+      ? readLocalValue("hamad-session-hide-coaching", false)
+      : false
+  );
+  const [equalColumns, setEqualColumns] = useState(() =>
+    persistPreferences
+      ? readLocalValue("hamad-session-equal-columns", false)
+      : false
+  );
+  const [resumeNoticeOpen, setResumeNoticeOpen] = useState(
+    initialStageIndex > 0 ||
+      initialQuestionIndex > 0 ||
+      completedDeskIds.length > 0 ||
+      timer.elapsedMs > 0
+  );
   const [deskElapsedSeconds, setDeskElapsedSeconds] = useState(0);
   const [deskTimerRunning, setDeskTimerRunning] = useState(false);
   const [advanceHint, setAdvanceHint] = useState("");
@@ -279,6 +355,7 @@ export function LiveSessionRunner({
   };
   const searchRef = useRef<HTMLInputElement>(null);
   const toolsRef = useRef<HTMLDetailsElement>(null);
+  const scrollSaveTimerRef = useRef<number | null>(null);
   const flowStep: TeachingFlowStep =
     linearPhase === "evidence" ? "answer" : linearPhase;
 
@@ -301,6 +378,8 @@ export function LiveSessionRunner({
   const evidenceTarget = isEvidenceTarget(question);
   const targetId = question?.id ?? stage?.id ?? "unknown";
   const currentDeskKey = sessionDeckKey(stage?.id ?? "unknown", targetId);
+  const panelScrollPositions =
+    workspaceMemoryRef.current.scrollByDeck?.[currentDeskKey] ?? {};
   const deskComplete = completedDeskIds.includes(currentDeskKey);
   const targetLabel = question
     ? `${question.label ?? `Proof ${safeQuestionIndex + 1}`} · ${question.id}`
@@ -319,6 +398,70 @@ export function LiveSessionRunner({
     [evidence]
   );
   const SyncIcon = syncCopy(syncState).icon;
+
+  useEffect(() => {
+    if (!persistPreferences) return;
+    writeLocalValue("hamad-session-density", density);
+    writeLocalValue("hamad-session-high-contrast", highContrast);
+    writeLocalValue("hamad-session-hide-coaching", hideCoaching);
+    writeLocalValue("hamad-session-equal-columns", equalColumns);
+  }, [density, equalColumns, hideCoaching, highContrast, persistPreferences]);
+
+  useEffect(() => {
+    workspaceMemoryRef.current.deckKey = currentDeskKey;
+    workspaceMemoryRef.current.phase = linearPhase;
+    if (persistPreferences)
+      writeLocalValue(workspaceStorageKey, workspaceMemoryRef.current);
+  }, [currentDeskKey, linearPhase, persistPreferences, workspaceStorageKey]);
+
+  useEffect(
+    () => () => {
+      if (scrollSaveTimerRef.current !== null)
+        window.clearTimeout(scrollSaveTimerRef.current);
+    },
+    []
+  );
+
+  const rememberPanelScroll = useCallback(
+    (step: TeachingFlowStep, scrollTop: number) => {
+      const scrollByDeck = workspaceMemoryRef.current.scrollByDeck ?? {};
+      workspaceMemoryRef.current.scrollByDeck = {
+        ...scrollByDeck,
+        [currentDeskKey]: {
+          ...(scrollByDeck[currentDeskKey] ?? {}),
+          [step]: scrollTop,
+        },
+      };
+      if (!persistPreferences) return;
+      if (scrollSaveTimerRef.current !== null)
+        window.clearTimeout(scrollSaveTimerRef.current);
+      scrollSaveTimerRef.current = window.setTimeout(() => {
+        writeLocalValue(workspaceStorageKey, workspaceMemoryRef.current);
+        scrollSaveTimerRef.current = null;
+      }, 120);
+    },
+    [currentDeskKey, persistPreferences, workspaceStorageKey]
+  );
+
+  const resetWorkspaceLayout = useCallback(() => {
+    setDensity("comfortable");
+    setHighContrast(false);
+    setHideCoaching(false);
+    setEqualColumns(false);
+    setFocusMode(false);
+    setReaderSize(1);
+    workspaceMemoryRef.current.scrollByDeck = {};
+    document
+      .querySelectorAll<HTMLElement>(".ls-command-block__body")
+      .forEach(panel => {
+        panel.scrollTop = 0;
+      });
+    if (persistPreferences) {
+      writeLocalValue("hamad-session-reader-size", 1);
+      writeLocalValue(workspaceStorageKey, workspaceMemoryRef.current);
+    }
+    setAdvanceHint("Workspace layout reset. Session progress was not changed.");
+  }, [persistPreferences, workspaceStorageKey]);
 
   const isDeckCovered = useCallback(
     (deck: SessionDeck) =>
@@ -349,22 +492,49 @@ export function LiveSessionRunner({
 
   const changePosition = useCallback(
     (nextStage: number, nextQuestion: number) => {
-      setStageIndex(
-        Math.min(Math.max(0, nextStage), Math.max(0, stages.length - 1))
+      const clampedStage = Math.min(
+        Math.max(0, nextStage),
+        Math.max(0, stages.length - 1)
       );
-      setQuestionIndex(Math.max(0, nextQuestion));
+      const clampedQuestion = Math.max(0, nextQuestion);
+      const nextStageValue = stages[clampedStage];
+      const nextQuestionValue = nextStageValue?.questions?.[clampedQuestion];
+      const nextDeckKey = sessionDeckKey(
+        nextStageValue?.id ?? "unknown",
+        nextQuestionValue?.id ?? nextStageValue?.id ?? "unknown"
+      );
+      setStageIndex(clampedStage);
+      setQuestionIndex(clampedQuestion);
       setDraft(EMPTY_DRAFT);
-      setLinearPhase("teach");
+      setLinearPhase(
+        workspaceMemoryRef.current.deckKey === nextDeckKey
+          ? (workspaceMemoryRef.current.phase ?? "teach")
+          : "teach"
+      );
       setDeskTimerRunning(false);
       setAdvanceHint("");
       window.scrollTo({ top: 0, behavior: "auto" });
     },
-    [stages.length]
+    [stages]
   );
 
   const navigateToDeck = useCallback(
     (deck: SessionDeck) => changePosition(deck.stageIndex, deck.questionIndex),
     [changePosition]
+  );
+
+  const navigateManuallyToDeck = useCallback(
+    (deck: SessionDeck) => {
+      if (hasUnrecordedDraft) {
+        setAdvanceHint(
+          "Save or clear the current evidence draft before changing decks."
+        );
+        return false;
+      }
+      navigateToDeck(deck);
+      return true;
+    },
+    [hasUnrecordedDraft, navigateToDeck]
   );
 
   const moveForward = useCallback(
@@ -412,21 +582,15 @@ export function LiveSessionRunner({
         : [...queueDecks]
             .reverse()
             .find(deck => deck.globalIndex < currentDeck.globalIndex);
-    if (previous) navigateToDeck(previous);
-  }, [currentDeck, navigateToDeck, queueDecks]);
+    if (previous) navigateManuallyToDeck(previous);
+  }, [currentDeck, navigateManuallyToDeck, queueDecks]);
 
   const moveToAdjacentRouteDeck = useCallback(
     (direction: -1 | 1) => {
       if (!currentDeck) return;
-      if (hasUnrecordedDraft) {
-        setAdvanceHint(
-          "Save or clear the current evidence draft before changing decks."
-        );
-        return;
-      }
       const adjacentDeck = allDecks[currentDeck.globalIndex + direction];
       if (adjacentDeck) {
-        navigateToDeck(adjacentDeck);
+        navigateManuallyToDeck(adjacentDeck);
         return;
       }
       setAdvanceHint(
@@ -435,7 +599,7 @@ export function LiveSessionRunner({
           : "You are already on the first deck in this route."
       );
     },
-    [allDecks, currentDeck, hasUnrecordedDraft, navigateToDeck]
+    [allDecks, currentDeck, navigateManuallyToDeck]
   );
 
   const recordEvidence = useCallback(() => {
@@ -598,9 +762,24 @@ export function LiveSessionRunner({
     selectFlowStep,
   ]);
 
+  const requestCloseoutSafely = useCallback(() => {
+    if (hasUnrecordedDraft) {
+      setAdvanceHint(
+        "Save or clear the current evidence draft before opening closeout."
+      );
+      return;
+    }
+    onRequestCloseout();
+  }, [hasUnrecordedDraft, onRequestCloseout]);
+
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       if (candidateOpen || referenceOpen) return;
+      if (event.key === "Escape" && focusMode) {
+        event.preventDefault();
+        setFocusMode(false);
+        return;
+      }
       if (event.key === "Escape" && toolsRef.current?.open) {
         event.preventDefault();
         toolsRef.current.open = false;
@@ -672,6 +851,9 @@ export function LiveSessionRunner({
       } else if (key === "?") {
         event.preventDefault();
         setShortcutsOpen(value => !value);
+      } else if (key === "z") {
+        event.preventDefault();
+        setFocusMode(value => !value);
       }
     };
     window.addEventListener("keydown", handleShortcut);
@@ -680,6 +862,7 @@ export function LiveSessionRunner({
     advanceLinearSequence,
     candidateOpen,
     draft.verdict,
+    focusMode,
     goPrevious,
     moveToAdjacentRouteDeck,
     openCandidateView,
@@ -966,6 +1149,11 @@ export function LiveSessionRunner({
     <section
       className="ls-runner"
       data-reader-size={readerSize}
+      data-density={density}
+      data-contrast={highContrast ? "high" : "standard"}
+      data-focus={focusMode ? "true" : "false"}
+      data-flow-step={flowStep}
+      data-equal-columns={equalColumns ? "true" : "false"}
       aria-label={`Live ${session.title}`}
     >
       <header className="ls-livebar">
@@ -1061,9 +1249,19 @@ export function LiveSessionRunner({
           <button
             className="ls-button ls-button--quiet"
             type="button"
-            onClick={onRequestCloseout}
+            onClick={requestCloseoutSafely}
           >
             <Flag size={16} /> {mode === "rehearsal" ? "Finish rehearsal" : "Finish session"}
+          </button>
+          <button
+            className="ls-icon-button ls-focus-toggle"
+            type="button"
+            onClick={() => setFocusMode(value => !value)}
+            aria-pressed={focusMode}
+            aria-label={focusMode ? "Exit laptop focus mode" : "Enter laptop focus mode"}
+            title={focusMode ? "Exit focus mode (Esc)" : "Enter focus mode (Z)"}
+          >
+            {focusMode ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
           </button>
         </div>
         {mode === "live" && <SyncRecoveryNotice state={syncState} message={syncMessage} onRetry={onSyncRetry} />}
@@ -1133,8 +1331,16 @@ export function LiveSessionRunner({
                       title={`${item.label}: ${item.title}`}
                       key={item.id}
                       onClick={() => {
-                        changePosition(index, 0);
-                        if (toolsRef.current) toolsRef.current.open = false;
+                        const destination = allDecks.find(
+                          deck => deck.stageIndex === index
+                        );
+                        if (
+                          destination &&
+                          navigateManuallyToDeck(destination) &&
+                          toolsRef.current
+                        ) {
+                          toolsRef.current.open = false;
+                        }
                       }}
                     >
                       {complete ? <CheckCircle2 size={15} /> : <span>{index + 1}</span>}
@@ -1181,6 +1387,45 @@ export function LiveSessionRunner({
                 </button>
               </div>
             </div>
+            <section className="ls-comfort-settings" aria-label="Session comfort controls">
+              <header>
+                <strong>Workspace comfort</strong>
+                <span>These settings affect only this device.</span>
+              </header>
+              <div>
+                <button
+                  type="button"
+                  aria-pressed={density === "compact"}
+                  onClick={() => setDensity(value => value === "compact" ? "comfortable" : "compact")}
+                >
+                  Compact density
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={highContrast}
+                  onClick={() => setHighContrast(value => !value)}
+                >
+                  High contrast
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={hideCoaching}
+                  onClick={() => setHideCoaching(value => !value)}
+                >
+                  Hide coaching cues
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={equalColumns}
+                  onClick={() => setEqualColumns(value => !value)}
+                >
+                  Equal panel widths
+                </button>
+                <button type="button" onClick={resetWorkspaceLayout}>
+                  <RotateCcw size={15} /> Reset layout
+                </button>
+              </div>
+            </section>
             <div className="ls-deck-tools__selectors">
               <label className="ls-deck-select">
                 <Layers3 size={17} />
@@ -1191,8 +1436,13 @@ export function LiveSessionRunner({
                     const selected = allDecks.find(
                       deck => deck.key === event.target.value
                     );
-                    if (selected) navigateToDeck(selected);
-                    if (toolsRef.current) toolsRef.current.open = false;
+                    if (
+                      selected &&
+                      navigateManuallyToDeck(selected) &&
+                      toolsRef.current
+                    ) {
+                      toolsRef.current.open = false;
+                    }
                   }}
                 >
                   {stages.map((item, itemStageIndex) => (
@@ -1235,8 +1485,13 @@ export function LiveSessionRunner({
                 type="button"
                 disabled={!nextOpenDeck}
                 onClick={() => {
-                  if (nextOpenDeck) navigateToDeck(nextOpenDeck);
-                  if (toolsRef.current) toolsRef.current.open = false;
+                  if (
+                    nextOpenDeck &&
+                    navigateManuallyToDeck(nextOpenDeck) &&
+                    toolsRef.current
+                  ) {
+                    toolsRef.current.open = false;
+                  }
                 }}
               >
                 <CheckCircle2 size={16} />
@@ -1245,6 +1500,42 @@ export function LiveSessionRunner({
                   : "All decks covered"}
               </button>
             </div>
+
+            <details className="ls-session-map">
+              <summary>
+                <Map size={17} />
+                <span>
+                  <strong>Session map</strong>
+                  <small>Open any deck without changing its evidence.</small>
+                </span>
+              </summary>
+              <div className="ls-session-map__grid" aria-label="Session route map">
+                {allDecks.map(deck => {
+                  const verdict = latestEvidence.get(deck.targetId)?.verdict;
+                  const covered = isDeckCovered(deck);
+                  return (
+                    <button
+                      type="button"
+                      key={deck.key}
+                      className={`${deck.key === currentDeck?.key ? "is-current" : ""}${verdict ? ` is-${verdict}` : covered ? " is-covered" : " is-open"}`}
+                      aria-current={deck.key === currentDeck?.key ? "step" : undefined}
+                      aria-label={`Deck ${deck.globalNumber}: ${deck.question?.title ?? deck.stageTitle}; ${verdict ?? (covered ? "covered" : "open")}`}
+                      title={`${deck.stageLabel} · ${deck.question?.title ?? deck.stageTitle}`}
+                      onClick={() => {
+                        if (
+                          navigateManuallyToDeck(deck) &&
+                          toolsRef.current
+                        ) {
+                          toolsRef.current.open = false;
+                        }
+                      }}
+                    >
+                      {deck.globalNumber}
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
 
             <section
               className={`ls-pacing-panel is-${pacingDisplayState}`}
@@ -1376,10 +1667,7 @@ export function LiveSessionRunner({
                           type="button"
                           key={result.key}
                           onClick={() => {
-                            changePosition(
-                              result.stageIndex,
-                              result.questionIndex
-                            );
+                            if (!navigateManuallyToDeck(result.deck)) return;
                             setQuery("");
                             setResultFilter("all");
                             if (toolsRef.current) toolsRef.current.open = false;
@@ -1475,6 +1763,9 @@ export function LiveSessionRunner({
           <span>
             <kbd>N</kbd> next
           </span>
+          <span>
+            <kbd>Z</kbd> focus
+          </span>
           <button
             type="button"
             onClick={() => setShortcutsOpen(false)}
@@ -1483,6 +1774,20 @@ export function LiveSessionRunner({
             <X size={15} />
           </button>
         </div>
+      )}
+
+      {resumeNoticeOpen && (
+        <aside className="ls-resume-notice" role="status">
+          <div>
+            <strong>Workspace restored</strong>
+            <span>
+              Deck {currentDeck?.globalNumber ?? 1} of {allDecks.length} · {linearStepLabel} · timer {timer.status}
+            </span>
+          </div>
+          <button type="button" onClick={() => setResumeNoticeOpen(false)}>
+            Continue here <ArrowRight size={15} />
+          </button>
+        </aside>
       )}
 
       <div
@@ -1531,7 +1836,7 @@ export function LiveSessionRunner({
               </div>
               <strong>{linearStepLabel}</strong>
               <small>
-                Space performs the blue button. ←/→ move by deck.
+                Deck {currentDeck?.globalNumber ?? 1}/{allDecks.length} · Space advances the step · ←/→ move by deck.
               </small>
             </div>
             <button
@@ -1553,6 +1858,9 @@ export function LiveSessionRunner({
             complete={deskComplete}
             onFlowStepChange={selectFlowStep}
             onShowCandidate={openCandidateView}
+            hideCoaching={hideCoaching}
+            panelScrollPositions={panelScrollPositions}
+            onPanelScroll={rememberPanelScroll}
           />
           {advanceHint ? (
             <p className="ls-advance-hint" role="status" aria-live="polite">

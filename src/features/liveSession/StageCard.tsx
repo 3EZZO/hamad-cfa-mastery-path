@@ -14,7 +14,7 @@ import {
   Route,
   Sparkles,
 } from "lucide-react";
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import type {
   LiveSessionQuestion,
   LiveSessionStage,
@@ -29,6 +29,9 @@ export interface StageCardProps {
   complete: boolean;
   onFlowStepChange: (step: TeachingFlowStep) => void;
   onShowCandidate?: () => void;
+  hideCoaching?: boolean;
+  panelScrollPositions?: Partial<Record<TeachingFlowStep, number>>;
+  onPanelScroll?: (step: TeachingFlowStep, scrollTop: number) => void;
 }
 
 function TextList({
@@ -55,18 +58,28 @@ function CommandBlock({
   children,
   tone,
   active,
+  step,
   sectionRef,
   onActivate,
+  initialScrollTop = 0,
+  onScroll,
 }: {
   icon: React.ReactNode;
   label: string;
   children: React.ReactNode;
   tone: "explain" | "question" | "answer";
   active: boolean;
+  step: TeachingFlowStep;
   sectionRef: React.RefObject<HTMLElement | null>;
   onActivate: () => void;
+  initialScrollTop?: number;
+  onScroll?: (step: TeachingFlowStep, scrollTop: number) => void;
 }) {
   const headingId = useId();
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = initialScrollTop;
+  }, [initialScrollTop]);
   return (
     <section
       ref={sectionRef}
@@ -94,7 +107,17 @@ function CommandBlock({
           </span>
         </button>
       </header>
-      <div className="ls-command-block__body" tabIndex={0} role="region" aria-labelledby={headingId}>{children}</div>
+      <div
+        ref={bodyRef}
+        className="ls-command-block__body"
+        data-panel={step}
+        tabIndex={0}
+        role="region"
+        aria-labelledby={headingId}
+        onScroll={event => onScroll?.(step, event.currentTarget.scrollTop)}
+      >
+        {children}
+      </div>
     </section>
   );
 }
@@ -131,6 +154,9 @@ export function StageCard({
   complete,
   onFlowStepChange,
   onShowCandidate,
+  hideCoaching = false,
+  panelScrollPositions = {},
+  onPanelScroll,
 }: StageCardProps) {
   const titleId = useId();
   const listenFor = question?.listenFor?.length
@@ -224,8 +250,11 @@ export function StageCard({
           label="1 · Teach"
           tone="explain"
           active={flowStep === "teach"}
+          step="teach"
           sectionRef={teachRef}
           onActivate={() => moveTo("teach")}
+          initialScrollTop={panelScrollPositions.teach}
+          onScroll={onPanelScroll}
         >
           <p className="ls-command-lead">{bestExplanation(stage, question)}</p>
           <div className="ls-script-ribbon">
@@ -245,9 +274,12 @@ export function StageCard({
           ) : null}
           {question?.formulae?.length ? (
             <div className="ls-formula-stack">
-              <span>Formula desk</span>
-              {question.formulae.map(formula => (
-                <code key={formula}>{formula}</code>
+              <span>Governing relationship</span>
+              {question.formulae.map((formula, index) => (
+                <div className="ls-formula-line" key={formula}>
+                  <small>{String(index + 1).padStart(2, "0")}</small>
+                  <code>{formula}</code>
+                </div>
               ))}
             </div>
           ) : null}
@@ -266,8 +298,11 @@ export function StageCard({
           label="2 · Ask"
           tone="question"
           active={flowStep === "ask"}
+          step="ask"
           sectionRef={askRef}
           onActivate={() => moveTo("ask")}
+          initialScrollTop={panelScrollPositions.ask}
+          onScroll={onPanelScroll}
         >
           <div className="ls-question-copy">
             <div className="ls-question-copy__topline">
@@ -313,8 +348,11 @@ export function StageCard({
           label="3 · Answer"
           tone="answer"
           active={flowStep === "answer"}
+          step="answer"
           sectionRef={answerRef}
           onActivate={() => moveTo("answer")}
+          initialScrollTop={panelScrollPositions.answer}
+          onScroll={onPanelScroll}
         >
           {suppliedAnswer && <><p className="ls-model-response-cue">
             Say this naturally after Hamad commits to an answer.
@@ -332,8 +370,8 @@ export function StageCard({
             </div>
           ) : null}
           {question?.working?.length ? (
-            <div className="ls-answer-detail">
-              <span>Clean working</span>
+            <div className="ls-answer-detail ls-calculation-workbench">
+              <span>Application sequence</span>
               <TextList items={question.working} ordered />
             </div>
           ) : null}
@@ -367,7 +405,7 @@ export function StageCard({
         </CommandBlock>
       </div>
 
-      {listenFor?.length || repair?.length ? (
+      {!hideCoaching && (listenFor?.length || repair?.length) ? (
         <details className="ls-coaching-drawer">
           <summary>
             <ClipboardCheck size={16} />

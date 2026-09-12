@@ -25,6 +25,8 @@ const question: LiveSessionQuestion = {
   spokenAnswer:
     "The holding-period return is 8%, including income and price appreciation.",
   rationale: "The denominator is the beginning investment value.",
+  formulae: ["HPR = (P1 - P0 + D1) / P0"],
+  working: ["Identify beginning value.", "Add income to the price change."],
   expectedSeconds: 90,
   difficulty: 3,
 };
@@ -63,6 +65,9 @@ describe("StageCard", () => {
     expect(html).toContain(question.explanation);
     expect(html).toContain(question.prompt);
     expect(html).toContain(question.spokenAnswer);
+    expect(html).toContain("Governing relationship");
+    expect(html).toContain('class="ls-formula-line"');
+    expect(html).toContain("Application sequence");
     expect(html).toContain(
       'class="ls-command-block ls-command-block--question is-active"'
     );
