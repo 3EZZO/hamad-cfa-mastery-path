@@ -195,6 +195,7 @@
 .practice-results__actions button.is-primary { color: #fff; border-color: var(--pc-blue); background: var(--pc-blue); }
 
 .practice-bank-admin__intro { color: var(--pc-muted, var(--muted)); line-height: 1.5; }
+.practice-bank-admin .form-error { white-space: pre-line; }
 .practice-bank-admin__list { display: grid; gap: 8px; margin-top: 16px; }
 .practice-bank-admin__list article { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
 .practice-bank-admin__list article > div { display: grid; gap: 3px; }

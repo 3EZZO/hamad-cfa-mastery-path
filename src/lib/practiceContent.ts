@@ -240,6 +240,15 @@ export function parsePracticeBankDraft(value: unknown): PracticeBankDraft {
   if (new Set(normalizedPrompts).size !== normalizedPrompts.length) {
     throw new PracticeContentError("practiceBank contains duplicate question prompts.");
   }
+  for (let left = 0; left < questions.length; left += 1) {
+    for (let right = left + 1; right < questions.length; right += 1) {
+      if (questionSimilarity(questions[left]!.prompt, questions[right]!.prompt) >= 0.88) {
+        throw new PracticeContentError(
+          `practiceBank questions ${questions[left]!.id} and ${questions[right]!.id} are near-duplicates.`
+        );
+      }
+    }
+  }
   const moduleIds = stringList(source.moduleIds, "practiceBank.moduleIds", 30).map((value, index) =>
     id(value, `practiceBank.moduleIds[${index}]`)
   );

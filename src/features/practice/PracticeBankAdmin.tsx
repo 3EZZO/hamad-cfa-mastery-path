@@ -31,19 +31,37 @@ export function PracticeBankAdmin({ notify }: {
 
   useEffect(() => { void refresh().catch(() => undefined); }, []);
 
-  const upload = async (file?: File) => {
-    if (!file) return;
+  const upload = async (files: FileList | null) => {
+    if (!files?.length) return;
     setBusy(true);
     setError("");
+    const published: PublishedPracticeBank[] = [];
+    const failures: string[] = [];
     try {
-      const draft = parsePracticeBankDraft(JSON.parse(await file.text()));
-      const bank = await publishPracticeBank(draft);
-      const nextAssigned = [...new Set([...assigned, bank.storageId])];
+      for (const file of Array.from(files)) {
+        try {
+          const draft = parsePracticeBankDraft(JSON.parse(await file.text()));
+          published.push(await publishPracticeBank(draft));
+        } catch (cause) {
+          failures.push(
+            `${file.name}: ${cause instanceof Error ? cause.message : "invalid bank"}`,
+          );
+        }
+      }
+      const nextAssigned = [
+        ...new Set([...assigned, ...published.map(bank => bank.storageId)]),
+      ];
       await savePracticeAssignment(nextAssigned);
       await refresh();
-      notify(`${bank.title} published and assigned to Hamad.`);
+      if (published.length) {
+        notify(`${published.length} practice ${published.length === 1 ? "bank" : "banks"} published and assigned to Hamad.`);
+      }
+      if (failures.length) {
+        setError(failures.join("\n"));
+        notify(`${failures.length} practice ${failures.length === 1 ? "file was" : "files were"} rejected.`, "warning");
+      }
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "Unable to publish this practice bank.";
+      const message = cause instanceof Error ? cause.message : "Unable to publish these practice banks.";
       setError(message);
       notify(message, "warning");
     } finally {
@@ -75,7 +93,7 @@ export function PracticeBankAdmin({ notify }: {
         <BookOpenCheck size={21} />
       </div>
       <p className="practice-bank-admin__intro">Upload only student-safe, independently authored practice JSON. Published versions are immutable and contain no private tutor fields.</p>
-      <input ref={input} type="file" accept="application/json,.json" hidden onChange={event => void upload(event.target.files?.[0])} />
+      <input ref={input} type="file" accept="application/json,.json" multiple hidden onChange={event => void upload(event.target.files)} />
       <button className="button button-primary" type="button" disabled={busy} onClick={() => input.current?.click()}><CloudUpload size={17} />{busy ? "Publishing…" : "Publish practice JSON"}</button>
       {error && <p className="form-error" role="alert"><CircleAlert size={16} />{error}</p>}
       <div className="practice-bank-admin__list">
