@@ -68,6 +68,9 @@ async function runDeployment() {
     const child = spawn(command, args, {
       cwd: process.cwd(),
       env: process.env,
+      // Node 24 can reject direct .cmd spawning on Windows with EINVAL.
+      // A shell is required only there; POSIX keeps the safer direct spawn.
+      shell: process.platform === "win32",
       stdio: ["inherit", "pipe", "pipe"],
     });
     for (const stream of [child.stdout, child.stderr]) {

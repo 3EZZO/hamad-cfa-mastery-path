@@ -15,13 +15,16 @@ import {
   type User,
 } from "firebase/auth";
 import {
+  collection,
   deleteDoc,
   doc,
   getDoc,
   getDocFromServer,
+  getDocs,
   getFirestore,
   onSnapshot,
   runTransaction,
+  setDoc,
   writeBatch,
   type Firestore,
 } from "firebase/firestore";
@@ -49,6 +52,20 @@ import {
   type TutorPlaybookManifest,
   type TutorPlaybookPackage,
 } from "./tutorContent";
+import {
+  parsePracticeAssignment,
+  parsePracticeBankDraft,
+  parsePracticeQuestionState,
+  parsePracticeRun,
+  parsePublishedPracticeBank,
+  practiceBankStorageId,
+  PracticeContentError,
+  type PracticeAssignment,
+  type PracticeBankDraft,
+  type PracticeQuestionState,
+  type PracticeRun,
+  type PublishedPracticeBank,
+} from "./practiceContent";
 
 const FIREBASE_APP_NAME = "project-202-cloud";
 const PROGRAM_ID = "project-202";
@@ -61,6 +78,10 @@ export const TUTOR_PLAYBOOK_COLLECTION_PATH =
   "programs/project-202/tutorPlaybooks" as const;
 export const TUTOR_LIVE_RUN_COLLECTION_PATH =
   "programs/project-202/tutorRuns" as const;
+export const PRACTICE_BANK_COLLECTION_PATH =
+  "programs/project-202/practiceBanks" as const;
+export const PRACTICE_ASSIGNMENT_DOCUMENT_PATH =
+  "programs/project-202/practiceAssignments/current" as const;
 
 export const REQUIRED_FIREBASE_ENV_KEYS = [
   "VITE_FIREBASE_API_KEY",
@@ -131,6 +152,7 @@ export type CloudErrorCode =
   | "browser-required"
   | "authentication-required"
   | "invalid-cloud-data"
+  | "invalid-practice-content"
   | "invalid-membership"
   | "inactive-membership"
   | "tutor-role-required"
@@ -157,6 +179,8 @@ const FRIENDLY_ERROR_MESSAGES: Record<CloudErrorCode, string> = {
   "authentication-required": "Sign in before using cloud sync.",
   "invalid-cloud-data":
     "The saved cloud record is not a valid Hamad CFA Mastery tracker.",
+  "invalid-practice-content":
+    "The practice bank or practice record is invalid and was not saved.",
   "invalid-membership":
     "This account's Hamad CFA Mastery membership record is invalid. Ask the tutor to check Firebase.",
   "inactive-membership":
@@ -455,6 +479,42 @@ function tutorLiveRunDocument(firestore: Firestore, runId: string) {
   return doc(firestore, "programs", PROGRAM_ID, "tutorRuns", runId);
 }
 
+function practiceBankDocument(firestore: Firestore, storageId: string) {
+  return doc(firestore, "programs", PROGRAM_ID, "practiceBanks", storageId);
+}
+
+function practiceAssignmentDocument(firestore: Firestore) {
+  return doc(firestore, "programs", PROGRAM_ID, "practiceAssignments", "current");
+}
+
+function practiceQuestionStateDocument(
+  firestore: Firestore,
+  uid: string,
+  questionId: string
+) {
+  return doc(
+    firestore,
+    "programs",
+    PROGRAM_ID,
+    "practiceUsers",
+    uid,
+    "questionState",
+    questionId
+  );
+}
+
+function practiceRunDocument(firestore: Firestore, uid: string, runId: string) {
+  return doc(
+    firestore,
+    "programs",
+    PROGRAM_ID,
+    "practiceUsers",
+    uid,
+    "runs",
+    runId
+  );
+}
+
 export function subscribeToPrivateTutorNotes(
   onEnvelope: (envelope: PrivateTutorNotesEnvelope | null) => void,
   onError?: (error: CloudClientError) => void
@@ -674,6 +734,154 @@ export async function replaceCloudTracker(
     });
   } catch (error) {
     throw mapCloudError(error);
+  }
+}
+
+function mapPracticeCloudError(error: unknown): CloudClientError {
+  if (error instanceof PracticeContentError) {
+    return new CloudClientError("invalid-practice-content", error);
+  }
+  return mapCloudError(error);
+}
+
+export async function listPublishedPracticeBanks(): Promise<PublishedPracticeBank[]> {
+  try {
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    const snapshot = await getDocs(
+      collection(firestore, "programs", PROGRAM_ID, "practiceBanks")
+    );
+    return snapshot.docs
+      .map(item => parsePublishedPracticeBank(item.data()))
+      .sort((left, right) => left.title.localeCompare(right.title));
+  } catch (error) {
+    throw mapPracticeCloudError(error);
+  }
+}
+
+export async function publishPracticeBank(
+  value: PracticeBankDraft | unknown
+): Promise<PublishedPracticeBank> {
+  try {
+    const draft = parsePracticeBankDraft(value);
+    const { auth, firestore } = getFirebaseServices();
+    const user = requireAuthenticatedUser(auth);
+    const storageId = practiceBankStorageId(draft);
+    const reference = practiceBankDocument(firestore, storageId);
+    const existing = await getDoc(reference);
+    if (existing.exists()) return parsePublishedPracticeBank(existing.data());
+    const published = parsePublishedPracticeBank({
+      ...draft,
+      storageId,
+      published: true,
+      publishedBy: user.uid,
+      publishedAtClient: new Date().toISOString(),
+    });
+    if (new Blob([JSON.stringify(published)]).size > 850_000) {
+      throw new PracticeContentError(
+        "This practice bank is too large for one Firestore document. Split it into smaller module banks."
+      );
+    }
+    await setDoc(reference, published);
+    return published;
+  } catch (error) {
+    throw mapPracticeCloudError(error);
+  }
+}
+
+export async function loadPracticeAssignment(): Promise<PracticeAssignment | null> {
+  try {
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    const snapshot = await getDoc(practiceAssignmentDocument(firestore));
+    return snapshot.exists() ? parsePracticeAssignment(snapshot.data()) : null;
+  } catch (error) {
+    throw mapPracticeCloudError(error);
+  }
+}
+
+export async function savePracticeAssignment(
+  bankStorageIds: string[]
+): Promise<PracticeAssignment> {
+  try {
+    const { auth, firestore } = getFirebaseServices();
+    const user = requireAuthenticatedUser(auth);
+    const assignment = parsePracticeAssignment({
+      bankStorageIds: [...new Set(bankStorageIds)],
+      updatedBy: user.uid,
+      updatedAtClient: new Date().toISOString(),
+    });
+    await setDoc(practiceAssignmentDocument(firestore), assignment);
+    return assignment;
+  } catch (error) {
+    throw mapPracticeCloudError(error);
+  }
+}
+
+export async function loadPracticeQuestionStates(
+  uid: string
+): Promise<PracticeQuestionState[]> {
+  try {
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    const snapshot = await getDocs(
+      collection(
+        firestore,
+        "programs",
+        PROGRAM_ID,
+        "practiceUsers",
+        uid,
+        "questionState"
+      )
+    );
+    return snapshot.docs.map(item => parsePracticeQuestionState(item.data()));
+  } catch (error) {
+    throw mapPracticeCloudError(error);
+  }
+}
+
+export async function savePracticeQuestionState(
+  uid: string,
+  stateValue: PracticeQuestionState
+): Promise<PracticeQuestionState> {
+  try {
+    const state = parsePracticeQuestionState(stateValue);
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    await setDoc(
+      practiceQuestionStateDocument(firestore, uid, state.questionId),
+      state
+    );
+    return state;
+  } catch (error) {
+    throw mapPracticeCloudError(error);
+  }
+}
+
+export async function listPracticeRuns(uid: string): Promise<PracticeRun[]> {
+  try {
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    const snapshot = await getDocs(
+      collection(firestore, "programs", PROGRAM_ID, "practiceUsers", uid, "runs")
+    );
+    return snapshot.docs
+      .map(item => parsePracticeRun(item.data()))
+      .sort((left, right) => right.updatedAtClient.localeCompare(left.updatedAtClient));
+  } catch (error) {
+    throw mapPracticeCloudError(error);
+  }
+}
+
+export async function savePracticeRun(runValue: PracticeRun): Promise<PracticeRun> {
+  try {
+    const run = parsePracticeRun(runValue);
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    await setDoc(practiceRunDocument(firestore, run.uid, run.id), run);
+    return run;
+  } catch (error) {
+    throw mapPracticeCloudError(error);
   }
 }
 

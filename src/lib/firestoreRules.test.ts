@@ -73,4 +73,19 @@ describe("private tutor Firestore rule boundary", () => {
       /match \/\{document=\*\*\}[\s\S]*allow read, write: if false;/
     );
   });
+
+  it("publishes immutable student-safe practice banks and isolates student records", () => {
+    const practice = blockBetween(
+      "function validPracticeBank(storageId)",
+      "function validPrivateTutorNotesEnvelope()"
+    );
+    expect(practice).toContain("match /programs/project-202/practiceBanks/{storageId}");
+    expect(practice).toContain("allow get, list: if activeProject202Member()");
+    expect(practice).toContain("allow create: if activeProject202Role('tutor')");
+    expect(practice).toContain("allow update, delete: if false");
+    expect(practice).toContain("match /programs/project-202/practiceAssignments/current");
+    expect(practice).toContain("request.auth.uid == uid");
+    expect(practice).toContain("validPracticeQuestionState(questionId)");
+    expect(practice).toContain("validPracticeRun(runId, uid)");
+  });
 });

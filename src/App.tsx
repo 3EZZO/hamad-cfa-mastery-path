@@ -102,6 +102,8 @@ import { ThemeProvider, ThemeToggle } from "./components/ThemeToggle";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
+import { PracticeCoach } from "./features/practice/PracticeCoach";
+import { PracticeBankAdmin } from "./features/practice/PracticeBankAdmin";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
@@ -209,9 +211,9 @@ const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: str
     description: "Record each lesson's outcomes, homework and next steps.",
   },
   practice: {
-    eyebrow: "Volume with feedback",
+    eyebrow: "Adaptive independent practice",
     title: "Practice",
-    description: "Track volume, accuracy, and the lesson from each question block.",
+    description: "Strengthen weak concepts with fresh questions, immediate feedback, and spaced review.",
   },
   mastery: {
     eyebrow: "Honest topic evidence",
@@ -945,10 +947,24 @@ function App() {
         );
       case "practice":
         return (
-          <PracticeLogView
-            tracker={tracker}
-            updateTracker={updateTracker}
+          <PracticeCoach
+            uid={user.uid}
+            role={role!}
             notify={notify}
+            onComplete={(summary) => updateTracker((current) => ({
+              ...current,
+              practiceLogs: [
+                { id: makeId("practice"), ...summary },
+                ...current.practiceLogs,
+              ],
+            }))}
+            manualLog={(
+              <PracticeLogView
+                tracker={tracker}
+                updateTracker={updateTracker}
+                notify={notify}
+              />
+            )}
           />
         );
       case "mastery":
@@ -2375,6 +2391,7 @@ function TutorAdminView({
 
   return (
     <div className="view-stack tutor-console">
+      <PracticeBankAdmin notify={notify} />
       <section className="panel approval-queue">
         <div className="panel-heading"><div><p className="eyebrow">Tutor approval</p><h3>Session completion queue</h3></div><CircleCheckBig size={21} /></div>
         {pendingSessionRequests.length ? <div className="entry-list">{pendingSessionRequests.map(({ task, request }) => <article className="approval-entry" key={task.id}><div><strong>{task.label}</strong><span>Requested {request ? new Date(request.requestedAt).toLocaleString() : ""}</span></div><div className="inline-actions"><button className="button button-primary" type="button" onClick={() => reviewSessionRequest(task.id, "approved")}><Check size={16} /> Approve</button><button className="button button-secondary" type="button" onClick={() => reviewSessionRequest(task.id, "returned")}><RotateCcw size={16} /> Return</button></div></article>)}</div> : <EmptyState icon={CircleCheckBig} title="No approvals waiting">Hamad's session-completion requests will appear here.</EmptyState>}

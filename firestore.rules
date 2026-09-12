@@ -254,6 +254,116 @@ service cloud.firestore {
       allow list, delete: if false;
     }
 
+    function validPracticeBank(storageId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'schemaVersion', 'id', 'version', 'title', 'topic', 'moduleIds',
+          'sourceSessionIds', 'questions', 'storageId', 'published',
+          'publishedBy', 'publishedAtClient'
+        ])
+        && data.schemaVersion == 1
+        && data.storageId == storageId
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 100
+        && data.version is string && data.version.size() > 0 && data.version.size() <= 100
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 240
+        && data.topic is string && data.topic.size() > 0 && data.topic.size() <= 120
+        && data.moduleIds is list && data.moduleIds.size() >= 1 && data.moduleIds.size() <= 30
+        && data.sourceSessionIds is list && data.sourceSessionIds.size() <= 10
+        && data.questions is list && data.questions.size() >= 5 && data.questions.size() <= 250
+        && data.published == true
+        && data.publishedBy == request.auth.uid
+        && data.publishedAtClient is string && data.publishedAtClient.size() <= 40;
+    }
+
+    function validPracticeAssignment() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['bankStorageIds', 'updatedBy', 'updatedAtClient'])
+        && data.bankStorageIds is list && data.bankStorageIds.size() <= 50
+        && data.updatedBy == request.auth.uid
+        && data.updatedAtClient is string && data.updatedAtClient.size() <= 40;
+    }
+
+    function validPracticeQuestionState(questionId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'questionId', 'bankStorageId', 'attempts', 'correctAttempts', 'streak',
+          'lapseCount', 'intervalDays', 'ease', 'lastCorrect', 'lastConfidence',
+          'lastResponseMs', 'lastAttemptedAt', 'dueAt', 'misconceptionTags',
+          'updatedAtClient'
+        ])
+        && data.questionId == questionId
+        && data.bankStorageId is string && data.bankStorageId.size() <= 210
+        && data.attempts is int && data.attempts >= 1 && data.attempts <= 10000
+        && data.correctAttempts is int && data.correctAttempts >= 0
+        && data.correctAttempts <= data.attempts
+        && data.streak is int && data.streak >= 0 && data.streak <= data.attempts
+        && data.lapseCount is int && data.lapseCount >= 0 && data.lapseCount <= data.attempts
+        && data.intervalDays is number && data.intervalDays >= 0 && data.intervalDays <= 10000
+        && data.ease is number && data.ease >= 1.3 && data.ease <= 3
+        && data.lastCorrect is bool
+        && data.lastConfidence is int && data.lastConfidence >= 1 && data.lastConfidence <= 5
+        && data.lastResponseMs is int && data.lastResponseMs >= 0 && data.lastResponseMs <= 3600000
+        && data.lastAttemptedAt is string && data.lastAttemptedAt.size() <= 40
+        && data.dueAt is string && data.dueAt.size() <= 40
+        && data.misconceptionTags is list && data.misconceptionTags.size() <= 20
+        && data.updatedAtClient is string && data.updatedAtClient.size() <= 40;
+    }
+
+    function validPracticeRun(runId, uid) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'id', 'uid', 'mode', 'bankStorageIds', 'moduleId', 'questionIds',
+          'answers', 'currentIndex', 'status', 'startedAtClient', 'updatedAtClient',
+          'completedAtClient'
+        ])
+        && data.id == runId && data.uid == uid
+        && data.mode in ['quick', 'module', 'exam', 'repair', 'mixed']
+        && data.bankStorageIds is list && data.bankStorageIds.size() <= 20
+        && (data.moduleId == null || data.moduleId is string)
+        && data.questionIds is list && data.questionIds.size() >= 1 && data.questionIds.size() <= 100
+        && data.answers is list && data.answers.size() <= data.questionIds.size()
+        && data.currentIndex is int && data.currentIndex >= 0 && data.currentIndex <= data.questionIds.size()
+        && data.status in ['active', 'completed']
+        && data.startedAtClient is string && data.startedAtClient.size() <= 40
+        && data.updatedAtClient is string && data.updatedAtClient.size() <= 40
+        && (data.completedAtClient == null || data.completedAtClient is string)
+        && (
+          (data.status == 'active' && data.currentIndex < data.questionIds.size() && data.completedAtClient == null)
+          || (data.status == 'completed' && data.currentIndex == data.questionIds.size() && data.completedAtClient is string)
+        );
+    }
+
+    match /programs/project-202/practiceBanks/{storageId} {
+      allow get, list: if activeProject202Member();
+      allow create: if activeProject202Role('tutor') && validPracticeBank(storageId);
+      allow update, delete: if false;
+    }
+
+    match /programs/project-202/practiceAssignments/current {
+      allow get: if activeProject202Member();
+      allow list, delete: if false;
+      allow create, update: if activeProject202Role('tutor')
+        && validPracticeAssignment();
+    }
+
+    match /programs/project-202/practiceUsers/{uid}/questionState/{questionId} {
+      allow get, list: if activeProject202Role('tutor')
+        || (activeProject202Member() && request.auth.uid == uid);
+      allow create, update: if activeProject202Member()
+        && request.auth.uid == uid
+        && validPracticeQuestionState(questionId);
+      allow delete: if activeProject202Member() && request.auth.uid == uid;
+    }
+
+    match /programs/project-202/practiceUsers/{uid}/runs/{runId} {
+      allow get, list: if activeProject202Role('tutor')
+        || (activeProject202Member() && request.auth.uid == uid);
+      allow create, update: if activeProject202Member()
+        && request.auth.uid == uid
+        && validPracticeRun(runId, uid);
+      allow delete: if false;
+    }
+
     function validPrivateTutorNotesEnvelope() {
       return request.resource.data.keys().hasOnly([
           'notes', 'revision', 'updatedBy', 'updatedAtClient'
