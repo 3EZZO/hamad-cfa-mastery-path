@@ -74,7 +74,9 @@ describe("shared tracker and Session Mode theme", () => {
       expect(readFileSync(new URL(file, import.meta.url), "utf8")).toContain("<ThemeToggle />");
     }
     const css = readFileSync(new URL("../theme.css", import.meta.url), "utf8");
-    for (const selector of [".ls-library-backdrop", ".calendar-dialog", ".sync-recovery-notice", ".ls-rehearsal-banner", ".ls-command-block--answer", ".ls-command-block--question"]) expect(css).toContain(selector);
+    for (const selector of [".ls-library-backdrop", ".calendar-dialog", ".sync-recovery-notice", ".ls-rehearsal-banner", ".ls-command-block--answer", ".ls-command-block--question", ".timeline-week", ".timeline-body", ".evidence-contract", ".reading-coverage"]) expect(css).toContain(selector);
+    expect(css).toContain('html:root[data-theme="dark"] .timeline-week');
+    expect(css).toContain('html:root[data-theme="dark"] .timeline-body');
     expect(css).not.toMatch(/filter:\s*(invert|brightness)/);
   });
   it("keeps authored dark text and focus pairs above WCAG contrast thresholds", () => {

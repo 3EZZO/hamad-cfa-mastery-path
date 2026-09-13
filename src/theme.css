@@ -92,6 +92,50 @@ html:root[data-theme="dark"] .task-check { background: #142333; border-color: #7
 html:root[data-theme="dark"] .is-complete .task-check { background: #17645b; }
 html:root[data-theme="dark"] .hero-actions .button-accent { color: #fff; background: #315fce; border-color: #7296e7; }
 
+/* Study Plan: closed, expanded, current, and nested content states. */
+html:root[data-theme="dark"] .timeline-week {
+  background: var(--surface); border-color: var(--border); box-shadow: var(--shadow-soft);
+}
+html:root[data-theme="dark"] .timeline-week > summary {
+  color: var(--ink); background: var(--surface);
+}
+html:root[data-theme="dark"] .timeline-week > summary:hover,
+html:root[data-theme="dark"] .timeline-week > summary:focus-visible,
+html:root[data-theme="dark"] .timeline-week[open] > summary { background: #203448; }
+html:root[data-theme="dark"] .timeline-week > summary:focus-visible {
+  outline: 3px solid #8db0f5; outline-offset: -3px;
+}
+html:root[data-theme="dark"] .timeline-week.is-current {
+  border-color: #7296e7; box-shadow: 0 0 0 1px #315fce55, 0 12px 30px #0005;
+}
+html:root[data-theme="dark"] .timeline-week.is-current > summary { background: #233c61; }
+html:root[data-theme="dark"] .timeline-body {
+  color: var(--ink); background: #142333; border-top-color: var(--border);
+}
+html:root[data-theme="dark"] .timeline::before {
+  background: linear-gradient(var(--theme-blue), var(--border) 80%, transparent);
+}
+html:root[data-theme="dark"] .evidence-contract > div {
+  color: var(--ink); background: var(--surface-2); border-color: var(--border);
+}
+html:root[data-theme="dark"] .timeline-week .session-plan-card {
+  color: var(--ink); background: var(--surface); border-color: var(--border);
+}
+html:root[data-theme="dark"] .timeline-week .session-plan-card.is-optional {
+  color: var(--muted); background: var(--surface-2);
+}
+html:root[data-theme="dark"] .timeline-week :is(.reading-pending, .reading-coverage) {
+  border-top-color: var(--border);
+}
+html:root[data-theme="dark"] .timeline-week :is(
+  .timeline-summary-copy strong, .timeline-progress strong, .outcome-list li,
+  .evidence-contract > div > strong, .evidence-contract > div > p,
+  .session-plan-card h4, .reading-coverage li) { color: var(--ink); }
+html:root[data-theme="dark"] .timeline-week :is(
+  .timeline-summary-copy > span, .summary-chevron,
+  .session-plan-card > div:first-child strong, .session-plan-card > p,
+  .reading-coverage li small) { color: var(--muted); }
+
 /* Variables cover both the workspace and its body-mounted library/dialog portals. */
 html:root[data-theme="dark"] .live-session {
   color-scheme: dark;
