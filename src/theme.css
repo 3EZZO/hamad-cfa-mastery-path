@@ -233,6 +233,23 @@ html:root[data-theme="dark"] .live-session :is(.ls-repair, .ls-advance-hint,
 html:root[data-theme="dark"] .live-session :is(.ls-rehearsal-reset__confirm > p,
   .ls-pacing-status--linear.is-paused .ls-pacing-status__rail strong,
   .ls-pacing-status--linear.is-calibrating .ls-pacing-status__rail strong) { color: var(--theme-amber); }
+html:root[data-theme="dark"] .live-session .ls-pacing-panel {
+  color: var(--ink); background: var(--surface); border-color: var(--border);
+  border-left-color: var(--theme-teal);
+}
+html:root[data-theme="dark"] .live-session .ls-pacing-panel :is(header span, p) {
+  color: var(--muted);
+}
+html:root[data-theme="dark"] .live-session .ls-pacing-panel header strong {
+  color: var(--ink);
+}
+html:root[data-theme="dark"] .live-session .ls-pacing-panel .ls-pacing-status__details small {
+  color: var(--ink); background: #142333; border-color: var(--border);
+}
+html:root[data-theme="dark"] .live-session .ls-pacing-panel:is(.is-paused, .is-calibrating) {
+  color: var(--ink); background: #25291f; border-color: #806d48;
+  border-left-color: var(--theme-amber);
+}
 html:root[data-theme="dark"] .live-session :is(.ls-private-setup__alert, .ls-trap-callout, .ls-pacing-panel.is-behind) {
   background: var(--danger-pale); color: var(--danger);
 }
