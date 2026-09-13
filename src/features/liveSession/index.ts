@@ -1,4 +1,5 @@
 import "./liveSession.css";
+import "./sessionPilot.css";
 
 export { adaptTutorPlaybookPackage } from "./adaptTutorPlaybook";
 export { CandidatePromptView } from "./CandidatePromptView";
