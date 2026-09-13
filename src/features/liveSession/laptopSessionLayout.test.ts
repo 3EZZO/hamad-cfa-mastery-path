@@ -19,7 +19,10 @@ describe("14-inch Session Mode layout contract", () => {
     expect(css).not.toContain("--ls-laptop-stagebar-h");
     expect(css).toContain("--ls-laptop-deckbar-h: 48px");
     expect(css).toMatch(
-      /@media \(min-width: 900px\) and \(max-height: 1100px\)[\s\S]*?\.live-session--running \.ls-stage-card\s*\{[^}]*grid-template-rows:\s*minmax\(0, 72px\) minmax\(0, 1fr\) 34px;/
+      /@media \(min-width: 900px\) and \(max-height: 1100px\)[\s\S]*?\.live-session--running \.ls-stage-card\s*\{[^}]*grid-template-rows:\s*minmax\(0, 84px\) minmax\(0, 1fr\) 34px;/
+    );
+    expect(css).toMatch(
+      /\.live-session--running \.ls-stage-card__identity\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\);/s
     );
   });
 
