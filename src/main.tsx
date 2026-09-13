@@ -4,7 +4,6 @@ import App from "./App";
 import PwaInstallPrompt from "./components/PwaInstallPrompt";
 import { registerProject202ServiceWorker } from "./lib/pwa";
 import "./styles.css";
-import "./designSystem.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

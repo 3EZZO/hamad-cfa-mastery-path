@@ -317,7 +317,7 @@ export function evaluateSessionPreflight(
       ? check(
           "position",
           "Current position",
-          `${position.stageTitle}, deck ${position.deckNumber} of ${position.deckCount}.`,
+          `${position.stageTitle} · deck ${position.deckNumber} of ${position.deckCount}.`,
           "ready"
         )
       : check(

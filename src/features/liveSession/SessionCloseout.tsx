@@ -177,7 +177,7 @@ export function SessionCloseout({
         <div>
           <strong>{coveredDecks} of {routeDecks.length} route decks covered</strong>
           <span className="ls-closeout__readiness-detail">
-            {openDecks} open, {repairs} repair, {parked} deferred; cloud {syncState}
+            {openDecks} open · {repairs} repair · {parked} deferred · cloud {syncState}
           </span>
         </div>
         {requiresAcknowledgement ? (

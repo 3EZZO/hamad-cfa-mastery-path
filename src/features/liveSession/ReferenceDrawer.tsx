@@ -125,7 +125,7 @@ export function ReferenceDrawer({
             >
               <summary>
                 <span className="ls-reference-icon"><BookOpenCheck size={17} /></span>
-                <span><small>{reference.category}, {reference.id}</small><strong>{reference.title}</strong></span>
+                <span><small>{reference.category} · {reference.id}</small><strong>{reference.title}</strong></span>
               </summary>
               <div className="ls-reference-body">
                 {reference.summary && <p className="ls-reference-summary">{reference.summary}</p>}

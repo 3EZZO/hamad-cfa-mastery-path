@@ -23,7 +23,7 @@ export function RehearsalWorkspace({ session, playbook, route, onExit }: {
 
   return <section className={`live-session ls-rehearsal${phase === "running" ? " live-session--running" : ""}`} aria-label="Rehearsal workspace">
     <header className="ls-rehearsal-banner">
-      <div><strong>Rehearsal copy; nothing is saved</strong><span>Session {String(session.number).padStart(2, "0")}. Practice only. Exiting discards these actions; your live session stays unchanged and paused.</span></div>
+      <div><strong>REHEARSAL — nothing is saved</strong><span>Session {String(session.number).padStart(2, "0")} · Practice only. Exiting discards these practice actions; your live session stays unchanged and paused.</span></div>
       <button type="button" className="ls-button ls-button--primary" onClick={onExit}>Exit rehearsal</button>
     </header>
     {phase === "running" && <LiveSessionRunner

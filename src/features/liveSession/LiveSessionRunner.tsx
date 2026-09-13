@@ -382,7 +382,7 @@ export function LiveSessionRunner({
     workspaceMemoryRef.current.scrollByDeck?.[currentDeskKey] ?? {};
   const deskComplete = completedDeskIds.includes(currentDeskKey);
   const targetLabel = question
-    ? `${question.label ?? `Proof ${safeQuestionIndex + 1}`}, ${question.id}`
+    ? `${question.label ?? `Proof ${safeQuestionIndex + 1}`} · ${question.id}`
     : (stage?.title ?? "Stage evidence");
   const stageTargetIds = new Set(
     questions.filter(isEvidenceTarget).map(item => item.id)
@@ -1162,10 +1162,10 @@ export function LiveSessionRunner({
         <div className="ls-livebar__identity">
           <span className="ls-live-dot" aria-hidden="true" />
           <div>
-            <span title={`${route.name}, ${session.dateLabel ?? session.date}, ${session.startTime} Riyadh`}>
-              Session {String(session.number).padStart(2, "0")}, {session.dateLabel ?? new Intl.DateTimeFormat("en-GB", {
+            <span title={`${route.name} · ${session.dateLabel ?? session.date} · ${session.startTime} Riyadh`}>
+              Session {String(session.number).padStart(2, "0")} · {session.dateLabel ?? new Intl.DateTimeFormat("en-GB", {
                 day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
-              }).format(new Date(`${session.date}T00:00:00Z`))} at {session.startTime} Riyadh, {route.minutes} min
+              }).format(new Date(`${session.date}T00:00:00Z`))} · {session.startTime} Riyadh · {route.minutes} min
             </span>
             <strong title={stage.title}>{stage.title}</strong>
           </div>
@@ -1301,8 +1301,8 @@ export function LiveSessionRunner({
           <small>
             {SESSION_TERMS.proofs.label}: {progress.recordedProofs} / {progress.totalProofs} recorded
             {progress.needsAttentionProofs
-              ? `; ${progress.needsAttentionProofs} need attention`
-              : "; no recorded proof needs attention"}
+              ? ` · ${progress.needsAttentionProofs} need attention`
+              : " · no recorded proof needs attention"}
           </small>
           <SessionCountLegend counts={{ library: libraryDecks, route: progress.totalDecks, queue: queueDecks.length, target: liveTargetDecks, covered: progress.coveredDecks, proofs: `${progress.recordedProofs} / ${progress.totalProofs} recorded` }} />
         </div>
@@ -1311,7 +1311,7 @@ export function LiveSessionRunner({
             <SlidersHorizontal size={18} />
             <span>
               <strong>Session tools</strong>
-              <small>Stage {stageIndex + 1} of {stages.length}. Find a deck, pacing, and settings.</small>
+              <small>Stage {stageIndex + 1} of {stages.length} · Find a deck, pacing & settings</small>
             </span>
             <kbd>/</kbd>
           </summary>
@@ -1449,14 +1449,14 @@ export function LiveSessionRunner({
                 >
                   {stages.map((item, itemStageIndex) => (
                     <optgroup
-                      label={`${item.label}: ${item.title}`}
+                      label={`${item.label} · ${item.title}`}
                       key={item.id}
                     >
                       {allDecks
                         .filter(deck => deck.stageIndex === itemStageIndex)
                         .map(deck => (
                           <option value={deck.key} key={deck.key}>
-                            {String(deck.globalNumber).padStart(3, "0")}: {" "}
+                            {String(deck.globalNumber).padStart(3, "0")} ·{" "}
                             {deck.question?.title ?? deck.stageTitle}
                           </option>
                         ))}
@@ -1466,7 +1466,7 @@ export function LiveSessionRunner({
               </label>
               <label className="ls-deck-select ls-deck-select--queue">
                 <SlidersHorizontal size={17} />
-                <span>{SESSION_TERMS.queue.label}, next or previous</span>
+                <span>{SESSION_TERMS.queue.label} · Next / Previous</span>
                 <select
                   value={queueMode}
                   onChange={event =>
@@ -1479,7 +1479,7 @@ export function LiveSessionRunner({
                   <option value="all">All route decks</option>
                 </select>
                 <small>
-                  {queueDecks.length} decks, {queueName(queueMode)}
+                  {queueDecks.length} decks · {queueName(queueMode)}
                 </small>
               </label>
               <button
@@ -1522,7 +1522,7 @@ export function LiveSessionRunner({
                       className={`${deck.key === currentDeck?.key ? "is-current" : ""}${verdict ? ` is-${verdict}` : covered ? " is-covered" : " is-open"}`}
                       aria-current={deck.key === currentDeck?.key ? "step" : undefined}
                       aria-label={`Deck ${deck.globalNumber}: ${deck.question?.title ?? deck.stageTitle}; ${verdict ?? (covered ? "covered" : "open")}`}
-                      title={`${deck.stageLabel}: ${deck.question?.title ?? deck.stageTitle}`}
+                      title={`${deck.stageLabel} · ${deck.question?.title ?? deck.stageTitle}`}
                       onClick={() => {
                         if (
                           navigateManuallyToDeck(deck) &&
@@ -1676,8 +1676,8 @@ export function LiveSessionRunner({
                           }}
                         >
                           <span>
-                            Deck {result.deck.globalNumber}, {" "}
-                            {result.stage.label}: {" "}
+                            Deck {result.deck.globalNumber} ·{" "}
+                            {result.stage.label} ·{" "}
                             {result.question?.tier ?? "core"}
                           </span>
                           <strong>{resultLabel(result)}</strong>
@@ -1783,7 +1783,7 @@ export function LiveSessionRunner({
           <div>
             <strong>Workspace restored</strong>
             <span>
-              Deck {currentDeck?.globalNumber ?? 1} of {allDecks.length}. {linearStepLabel}; timer {timer.status}.
+              Deck {currentDeck?.globalNumber ?? 1} of {allDecks.length} · {linearStepLabel} · timer {timer.status}
             </span>
           </div>
           <button type="button" onClick={() => setResumeNoticeOpen(false)}>
@@ -1799,13 +1799,13 @@ export function LiveSessionRunner({
           <div className="ls-proof-progress">
             <span>
               Route deck {currentDeck?.globalNumber ?? 1} of {allDecks.length}
-              {question?.tier ? `, ${question.tier}` : ""}
-              {deskComplete ? ", covered" : ", open"}
+              {question?.tier ? ` · ${question.tier}` : ""}
+              {deskComplete ? " · covered" : " · open"}
             </span>
             <span>
               {stageTargetCount
                 ? `${stageEvidenceCount} of ${stageTargetCount} stage assessment proofs recorded`
-                : "Teaching stage; no formal proof required"}
+                : "Teaching stage · no formal proof required"}
             </span>
           </div>
           <nav
@@ -1838,7 +1838,7 @@ export function LiveSessionRunner({
               </div>
               <strong>{linearStepLabel}</strong>
               <small>
-                Deck {currentDeck?.globalNumber ?? 1}/{allDecks.length}. Space advances the step; ←/→ moves by deck.
+                Deck {currentDeck?.globalNumber ?? 1}/{allDecks.length} · Space advances the step · ←/→ move by deck.
               </small>
             </div>
             <button

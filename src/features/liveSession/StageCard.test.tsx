@@ -59,9 +59,9 @@ describe("StageCard", () => {
       />
     );
 
-    expect(html).toContain(">Teach<");
-    expect(html).toContain(">Ask<");
-    expect(html).toContain(">Answer<");
+    expect(html).toContain("1 · Teach");
+    expect(html).toContain("2 · Ask");
+    expect(html).toContain("3 · Answer");
     expect(html).toContain(question.explanation);
     expect(html).toContain(question.prompt);
     expect(html).toContain(question.spokenAnswer);

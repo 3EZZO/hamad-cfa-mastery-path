@@ -178,7 +178,7 @@ export function adaptTutorPlaybookPackage(
         id: route.id,
         name: route.label,
         minutes: route.totalMinutes,
-        description: `${deckCount} Teach–Ask–Answer decks, ${route.stageIds.length} stages, ${proofCount} independent mastery proofs.`,
+        description: `${deckCount} Teach–Ask–Answer decks · ${route.stageIds.length} stages · ${proofCount} independent mastery proofs.`,
         recommended: route.id === value.manifest.defaultRouteId,
         expectedDeckCount: route.stageIds.reduce((sum, stageId) => sum +
           (route.cardIdsByStage?.[stageId]?.length ?? stageById.get(stageId)?.cards.length ?? 0), 0),
@@ -213,7 +213,7 @@ export function adaptTutorPlaybookPackage(
             id: card.id,
             title: card.title || stage.title,
             category: isRoutedStage
-              ? `Question Bank: ${stage.title}`
+              ? `Question Bank · ${stage.title}`
               : stage.title,
             summary: card.body || stage.objective,
             content: content.length ? content : [card.body || stage.objective],

@@ -326,7 +326,7 @@ function humanizeTaskDetail(detail: string): string {
         ? formatDate(part, { day: "numeric", month: "short" })
         : part,
     )
-    .join(", ");
+    .join(" · ");
 }
 
 function sortByDateDesc<T extends { date: string }>(entries: T[]): T[] {
@@ -373,6 +373,7 @@ function PageHeading({ tab }: { tab: TabId }) {
   const copy = TAB_COPY[tab];
   return (
     <header className="page-heading">
+      <p className="eyebrow">{copy.eyebrow}</p>
       <h1>{copy.title}</h1>
       <p>{copy.description}</p>
     </header>
@@ -1086,8 +1087,8 @@ function App() {
         <div className="brand-lockup">
           <span className="brand-mark"><Target size={24} /></span>
           <div>
-            <strong>Mastery Path</strong>
-            <span>Hamad, CFA Level I</span>
+            <strong>MASTERY PATH</strong>
+            <span>Hamad · CFA Level I</span>
             <small className="creator-credit">Created by Mohamed Ali, CFA</small>
           </div>
         </div>
@@ -1141,13 +1142,13 @@ function App() {
           <div className="mobile-brand">
             <span className="brand-mark"><Target size={20} /></span>
             <div>
-              <strong>Mastery Path</strong>
-              <span>Hamad, CFA Level I</span>
+              <strong>MASTERY PATH</strong>
+              <span>Hamad · CFA Level I</span>
               <small className="creator-credit">Created by Mohamed Ali, CFA</small>
             </div>
           </div>
           <div className="topbar-title">
-            <span>{role === "tutor" ? "Tutor workspace" : "Hamad's study workspace"}</span>
+            <span>{role === "tutor" ? "Tutor workspace" : "Hamad's study workspace"} · CFA Level I</span>
             <strong>{TAB_COPY[activeTab].title}</strong>
           </div>
           <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
@@ -1250,7 +1251,7 @@ function App() {
             onClick={(event) => event.stopPropagation()}
           >
             <header>
-              <div><span>Hamad's CFA workspace</span><strong>More tools</strong></div>
+              <div><span>HAMAD CFA MASTERY</span><strong>More tools</strong></div>
               <button ref={mobileCloseRef} className="icon-button" type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close menu"><X size={19} /></button>
             </header>
             <div className="mobile-more-grid">
@@ -1270,6 +1271,7 @@ function App() {
                   >
                     <span><Icon size={19} /></span>
                     <div><strong>{item.label}</strong><small>{TAB_COPY[item.id].description}</small></div>
+                    <ChevronRight size={17} />
                   </button>
                 );
               })}
@@ -1374,7 +1376,7 @@ function DashboardView({
         </div>
         <div className="today-focus">
           <div className="today-focus-copy">
-            <p className="hero-kicker">Week {String(currentWeek).padStart(2, "0")} next action</p>
+            <p className="hero-kicker">YOUR NEXT STEP · WEEK {String(currentWeek).padStart(2, "0")}</p>
             {nextTask ? (
               <>
                 <h1>{nextTask.kind === "session" ? nextTask.label : nextTask.kind === "evidence" ? "Check your progress" : "Your next study task"}</h1>
@@ -1384,7 +1386,7 @@ function DashboardView({
                     {nextTask.kind === "session" && role === "tutor" ? <PlayCircle size={17} /> : <Check size={17} />} {nextTaskAction}
                   </button>
                   <button className="button button-dark-ghost" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
-                    View this week
+                    View this week <ChevronRight size={17} />
                   </button>
                 </div>
               </>
@@ -1393,7 +1395,7 @@ function DashboardView({
                 <h1>This week is complete.</h1>
                 <p>Review the evidence, then move forward only with your tutor's direction.</p>
                 <button className="button button-accent" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
-                  Review the week
+                  Review the week <ChevronRight size={17} />
                 </button>
               </>
             )}
@@ -1448,7 +1450,7 @@ function DashboardView({
       <details className="panel risk-panel" aria-label="Automatic coaching signals">
         <summary className="risk-summary">
           <span className="risk-summary-icon"><ShieldCheck size={21} /></span>
-          <span><strong>Progress check</strong><small>{attentionCount ? `${attentionCount} ${attentionCount === 1 ? "area" : "areas"} to review. Open your coaching signals.` : "All areas are on track. View coaching signals."}</small></span>
+          <span><strong>Progress check</strong><small>{attentionCount ? `${attentionCount} ${attentionCount === 1 ? "area" : "areas"} to review · Open your coaching signals` : "All areas on track · View coaching signals"}</small></span>
           <span className="risk-summary-signals" aria-hidden="true">{risks.map((risk) => <i className={`risk-dot-${risk.tone}`} key={risk.id} />)}</span>
           <ChevronDown size={17} />
         </summary>
@@ -1488,7 +1490,7 @@ function DashboardView({
             </EmptyState>
           )}
           <button className="text-button" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
-            Open the full week
+            Open the full week <ChevronRight size={15} />
           </button>
         </article>
         <div className="home-side-stack">
@@ -1524,7 +1526,7 @@ function DashboardView({
       <section className="principle-strip">
         <Sparkles size={19} />
         <div><strong>Every mistake must pay rent.</strong><span>Record the pattern, correction rule, and retest.</span></div>
-        <button className="text-button" type="button" onClick={() => onNavigate("errors")}>Review mistakes</button>
+        <button className="text-button" type="button" onClick={() => onNavigate("errors")}>Review mistakes <ChevronRight size={15} /></button>
       </section>
     </div>
   );
@@ -1582,7 +1584,7 @@ function RoadmapView({
       <details className="tracker-secondary-tools">
         <summary>
           <span>Plan overview & filters</span>
-          <small>{phase}. {visibleWeeks.length} weeks shown.</small>
+          <small>{phase} · {visibleWeeks.length} weeks shown</small>
         </summary>
         <div className="tracker-secondary-tools__content">
       <section className="roadmap-summary panel">
@@ -1621,11 +1623,12 @@ function RoadmapView({
               <summary>
                 <span className="timeline-index">{String(week.week).padStart(2, "0")}</span>
                 <span className="timeline-summary-copy">
-                  <small>{phaseShort(week.phase)}, {formatDate(week.startDate, { day: "numeric", month: "short" })}–{formatDate(week.endDate, { day: "numeric", month: "short" })}</small>
+                  <small>{phaseShort(week.phase)} · {formatDate(week.startDate, { day: "numeric", month: "short" })}–{formatDate(week.endDate, { day: "numeric", month: "short" })}</small>
                   <strong>{week.focus}</strong>
-                  <span>{week.topics.join(", ")}</span>
+                  <span>{week.topics.join(" · ")}</span>
                 </span>
                 <span className="timeline-progress"><strong>{progress}%</strong><ProgressBar value={progress} /></span>
+                <span className="summary-chevron"><ChevronRight size={18} /></span>
               </summary>
               <div className="timeline-body">
                 <div className="roadmap-columns">
@@ -1645,7 +1648,7 @@ function RoadmapView({
                 <div className="session-plan-grid">
                   {getWeekSessions(week).map((session) => (
                     <article key={session.number} className="session-plan-card">
-                      <div><span>Session {String(session.number).padStart(2, "0")}, {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}</span><strong>{formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} at {CHECKPOINT_TIME}, {session.durationMinutes} min</strong></div>
+                      <div><span>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}</span><strong>{formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} · {CHECKPOINT_TIME} · {session.durationMinutes} min</strong></div>
                       <h4>{session.title}</h4>
                       <p>{session.objective}</p>
                       {tracker.sessionOverrides[String(session.number)] && (
@@ -1665,7 +1668,7 @@ function RoadmapView({
                   )}
                 </div>
                 <button className="button button-secondary" type="button" onClick={() => onNavigate("weekly", week.week)}>
-                  Open Week {week.week} checklist
+                  Open Week {week.week} checklist <ChevronRight size={16} />
                 </button>
               </div>
             </details>
@@ -1722,7 +1725,7 @@ function WeeklyView({
         <label>
           <span>Selected week</span>
           <select value={selectedWeek} onChange={(event) => setSelectedWeek(Number(event.target.value))}>
-            {PLAN.map((item) => <option value={item.week} key={item.week}>Week {item.week}: {item.focus}</option>)}
+            {PLAN.map((item) => <option value={item.week} key={item.week}>Week {item.week} · {item.focus}</option>)}
           </select>
         </label>
         <button className="icon-button" type="button" disabled={selectedWeek === TOTAL_WEEKS} onClick={() => setSelectedWeek(selectedWeek + 1)} aria-label="Next week"><ChevronRight size={19} /></button>
@@ -1741,7 +1744,7 @@ function WeeklyView({
           <div className="topic-pills">{week.topics.map((topic) => <span key={topic}>{topic}</span>)}</div>
           <div className="session-date-pills">
             {getWeekSessions(week).map((session) => (
-              <span key={session.number}><strong>S{String(session.number).padStart(2, "0")}</strong>{sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}, {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} at {CHECKPOINT_TIME}</span>
+              <span key={session.number}><strong>S{String(session.number).padStart(2, "0")}</strong>{sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))} · {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} · {CHECKPOINT_TIME}</span>
             ))}
           </div>
         </div>
@@ -1778,7 +1781,7 @@ function WeeklyView({
             <p className="eyebrow">Official 2027 modules</p>
             {getWeekSessions(week).map((session) => (
               <div key={session.number}>
-                <strong>Session {String(session.number).padStart(2, "0")}, {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}, {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} at {CHECKPOINT_TIME}</strong>
+                <strong>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))}, {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} at {CHECKPOINT_TIME}</strong>
                 {tracker.sessionOverrides[String(session.number)] && (
                   <small className="reschedule-note">Rescheduled from {sessionDayLabel(session.date)}, {formatDate(session.date)}: {tracker.sessionOverrides[String(session.number)]!.reason}</small>
                 )}
@@ -1867,7 +1870,7 @@ function SessionLogView({
               type: "Tutor session",
               durationMinutes: selected.session.durationMinutes,
             });
-          }}>{PLANNED_SESSIONS.map(({ week, session }) => <option key={session.number} value={session.number}>Session {String(session.number).padStart(2, "0")}, {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))} {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} at {CHECKPOINT_TIME}; week {week.week}: {session.title}</option>)}</select></label>
+          }}>{PLANNED_SESSIONS.map(({ week, session }) => <option key={session.number} value={session.number}>Session {String(session.number).padStart(2, "0")} · {sessionDayLabel(effectiveSessionDate(session, tracker.sessionOverrides))} {formatDate(effectiveSessionDate(session, tracker.sessionOverrides), { day: "numeric", month: "short" })} at {CHECKPOINT_TIME} · W{week.week} · {session.title}</option>)}</select></label>
           <ReadingCoverage week={plannedSelection.week} session={plannedSelection.session} />
           <label><span>Focus</span><input required maxLength={120} placeholder="What did this session attack?" value={form.focus} onChange={(event) => setForm({ ...form, focus: event.target.value })} /></label>
           <label><span>What changed?</span><textarea required rows={3} maxLength={600} placeholder="The observable breakthrough, decision, or remaining gap." value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} /></label>
@@ -1881,10 +1884,10 @@ function SessionLogView({
             <div className="entry-list">
               {sortByDateDesc(tracker.sessionLogs).map((entry) => (
                 <article className="log-entry" key={entry.id}>
-                  <div className="log-entry-top"><div><span>{entry.sessionNumber ? `Session ${String(entry.sessionNumber).padStart(2, "0")}, ` : ""}week {entry.week}, {entry.type}</span><strong>{entry.focus}</strong></div>{canManage && <button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete session"><Trash2 size={15} /></button>}</div>
+                  <div className="log-entry-top"><div><span>{entry.sessionNumber ? `Session ${String(entry.sessionNumber).padStart(2, "0")} · ` : ""}Week {entry.week} · {entry.type}</span><strong>{entry.focus}</strong></div>{canManage && <button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete session"><Trash2 size={15} /></button>}</div>
                   <p>{entry.outcome}</p>
                   <div className="next-action"><Flag size={15} /><span><strong>Next:</strong> {entry.nextAction}</span></div>
-                  <footer>{formatDate(entry.date)}, {entry.durationMinutes} minutes</footer>
+                  <footer>{formatDate(entry.date)} · {entry.durationMinutes} minutes</footer>
                 </article>
               ))}
             </div>
@@ -1969,7 +1972,7 @@ function PracticeLogView({
                 return (
                   <article className="practice-entry" key={entry.id}>
                     <div className="practice-score"><strong>{score}%</strong><span>{entry.correct}/{entry.attempted}</span></div>
-                    <div className="practice-copy"><span>{topicShort(entry.topic)}, {formatDate(entry.date)}, confidence {entry.confidence ?? 3}/5</span><strong>{entry.source || "Practice block"}</strong>{entry.note && <p>{entry.note}</p>}<ProgressBar value={score} tone={score >= 70 ? "green" : "gold"} /></div>
+                    <div className="practice-copy"><span>{topicShort(entry.topic)} · {formatDate(entry.date)} · confidence {entry.confidence ?? 3}/5</span><strong>{entry.source || "Practice block"}</strong>{entry.note && <p>{entry.note}</p>}<ProgressBar value={score} tone={score >= 70 ? "green" : "gold"} /></div>
                     <button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete practice block"><Trash2 size={15} /></button>
                   </article>
                 );
@@ -2011,7 +2014,7 @@ function MasteryView({ tracker, updateTracker, canEdit }: { tracker: TrackerStat
           const evidence = practiceByTopic[topic]!;
           return (
             <article className="mastery-card" key={topic}>
-              <div className="mastery-card-top"><span className={cx("status-badge", `status-${band.tone}`)}>{band.label}</span></div>
+              <div className="mastery-card-top"><span className="topic-index">{String(index + 1).padStart(2, "0")}</span><span className={cx("status-badge", `status-${band.tone}`)}>{band.label}</span></div>
               <h3>{topic}</h3>
               <div className="mastery-score"><strong>{score}%</strong><span>{evidence.attempted ? `${evidence.accuracy}% across ${evidence.attempted} logged questions` : "No practice linked yet"}</span></div>
               <input
@@ -2104,7 +2107,7 @@ function MockView({
         {canManage ? <form className="panel entry-form mock-form" onSubmit={submit}>
           <div className="panel-heading"><div><p className="eyebrow">New result</p><h3>Log a mock</h3></div><Plus size={20} /></div>
           <label><span>Date</span><input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
-          <label><span>Mock milestone</span><select required value={form.milestoneWeek ?? ""} onChange={(event) => { const milestoneWeek = Number(event.target.value); const milestone = fullMockTargets.find((item) => item.week === milestoneWeek); setForm({ ...form, milestoneWeek, label: milestone?.label ?? "" }); }}><option value="" disabled>Select Mock 1-7</option>{fullMockTargets.map((item) => <option key={item.week} value={item.week}>Week {item.week}: {item.label}, target {item.targetScore}%</option>)}</select></label>
+          <label><span>Mock milestone</span><select required value={form.milestoneWeek ?? ""} onChange={(event) => { const milestoneWeek = Number(event.target.value); const milestone = fullMockTargets.find((item) => item.week === milestoneWeek); setForm({ ...form, milestoneWeek, label: milestone?.label ?? "" }); }}><option value="" disabled>Select Mock 1-7</option>{fullMockTargets.map((item) => <option key={item.week} value={item.week}>Week {item.week} · {item.label} · target {item.targetScore}%</option>)}</select></label>
           <label><span>Score %</span><input required type="number" min="0" max="100" value={form.score} onChange={(event) => setForm({ ...form, score: Number(event.target.value) })} /></label>
           <label><span>Evidence note</span><textarea rows={3} maxLength={500} placeholder="What drove this result?" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label>
           <button className="button button-primary" type="submit"><Plus size={16} /> Save result</button>
@@ -2216,9 +2219,9 @@ function ErrorVaultView({
             <div className="entry-list">
               {sorted.map((entry) => (
                 <article className={cx("error-entry", entry.resolved && "is-resolved")} key={entry.id}>
-                  <div className="error-entry-top"><div><span>{topicShort(entry.topic)}, {entry.category}</span><strong>{entry.summary}</strong></div><div className="entry-actions"><button className="icon-button" type="button" onClick={() => toggleResolved(entry.id)} aria-label={entry.resolved ? "Reopen error" : "Resolve error"}>{entry.resolved ? <Archive size={15} /> : <Check size={15} />}</button><button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete error"><Trash2 size={15} /></button></div></div>
+                  <div className="error-entry-top"><div><span>{topicShort(entry.topic)} · {entry.category}</span><strong>{entry.summary}</strong></div><div className="entry-actions"><button className="icon-button" type="button" onClick={() => toggleResolved(entry.id)} aria-label={entry.resolved ? "Reopen error" : "Resolve error"}>{entry.resolved ? <Archive size={15} /> : <Check size={15} />}</button><button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete error"><Trash2 size={15} /></button></div></div>
                   <div className="correction-rule"><ShieldCheck size={16} /><p><strong>Correction rule</strong>{entry.correction}</p></div>
-                  <footer>{formatDate(entry.date)}{entry.revisitDate && `; retest ${formatDate(entry.revisitDate)}`}. {entry.resolved ? "Resolved" : "Open"}</footer>
+                  <footer>{formatDate(entry.date)}{entry.revisitDate && ` · Retest ${formatDate(entry.revisitDate)}`} · {entry.resolved ? "Resolved" : "Open"}</footer>
                 </article>
               ))}
             </div>
@@ -2396,7 +2399,7 @@ function TutorAdminView({
       <details className="tracker-secondary-tools">
         <summary>
           <span>Schedule, readiness & recovery</span>
-          <small>{Object.keys(tracker.sessionOverrides).length} changed dates. Tutor controls.</small>
+          <small>{Object.keys(tracker.sessionOverrides).length} changed dates · Tutor controls</small>
         </summary>
         <div className="tracker-secondary-tools__content">
       <section className="panel launch-control-panel">
@@ -2421,7 +2424,7 @@ function TutorAdminView({
       <section className="form-and-list tutor-tool-grid">
         <form className="panel entry-form" onSubmit={submitReschedule}>
           <div className="panel-heading"><div><p className="eyebrow">Safe rescheduling</p><h3>Use a same-week Friday exception</h3></div><CalendarClock size={21} /></div>
-          <label><span>Session</span><select value={selectedSession} onChange={(event) => chooseSession(Number(event.target.value))}>{effectiveSessions.map((entry) => <option value={entry.session.number} key={entry.session.number}>S{String(entry.session.number).padStart(2, "0")}, {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })}: {entry.session.title}</option>)}</select></label>
+          <label><span>Session</span><select value={selectedSession} onChange={(event) => chooseSession(Number(event.target.value))}>{effectiveSessions.map((entry) => <option value={entry.session.number} key={entry.session.number}>S{String(entry.session.number).padStart(2, "0")} · {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })} · {entry.session.title}</option>)}</select></label>
           <div className="form-grid form-grid-2">
             <label><span>New date</span><input type="date" min={program.programStart} max={PLANNED_SESSIONS.at(-1)!.session.date} required value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
             <label><span>Current date</span><input type="text" readOnly value={formatDate(selected.effectiveDate)} /></label>
@@ -2590,7 +2593,7 @@ function NotesView({
             <div className="entry-list">
               {sortByDateDesc(tracker.notes).map((entry) => (
                 <article className="note-entry" key={entry.id}>
-                  <div className="log-entry-top"><div><span>{entry.category}, {formatDate(entry.date)}</span><strong>{entry.title}</strong></div><button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete note"><Trash2 size={15} /></button></div>
+                  <div className="log-entry-top"><div><span>{entry.category} · {formatDate(entry.date)}</span><strong>{entry.title}</strong></div><button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete note"><Trash2 size={15} /></button></div>
                   <p>{entry.body}</p>
                 </article>
               ))}
@@ -2607,7 +2610,7 @@ function NotesView({
             <div className="entry-list">
               {sortByDateDesc(privateTutorNotes).map((entry) => (
                 <article className="note-entry private-note-entry" key={entry.id}>
-                  <div className="log-entry-top"><div><span>{entry.category}, {formatDate(entry.date)}</span><strong>{entry.title}</strong></div><button className="icon-button icon-button-danger" disabled={privateNotesBusy} type="button" onClick={() => void removePrivate(entry.id)} aria-label="Delete private note"><Trash2 size={15} /></button></div>
+                  <div className="log-entry-top"><div><span>{entry.category} · {formatDate(entry.date)}</span><strong>{entry.title}</strong></div><button className="icon-button icon-button-danger" disabled={privateNotesBusy} type="button" onClick={() => void removePrivate(entry.id)} aria-label="Delete private note"><Trash2 size={15} /></button></div>
                   <p>{entry.body}</p>
                 </article>
               ))}
