@@ -1186,6 +1186,7 @@ export function LiveSessionRunner({
             <time>{deskDisplay}</time>
             <div>
               <button
+                className="ls-clock-control"
                 type="button"
                 onClick={() => setDeskTimerRunning(value => !value)}
                 aria-label={
@@ -1197,6 +1198,7 @@ export function LiveSessionRunner({
                 {deskTimerRunning ? <Pause size={12} /> : <Play size={12} />}
               </button>
               <button
+                className="ls-clock-control"
                 type="button"
                 onClick={() => setDeskElapsedSeconds(0)}
                 aria-label="Reset response timer"

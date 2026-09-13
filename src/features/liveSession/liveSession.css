@@ -5416,7 +5416,7 @@
   font-size: var(--ls-reading-size);
 }
 .live-session :is(button, input, select, textarea, summary) { font-size: max(calc(.875rem * var(--ls-reader-scale, 1)), 1em); }
-.live-session :is(button, input, select, textarea) { min-height: 44px; }
+.live-session :is(button, input, select, textarea):not(.ls-clock-control) { min-height: 44px; }
 .live-session :is(button, summary) { white-space: normal; }
 .live-session .ls-command-block__body { font-size: var(--ls-reading-size, 1rem); }
 .live-session .ls-command-block__body :is(p, li, blockquote) { font-size: inherit; }
