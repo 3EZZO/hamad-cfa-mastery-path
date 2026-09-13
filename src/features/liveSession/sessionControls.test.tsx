@@ -113,9 +113,11 @@ describe("P1 consolidated session controls", () => {
     const focus = tree!.root.findAllByType("button").find(
       button => button.props["aria-label"] === "Enter laptop focus mode"
     )!;
+    expect(focus.findByType("span").children).toContain("Teaching focus");
     expect(runner().props["data-focus"]).toBe("false");
     await act(async () => focus.props.onClick());
     expect(runner().props["data-focus"]).toBe("true");
+    expect(focus.findByType("span").children).toContain("Exit focus");
 
     const routeMap = tree!.root.find(
       node => node.props["aria-label"] === "Session route map"

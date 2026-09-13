@@ -13,7 +13,7 @@ import {
   Route,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type {
   LiveSessionQuestion,
   LiveSessionStage,
@@ -76,9 +76,19 @@ function CommandBlock({
 }) {
   const headingId = useId();
   const bodyRef = useRef<HTMLDivElement>(null);
+  const [readingProgress, setReadingProgress] = useState(0);
+  const updateReadingProgress = () => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const available = body.scrollHeight - body.clientHeight;
+    setReadingProgress(
+      available <= 1 ? 100 : Math.min(100, (body.scrollTop / available) * 100)
+    );
+  };
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = initialScrollTop;
-  }, [initialScrollTop]);
+    updateReadingProgress();
+  }, [children, initialScrollTop]);
   return (
     <section
       ref={sectionRef}
@@ -113,10 +123,16 @@ function CommandBlock({
         tabIndex={0}
         role="region"
         aria-labelledby={headingId}
-        onScroll={event => onScroll?.(step, event.currentTarget.scrollTop)}
+        onScroll={event => {
+          updateReadingProgress();
+          onScroll?.(step, event.currentTarget.scrollTop);
+        }}
       >
         {children}
       </div>
+      <span className="ls-reading-progress" aria-hidden="true">
+        <span style={{ height: `${readingProgress}%` }} />
+      </span>
     </section>
   );
 }

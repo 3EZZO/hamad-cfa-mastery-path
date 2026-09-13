@@ -73,6 +73,7 @@ describe("StageCard", () => {
       'class="ls-command-block ls-command-block--question is-active"'
     );
     expect(html.match(/class="ls-panel-step"/g)).toHaveLength(3);
+    expect(html.match(/class="ls-reading-progress"/g)).toHaveLength(3);
     expect(html.match(/aria-current="step"/g)).toHaveLength(1);
     expect(html).not.toContain('class="ls-teach-flow"');
     expect(html).not.toContain('aria-expanded="false"');

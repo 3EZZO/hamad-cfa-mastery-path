@@ -181,6 +181,52 @@ html:root[data-theme="dark"] .live-session {
   background: var(--sp-fault-soft);
 }
 
+.live-session .ls-focus-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 4px 9px;
+  color: var(--sp-focus);
+  border: 1px solid var(--sp-rule);
+  border-radius: 999px;
+  background: var(--sp-focus-soft);
+  font-size: calc(0.78rem * var(--ls-reader-scale, 1));
+  font-weight: 650;
+}
+
+.live-session .ls-focus-toggle {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 6px 10px;
+  color: var(--sp-ink);
+  border: 1px solid var(--sp-rule);
+  border-radius: 8px;
+  background: var(--sp-surface-raised);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.live-session .ls-focus-toggle:hover,
+.live-session .ls-focus-toggle[aria-pressed="true"] {
+  color: var(--sp-focus);
+  border-color: var(--sp-focus);
+  background: var(--sp-focus-soft);
+}
+
+.live-session .ls-focus-toggle kbd {
+  padding: 1px 5px;
+  color: var(--sp-ink-soft);
+  border: 1px solid var(--sp-rule);
+  border-radius: 4px;
+  background: var(--sp-surface);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+}
+
 .live-session .ls-sync {
   color: var(--sp-verified);
   background: var(--sp-verified-soft);
@@ -387,6 +433,34 @@ html:root[data-theme="dark"] .live-session {
   background: var(--sp-surface);
   opacity: 1;
   box-shadow: none;
+}
+
+.live-session .ls-command-block {
+  position: relative;
+}
+
+.live-session .ls-reading-progress {
+  position: absolute;
+  z-index: 4;
+  top: 49px;
+  right: 2px;
+  bottom: 3px;
+  width: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--sp-rule);
+  pointer-events: none;
+}
+
+.live-session .ls-reading-progress > span {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  min-height: 3px;
+  border-radius: inherit;
+  background: var(--sp-focus);
+  transition: height 120ms ease-out;
 }
 
 .live-session .ls-command-block + .ls-command-block {
@@ -663,6 +737,61 @@ html:root[data-theme="dark"] .live-session {
   .live-session--running .ls-command-lead,
   .live-session--running .ls-command-block__body :is(p, li, blockquote) {
     line-height: 1.52;
+  }
+}
+
+@media (min-width: 900px) {
+  .live-session .ls-runner[data-equal-columns="false"][data-flow-step="teach"] .ls-command-grid {
+    grid-template-columns: 1.22fr 0.89fr 0.89fr;
+  }
+
+  .live-session .ls-runner[data-equal-columns="false"][data-flow-step="ask"] .ls-command-grid {
+    grid-template-columns: 0.89fr 1.22fr 0.89fr;
+  }
+
+  .live-session .ls-runner[data-equal-columns="false"][data-flow-step="answer"] .ls-command-grid {
+    grid-template-columns: 0.89fr 0.89fr 1.22fr;
+  }
+
+  .live-session .ls-command-grid {
+    transition: grid-template-columns 150ms ease-out;
+  }
+
+  .ls-session-hub:has(.ls-runner[data-focus="true"]) .ls-session-switcher {
+    display: none;
+  }
+
+  .ls-session-hub:has(.ls-runner[data-focus="true"]) .live-session--running,
+  .ls-session-hub .live-session--running:has(.ls-runner[data-focus="true"]) {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  .live-session .ls-runner[data-focus="true"] {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-deck-console,
+  .live-session .ls-runner[data-focus="true"] .ls-shortcuts,
+  .live-session .ls-runner[data-focus="true"] .ls-livebar__identity,
+  .live-session .ls-runner[data-focus="true"] .ls-mastery-radar,
+  .live-session .ls-runner[data-focus="true"] .ls-livebar__actions > .ls-button,
+  .live-session .ls-runner[data-focus="true"] .ls-livebar__actions .ls-workspace-tools {
+    display: none;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-livebar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    min-height: 54px;
+    padding-block: 5px;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-focus-state {
+    justify-self: end;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-runner__grid {
+    grid-row: 2;
   }
 }
 

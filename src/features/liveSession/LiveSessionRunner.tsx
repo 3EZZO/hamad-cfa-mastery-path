@@ -1174,6 +1174,11 @@ export function LiveSessionRunner({
           evidence={targetEvidence}
           total={evidenceTargetIds.size}
         />
+        {focusMode ? (
+          <span className="ls-focus-state" role="status">
+            Teaching focus
+          </span>
+        ) : null}
         <div className="ls-clock-cluster" aria-label="Session timers">
           <div className={`ls-clock${timer.expired ? " is-overtime" : ""}`}>
             <span>{timer.status === "paused" ? "Timer paused" : timer.expired ? "Session overtime" : "Session left"}</span>
@@ -1256,7 +1261,7 @@ export function LiveSessionRunner({
             <Flag size={16} /> {mode === "rehearsal" ? "Finish rehearsal" : "Finish session"}
           </button>
           <button
-            className="ls-icon-button ls-focus-toggle"
+            className="ls-focus-toggle"
             type="button"
             onClick={() => setFocusMode(value => !value)}
             aria-pressed={focusMode}
@@ -1264,6 +1269,8 @@ export function LiveSessionRunner({
             title={focusMode ? "Exit focus mode (Esc)" : "Enter focus mode (Z)"}
           >
             {focusMode ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+            <span>{focusMode ? "Exit focus" : "Teaching focus"}</span>
+            <kbd>Z</kbd>
           </button>
         </div>
         {mode === "live" && <SyncRecoveryNotice state={syncState} message={syncMessage} onRetry={onSyncRetry} />}
