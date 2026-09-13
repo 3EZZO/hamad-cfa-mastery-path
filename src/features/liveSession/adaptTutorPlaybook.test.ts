@@ -91,7 +91,7 @@ describe("private playbook adapter", () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: "deep-drill",
-          category: "Question Bank · Return selection",
+          category: "Question Bank: Return selection",
         }),
       ]),
     );

@@ -100,7 +100,7 @@ export function PracticeBankAdmin({ notify }: {
       <div className="practice-bank-admin__list">
         {banks.length ? banks.map(bank => {
           const unlocked = assigned.includes(bank.storageId);
-          return <article key={bank.storageId}><div><span>{bank.topic} · {bank.questions.length} questions</span><strong>{bank.title}</strong><small>{bank.version}</small></div><button type="button" disabled={busy} className={unlocked ? "is-unlocked" : ""} onClick={() => void toggle(bank.storageId)}>{unlocked ? <><Check size={16} />Unlocked</> : <><LockKeyhole size={16} />Locked</>}</button></article>;
+          return <article key={bank.storageId}><div><span>{bank.topic}, {bank.questions.length} questions</span><strong>{bank.title}</strong><small>{bank.version}</small></div><button type="button" disabled={busy} className={unlocked ? "is-unlocked" : ""} onClick={() => void toggle(bank.storageId)}>{unlocked ? <><Check size={16} />Unlocked</> : <><LockKeyhole size={16} />Locked</>}</button></article>;
         }) : <p>No practice banks have been published.</p>}
       </div>
     </section>

@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  ArrowRight,
   BookOpen,
   CheckCircle2,
   ClipboardCheck,
@@ -247,7 +246,7 @@ export function StageCard({
       <div className="ls-command-grid" aria-label="Tutor command desk">
         <CommandBlock
           icon={<Lightbulb size={19} />}
-          label="1 · Teach"
+          label="Teach"
           tone="explain"
           active={flowStep === "teach"}
           step="teach"
@@ -259,7 +258,7 @@ export function StageCard({
           <p className="ls-command-lead">{bestExplanation(stage, question)}</p>
           <div className="ls-script-ribbon">
             <span>
-              <Quote size={15} /> Teach it
+              <Quote size={15} /> Teaching language
             </span>
             <TextList
               items={bestScript(stage, question)}
@@ -295,7 +294,7 @@ export function StageCard({
 
         <CommandBlock
           icon={<MessageSquareText size={19} />}
-          label="2 · Ask"
+          label="Ask"
           tone="question"
           active={flowStep === "ask"}
           step="ask"
@@ -338,14 +337,14 @@ export function StageCard({
               type="button"
               onClick={() => moveTo("answer")}
             >
-              Hamad has committed · go to Answer <ArrowRight size={16} />
+              Hamad has committed; show the answer
             </button>
           </div>
         </CommandBlock>
 
         <CommandBlock
           icon={<Sparkles size={19} />}
-          label="3 · Answer"
+          label="Answer"
           tone="answer"
           active={flowStep === "answer"}
           step="answer"

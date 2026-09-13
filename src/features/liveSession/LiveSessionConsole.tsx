@@ -563,10 +563,10 @@ function LiveSessionWorkspace({
     syncState === "synced"
       ? "Cloud current on every tutor device."
       : syncState === "saving"
-        ? "Saved on this device · syncing in the background."
+        ? "Saved on this device; syncing in the background."
         : syncState === "offline"
-          ? "Saved on this device · it will sync when the connection returns."
-          : "Saved on this device · cloud sync needs a retry.";
+          ? "Saved on this device; it will sync when the connection returns."
+          : "Saved on this device; cloud sync needs a retry.";
   const isRehearsal = Boolean(
     completion &&
     isPreSessionRehearsal(

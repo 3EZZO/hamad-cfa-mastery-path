@@ -340,7 +340,7 @@ export function PracticeCoach({
       attempted: complete.answers.length,
       correct,
       confidence: averageConfidence,
-      source: `Practice Coach · ${modeLabel(complete.mode)}`,
+      source: `Practice Coach: ${modeLabel(complete.mode)}`,
       note: `${correct}/${complete.answers.length} correct; detailed adaptive review retained in Practice Coach.`,
     });
     notify("Practice set completed and synchronized with the tracker.");
@@ -444,7 +444,7 @@ export function PracticeCoach({
                   <button type="button" aria-pressed={confidence === value} key={value} onClick={() => setConfidence(value)}>{value}</button>
                 ))}
               </div>
-              <small>1 = guessing · 5 = certain</small>
+              <small>1 means guessing; 5 means certain.</small>
             </fieldset>
           )}
           {submitted && activeRun.mode !== "exam" && (
@@ -516,7 +516,7 @@ export function PracticeCoach({
       {activeRun && (
         <button className="practice-resume" type="button" onClick={resume}>
           <span><Play size={20} /></span>
-          <div><small>Continue where you stopped</small><strong>{modeLabel(activeRun.mode)} · question {activeRun.currentIndex + 1} of {activeRun.questionIds.length}</strong></div>
+          <div><small>Continue where you stopped</small><strong>{modeLabel(activeRun.mode)}, question {activeRun.currentIndex + 1} of {activeRun.questionIds.length}</strong></div>
           <ArrowRight />
         </button>
       )}
@@ -553,7 +553,7 @@ export function PracticeCoach({
             {modulePickerOpen && <div>{modules.map(moduleId => {
               const moduleQuestions = questions.filter(question => question.moduleId === moduleId);
               const attempted = moduleQuestions.filter(question => states[question.id]).length;
-              return <button type="button" key={moduleId} onClick={() => void begin("module", 10, moduleId)}><div><strong>{moduleId}</strong><span>{moduleQuestions.length} questions · {attempted} attempted</span></div><ArrowRight /></button>;
+              return <button type="button" key={moduleId} onClick={() => void begin("module", 10, moduleId)}><div><strong>{moduleId}</strong><span>{moduleQuestions.length} questions, {attempted} attempted</span></div></button>;
             })}</div>}
           </section>
         </>

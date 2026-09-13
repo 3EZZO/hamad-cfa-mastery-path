@@ -94,7 +94,7 @@ export default function CalendarExportDialog({
             <legend><Clock3 size={15} /> Weekly checkpoint time</legend>
             <div className="calendar-time-grid">
               <label>
-                <span>Saturday checkpoint · Asia/Riyadh</span>
+                <span>Saturday checkpoint, Asia/Riyadh</span>
                 <input
                   ref={firstFieldRef}
                   aria-readonly="true"

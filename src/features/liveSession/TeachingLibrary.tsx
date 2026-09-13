@@ -36,7 +36,7 @@ export function TeachingLibrary({ stages }: { stages: LiveSessionStage[] }) {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}>
-        <LibraryBig size={17} /> Full teaching library · {decks.length} library decks
+        <LibraryBig size={17} /> Full teaching library, {decks.length} library decks
       </button>
       {open &&
         createPortal(
@@ -53,7 +53,7 @@ export function TeachingLibrary({ stages }: { stages: LiveSessionStage[] }) {
                 <div>
                   <h2 id="ls-library-title">Full teaching library</h2>
                   <p>
-                    Reference only · your live route, position, and progress
+                    Reference only; your live route, position, and progress remain unchanged
                     stay unchanged.
                   </p>
                 </div>
@@ -114,7 +114,7 @@ export function TeachingLibrary({ stages }: { stages: LiveSessionStage[] }) {
                   {!current && <option value="">No matching decks</option>}
                   {filtered.map((deck, i) => (
                     <option key={deck.key} value={deck.key}>
-                      {i + 1} / {filtered.length} ·{" "}
+                      {i + 1} / {filtered.length}, {" "}
                       {deck.question?.title ?? deck.stage.title}
                     </option>
                   ))}

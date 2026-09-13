@@ -158,7 +158,7 @@ export function EvidenceRepairFlow({
             </button>
           ))}
         </div>
-        <small>1 = guessing · 5 = can teach it back accurately</small>
+        <small>1 means guessing; 5 means he can teach it back accurately.</small>
       </fieldset>
 
       {value.verdict === "repair" && (

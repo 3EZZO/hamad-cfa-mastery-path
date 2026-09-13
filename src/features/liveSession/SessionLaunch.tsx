@@ -213,7 +213,7 @@ export function SessionLaunch({
                 <strong>{route.name}</strong>
                 <p>{route.description}</p>
                 <small>
-                  {routeStages.length} stages · {routeItems} route decks · {routeProofs} assessment proofs
+                  {routeStages.length} stages, {routeItems} route decks, {routeProofs} assessment proofs
                 </small>
                 {route.recommended && <em>Recommended</em>}
               </label>
