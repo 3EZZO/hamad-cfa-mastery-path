@@ -24,14 +24,14 @@
 
 html:root[data-theme="dark"] {
   color-scheme: dark;
-  color: #e5edf5; background: #101c2a;
+  color: #e5edf5; background: #0d1723;
   --ink: #e5edf5; --ink-2: #c4d2e0; --muted: #a9bacd;
-  --paper: #101c2a; --surface: #192b3d; --surface-2: #203448;
-  --border: #455b72; --forest-soft: #233c61; --gold-pale: #233c61;
+  --paper: #0d1723; --surface: #172638; --surface-2: #1d3043;
+  --border: #3b5065; --forest-soft: #203958; --gold-pale: #203958;
   --gold: #a8c5ff; --gold-bright: #a8c5ff;
   --green: #87d9c8; --green-pale: #193f3c;
   --danger: #ffabb6; --danger-pale: #492d3c;
-  --shadow: 0 20px 55px #0004; --shadow-soft: 0 8px 24px #0003;
+  --shadow: 0 16px 42px #0004; --shadow-soft: 0 1px 2px #0005;
   --theme-blue: #a8c5ff; --theme-teal: #87d9c8; --theme-violet: #c9bcff;
   --theme-amber: #f1ce88; --theme-amber-bg: #423724;
   --chart-grid: #455b72; --chart-tick: #a9bacd;
@@ -39,7 +39,7 @@ html:root[data-theme="dark"] {
 }
 html:root[data-theme="dark"] body,
 html:root[data-theme="dark"] :is(.access-screen, .session-mode-loader) {
-  background: #101c2a; color: var(--ink);
+  background: var(--paper); color: var(--ink);
 }
 html:root[data-theme="dark"] :is(
   .topbar, .panel, .metric-card, .access-card, .button-google, .tracker-secondary-tools,
@@ -78,8 +78,11 @@ html:root[data-theme="dark"] :is(.status-muted, .task-status, .backup-sync-statu
 html:root[data-theme="dark"] :is(.metric-top, .access-footnote, .access-divider,
   .tracker-secondary-tools > summary small, .is-complete .task-label, .reading-pending,
   .reading-pending.reading-no-new, .entry-form label span em, .topic-index, .slider-labels) { color: var(--muted); }
-html:root[data-theme="dark"] :is(.text-button, .eyebrow, .mini-label, .metric-top svg,
+html:root[data-theme="dark"] :is(.text-button,
   .workspace-actions-panel > button > svg, .session-mode-loader p) { color: var(--theme-blue); }
+html:root[data-theme="dark"] :is(.eyebrow, .mini-label, .metric-top svg, .panel-heading > svg) {
+  color: var(--muted);
+}
 html:root[data-theme="dark"] :is(.week-chip, .timeline-index, .mobile-nav-button.is-active,
   .mobile-more-button.is-active, .workspace-actions[open] > summary,
   .workspace-actions-panel > button:hover) { color: var(--theme-blue); background: #233c61; }

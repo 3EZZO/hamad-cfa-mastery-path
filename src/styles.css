@@ -4257,12 +4257,15 @@ body {
 :root {
   --teal: #087e83;
   --ink-soft: #294960;
-  --shadow-soft: 0 3px 14px rgba(19, 44, 68, 0.035);
-  --shadow: 0 16px 40px rgba(19, 44, 68, 0.08);
+  --paper: #eef2f6;
+  --surface-2: #f6f8fb;
+  --border: #d5dee8;
+  --shadow-soft: 0 1px 2px rgba(19, 44, 68, 0.045);
+  --shadow: 0 12px 32px rgba(19, 44, 68, 0.07);
 }
 
 body {
-  background: #f3f6fa;
+  background: var(--paper);
 }
 
 a:focus-visible,
@@ -4352,7 +4355,9 @@ summary:focus-visible {
 }
 .button-secondary,
 .button-ghost {
-  background: #fff;
+  border-color: #c7d2df;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: none;
 }
 .header-session-action {
   padding: 0 14px;
@@ -4472,7 +4477,7 @@ summary:focus-visible {
 }
 .panel,
 .metric-card {
-  border-radius: 15px;
+  border-radius: 13px;
   border-color: var(--border);
   background: #fff;
   box-shadow: var(--shadow-soft);
@@ -4483,10 +4488,16 @@ summary:focus-visible {
   line-height: 1.4;
   letter-spacing: -0.025em;
 }
+.panel-heading > svg {
+  color: var(--muted);
+}
 .eyebrow,
 .mini-label {
-  font-size: 0.67rem;
-  letter-spacing: 0.095em;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  text-transform: none;
 }
 .progress-track {
   height: 5px;
@@ -4627,7 +4638,7 @@ summary:focus-visible {
   font-weight: 500;
 }
 .metric-top svg {
-  color: #315fce;
+  color: var(--muted);
   width: 19px;
   height: 19px;
 }
@@ -4936,8 +4947,10 @@ summary:focus-visible {
   }
   .nav-group-label {
     color: #9eb5cb;
-    font-size: 0.6rem;
-    letter-spacing: 0.09em;
+    font-size: 0.69rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: none;
   }
   .nav-group + .nav-group {
     margin-top: 14px;
@@ -4955,7 +4968,7 @@ summary:focus-visible {
   }
   .nav-button.is-active {
     color: #fff;
-    background: #2a4b72;
+    background: #294b6b;
   }
   .nav-button.is-active::before {
     background: #8eb5ff;
