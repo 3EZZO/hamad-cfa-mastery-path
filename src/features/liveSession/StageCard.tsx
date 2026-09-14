@@ -36,14 +36,16 @@ export interface StageCardProps {
 function TextList({
   items,
   ordered = false,
+  className,
 }: {
   items?: string[];
   ordered?: boolean;
+  className?: string;
 }) {
   if (!items?.length) return null;
   const Tag = ordered ? "ol" : "ul";
   return (
-    <Tag>
+    <Tag className={className}>
       {items.map((item, index) => (
         <li key={`${index}-${item}`}>{item}</li>
       ))}
@@ -293,7 +295,7 @@ export function StageCard({
               {question.formulae.map((formula, index) => (
                 <div className="ls-formula-line" key={formula}>
                   <small>{String(index + 1).padStart(2, "0")}</small>
-                  <code>{formula}</code>
+                  <code className="financial-expression">{formula}</code>
                 </div>
               ))}
             </div>
@@ -303,7 +305,7 @@ export function StageCard({
               <span>
                 <PenLine size={15} /> Write or draw
               </span>
-              <TextList items={write} ordered />
+              <TextList items={write} ordered className="financial-working" />
             </div>
           ) : null}
         </CommandBlock>
@@ -387,7 +389,7 @@ export function StageCard({
           {question?.working?.length ? (
             <div className="ls-answer-detail ls-calculation-workbench">
               <span>Application sequence</span>
-              <TextList items={question.working} ordered />
+              <TextList items={question.working} ordered className="financial-working" />
             </div>
           ) : null}
           {question?.rationale ? (

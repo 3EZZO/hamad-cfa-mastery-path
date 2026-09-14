@@ -253,3 +253,34 @@ html:root[data-theme="dark"] .practice-bank-admin__list button.is-unlocked { col
   .practice-action,
   .practice-player__progress span { transition: none; }
 }
+
+/* Shared reading rhythm and numerical voice with Session Mode. */
+.practice-question h2 { max-width: var(--measure-question, 52ch); }
+.practice-feedback > p,
+.practice-feedback details > p,
+.practice-feedback aside p,
+.practice-working { max-width: var(--measure-explanation, 66ch); }
+.practice-formulae code {
+  display: block;
+  border: 1px solid #cbd9e8;
+  font-family: var(--font-financial);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  white-space: pre;
+}
+.practice-working { padding-left: 1.7rem; }
+.practice-working li {
+  padding-left: .25rem;
+  font-family: var(--font-financial);
+  font-size: .9rem;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+html:root[data-theme="dark"] .practice-formulae code { border-color: #455b72; }
+@media (max-width: 640px) {
+  .practice-question h2,
+  .practice-feedback > p,
+  .practice-feedback details > p,
+  .practice-feedback aside p,
+  .practice-working { max-width: 100%; }
+}

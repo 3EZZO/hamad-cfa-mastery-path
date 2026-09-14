@@ -5795,3 +5795,26 @@ html:root[data-theme="dark"] .live-session .ls-closeout__readiness strong { colo
 html:root[data-theme="dark"] .live-session .ls-closeout__readiness .ls-closeout__readiness-detail { color: #b7cad9; }
 html:root[data-theme="dark"] .live-session .ls-closeout__ready { color: #87d9c8; }
 html:root[data-theme="dark"] .live-session .ls-closeout__warning { color: #ffabb6; }
+
+/* Deliberate reading measures and financial notation. Panels retain their
+   working width; only long-form copy is constrained for faster scanning. */
+.live-session :is(.ls-command-lead, .ls-depth-note p, .ls-board-cue .financial-working, .ls-answer-detail p, .ls-calculation-workbench .financial-working) {
+  max-width: var(--measure-explanation, 66ch);
+}
+.live-session .ls-question-copy h3 { max-width: var(--measure-question, 52ch); }
+.live-session .ls-spoken-answer { max-width: var(--measure-response, 62ch); }
+.live-session :is(.ls-formula-line code, .financial-working) {
+  font-family: var(--font-financial);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+.live-session .financial-working li {
+  font-family: inherit;
+  font-size: calc(.84rem * var(--ls-reader-scale, 1));
+  line-height: 1.62;
+}
+@media (max-width: 899px) {
+  .live-session :is(.ls-command-lead, .ls-depth-note p, .ls-board-cue .financial-working, .ls-question-copy h3, .ls-spoken-answer, .ls-answer-detail p, .ls-calculation-workbench .financial-working) {
+    max-width: 100%;
+  }
+}

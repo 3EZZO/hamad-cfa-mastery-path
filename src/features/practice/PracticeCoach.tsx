@@ -451,8 +451,8 @@ export function PracticeCoach({
             <section className={`practice-feedback ${correct ? "is-correct" : "is-repair"}`} aria-live="polite">
               <header>{correct ? <CheckCircle2 /> : <CircleAlert />}<div><span>{correct ? "Correct" : "Repair this concept"}</span><strong>{currentQuestion.options[currentQuestion.correctOption]}</strong></div></header>
               <p>{currentQuestion.explanation}</p>
-              {currentQuestion.formulae.length > 0 && <div className="practice-formulae">{currentQuestion.formulae.map(formula => <code key={formula}>{formula}</code>)}</div>}
-              {currentQuestion.working.length > 0 && <ol>{currentQuestion.working.map(step => <li key={step}>{step}</li>)}</ol>}
+              {currentQuestion.formulae.length > 0 && <div className="practice-formulae">{currentQuestion.formulae.map(formula => <code className="financial-expression" key={formula}>{formula}</code>)}</div>}
+              {currentQuestion.working.length > 0 && <ol className="practice-working financial-working">{currentQuestion.working.map(step => <li key={step}>{step}</li>)}</ol>}
               <details>
                 <summary>Why the other choices are wrong <ChevronDown size={16} /></summary>
                 {currentQuestion.options.map((option, index) => index === currentQuestion.correctOption ? null : (

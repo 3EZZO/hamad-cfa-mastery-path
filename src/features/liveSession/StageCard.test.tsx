@@ -68,7 +68,9 @@ describe("StageCard", () => {
     expect(html).toContain(question.spokenAnswer);
     expect(html).toContain("Governing relationship");
     expect(html).toContain('class="ls-formula-line"');
+    expect(html).toContain('class="financial-expression"');
     expect(html).toContain("Application sequence");
+    expect(html).toContain('class="financial-working"');
     expect(html).toContain(
       'class="ls-command-block ls-command-block--question is-active"'
     );

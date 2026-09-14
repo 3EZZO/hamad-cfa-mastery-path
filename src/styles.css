@@ -25,6 +25,17 @@
   --danger-pale: #fbe9eb;
   --shadow: 0 20px 55px rgba(19, 44, 68, 0.08);
   --shadow-soft: 0 8px 24px rgba(19, 44, 68, 0.06);
+  --font-financial: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+  --measure-question: 52ch;
+  --measure-response: 62ch;
+  --measure-explanation: 66ch;
+}
+
+.financial-expression,
+.financial-working {
+  font-family: var(--font-financial);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
 }
 
 * {
