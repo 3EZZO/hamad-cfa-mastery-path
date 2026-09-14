@@ -59,6 +59,7 @@ let tree: ReactTestRenderer | undefined;
 let s1: TutorPlaybookPackage;
 let s2: TutorPlaybookPackage;
 let s3: TutorPlaybookPackage;
+let s4: TutorPlaybookPackage;
 const notify = vi.fn();
 
 beforeEach(async () => {
@@ -71,15 +72,17 @@ beforeEach(async () => {
     clearTimeout,
   });
   vi.stubGlobal("navigator", { onLine: true });
-  [s1, s2, s3] = await Promise.all([
+  [s1, s2, s3, s4] = await Promise.all([
     syntheticPlaybook(1),
     syntheticPlaybook(2),
     syntheticPlaybook(3),
+    syntheticPlaybook(4),
   ]);
   mocks.load.mockImplementation(async (id: string) => {
     if (id === s1.manifest.id) return s1;
     if (id === s2.manifest.id) return s2;
-    return s3;
+    if (id === s3.manifest.id) return s3;
+    return s4;
   });
   mocks.cache.mockResolvedValue({ ready: true });
   mocks.cacheRun.mockResolvedValue(undefined);
@@ -146,6 +149,18 @@ describe("Session Mode workspace isolation", () => {
     expect(consoleFor(3).props.session).toMatchObject({
       number: 3,
       date: "2026-10-03",
+    });
+  });
+
+  it("opens Session 04 in an isolated workspace with its planned appointment", async () => {
+    await mount();
+    await choose(4);
+    expect(consoleFor(1).props.active).toBe(false);
+    expect(consoleFor(4).props.active).toBe(true);
+    expect(consoleFor(4).props.playbook.id).toBe(getTutorSession(4).playbookId);
+    expect(consoleFor(4).props.session).toMatchObject({
+      number: 4,
+      date: "2026-10-10",
     });
   });
 

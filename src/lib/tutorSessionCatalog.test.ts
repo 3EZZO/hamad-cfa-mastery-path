@@ -21,6 +21,10 @@ describe("session catalog and import boundary", () => {
       date: "2026-10-03",
       durationMinutes: 150,
     });
+    expect(getTutorSession(4).session).toMatchObject({
+      date: "2026-10-10",
+      durationMinutes: 120,
+    });
     expect(getTutorSession(2).taskId).not.toBe(getTutorSession(1).taskId);
     expect(tutorSessionRunId(2, "v1", "a".repeat(64))).not.toBe(
       tutorSessionRunId(1, "v1", "a".repeat(64))
@@ -45,6 +49,13 @@ describe("session catalog and import boundary", () => {
       manifest: { sessionNumber: 3 },
     });
     await expect(validateSessionImport(s3, 2)).rejects.toThrow("Session 02");
+  });
+  it("accepts the Session 04 identity only in the Session 04 workspace", async () => {
+    const s4 = asDraft(await syntheticPlaybook(4));
+    await expect(validateSessionImport(s4, 4)).resolves.toMatchObject({
+      manifest: { sessionNumber: 4 },
+    });
+    await expect(validateSessionImport(s4, 3)).rejects.toThrow("Session 03");
   });
   it("rejects changed private content rather than publishing a corrupt package", async () => {
     const s2 = asDraft(await syntheticPlaybook(2));
