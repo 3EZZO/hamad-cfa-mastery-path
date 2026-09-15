@@ -103,7 +103,7 @@ html:root[data-theme="dark"] .live-session {
   padding: 6px 11px;
   color: var(--sp-ink-soft);
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
 }
 
@@ -188,7 +188,7 @@ html:root[data-theme="dark"] .live-session {
   padding: 4px 9px;
   color: var(--sp-focus);
   border: 1px solid var(--sp-rule);
-  border-radius: 999px;
+  border-radius: 14px;
   background: var(--sp-focus-soft);
   font-size: calc(0.78rem * var(--ls-reader-scale, 1));
   font-weight: 650;
@@ -221,7 +221,7 @@ html:root[data-theme="dark"] .live-session {
   padding: 1px 5px;
   color: var(--sp-ink-soft);
   border: 1px solid var(--sp-rule);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--sp-surface);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.7rem;
@@ -297,7 +297,7 @@ html:root[data-theme="dark"] .live-session {
 .live-session .ls-linear-control {
   color: var(--sp-ink);
   border: 1px solid var(--sp-rule);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--sp-surface);
   box-shadow: none;
   backdrop-filter: none;
@@ -447,7 +447,7 @@ html:root[data-theme="dark"] .live-session {
   bottom: 3px;
   width: 3px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 14px;
   background: var(--sp-rule);
   pointer-events: none;
 }
@@ -514,7 +514,7 @@ html:root[data-theme="dark"] .live-session {
 .live-session :is(.ls-script-ribbon, .ls-depth-note, .ls-board-cue, .ls-hints, .ls-answer-detail) {
   color: var(--sp-ink);
   border-color: var(--sp-rule);
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--sp-surface-raised);
   box-shadow: none;
 }
@@ -572,7 +572,7 @@ html:root[data-theme="dark"] .live-session {
   color: var(--sp-ink);
   border: 0;
   border-left: 4px solid var(--sp-focus);
-  border-radius: 0 7px 7px 0;
+  border-radius: 0 8px 8px 0;
   background: var(--sp-focus-soft);
   font-weight: 580;
 }
