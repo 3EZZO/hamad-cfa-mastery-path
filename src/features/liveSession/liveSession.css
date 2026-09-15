@@ -235,7 +235,7 @@
   border: 1px solid #31536d;
   border-radius: 14px;
   background: #081f35;
-  box-shadow: 0 18px 48px rgba(7, 30, 51, 0.28);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 .ls-workspace-tools__identity {
   display: grid;
@@ -315,7 +315,6 @@
 }
 .ls-button:not(:disabled):hover,
 .ls-icon-button:not(:disabled):hover {
-  transform: translateY(-1px);
 }
 
 .ls-button--primary {
@@ -850,7 +849,6 @@
     box-shadow 130ms ease;
 }
 .ls-route-card:hover {
-  transform: translateY(-2px);
   border-color: #79b4ff;
   box-shadow: var(--ls-shadow-soft);
 }
@@ -2235,7 +2233,6 @@
 }
 .ls-linear-control__next:hover {
   background: linear-gradient(135deg, #0e59c6, #246de0);
-  transform: translateY(-1px);
 }
 .ls-linear-control__next kbd {
   color: #dceaff;
@@ -2490,7 +2487,10 @@
 .ls-command-block {
   scroll-margin-top: 112px;
 }
-.ls-command-block.is-active { box-shadow: inset 0 3px 0 var(--ls-azure); background: var(--ls-cloud); }
+.ls-command-block.is-active {
+  background: var(--ls-cloud);
+  box-shadow: inset 4px 0 0 var(--ls-azure);
+}
 .ls-command-block.is-active > header { background: var(--ls-cloud); color: var(--ls-navy); }
 .ls-command-block.is-active .ls-command-block__icon { background: var(--ls-azure); color: var(--ls-white); }
 .ls-command-block:last-child {
@@ -4814,7 +4814,10 @@
 .ls-command-grid {
   background: #fff;
 }
-.ls-command-block.is-active { box-shadow: inset 0 3px 0 var(--ls-azure); background: var(--ls-cloud); }
+.ls-command-block.is-active {
+  background: var(--ls-cloud);
+  box-shadow: inset 4px 0 0 var(--ls-azure);
+}
 .ls-command-block.is-active > header { background: var(--ls-cloud); color: var(--ls-navy); }
 .ls-command-block.is-active .ls-command-block__icon { background: var(--ls-azure); color: var(--ls-white); }
 .live-session .ls-command-block > header {
@@ -5571,8 +5574,11 @@
 .ls-command-block {
   transition: flex-basis 160ms ease, opacity 160ms ease, background-color 160ms ease;
 }
-.ls-command-block:not(.is-active) { opacity: .84; }
-.ls-command-block.is-active { box-shadow: inset 0 3px 0 var(--ls-azure); background: var(--ls-cloud); }
+
+.ls-command-block.is-active {
+  background: var(--ls-cloud);
+  box-shadow: inset 4px 0 0 var(--ls-azure);
+}
 .ls-command-block.is-active > header { background: var(--ls-cloud); color: var(--ls-navy); }
 .ls-command-block.is-active .ls-command-block__icon { background: var(--ls-azure); color: var(--ls-white); }
 .ls-command-block__body {
@@ -5793,4 +5799,44 @@ html:root[data-theme="dark"] .live-session .ls-closeout__warning { color: #ffabb
   .live-session :is(.ls-command-lead, .ls-depth-note p, .ls-board-cue .financial-working, .ls-question-copy h3, .ls-spoken-answer, .ls-answer-detail p, .ls-calculation-workbench .financial-working) {
     max-width: 100%;
   }
+}
+/* Signature Launch Moment */
+@media (prefers-reduced-motion: no-preference) {
+  .live-session.live-session--running .ls-workspace-tools {
+    animation: ls-launch-tools 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .live-session.live-session--running .ls-stage-card__identity {
+    animation: ls-launch-fade 200ms cubic-bezier(0.16, 1, 0.3, 1) 100ms both;
+  }
+  .live-session.live-session--running .ls-deck-console {
+    animation: ls-launch-fade 200ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
+  }
+  @keyframes ls-launch-tools {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes ls-launch-fade {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+}
+
+/* Analytical Calculation Field */
+.ls-formula-stack,
+.ls-formula-desk,
+.ls-formula-line code,
+.financial-working {
+  font-family: "IBM Plex Mono", monospace !important;
+  font-variant-numeric: tabular-nums lining-nums;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px) !important;
+  background-size: 8px 8px !important;
+}
+
+html:root[data-theme="dark"] .ls-formula-stack,
+html:root[data-theme="dark"] .ls-formula-desk,
+html:root[data-theme="dark"] .ls-formula-line code,
+html:root[data-theme="dark"] .financial-working {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
 }
