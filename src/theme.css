@@ -36,6 +36,21 @@ html:root[data-theme="dark"] {
   --theme-amber: #f1ce88; --theme-amber-bg: #423724;
   --chart-grid: #455b72; --chart-tick: #a9bacd;
   --chart-score: #87d9c8; --chart-target: #f1ce88;
+  
+  /* Glassmorphism Elevation Tokens */
+  --surface-blur: blur(16px);
+
+  --surface-base-bg: rgba(23, 38, 56, 0.65);
+  --surface-base-border: rgba(255, 255, 255, 0.06);
+  --surface-base-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  
+  --surface-raised-bg: rgba(29, 48, 67, 0.70);
+  --surface-raised-border: rgba(255, 255, 255, 0.10);
+  --surface-raised-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+  
+  --surface-modal-bg: rgba(35, 60, 97, 0.80);
+  --surface-modal-border: rgba(255, 255, 255, 0.15);
+  --surface-modal-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
 }
 html:root[data-theme="dark"] body,
 html:root[data-theme="dark"] :is(.access-screen, .session-mode-loader) {
@@ -298,4 +313,29 @@ html:root[data-theme="dark"] .live-session .ls-command-block__body:focus-visible
   html:root[data-theme="dark"] :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
     outline-color: Highlight;
   }
+}
+
+/* Glassmorphism Elevation Utilities */
+html:root[data-theme="dark"] .elevation-base {
+  background: var(--surface-base-bg);
+  border: 1px solid var(--surface-base-border);
+  box-shadow: var(--surface-base-shadow);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+}
+
+html:root[data-theme="dark"] .elevation-raised {
+  background: var(--surface-raised-bg);
+  border: 1px solid var(--surface-raised-border);
+  box-shadow: var(--surface-raised-shadow);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+}
+
+html:root[data-theme="dark"] .elevation-modal {
+  background: var(--surface-modal-bg);
+  border: 1px solid var(--surface-modal-border);
+  box-shadow: var(--surface-modal-shadow);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
 }
