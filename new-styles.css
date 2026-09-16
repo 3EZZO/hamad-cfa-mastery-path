@@ -1,0 +1,159 @@
+﻿/* Dashboard Path Redesign */
+.week-snapshot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.week-snapshot-header span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+.week-snapshot-header p {
+  margin: 0;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.plan-route-graphic {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  width: 100%;
+}
+
+.plan-route-pulse {
+  animation: route-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  transform-origin: center;
+}
+
+@keyframes route-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.plan-route-active-line {
+  filter: drop-shadow(0 0 4px var(--theme-blue));
+}
+
+.metric-gauge-layout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.metric-gauge {
+  flex: 0 0 52px;
+}
+
+.metric-gauge svg {
+  display: block;
+}
+
+.metric-gauge circle {
+  transition: stroke-dashoffset var(--motion-micro) ease-out;
+}
+
+.metric-stats {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-stats strong {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.metric-stats p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1.3;
+}
+
+/* Hide original metric stuff if needed */
+.metric-card > strong, .metric-card > p, .metric-card > .progress-track {
+  display: none;
+}
+.metric-card .metric-top {
+  margin-bottom: 0;
+}
+
+/* Staggered Dashboard Cards Entrance */
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.home-metrics > .metric-card,
+.home-main-grid > .panel,
+.home-side-stack > .panel {
+  animation: slide-up-fade var(--motion-standard) var(--ease-entrance) both;
+}
+
+.home-metrics > .metric-card:nth-child(1) { animation-delay: 40ms; }
+.home-metrics > .metric-card:nth-child(2) { animation-delay: 80ms; }
+.home-metrics > .metric-card:nth-child(3) { animation-delay: 120ms; }
+.home-metrics > .metric-card:nth-child(4) { animation-delay: 160ms; }
+.home-main-grid > .panel { animation-delay: 200ms; }
+.home-side-stack > .panel:nth-child(1) { animation-delay: 240ms; }
+.home-side-stack > .panel:nth-child(2) { animation-delay: 280ms; }
+
+/* Sidebar Ambient Glow */
+.sidebar .brand-lockup {
+  position: relative;
+}
+
+.sidebar .brand-lockup::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, var(--gold-bright) 0%, transparent 60%);
+  opacity: 0.15;
+  filter: blur(12px);
+  transform: translateY(-50%) scale(1);
+  animation: ambient-glow 5s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes ambient-glow {
+  from { opacity: 0.1; transform: translateY(-50%) scale(0.9); }
+  to { opacity: 0.25; transform: translateY(-50%) scale(1.15); }
+}
+
+/* Progress Check Pulse */
+.risk-summary-signals i {
+  position: relative;
+}
+.risk-dot-green::after {
+  content: "";
+  position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  border: 1px solid var(--theme-teal);
+  border-radius: 50%;
+  animation: beacon-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes beacon-ping {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-route-pulse,
+  .sidebar .brand-lockup::before,
+  .risk-dot-green::after {
+    animation: none !important;
+  }
+}

@@ -101,6 +101,7 @@ import CalendarExportDialog from "./components/CalendarExportDialog";
 import { ThemeProvider, ThemeToggle } from "./components/ThemeToggle";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
+import { PlanRouteGraphic } from "./components/PlanRouteGraphic";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
 import { PracticeCoach } from "./features/practice/PracticeCoach";
 import { PracticeBankAdmin } from "./features/practice/PracticeBankAdmin";
@@ -1401,10 +1402,11 @@ function DashboardView({
             )}
           </div>
           <aside className="week-snapshot">
-            <span>This week</span>
-            <strong>{weekProgress}%</strong>
-            <ProgressBar value={weekProgress} />
-            <p>{required.filter((task) => isTaskComplete(task, tracker)).length} of {required.length} required items complete</p>
+            <div className="week-snapshot-header">
+              <span>This week: {weekProgress}%</span>
+              <p>{required.filter((task) => isTaskComplete(task, tracker)).length} of {required.length} required items complete</p>
+            </div>
+            <PlanRouteGraphic plan={PLAN} currentWeek={currentWeek} tracker={tracker} />
             <small>{formatDate(week.startDate, { day: "numeric", month: "short" })} — {formatDate(week.endDate, { day: "numeric", month: "short" })}</small>
           </aside>
         </div>
@@ -1545,12 +1547,65 @@ function MetricCard({
   detail: string;
   progress: number;
 }) {
+  const [displayProgress, setDisplayProgress] = useState(0);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    const duration = 600;
+    const startTime = performance.now();
+
+    const animate = (time: number) => {
+      const elapsed = time - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      // ease-out curve
+      const easeOut = 1 - Math.pow(1 - t, 3);
+      
+      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      if (mediaQuery.matches) {
+        setDisplayProgress(progress);
+      } else {
+        setDisplayProgress(progress * easeOut);
+        if (t < 1) {
+          animationFrameId = requestAnimationFrame(animate);
+        }
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [progress]);
+
+  const radius = 22;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (displayProgress / 100) * circumference;
+
+  // The value is already formatted, e.g. "50%".
+  // But to animate the text we'd need to extract the number if possible.
+  // Instead of parsing strings, since 'progress' is passed, we can render the animated number.
+  // Wait, if value is "—", we should show "—".
+  const displayValue = value === "—" ? "—" : `${Math.round(displayProgress)}%`;
+
   return (
     <article className="metric-card">
       <div className="metric-top"><span>{label}</span><Icon size={18} /></div>
-      <strong>{value}</strong>
-      <p>{detail}</p>
-      <ProgressBar value={progress} />
+      <div className="metric-gauge-layout">
+        <div className="metric-gauge">
+          <svg viewBox="0 0 52 52" width="52" height="52">
+            <circle cx="26" cy="26" r={radius} fill="none" stroke="var(--border)" strokeWidth="6" />
+            <circle
+              cx="26" cy="26" r={radius} fill="none" stroke="var(--theme-blue)" strokeWidth="6"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              transform="rotate(-90 26 26)"
+            />
+          </svg>
+        </div>
+        <div className="metric-stats">
+          <strong>{displayValue}</strong>
+          <p>{detail}</p>
+        </div>
+      </div>
     </article>
   );
 }
