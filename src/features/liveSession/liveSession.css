@@ -1,9 +1,9 @@
-/*
+﻿/*
  * Session Mode visual identity
- * Mastery Path — one workspace for preparation, teaching, and evidence.
- * Navy #132C44 · Blue #315FCE · Teal #087E83
- * Cloud #F3F6FA · White #FFFFFF · Slate #5B6D80
- * Display: Sora · Body: IBM Plex Sans · Formulae: IBM Plex Mono
+ * Mastery Path â€” one workspace for preparation, teaching, and evidence.
+ * Navy #132C44 Â· Blue #315FCE Â· Teal #087E83
+ * Cloud #F3F6FA Â· White #FFFFFF Â· Slate #5B6D80
+ * Display: Sora Â· Body: IBM Plex Sans Â· Formulae: IBM Plex Mono
 */
 .ls-session-switcher {
   display: flex;
@@ -5966,3 +5966,231 @@ html:root[data-theme="dark"] .financial-working {
   outline: 2px solid var(--theme-blue);
   outline-offset: 2px;
 }
+
+/* === UNIFIED WORKSPACE LAYOUT OVERRIDES === */
+/* Enforce 100vh bounded height and independent scrolling */
+html:root body:has(.live-session) {
+  overflow: hidden;
+}
+.live-session,
+.live-session.live-session--running,
+.live-session.ls-rehearsal.live-session--running {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+.ls-runner,
+.ls-runner__grid,
+.ls-runner__main,
+.ls-stage-card {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+.ls-command-grid {
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+.ls-command-block {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+
+.ls-command-block__body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  max-height: none !important;
+}
+
+.ls-coaching-drawer {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--panel-base, var(--ls-panel));
+  border-top: 1px solid var(--border);
+}
+
+/* Unified Header Styles */
+.ls-unified-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: var(--ls-panel, #0f1c29);
+  border-bottom: 1px solid var(--border, #1e3a5f);
+  flex-shrink: 0;
+  height: 56px;
+  box-sizing: border-box;
+}
+
+.ls-unified-header__left,
+.ls-unified-header__right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
+}
+
+.ls-unified-header__identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ls-unified-header__identity h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-base, #e5edf5);
+}
+
+.ls-unified-header__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ls-meta-pill {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-subdued, #a1b6c7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: inline-flex;
+  align-items: center;
+}
+
+.ls-pacing-status--compact {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ls-deck-tools-compact {
+  position: relative;
+}
+
+.ls-deck-tools-compact summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-subdued, #a1b6c7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  list-style: none;
+}
+
+.ls-deck-tools-compact summary::-webkit-details-marker {
+  display: none;
+}
+
+.ls-deck-tools-compact[open] summary {
+  background: var(--theme-blue, #315fce);
+  color: #fff;
+  border-color: var(--theme-blue, #315fce);
+}
+
+.ls-deck-tools-compact .ls-deck-tools__popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  margin-top: 0.5rem;
+  width: 320px;
+  /* Existing popover styles will cascade */
+}
+
+/* Ensure next button looks prominent */
+.ls-unified-header__right .ls-linear-control__next {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--theme-blue, #315fce);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.ls-unified-header__right .ls-linear-control__next kbd {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+.ls-unified-header__right .ls-icon-button {
+  background: transparent;
+  border: none;
+  color: var(--text-subdued);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ls-unified-header__right .ls-icon-button:hover {
+  color: var(--text-base);
+}
+.ls-unified-header__left .ls-icon-button {
+  background: transparent;
+  border: none;
+  color: var(--text-base);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ls-unified-header__right .ls-clock-cluster {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ls-proof-progress {
+  display: none !important;
+}
+.ls-unified-header__path {
+  width: 140px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  opacity: 0.8;
+}
+.ls-deck-objective {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.ls-deck-objective summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-subdued);
+}
+.ls-deck-objective p {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
