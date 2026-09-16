@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowLeft,
   ArrowRight,
   BookOpenCheck,
@@ -390,7 +390,7 @@ export function LiveSessionRunner({
     workspaceMemoryRef.current.scrollByDeck?.[currentDeskKey] ?? {};
   const deskComplete = completedDeskIds.includes(currentDeskKey);
   const targetLabel = question
-    ? `${question.label ?? `Proof ${safeQuestionIndex + 1}`} Â· ${question.id}`
+    ? `${question.label ?? `Proof ${safeQuestionIndex + 1}`} · ${question.id}`
     : (stage?.title ?? "Stage evidence");
   const stageTargetIds = new Set(
     questions.filter(isEvidenceTarget).map(item => item.id)
@@ -1164,229 +1164,650 @@ export function LiveSessionRunner({
       data-equal-columns={equalColumns ? "true" : "false"}
       aria-label={`Live ${session.title}`}
     >
-      <header className="ls-unified-header">
-        <p className="ls-sr-only" role="status" aria-live="polite" aria-atomic="true">
-          Session timer {timer.status}{timer.expired ? "; planned time has elapsed" : ""}. Response timer {deskTimerRunning ? "running" : "paused"}.
-        </p>
+      <header className="ls-livebar">
+        <p className="ls-sr-only" role="status" aria-live="polite" aria-atomic="true">Session timer {timer.status}{timer.expired ? "; planned time has elapsed" : ""}. Response timer {deskTimerRunning ? "running" : "paused"}.</p>
         <p className="ls-sr-only" role="status" aria-live="polite" aria-atomic="true">{evidenceAnnouncement}</p>
-        
-        <div className="ls-unified-header__left">
-          <button
-            className="ls-icon-button"
-            type="button"
-            disabled={!hasPreviousQueueDeck}
-            onClick={goPrevious}
-            aria-label="Return to the previous teaching deck"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <button className="ls-button ls-button--quiet ls-reference-shortcut" type="button" onClick={() => setReferenceOpen(true)}><BookOpenCheck size={16} /> References <kbd>F</kbd></button>
-          
-          <div className="ls-unified-header__identity">
-            <h2 title={stage.title}>{stage.title}</h2>
-            
-            <div className="ls-unified-header__path">
-              <PlanRouteGraphic 
-                nodes={allDecks.map((deck) => ({
-                  id: deck.key,
-                  isPast: deck.globalNumber < (currentDeck?.globalNumber ?? 1),
-                  isCurrent: deck.globalNumber === (currentDeck?.globalNumber ?? 1),
-                  isComplete: completedDeskIds.includes(deck.key),
-                }))}
-                columns={15}
-                compact={true}
+        <div className="ls-livebar__identity">
+          <span className="ls-live-dot" aria-hidden="true" />
+          <div>
+            <span title={`${route.name} · ${session.dateLabel ?? session.date} · ${session.startTime} Riyadh`}>
+              Session {String(session.number).padStart(2, "0")} · {session.dateLabel ?? new Intl.DateTimeFormat("en-GB", {
+                day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+              }).format(new Date(`${session.date}T00:00:00Z`))} · {session.startTime} Riyadh · {route.minutes} min
+            </span>
+            <strong title={stage.title}>{stage.title}</strong>
+          </div>
+        </div>
+        <MasteryRadar
+          evidence={targetEvidence}
+          total={evidenceTargetIds.size}
+        />
+        {focusMode ? (
+          <span className="ls-focus-state" role="status">
+            Teaching focus
+          </span>
+        ) : null}
+        <div className="ls-clock-cluster" aria-label="Session timers">
+          <div className={`ls-clock${timer.expired ? " is-overtime" : ""}`}>
+            <svg className="ls-clock-ring" viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="24" cy="24" r="20" stroke="var(--border)" strokeWidth="4" fill="none" />
+              <circle 
+                cx="24" cy="24" r="20" 
+                stroke={timer.expired ? "var(--alert-red)" : (timer.remainingMs !== undefined && timer.remainingMs < 5 * 60_000) ? "var(--gold-bright)" : "var(--theme-blue)"} 
+                strokeWidth="4" fill="none"
+                strokeDasharray={2 * Math.PI * 20}
+                strokeDashoffset={timer.progress !== undefined ? (Math.min(timer.progress, 1)) * (2 * Math.PI * 20) : 0}
+                strokeLinecap="round"
+                transform="rotate(-90 24 24)"
+                style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s ease" }}
               />
+            </svg>
+            <div className="ls-clock-text">
+              <span>{timer.status === "paused" ? "Paused" : timer.expired ? "Overtime" : "Remaining"}</span>
+              <time>{timer.display}</time>
+            </div>
+          </div>
+          <div
+            className={`ls-clock ls-clock--desk${deskOvertime ? " is-overtime" : ""}`}
+          >
+            <span>{deskOvertime ? "Response overtime" : "Response time"}</span>
+            <time>{deskDisplay}</time>
+            <div>
+              <button
+                className="ls-clock-control"
+                type="button"
+                onClick={() => setDeskTimerRunning(value => !value)}
+                aria-label={
+                  deskTimerRunning
+                    ? "Pause response timer"
+                    : "Resume response timer"
+                }
+              >
+                {deskTimerRunning ? <Pause size={12} /> : <Play size={12} />}
+              </button>
+              <button
+                className="ls-clock-control"
+                type="button"
+                onClick={() => setDeskElapsedSeconds(0)}
+                aria-label="Reset response timer"
+              >
+                <RotateCcw size={12} />
+              </button>
+            </div>
+          </div>
+          <button
+            className="ls-timer-toggle"
+            type="button"
+            disabled={timer.status === "complete"}
+            onClick={timer.toggle}
+            title={timer.status === "running"
+              ? "Pause the teaching clock"
+              : "Resume from the last saved teaching time. Time away is not counted."}
+            aria-label={
+              timer.status === "running"
+                ? "Pause session timer"
+                : "Resume session timer"
+            }
+          >
+            {timer.status === "running" ? (
+              <Pause size={18} fill="currentColor" />
+            ) : (
+              <Play size={18} fill="currentColor" />
+            )}
+          </button>
+        </div>
+        <div className="ls-livebar__actions">
+          {mode === "rehearsal" ? <span className="ls-rehearsal-badge">Practice only</span> : (syncState === "error" || syncState === "offline") && onSyncRetry ? (
+            <button
+              className={`ls-sync ls-sync--${syncState}`}
+              type="button"
+              onClick={onSyncRetry}
+              aria-label={`${syncCopy(syncState).label}. Retry synchronization.`}
+            >
+              <SyncIcon size={15} /> {syncCopy(syncState).label}
+              <small>Retry</small>
+            </button>
+          ) : (
+            <span
+              className={`ls-sync ls-sync--${syncState}`}
+              role={syncState === "error" || syncState === "offline" ? undefined : "status"}
+              aria-atomic="true"
+            >
+              <SyncIcon size={15} /> {syncCopy(syncState).label}
+            </span>
+          )}
+          <button
+            className="ls-button ls-button--quiet"
+            type="button"
+            onClick={requestCloseoutSafely}
+          >
+            <Flag size={16} /> {mode === "rehearsal" ? "Finish rehearsal" : "Finish session"}
+          </button>
+          <button
+            className="ls-focus-toggle"
+            type="button"
+            onClick={() => setFocusMode(value => !value)}
+            aria-pressed={focusMode}
+            aria-label={focusMode ? "Exit laptop focus mode" : "Enter laptop focus mode"}
+            title={focusMode ? "Exit focus mode (Esc)" : "Enter focus mode (Z)"}
+          >
+            {focusMode ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+            <span>{focusMode ? "Exit focus" : "Teaching focus"}</span>
+            <kbd>Z</kbd>
+          </button>
+        </div>
+        {mode === "live" && <SyncRecoveryNotice state={syncState} message={syncMessage} onRetry={onSyncRetry} />}
+      </header>
+
+      <section
+        className="ls-deck-console"
+        aria-label="Teaching deck control centre"
+      >
+        <div className="ls-deck-console__coverage">
+          <div>
+            <span>
+              Route deck {currentDeck?.globalNumber ?? 1} of {progress.totalDecks}
+            </span>
+            <strong>{SESSION_TERMS.covered.label}: {progress.coveredDecks}</strong>
+          </div>
+          <div className="ls-deck-console-graphic">
+            <PlanRouteGraphic 
+              nodes={allDecks.map((deck) => ({
+                id: deck.key,
+                isPast: deck.globalNumber < (currentDeck?.globalNumber ?? 1),
+                isCurrent: deck.globalNumber === (currentDeck?.globalNumber ?? 1),
+                isComplete: completedDeskIds.includes(deck.key),
+              }))}
+              columns={15}
+              compact={true}
+            />
+          </div>
+          <small>
+            {SESSION_TERMS.proofs.label}: {progress.recordedProofs} / {progress.totalProofs} recorded
+            {progress.needsAttentionProofs
+              ? ` · ${progress.needsAttentionProofs} need attention`
+              : " · no recorded proof needs attention"}
+          </small>
+          <SessionCountLegend counts={{ library: libraryDecks, route: progress.totalDecks, queue: queueDecks.length, target: liveTargetDecks, covered: progress.coveredDecks, proofs: `${progress.recordedProofs} / ${progress.totalProofs} recorded` }} />
+        </div>
+        <details className="ls-deck-tools" ref={toolsRef}>
+          <summary>
+            <SlidersHorizontal size={18} />
+            <span>
+              <strong>Session tools</strong>
+              <small>Stage {stageIndex + 1} of {stages.length} · Find a deck, pacing & settings</small>
+            </span>
+            <kbd>/</kbd>
+          </summary>
+          <div className="ls-deck-tools__popover">
+            <nav className="ls-stage-strip" aria-label="Session stages">
+              <div className="ls-stage-strip__progress">
+                <span>Stage {stageIndex + 1} of {stages.length}</span>
+                <strong>{stage.title}</strong>
+              </div>
+              <div className="ls-stage-strip__items">
+                {stageProgress.map((item, index) => {
+                  const complete = item.deckCount > 0 && item.coveredCount >= item.deckCount;
+                  return (
+                    <button
+                      type="button"
+                      className={`${index === stageIndex ? "is-current" : ""}${complete ? " is-complete" : ""}`}
+                      aria-current={index === stageIndex ? "step" : undefined}
+                      aria-label={`Stage ${index + 1}: ${item.title}${complete ? ", covered" : ""}`}
+                      title={`${item.label}: ${item.title}`}
+                      key={item.id}
+                      onClick={() => {
+                        const destination = allDecks.find(
+                          deck => deck.stageIndex === index
+                        );
+                        if (
+                          destination &&
+                          navigateManuallyToDeck(destination) &&
+                          toolsRef.current
+                        ) {
+                          toolsRef.current.open = false;
+                        }
+                      }}
+                    >
+                      {complete ? <CheckCircle2 size={15} /> : <span>{index + 1}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+            <button
+              className="ls-button ls-button--quiet"
+              type="button"
+              onClick={() => {
+                setShortcutsOpen(value => !value);
+                if (toolsRef.current) toolsRef.current.open = false;
+              }}
+              aria-expanded={shortcutsOpen}
+            >
+              <Command size={19} /> Keyboard shortcuts
+            </button>
+            <div className="ls-reading-settings">
+              <div>
+                <strong>Make yourself comfortable</strong>
+                <span>Adjust the teaching text on this device.</span>
+              </div>
+              <div role="group" aria-label="Teaching text size">
+                <button
+                  type="button"
+                  disabled={readerSize <= 1}
+                  onClick={() => changeReaderSize(-1)}
+                  aria-label="Decrease teaching text size"
+                >
+                  <Minus size={16} />
+                </button>
+                <output aria-live="polite">
+                  {Math.round(readerSize * 100)}%
+                </output>
+                <button
+                  type="button"
+                  disabled={readerSize >= 1.2}
+                  onClick={() => changeReaderSize(1)}
+                  aria-label="Increase teaching text size"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+            <section className="ls-comfort-settings" aria-label="Session comfort controls">
+              <header>
+                <strong>Workspace comfort</strong>
+                <span>These settings affect only this device.</span>
+              </header>
+              <div>
+                <button
+                  type="button"
+                  aria-pressed={density === "compact"}
+                  onClick={() => setDensity(value => value === "compact" ? "comfortable" : "compact")}
+                >
+                  Compact density
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={highContrast}
+                  onClick={() => setHighContrast(value => !value)}
+                >
+                  High contrast
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={hideCoaching}
+                  onClick={() => setHideCoaching(value => !value)}
+                >
+                  Hide coaching cues
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={equalColumns}
+                  onClick={() => setEqualColumns(value => !value)}
+                >
+                  Equal panel widths
+                </button>
+                <button type="button" onClick={resetWorkspaceLayout}>
+                  <RotateCcw size={15} /> Reset layout
+                </button>
+              </div>
+            </section>
+            <div className="ls-deck-tools__selectors">
+              <label className="ls-deck-select">
+                <Layers3 size={17} />
+                <span>Jump to deck</span>
+                <select
+                  value={currentDeck?.key ?? ""}
+                  onChange={event => {
+                    const selected = allDecks.find(
+                      deck => deck.key === event.target.value
+                    );
+                    if (
+                      selected &&
+                      navigateManuallyToDeck(selected) &&
+                      toolsRef.current
+                    ) {
+                      toolsRef.current.open = false;
+                    }
+                  }}
+                >
+                  {stages.map((item, itemStageIndex) => (
+                    <optgroup
+                      label={`${item.label} · ${item.title}`}
+                      key={item.id}
+                    >
+                      {allDecks
+                        .filter(deck => deck.stageIndex === itemStageIndex)
+                        .map(deck => (
+                          <option value={deck.key} key={deck.key}>
+                            {String(deck.globalNumber).padStart(3, "0")} ·{" "}
+                            {deck.question?.title ?? deck.stageTitle}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+              <label className="ls-deck-select ls-deck-select--queue">
+                <SlidersHorizontal size={17} />
+                <span>{SESSION_TERMS.queue.label} · Next / Previous</span>
+                <select
+                  value={queueMode}
+                  onChange={event =>
+                    setQueueMode(event.target.value as QueueMode)
+                  }
+                >
+                  <option value="core">Core decks</option>
+                  <option value="core-plus">Core + reinforcement</option>
+                  <option value="stretch">Stretch decks</option>
+                  <option value="all">All route decks</option>
+                </select>
+                <small>
+                  {queueDecks.length} decks · {queueName(queueMode)}
+                </small>
+              </label>
+              <button
+                className="ls-button ls-button--quiet ls-next-open"
+                type="button"
+                disabled={!nextOpenDeck}
+                onClick={() => {
+                  if (
+                    nextOpenDeck &&
+                    navigateManuallyToDeck(nextOpenDeck) &&
+                    toolsRef.current
+                  ) {
+                    toolsRef.current.open = false;
+                  }
+                }}
+              >
+                <CheckCircle2 size={16} />
+                {nextOpenDeck
+                  ? `First open: ${nextOpenDeck.globalNumber}`
+                  : "All decks covered"}
+              </button>
             </div>
 
-            <div className="ls-unified-header__meta">
-              <span className="ls-meta-pill">Step {linearStepNumber} of {linearStepTotal}</span>
+            <details className="ls-session-map">
+              <summary>
+                <Map size={17} />
+                <span>
+                  <strong>Session map</strong>
+                  <small>Open any deck without changing its evidence.</small>
+                </span>
+              </summary>
+              <div className="ls-session-map__grid" aria-label="Session route map">
+                {allDecks.map(deck => {
+                  const verdict = latestEvidence.get(deck.targetId)?.verdict;
+                  const covered = isDeckCovered(deck);
+                  return (
+                    <button
+                      type="button"
+                      key={deck.key}
+                      className={`${deck.key === currentDeck?.key ? "is-current" : ""}${verdict ? ` is-${verdict}` : covered ? " is-covered" : " is-open"}`}
+                      aria-current={deck.key === currentDeck?.key ? "step" : undefined}
+                      aria-label={`Deck ${deck.globalNumber}: ${deck.question?.title ?? deck.stageTitle}; ${verdict ?? (covered ? "covered" : "open")}`}
+                      title={`${deck.stageLabel} · ${deck.question?.title ?? deck.stageTitle}`}
+                      onClick={() => {
+                        if (
+                          navigateManuallyToDeck(deck) &&
+                          toolsRef.current
+                        ) {
+                          toolsRef.current.open = false;
+                        }
+                      }}
+                    >
+                      {deck.globalNumber}
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
+
+            <section
+              className={`ls-pacing-panel is-${pacingDisplayState}`}
+              aria-label="Live session pacing assistant"
+            >
+              <header>
+                <div>
+                  <span>Live pacing assistant</span>
+                  <strong>{pacingLabel}</strong>
+                </div>
+                <div>
+                  <span>{SESSION_TERMS.target.label}</span>
+                  <strong>
+                    {completedLiveTargetDecks} / {liveTargetDecks} decks
+                  </strong>
+                </div>
+              </header>
+              <div
+                className="ls-pacing-panel__bar"
+                role="progressbar"
+                aria-label="Live teaching target progress"
+                aria-valuemin={0}
+                aria-valuemax={liveTargetDecks}
+                aria-valuenow={completedLiveTargetDecks}
+              >
+                <span
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (completedLiveTargetDecks / liveTargetDecks) * 100
+                    )}%`,
+                  }}
+                />
+              </div>
               <SessionPacingStatus
                 pacing={pacing}
                 completedDecks={completedLiveTargetDecks}
                 targetDecks={liveTargetDecks}
                 paused={pacingPaused}
                 calibrating={pacingCalibrating}
-                className="ls-pacing-status--compact"
+                showDetails
               />
-              <span className="ls-meta-pill">Target {evidenceTargetIds.size}/120</span>
-              <span className="ls-meta-pill">{deskComplete ? "Covered" : "Open"}</span>
-              
-              <details className="ls-deck-tools" ref={toolsRef}>
-                <summary aria-label="Session tools">
-                  <SlidersHorizontal size={14} /> Tools
-                </summary>
-                <div className="ls-deck-tools__popover">
-                  <div className="ls-deck-console__coverage" aria-label="Session route map" role="group">
-                    <PlanRouteGraphic 
-                      nodes={allDecks.map((deck) => ({
-                        id: deck.key,
-                        isPast: deck.globalNumber < (currentDeck?.globalNumber ?? 1),
-                        isCurrent: deck.globalNumber === (currentDeck?.globalNumber ?? 1),
-                        isComplete: completedDeskIds.includes(deck.key),
-                      }))}
-                    />
-                    <div className="ls-deck-console__matrix" style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', marginTop: '0.5rem' }}>
-                      {allDecks.map(deck => (
-                        <button
-                          key={deck.key}
-                          type="button"
-                          aria-current={deck.globalNumber === (currentDeck?.globalNumber ?? 1) ? "step" : undefined}
-                          aria-label={`Jump to deck ${deck.globalNumber}`}
-                          className={`ls-matrix-node${completedDeskIds.includes(deck.key) ? " is-complete" : ""}`}
-                          style={{ width: '8px', height: '8px', padding: 0, minHeight: 0 }}
-                          onClick={() => {
-                            if (navigateManuallyToDeck(deck) && toolsRef.current) {
-                              toolsRef.current.open = false;
-                            }
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <nav className="ls-stage-strip" aria-label="Session stages">
-                    <div className="ls-stage-strip__progress">
-                      <span>Stage {stageIndex + 1} of {stages.length}</span>
-                      <strong>{stage.title}</strong>
-                    </div>
-                    <div className="ls-stage-strip__items">
-                      {stageProgress.map((item, index) => {
-                        const complete = item.deckCount > 0 && item.coveredCount >= item.deckCount;
-                        return (
-                          <button
-                            type="button"
-                            className={`${index === stageIndex ? "is-current" : ""}${complete ? " is-complete" : ""}`}
-                            aria-current={index === stageIndex ? "step" : undefined}
-                            aria-label={`Stage ${index + 1}: ${item.title}${complete ? ", covered" : ""}`}
-                            title={`${item.label}: ${item.title}`}
-                            key={item.id}
-                            onClick={() => {
-                              const destination = allDecks.find(deck => deck.stageIndex === index);
-                              if (destination && navigateManuallyToDeck(destination) && toolsRef.current) {
-                                toolsRef.current.open = false;
-                              }
-                            }}
-                          >
-                            {complete ? <CheckCircle2 size={15} /> : <span>{index + 1}</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </nav>
-                  
-                  <div className="ls-reading-settings">
-                    <div>
-                      <strong>Make yourself comfortable</strong>
-                      <span>Adjust the teaching text on this device.</span>
-                    </div>
-                    <div role="group" aria-label="Teaching text size">
-                      <button type="button" aria-label="Decrease text size" disabled={readerSize <= 1} onClick={() => changeReaderSize(-1)}><Minus size={16} /></button>
-                      <output aria-live="polite">{Math.round(readerSize * 100)}%</output>
-                      <button type="button" aria-label="Increase text size" disabled={readerSize >= 1.2} onClick={() => changeReaderSize(1)}><Plus size={16} /></button>
-                    </div>
-                  </div>
-                  
-                  <section className="ls-comfort-settings">
-                    <header>
-                      <strong>Workspace comfort</strong>
-                    </header>
-                    <div>
-                      <button type="button" aria-pressed={density === "compact"} onClick={() => setDensity(value => value === "compact" ? "comfortable" : "compact")}>Compact density</button>
-                      <button type="button" aria-pressed={highContrast} onClick={() => setHighContrast(value => !value)}>High contrast</button>
-                      <button type="button" aria-pressed={hideCoaching} onClick={() => setHideCoaching(value => !value)}>Hide coaching cues</button>
-                      <button type="button" aria-pressed={equalColumns} onClick={() => setEqualColumns(value => !value)}>Equal panel widths</button>
-                      <button type="button" onClick={resetWorkspaceLayout}><RotateCcw size={15} /> Reset layout</button>
-                    </div>
-                  </section>
-                  
-                  {sessionTools}
-                  <div style={{ display: "flex", gap: "0.5rem", padding: "1rem" }}>
-                    <button className="ls-button ls-button--quiet" type="button" onClick={requestCloseoutSafely}>
-                      <Flag size={16} /> {mode === "rehearsal" ? "Finish rehearsal" : "Finish session"}
-                    </button>
-                    {onRehearse && (
-                      <button className="ls-button ls-button--quiet" type="button" onClick={() => { if (!hasUnrecordedDraft) onRehearse(); }} disabled={hasUnrecordedDraft}>
-                        Rehearse without saving
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </details>
-            </div>
-          </div>
-        </div>
+              <p>
+                The full {progress.totalDecks}-deck Tutor Bible remains
+                available. This target is the ordered subset that fits the{" "}
+                {route.minutes}-minute teaching window using each deck&apos;s
+                authored timing estimate and one five-minute break.
+              </p>
+            </section>
 
-        <div className="ls-unified-header__right">
-          {mode === "live" && <SyncRecoveryNotice state={syncState} message={syncMessage} onRetry={onSyncRetry} />}
-          
-          <div className="ls-clock-cluster" aria-label="Session timers">
-            <div className={`ls-clock${timer.expired ? " is-overtime" : ""}`}>
-              <svg className="ls-clock-ring" viewBox="0 0 48 48" aria-hidden="true">
-                <circle cx="24" cy="24" r="20" stroke="var(--border)" strokeWidth="4" fill="none" />
-                <circle 
-                  cx="24" cy="24" r="20" 
-                  stroke={timer.expired ? "var(--alert-red)" : (timer.remainingMs !== undefined && timer.remainingMs < 5 * 60_000) ? "var(--gold-bright)" : "var(--theme-blue)"} 
-                  strokeWidth="4" fill="none"
-                  strokeDasharray={2 * Math.PI * 20}
-                  strokeDashoffset={timer.progress !== undefined ? (Math.min(timer.progress, 1)) * (2 * Math.PI * 20) : 0}
-                  strokeLinecap="round"
-                  transform="rotate(-90 24 24)"
-                  style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s ease" }}
+            <section
+              className="ls-command-search"
+              aria-label="Find any playbook item"
+            >
+              <label>
+                <Search size={18} />
+                <span className="ls-sr-only">Search the private playbook</span>
+                <input
+                  ref={searchRef}
+                  type="search"
+                  value={query}
+                  placeholder="Find a concept, formula, question, or model response"
+                  onChange={event => setQuery(event.target.value)}
                 />
-              </svg>
-              <div className="ls-clock-text">
-                <span>{timer.status === "paused" ? "Paused" : timer.expired ? "Overtime" : "Remaining"}</span>
-                <time>{timer.display}</time>
-              </div>
-            </div>
-            
-            <div className={`ls-clock ls-clock--desk${deskOvertime ? " is-overtime" : ""}`}>
-              <span>{deskOvertime ? "Response overtime" : "Response time"}</span>
-              <time>{deskDisplay}</time>
-              <div>
-                <button className="ls-clock-control" aria-label="Toggle response timer" type="button" onClick={() => setDeskTimerRunning(value => !value)}>
-                  {deskTimerRunning ? <Pause size={12} /> : <Play size={12} />}
-                </button>
-                <button className="ls-clock-control" aria-label="Reset response timer" type="button" onClick={() => setDeskElapsedSeconds(0)}>
-                  <RotateCcw size={12} />
-                </button>
-              </div>
-            </div>
-            
-            <button className="ls-timer-toggle" aria-label={timer.status === "running" ? "Pause session timer" : "Start session timer"} type="button" disabled={timer.status === "complete"} onClick={timer.toggle}>
-              {timer.status === "running" ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
-            </button>
-          </div>
+                {query ? (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label="Clear search"
+                  >
+                    <X size={16} />
+                  </button>
+                ) : (
+                  <kbd>/</kbd>
+                )}
+              </label>
+              <label className="ls-filter-control">
+                <SlidersHorizontal size={17} />
+                <span className="ls-sr-only">Filter by evidence result</span>
+                <select
+                  value={resultFilter}
+                  onChange={event =>
+                    setResultFilter(event.target.value as ResultFilter)
+                  }
+                >
+                  <option value="all">All teaching decks</option>
+                  <option value="uncovered">All uncovered decks</option>
+                  <option value="core">Core decks</option>
+                  <option value="reinforcement">Reinforcement decks</option>
+                  <option value="stretch">Stretch decks</option>
+                  <option value="open">Proof not recorded</option>
+                  <option value="correct">Secure</option>
+                  <option value="partial">Developing</option>
+                  <option value="repair">Needs repair</option>
+                  <option value="parked">Deferred</option>
+                </select>
+              </label>
+            </section>
 
+            {showSearchResults && (
+              <section
+                className="ls-search-results"
+                aria-live="polite"
+                aria-label="Playbook search results"
+              >
+                <header>
+                  <div>
+                    <strong>{filteredResults.length} matches</strong>
+                    <span>Ordered by teaching route</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      setResultFilter("all");
+                    }}
+                  >
+                    Clear
+                  </button>
+                </header>
+                {filteredResults.length ? (
+                  <div className="ls-search-results__list">
+                    {filteredResults.map(result => {
+                      const covered =
+                        completedDeskIds.includes(result.deck.key) ||
+                        Boolean(result.verdict);
+                      return (
+                        <button
+                          type="button"
+                          key={result.key}
+                          onClick={() => {
+                            if (!navigateManuallyToDeck(result.deck)) return;
+                            setQuery("");
+                            setResultFilter("all");
+                            if (toolsRef.current) toolsRef.current.open = false;
+                          }}
+                        >
+                          <span>
+                            Deck {result.deck.globalNumber} ·{" "}
+                            {result.stage.label} ·{" "}
+                            {result.question?.tier ?? "core"}
+                          </span>
+                          <strong>{resultLabel(result)}</strong>
+                          <small>
+                            {result.question?.prompt ?? result.stage.objective}
+                          </small>
+                          <em
+                            className={
+                              result.verdict
+                                ? `is-${result.verdict}`
+                                : covered
+                                  ? "is-covered"
+                                  : "is-open"
+                            }
+                          >
+                            {result.verdict ?? (covered ? "covered" : "open")}
+                          </em>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="ls-no-results">
+                    <Search size={23} />
+                    <strong>No decks found</strong>
+                    <p>
+                      Try fewer words, a formula fragment, or clear the proof
+                      filter.
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
+            {sessionTools}
+            {onRehearse && <div className="ls-rehearsal-entry">
+              <button type="button" className="ls-button ls-button--quiet" disabled={hasUnrecordedDraft} onClick={() => { if (!hasUnrecordedDraft) onRehearse(); }}>Rehearse without saving</button>
+              {hasUnrecordedDraft && <p>Record the current evidence draft before entering rehearsal.</p>}
+            </div>}
+          </div>
+        </details>
+        <button
+          className="ls-button ls-button--quiet ls-reference-shortcut"
+          type="button"
+          onClick={() => setReferenceOpen(true)}
+        >
+          <BookOpenCheck size={16} /> References <kbd>F</kbd>
+        </button>
+      </section>
+
+      {shortcutsOpen && (
+        <div className="ls-shortcuts" role="status">
+          <span>
+            <kbd>Space</kbd> continue
+          </span>
+          <span>
+            <kbd>←</kbd> previous deck
+          </span>
+          <span>
+            <kbd>→</kbd> next deck
+          </span>
+          <span>
+            <kbd>T</kbd> timer
+          </span>
+          <span>
+            <kbd>/</kbd> search
+          </span>
+          <span>
+            <kbd>V</kbd> candidate
+          </span>
+          <span>
+            <kbd>C</kbd> correct
+          </span>
+          <span>
+            <kbd>L</kbd> developing
+          </span>
+          <span>
+            <kbd>R</kbd> repair
+          </span>
+          <span>
+            <kbd>P</kbd> defer
+          </span>
+          <span>
+            <kbd>B</kbd> back
+          </span>
+          <span>
+            <kbd>N</kbd> next
+          </span>
+          <span>
+            <kbd>Z</kbd> focus
+          </span>
           <button
-            className="ls-focus-toggle"
             type="button"
-            aria-label={focusMode ? "Exit laptop focus mode" : "Enter laptop focus mode"}
-            onClick={() => setFocusMode(value => !value)}
-            aria-pressed={focusMode}
+            onClick={() => setShortcutsOpen(false)}
+            aria-label="Hide shortcuts"
           >
-            {focusMode ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
-            <span>{focusMode ? "Exit focus" : "Teaching focus"}</span>
-            <kbd>Z</kbd>
-          </button>
-          
-          <button
-            className="ls-linear-control__next"
-            type="button"
-            onClick={advanceLinearSequence}
-          >
-            <span>{primaryActionLabel}</span>
-            <kbd>Space</kbd>
-            <ArrowRight size={20} />
+            <X size={15} />
           </button>
         </div>
-      </header>
+      )}
 
       {resumeNoticeOpen && (
         <aside className="ls-resume-notice" role="status">
           <div>
             <strong>Workspace restored</strong>
             <span>
-              Deck {currentDeck?.globalNumber ?? 1} of {allDecks.length} | {linearStepLabel} | timer {timer.status}
+              Deck {currentDeck?.globalNumber ?? 1} of {allDecks.length} · {linearStepLabel} · timer {timer.status}
             </span>
           </div>
           <button type="button" onClick={() => setResumeNoticeOpen(false)}>
@@ -1399,8 +1820,61 @@ export function LiveSessionRunner({
         className={`ls-runner__grid${evidenceTarget ? " has-evidence-rail" : " is-teaching-deck"}${linearPhase === "evidence" ? " is-evidence-step" : ""}`}
       >
         <main className="ls-runner__main">
-
-
+          <div className="ls-proof-progress">
+            <span>
+              Route deck {currentDeck?.globalNumber ?? 1} of {allDecks.length}
+              {question?.tier ? ` · ${question.tier}` : ""}
+              {deskComplete ? " · covered" : " · open"}
+            </span>
+            <span>
+              {stageTargetCount
+                ? `${stageEvidenceCount} of ${stageTargetCount} stage assessment proofs recorded`
+                : "Teaching stage · no formal proof required"}
+            </span>
+          </div>
+          <nav
+            className="ls-linear-control"
+            aria-label="Linear session navigation"
+          >
+            <button
+              className="ls-linear-control__back"
+              type="button"
+              disabled={!hasPreviousQueueDeck}
+              onClick={goPrevious}
+              aria-label="Return to the previous teaching deck"
+            >
+              <ArrowLeft size={18} />
+              <span>Previous deck</span>
+            </button>
+            <div className="ls-linear-control__status">
+              <div className="ls-linear-control__meta">
+                <span>
+                  Step {linearStepNumber} of {linearStepTotal}
+                </span>
+                <SessionPacingStatus
+                  pacing={pacing}
+                  completedDecks={completedLiveTargetDecks}
+                  targetDecks={liveTargetDecks}
+                  paused={pacingPaused}
+                  calibrating={pacingCalibrating}
+                  className="ls-pacing-status--linear"
+                />
+              </div>
+              <strong>{linearStepLabel}</strong>
+              <small>
+                Deck {currentDeck?.globalNumber ?? 1}/{allDecks.length} · Space advances the step · ←/→ move by deck.
+              </small>
+            </div>
+            <button
+              className="ls-linear-control__next"
+              type="button"
+              onClick={advanceLinearSequence}
+            >
+              <span>{primaryActionLabel}</span>
+              <kbd>Space</kbd>
+              <ArrowRight size={20} />
+            </button>
+          </nav>
           <StageCard
             key={currentDeck?.key ?? `${stage.id}:${safeQuestionIndex}`}
             stage={stage}
@@ -1543,4 +2017,3 @@ export function LiveSessionRunner({
     </SessionReadingContext.Provider>
   );
 }
-

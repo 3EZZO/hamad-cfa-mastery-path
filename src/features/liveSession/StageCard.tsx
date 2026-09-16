@@ -1,4 +1,4 @@
-﻿import {
+import {
   AlertTriangle,
   BookOpen,
   CheckCircle2,
@@ -233,13 +233,53 @@ export function StageCard({
 
   return (
     <article className="ls-stage-card" aria-labelledby={titleId}>
+      <header className="ls-stage-card__header">
+        <div className="ls-stage-card__identity">
+          <p className="ls-eyebrow">{stage.label}</p>
+          <h2 id={titleId}>{question?.title || stage.title}</h2>
+          {stage.objective && (
+            <details className="ls-deck-objective">
+              <summary>Teaching objective</summary>
+              <p>{stage.objective}</p>
+            </details>
+          )}
+        </div>
+        <div
+          className="ls-item-meta"
+          aria-label="Current teaching item details"
+        >
+          <span>
+            <Route size={15} /> Item {questionIndex + 1}
+          </span>
+          {question?.kind && (
+            <span>
+              <BookOpen size={15} /> {question.kind}
+            </span>
+          )}
+          {question?.tier && (
+            <span>
+              <Route size={15} /> {question.tier}
+            </span>
+          )}
+          {complete && (
+            <span className="is-covered">
+              <CheckCircle2 size={15} /> Covered
+            </span>
+          )}
+          {question?.difficulty ? (
+            <span>
+              <Gauge size={15} /> Level {question.difficulty}/5
+            </span>
+          ) : null}
+          {question?.expectedSeconds ? (
+            <span>
+              <Clock3 size={15} /> {Math.ceil(question.expectedSeconds / 60)}{" "}
+              min
+            </span>
+          ) : null}
+        </div>
+      </header>
 
-      {stage.objective && (
-        <details className="ls-deck-objective">
-          <summary>Teaching objective</summary>
-          <p>{stage.objective}</p>
-        </details>
-      )}
       <nav className="ls-panel-jumps" aria-label="Jump to teaching panel">
         {(["teach", "ask", "answer"] as TeachingFlowStep[]).map(step => <button key={step} type="button" aria-pressed={flowStep === step} onClick={() => moveTo(step)}>{step === "teach" ? "Teach" : step === "ask" ? "Ask" : "Answer"}</button>)}
       </nav>

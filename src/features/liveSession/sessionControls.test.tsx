@@ -1,4 +1,4 @@
-﻿import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveSessionRunner, type LiveSessionRunnerProps } from "./LiveSessionRunner";
 import { StageCard } from "./StageCard";
@@ -81,8 +81,8 @@ describe("P1 consolidated session controls", () => {
     expect(tools.props.open).toBeUndefined();
     expect(tools.findAll(node => node.type === "nav" && node.props["aria-label"] === "Session stages")).toHaveLength(1);
     expect(tools.findAllByType("button").some(button => button.children.includes("Existing playbook controls"))).toBe(true);
-    const header = tree!.root.find(node => node.type === "header" && (node.props.className && node.props.className.includes("ls-unified-header")));
-    expect(header.findAll(node => node.type === "nav")).toHaveLength(1);
+    const header = tree!.root.find(node => node.type === "header" && node.props.className === "ls-livebar");
+    expect(header.findAll(node => node.type === "nav")).toHaveLength(0);
   });
 
   it("still navigates to a selected stage and retains the three teaching panels", async () => {
