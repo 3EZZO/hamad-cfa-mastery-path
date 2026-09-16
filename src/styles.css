@@ -29,6 +29,30 @@
   --measure-question: 52ch;
   --measure-response: 62ch;
   --measure-explanation: 66ch;
+
+  /* Typography: Fluid Headline Weights */
+  --weight-h1: clamp(600, 400 + 4vw, 800);
+  --weight-h2: clamp(550, 400 + 3vw, 700);
+  --weight-h3: clamp(500, 400 + 2vw, 650);
+  --weight-h4: clamp(500, 400 + 1vw, 600);
+
+  /* Motion Tokens */
+  --motion-micro: 150ms;
+  --motion-standard: 250ms;
+  --motion-emphasis: 400ms;
+  --ease-entrance: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  --ease-exit: cubic-bezier(0.895, 0.03, 0.685, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .financial-expression,
@@ -102,6 +126,11 @@ h3,
 blockquote {
   color: var(--ink);
 }
+
+h1 { font-weight: var(--weight-h1); }
+h2 { font-weight: var(--weight-h2); }
+h3 { font-weight: var(--weight-h3); }
+h4 { font-weight: var(--weight-h4); }
 
 .app-shell {
   min-height: 100vh;
