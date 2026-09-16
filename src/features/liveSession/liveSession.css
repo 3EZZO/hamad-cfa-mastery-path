@@ -1,9 +1,9 @@
-/*
+﻿/*
  * Session Mode visual identity
- * Mastery Path — one workspace for preparation, teaching, and evidence.
- * Navy #132C44 · Blue #315FCE · Teal #087E83
- * Cloud #F3F6FA · White #FFFFFF · Slate #5B6D80
- * Display: Sora · Body: IBM Plex Sans · Formulae: IBM Plex Mono
+ * Mastery Path â€” one workspace for preparation, teaching, and evidence.
+ * Navy #132C44 Â· Blue #315FCE Â· Teal #087E83
+ * Cloud #F3F6FA Â· White #FFFFFF Â· Slate #5B6D80
+ * Display: Sora Â· Body: IBM Plex Sans Â· Formulae: IBM Plex Mono
 */
 .ls-session-switcher {
   display: flex;
@@ -6193,3 +6193,4 @@ html:root body:has(.live-session) {
   margin: 0.5rem 0 0;
   font-size: 0.9rem;
 }
+
