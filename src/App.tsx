@@ -915,6 +915,7 @@ function App() {
             onToggleTask={toggleTask}
             onNavigate={navigate}
             role={role!}
+            loading={syncStatus === "loading"}
           />
         );
       case "roadmap":
@@ -1305,6 +1306,7 @@ function DashboardView({
   onToggleTask,
   onNavigate,
   role,
+  loading,
 }: {
   tracker: TrackerState;
   currentWeek: number;
@@ -1312,6 +1314,7 @@ function DashboardView({
   onToggleTask: (id: string) => void;
   onNavigate: (tab: TabId, week?: number) => void;
   role: "tutor" | "student";
+  loading?: boolean;
 }) {
   const week = PLAN[currentWeek - 1]!;
   const days = daysUntilExam();
@@ -1432,6 +1435,7 @@ function DashboardView({
           value={`${overallProgress}%`}
           detail="Required work"
           progress={overallProgress}
+          loading={loading}
         />
         <MetricCard
           icon={BookOpenCheck}
@@ -1439,6 +1443,7 @@ function DashboardView({
           value={practiceAttempted ? `${practiceAccuracy}%` : "—"}
           detail={`${practiceAttempted.toLocaleString()} attempts logged`}
           progress={practiceAccuracy}
+          loading={loading}
         />
         <MetricCard
           icon={Gauge}
@@ -1446,6 +1451,7 @@ function DashboardView({
           value={masteryAverage ? `${masteryAverage}%` : "—"}
           detail="Ten-topic evidence average"
           progress={masteryAverage}
+          loading={loading}
         />
         <MetricCard
           icon={TrendingUp}
@@ -1453,6 +1459,7 @@ function DashboardView({
           value={latestMock ? `${latestMock.score}%` : "—"}
           detail={latestMock ? latestMock.label : "No full mock recorded yet"}
           progress={latestMock?.score ?? 0}
+          loading={loading}
         />
       </section>
 
@@ -1547,12 +1554,14 @@ function MetricCard({
   value,
   detail,
   progress,
+  loading,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
   detail: string;
   progress: number;
+  loading?: boolean;
 }) {
   const [displayProgress, setDisplayProgress] = useState(0);
 
@@ -1586,11 +1595,34 @@ function MetricCard({
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (displayProgress / 100) * circumference;
 
-  // The value is already formatted, e.g. "50%".
-  // But to animate the text we'd need to extract the number if possible.
-  // Instead of parsing strings, since 'progress' is passed, we can render the animated number.
-  // Wait, if value is "—", we should show "—".
   const displayValue = value === "—" ? "—" : `${Math.round(displayProgress)}%`;
+
+  if (loading) {
+    return (
+      <article className="metric-card skeleton-loading">
+        <div className="metric-top"><span className="skeleton-text short"></span></div>
+        <div className="metric-gauge-layout">
+          <div className="skeleton-circle"></div>
+          <div className="metric-score">
+            <span className="skeleton-text"></span>
+            <span className="skeleton-text long"></span>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  if (value === "—") {
+    return (
+      <article className="metric-card empty-metric-state">
+        <div className="metric-top"><span>{label}</span><Icon size={18} /></div>
+        <div className="empty-metric-content">
+          <Icon size={24} className="empty-metric-icon" />
+          <p>Log your first attempt to see this</p>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article className="metric-card">

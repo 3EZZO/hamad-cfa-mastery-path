@@ -391,14 +391,16 @@ export function PracticeCoach({
           <button type="button" onClick={abandon} aria-label="Return to Practice home"><ArrowLeft /></button>
           <div>
             <span>{modeLabel(activeRun.mode)}</span>
-            <strong>{activeRun.currentIndex + 1} of {activeRun.questionIds.length}</strong>
           </div>
           <PracticeSync state={sync} />
         </header>
-        <div className="practice-player__progress" role="progressbar" aria-label="Practice-set progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
-          <span style={{ width: `${progress}%` }} />
+        <div className="practice-progress-segments" role="progressbar" aria-label="Practice-set progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+          {activeRun.questionIds.map((id, index) => {
+            const isFilled = index < activeRun.currentIndex || (index === activeRun.currentIndex && submitted);
+            return <div key={id} className={`practice-progress-segment ${isFilled ? "is-filled" : ""}`} />;
+          })}
         </div>
-        <main className="practice-question">
+        <main className="practice-question practice-slide-in" key={currentQuestion.id}>
           <div className="practice-question__meta">
             <span>{currentQuestion.moduleId}</span>
             <span>Level {currentQuestion.difficulty}/5</span>
@@ -430,8 +432,8 @@ export function PracticeCoach({
                 >
                   <span>{String.fromCharCode(65 + index)}</span>
                   <strong>{option}</strong>
-                  {submitted && optionIndex === currentQuestion.correctOption && <CheckCircle2 size={20} />}
-                  {submitted && selected && !correct && <X size={20} />}
+                  {submitted && optionIndex === currentQuestion.correctOption && <CheckCircle2 size={20} className="icon-draw-in" />}
+                  {submitted && selected && !correct && <X size={20} className="icon-draw-in" />}
                 </button>
               );
             })}
@@ -483,6 +485,7 @@ export function PracticeCoach({
     const repair = completedAnswers.filter(answer => !answer.correct || answer.confidence <= 2).length;
     return (
       <section className="practice-results">
+        <div className="practice-celebration" aria-hidden="true" />
         <div className="practice-results__mark"><Target /></div>
         <p>Practice set complete</p>
         <h2>{percentage}% accuracy</h2>
