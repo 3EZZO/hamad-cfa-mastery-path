@@ -5952,3 +5952,17 @@ html:root[data-theme="dark"] .financial-working {
   align-items: center;
   overflow: hidden;
 }
+.ls-copy-btn:focus-visible,
+.ls-deck-tools button:focus-visible {
+  outline: 2px solid var(--theme-blue);
+  outline-offset: 2px;
+}
+.ls-clock-ring circle:last-child {
+  transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+.ls-resume-notice button:focus-visible {
+  outline: 2px solid var(--theme-blue);
+  outline-offset: 2px;
+}

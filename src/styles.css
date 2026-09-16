@@ -5482,3 +5482,10 @@ summary:focus-visible {
   margin: 0;
   line-height: 1.3;
 }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-loading .skeleton-text,
+  .skeleton-loading .skeleton-circle {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
