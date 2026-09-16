@@ -1406,7 +1406,14 @@ function DashboardView({
               <span>This week: {weekProgress}%</span>
               <p>{required.filter((task) => isTaskComplete(task, tracker)).length} of {required.length} required items complete</p>
             </div>
-            <PlanRouteGraphic plan={PLAN} currentWeek={currentWeek} tracker={tracker} />
+            <PlanRouteGraphic 
+              nodes={PLAN.map((w) => ({
+                id: `week-${w.week}`,
+                isPast: w.week < currentWeek,
+                isCurrent: w.week === currentWeek,
+                isComplete: getWeekProgressForState(w, tracker) === 100,
+              }))}
+            />
             <small>{formatDate(week.startDate, { day: "numeric", month: "short" })} — {formatDate(week.endDate, { day: "numeric", month: "short" })}</small>
           </aside>
         </div>

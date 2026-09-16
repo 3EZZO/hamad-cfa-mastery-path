@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Clock3,
+  Copy,
   Gauge,
   Lightbulb,
   MessageSquareText,
@@ -38,18 +39,39 @@ function TextList({
   ordered = false,
   className,
 }: {
-  items?: string[];
+  items: string[];
   ordered?: boolean;
   className?: string;
 }) {
-  if (!items?.length) return null;
-  const Tag = ordered ? "ol" : "ul";
+  if (items.length === 0) return null;
+  const Wrapper = ordered ? "ol" : "ul";
   return (
-    <Tag className={className}>
-      {items.map((item, index) => (
-        <li key={`${index}-${item}`}>{item}</li>
+    <Wrapper className={className}>
+      {items.map((item, i) => (
+        <li key={i}>{item}</li>
       ))}
-    </Tag>
+    </Wrapper>
+  );
+}
+
+function ApplicationSequence({ items }: { items: string[] }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(items.join("\n"));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="ls-answer-detail ls-calculation-workbench ls-app-sequence">
+      <div className="ls-app-sequence-header">
+        <span>Application sequence</span>
+        <button type="button" onClick={handleCopy} aria-label="Copy application sequence" className="ls-copy-btn">
+          {copied ? <CheckCircle2 size={14} className="text-green" /> : <Copy size={14} />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <TextList items={items} ordered className="financial-working" />
+    </div>
   );
 }
 
@@ -387,10 +409,7 @@ export function StageCard({
             </div>
           ) : null}
           {question?.working?.length ? (
-            <div className="ls-answer-detail ls-calculation-workbench">
-              <span>Application sequence</span>
-              <TextList items={question.working} ordered className="financial-working" />
-            </div>
+            <ApplicationSequence items={question.working} />
           ) : null}
           {question?.rationale ? (
             <div className="ls-answer-detail">
