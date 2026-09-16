@@ -339,3 +339,9 @@ html:root[data-theme="dark"] .elevation-modal {
   backdrop-filter: var(--surface-blur);
   -webkit-backdrop-filter: var(--surface-blur);
 }
+:root {
+  --theme-blue: #315fce;
+  --theme-teal: #066570;
+  --theme-violet: #454063;
+  --theme-amber: #c5862b;
+}

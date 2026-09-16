@@ -384,3 +384,25 @@ html:root[data-theme="dark"] .practice-formulae code { border-color: #455b72; }
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
+@media (prefers-reduced-motion: reduce) {
+  .practice-progress-segment,
+  .practice-slide-in,
+  .practice-option,
+  .practice-options button,
+  .icon-draw-in,
+  .practice-celebration,
+  .practice-question__meta span {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+.practice-options button:focus-visible {
+  outline: 2px solid var(--theme-blue);
+  outline-offset: 2px;
+}
+.practice-celebration {
+  pointer-events: none;
+  z-index: 0;
+}
