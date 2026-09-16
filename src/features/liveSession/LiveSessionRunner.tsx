@@ -58,6 +58,7 @@ import {
 } from "./sessionDeckModel";
 import { StageCard } from "./StageCard";
 import { SessionReadingContext } from "./SessionReadingContext";
+import { PlanRouteGraphic } from "../../components/PlanRouteGraphic";
 import { SyncRecoveryNotice } from "../../components/SyncRecoveryNotice";
 import { SessionCountLegend, SESSION_TERMS } from "./sessionGlossary";
 import type { SessionTimerController } from "./useSessionTimer";
@@ -327,6 +328,13 @@ export function LiveSessionRunner({
       completedDeskIds.length > 0 ||
       timer.elapsedMs > 0
   );
+
+  useEffect(() => {
+    if (resumeNoticeOpen) {
+      const t = setTimeout(() => setResumeNoticeOpen(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [resumeNoticeOpen]);
   const [deskElapsedSeconds, setDeskElapsedSeconds] = useState(0);
   const [deskTimerRunning, setDeskTimerRunning] = useState(false);
   const [advanceHint, setAdvanceHint] = useState("");
@@ -1181,8 +1189,23 @@ export function LiveSessionRunner({
         ) : null}
         <div className="ls-clock-cluster" aria-label="Session timers">
           <div className={`ls-clock${timer.expired ? " is-overtime" : ""}`}>
-            <span>{timer.status === "paused" ? "Timer paused" : timer.expired ? "Session overtime" : "Session left"}</span>
-            <time>{timer.display}</time>
+            <svg className="ls-clock-ring" viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="24" cy="24" r="20" stroke="var(--border)" strokeWidth="4" fill="none" />
+              <circle 
+                cx="24" cy="24" r="20" 
+                stroke={timer.expired ? "var(--alert-red)" : (timer.remainingMs !== undefined && timer.remainingMs < 5 * 60_000) ? "var(--gold-bright)" : "var(--theme-blue)"} 
+                strokeWidth="4" fill="none"
+                strokeDasharray={2 * Math.PI * 20}
+                strokeDashoffset={timer.progress !== undefined ? (Math.min(timer.progress, 1)) * (2 * Math.PI * 20) : 0}
+                strokeLinecap="round"
+                transform="rotate(-90 24 24)"
+                style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s ease" }}
+              />
+            </svg>
+            <div className="ls-clock-text">
+              <span>{timer.status === "paused" ? "Paused" : timer.expired ? "Overtime" : "Remaining"}</span>
+              <time>{timer.display}</time>
+            </div>
           </div>
           <div
             className={`ls-clock ls-clock--desk${deskOvertime ? " is-overtime" : ""}`}
@@ -1287,22 +1310,16 @@ export function LiveSessionRunner({
             </span>
             <strong>{SESSION_TERMS.covered.label}: {progress.coveredDecks}</strong>
           </div>
-          <div
-            className="ls-deck-console__bar"
-            role="progressbar"
-            aria-label="Teaching deck coverage"
-            aria-valuemin={0}
-            aria-valuemax={progress.totalDecks}
-            aria-valuenow={progress.coveredDecks}
-          >
-            <span
-              style={{
-                width: `${
-                  progress.totalDecks
-                    ? (progress.coveredDecks / progress.totalDecks) * 100
-                    : 0
-                }%`,
-              }}
+          <div className="ls-deck-console-graphic">
+            <PlanRouteGraphic 
+              nodes={allDecks.map((deck) => ({
+                id: deck.key,
+                isPast: deck.globalNumber < (currentDeck?.globalNumber ?? 1),
+                isCurrent: deck.globalNumber === (currentDeck?.globalNumber ?? 1),
+                isComplete: completedDeskIds.includes(deck.key),
+              }))}
+              columns={15}
+              compact={true}
             />
           </div>
           <small>
