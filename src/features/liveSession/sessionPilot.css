@@ -768,7 +768,8 @@ html:root[data-theme="dark"] .live-session {
   }
 
   .live-session .ls-runner[data-focus="true"] {
-    grid-template-rows: auto minmax(0, 1fr);
+    --ls-focus-livebar-h: 48px;
+    grid-template-rows: var(--ls-focus-livebar-h) minmax(0, 1fr);
   }
 
   .live-session .ls-runner[data-focus="true"] .ls-deck-console,
@@ -781,17 +782,95 @@ html:root[data-theme="dark"] .live-session {
   }
 
   .live-session .ls-runner[data-focus="true"] .ls-livebar {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    min-height: 54px;
-    padding-block: 5px;
+    grid-template-columns: auto minmax(360px, 560px) auto;
+    gap: clamp(10px, 2vw, 32px);
+    min-height: var(--ls-focus-livebar-h);
+    max-height: var(--ls-focus-livebar-h);
+    padding: 3px 8px;
+    justify-content: space-between;
   }
 
   .live-session .ls-runner[data-focus="true"] .ls-focus-state {
-    justify-self: end;
+    justify-self: start;
+    min-height: 28px;
+    white-space: nowrap;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-clock-cluster {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(112px, 1fr) minmax(160px, 1.2fr) 36px;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-clock {
+    min-height: 40px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 3px 7px;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-clock-ring {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    margin: 0;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-clock--desk {
+    justify-content: space-between;
+    padding-right: 34px;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-clock--desk > div {
+    top: 2px;
+    right: 2px;
+    gap: 2px;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-clock--desk button {
+    width: 20px;
+    height: 17px;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-timer-toggle {
+    width: 36px;
+    min-height: 40px;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-livebar__actions {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-sync,
+  .live-session .ls-runner[data-focus="true"] .ls-focus-toggle {
+    min-height: 36px;
+    white-space: nowrap;
   }
 
   .live-session .ls-runner[data-focus="true"] .ls-runner__grid {
     grid-row: 2;
+    height: 100%;
+    min-height: 0;
+    padding: 4px 8px 0;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-runner__main,
+  .live-session .ls-runner[data-focus="true"] .ls-stage-card {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-stage-card {
+    border-radius: 10px 10px 0 0;
+  }
+
+  .live-session .ls-runner[data-focus="true"] .ls-coaching-drawer {
+    align-self: end;
   }
 }
 
