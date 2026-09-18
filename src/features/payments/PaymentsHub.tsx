@@ -60,7 +60,7 @@ export function PaymentsHub() {
         // Seed initial data
         cfg = {
           studentUid,
-          studentName: "Mohamed",
+          studentName: "Hamad",
           monthlyAmount: 1400,
           currency: "USD",
           engagementStartDate: "2026-09-18",
@@ -191,16 +191,21 @@ export function PaymentsHub() {
           <h2>Tutor Payments</h2>
           <p>Track engagement income and issue receipts.</p>
         </div>
-        <button className="button button-primary" onClick={() => setEditingRecord({
-          id: makeId(),
-          studentUid,
-          dateRecorded: todayDateOnly(),
-          amount: config.monthlyAmount,
-          status: "paid",
-          hasReceipt: false,
-        })}>
-          <Plus size={16} /> Log Payment
-        </button>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <button className="button" onClick={() => setShowConfig(true)}>
+            Settings
+          </button>
+          <button className="button button-primary" onClick={() => setEditingRecord({
+            id: makeId(),
+            studentUid,
+            dateRecorded: todayDateOnly(),
+            amount: config.monthlyAmount,
+            status: "paid",
+            hasReceipt: false,
+          })}>
+            <Plus size={16} /> Log Payment
+          </button>
+        </div>
       </div>
 
       <div className="payments-metrics">
@@ -295,6 +300,18 @@ export function PaymentsHub() {
           onSave={handleSaveRecord}
         />
       )}
+
+      {showConfig && config && (
+        <ConfigModal
+          config={config}
+          onClose={() => setShowConfig(false)}
+          onSave={async (newConfig) => {
+            await savePaymentConfig(newConfig);
+            setConfig(newConfig);
+            setShowConfig(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -363,6 +380,59 @@ function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onCl
           <button className="button" onClick={onClose} disabled={saving}>Cancel</button>
           <button className="button button-primary" onClick={handleSave} disabled={saving}>
             {saving ? "Saving..." : "Save Payment"}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function ConfigModal({ config, onClose, onSave }: { config: PaymentConfig, onClose: () => void, onSave: (cfg: PaymentConfig) => void }) {
+  const [data, setData] = useState(config);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(data);
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content payment-modal">
+        <header className="modal-header">
+          <h3>Payment Settings</h3>
+          <button className="icon-button" onClick={onClose} disabled={saving}><X size={18} /></button>
+        </header>
+        <div className="modal-body">
+          <label>
+            <span>Student Name</span>
+            <input type="text" value={data.studentName} onChange={e => setData({...data, studentName: e.target.value})} disabled={saving} />
+          </label>
+          <label>
+            <span>Currency</span>
+            <input type="text" value={data.currency} onChange={e => setData({...data, currency: e.target.value})} disabled={saving} />
+          </label>
+          <label>
+            <span>Monthly Amount</span>
+            <input type="number" value={data.monthlyAmount} onChange={e => setData({...data, monthlyAmount: Number(e.target.value)})} disabled={saving} />
+          </label>
+          <label>
+            <span>Engagement Start Date</span>
+            <input type="date" value={data.engagementStartDate} onChange={e => setData({...data, engagementStartDate: e.target.value})} disabled={saving} />
+          </label>
+          <label>
+            <span>Engagement End Date</span>
+            <input type="date" value={data.engagementEndDate} onChange={e => setData({...data, engagementEndDate: e.target.value})} disabled={saving} />
+          </label>
+          <label>
+            <span>Billing Day of Month</span>
+            <input type="number" min={1} max={31} value={data.billingDayOfMonth} onChange={e => setData({...data, billingDayOfMonth: Number(e.target.value)})} disabled={saving} />
+          </label>
+        </div>
+        <footer className="modal-footer">
+          <button className="button" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="button button-primary" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Settings"}
           </button>
         </footer>
       </div>
