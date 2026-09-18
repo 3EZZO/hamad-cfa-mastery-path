@@ -583,6 +583,8 @@ export function PracticeCoach({
         <>
           <PracticePerformance role={role} insights={insights} />
 
+          {role === "tutor" && <PracticeLibrary questions={questions} />}
+
           {role === "student" && <section className="practice-actions" aria-label="Start practice">
             <button className="practice-action is-primary" type="button" onClick={() => void begin("quick", 5)}>
               <span><Sparkles /></span><div><small>Recommended now</small><strong>Quick 5</strong><p>Five adaptive questions for a focused mobile study break.</p></div><ArrowRight />
@@ -760,4 +762,80 @@ function PracticeSync({ state }: { state: CoachSync }) {
   }[state];
   const Icon = content.icon;
   return <span className={`practice-sync is-${state}`} role="status"><Icon size={16} />{content.label}</span>;
+}
+
+function PracticeLibrary({ questions }: { questions: PracticeQuestion[] }) {
+  const [openModule, setOpenModule] = useState<string | null>(null);
+
+  const modules = useMemo(() => {
+    const map = new Map<string, PracticeQuestion[]>();
+    for (const q of questions) {
+      const list = map.get(q.moduleId) ?? [];
+      list.push(q);
+      map.set(q.moduleId, list);
+    }
+    return Array.from(map.entries());
+  }, [questions]);
+
+  return (
+    <section className="practice-library panel">
+      <header className="panel-heading">
+        <div>
+          <p className="eyebrow">Question Library</p>
+          <h3>Browse all practice questions</h3>
+        </div>
+        <BookOpenCheck size={21} />
+      </header>
+      <p className="practice-library__intro">View the complete set of questions currently assigned to the student.</p>
+      <div className="practice-library__list">
+        {modules.map(([moduleId, moduleQuestions]) => (
+          <details
+            key={moduleId}
+            className="practice-library__module"
+            open={openModule === moduleId}
+            onToggle={(e) => {
+              if ((e.target as HTMLDetailsElement).open) setOpenModule(moduleId);
+              else if (openModule === moduleId) setOpenModule(null);
+            }}
+          >
+            <summary>
+              <div>
+                <strong>{moduleId}</strong>
+                <span>{moduleQuestions.length} questions</span>
+              </div>
+              <ChevronDown />
+            </summary>
+            <div className="practice-library__questions">
+              {moduleQuestions.map((q, index) => (
+                <article key={q.id} className="practice-library__question">
+                  <div className="practice-question__meta">
+                    <span>{q.type}</span>
+                    <span>Level {q.difficulty}/5</span>
+                    <span><Clock3 size={14} /> {Math.ceil(q.estimatedSeconds / 60)} min</span>
+                  </div>
+                  <h4>{index + 1}. {q.prompt}</h4>
+                  <ul className="practice-library__options">
+                    {q.options.map((opt, i) => (
+                      <li key={i} className={i === q.correctOption ? "is-correct" : ""}>
+                        <strong>{String.fromCharCode(65 + i)}.</strong> {opt}
+                        {i === q.correctOption && <span className="practice-library__correct-badge"><CheckCircle2 size={16} /></span>}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="practice-library__explanation">
+                    <p>{q.explanation}</p>
+                    {q.formulae.length > 0 && <div className="practice-formulae">{q.formulae.map(formula => <code className="financial-expression" key={formula}>{formula}</code>)}</div>}
+                    {q.working.length > 0 && <ol className="practice-working financial-working">{q.working.map(step => <li key={step}>{step}</li>)}</ol>}
+                    {q.examTrap && (
+                      <aside><ShieldCheck size={17} /><p><strong>Exam trap</strong>{q.examTrap}</p></aside>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
 }
