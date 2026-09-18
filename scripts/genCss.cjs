@@ -1,4 +1,7 @@
+const fs = require('fs');
+const path = require('path');
 
+const content = `
 /* ==========================================
    LUXURY PAYMENTS DASHBOARD CSS
    World-class styling matching the Project 202 Proposal
@@ -613,33 +616,8 @@
   .no-print {
     display: none !important;
   }
-  .ledger-table tr { 
-    page-break-inside: avoid; 
-  }
 }
+`;
 
-/* LEDGER TABLE STYLES */
-.statement-ledger { 
-  margin-top: 30px; 
-  overflow-x: auto; 
-}
-.ledger-table { 
-  width: 100%; 
-  border-collapse: collapse; 
-  text-align: left; 
-  font-size: 13px; 
-  color: #fff; 
-}
-.ledger-table th { 
-  padding: 12px; 
-  border-bottom: 2px solid #3b5065; 
-  color: #a9bacd; 
-  font-weight: 600; 
-  letter-spacing: 1px; 
-}
-.ledger-table td { 
-  padding: 12px; 
-  border-bottom: 1px solid #1e3146; 
-  vertical-align: middle; 
-}
-
+fs.writeFileSync(path.join(__dirname, 'temp_css.css'), content);
+console.log("Wrote temp_css.css successfully");

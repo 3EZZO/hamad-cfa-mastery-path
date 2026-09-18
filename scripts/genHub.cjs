@@ -1,20 +1,14 @@
+const fs = require('fs');
+const path = require('path');
 
+const content = `
 import React, { useState, useEffect } from "react";
 import { Plus, Download, Search, Settings, FileText, CheckCircle2, CircleDashed, Clock, ChevronLeft, X, Printer, MessageCircle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getPaymentConfig, savePaymentConfig, listPaymentRecords, savePaymentRecord, getPaymentReceipt, savePaymentReceipt, type PaymentConfig, type PaymentRecord } from "../../lib/cloudPayments";
+import { getPaymentConfig, savePaymentConfig, listPaymentRecords, savePaymentRecord, getPaymentReceipt, type PaymentConfig, type PaymentRecord } from "../../lib/cloudPayments";
+import { generatePaymentReceipt } from "./ReceiptGenerator";
 import { toDateOnly, todayDateOnly, formatDate } from "../../lib/dates";
-import QRCode from "react-qr-code";
 import "./payments.css";
-
-const SAR_PEG = 3.75;
-function formatDualCurrency(amount: number, currency: string) {
-  if (currency === "USD") {
-    const sar = amount * SAR_PEG;
-    return `$${amount.toLocaleString()} USD / ﷼${sar.toLocaleString()} SAR`;
-  }
-  return `${amount.toLocaleString()} ${currency}`;
-}
 
 // Generate a random ID for new records
 function makeId() {
@@ -24,10 +18,7 @@ function makeId() {
   return Math.random().toString(36).substring(2, 15);
 }
 
-export function PaymentsHub() {
-  const tutorName = "Mohamed Ali"; // Placeholder for the 1:1 engagement
-  const studentUid = "student-001"; // Placeholder for the 1:1 engagement
-
+export function PaymentsHub({ tutorName, studentUid }: { tutorName: string, studentUid: string }) {
   const [config, setConfig] = useState<PaymentConfig | null>(null);
   const [records, setRecords] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +26,6 @@ export function PaymentsHub() {
   const [editingRecord, setEditingRecord] = useState<PaymentRecord | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [viewingReceipt, setViewingReceipt] = useState<{payment: PaymentRecord, blobUrl: string | null} | null>(null);
-  const [viewingStatement, setViewingStatement] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -46,7 +36,7 @@ export function PaymentsHub() {
           cfg = {
             studentUid,
             studentName: "Hamad",
-            monthlyAmount: 1400,
+            monthlyAmount: 1800,
             currency: "USD",
             engagementStartDate: "2026-09-18",
             engagementEndDate: "2027-02-26",
@@ -75,17 +65,7 @@ export function PaymentsHub() {
   if (!config) return null;
 
   const handleSaveRecord = async (rec: PaymentRecord, file: File | null) => {
-    if (file) {
-      const reader = new FileReader();
-      const p = new Promise<string>((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-      });
-      reader.readAsDataURL(file);
-      const dataUri = await p;
-      await savePaymentReceipt(rec.id, dataUri);
-      rec.hasReceipt = true;
-    }
-    await savePaymentRecord(rec);
+    await savePaymentRecord(rec, file);
     setRecords(prev => {
       const idx = prev.findIndex(r => r.id === rec.id);
       if (idx >= 0) {
@@ -98,6 +78,16 @@ export function PaymentsHub() {
     setEditingRecord(null);
   };
 
+  const downloadReceipt = (rec: PaymentRecord) => {
+    const blob = generatePaymentReceipt(tutorName, config, rec);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = \`Receipt-\${rec.id.slice(0,8)}.pdf\`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handlePrintReceipt = (rec: PaymentRecord) => {
     setViewingReceipt({ payment: rec, blobUrl: null });
   };
@@ -107,7 +97,7 @@ export function PaymentsHub() {
   const startObj = new Date(config.engagementStartDate);
   const endObj = new Date(config.engagementEndDate);
   const monthsDiff = (endObj.getFullYear() - startObj.getFullYear()) * 12 + (endObj.getMonth() - startObj.getMonth()) + 1;
-  const expectedTotal = config.monthlyAmount; // Just display the monthly amount instead of total
+  const expectedTotal = config.monthlyAmount * Math.max(1, monthsDiff);
   
   const today = new Date();
   let nextBillingDate = new Date(today.getFullYear(), today.getMonth(), config.billingDayOfMonth);
@@ -120,23 +110,28 @@ export function PaymentsHub() {
 
   // Generate Chart Data
   const chartData = [];
+  let cumulativeExpected = 0;
+  let cumulativeActual = 0;
   let currentM = new Date(startObj);
   while (currentM <= endObj || chartData.length < monthsDiff) {
+    cumulativeExpected += config.monthlyAmount;
+    
     // Find payments in this month
     const mStr = currentM.toISOString().slice(0, 7); // YYYY-MM
     const paidThisMonth = records.filter(r => r.status === "paid" && r.dateRecorded.startsWith(mStr)).reduce((s, r) => s + r.amount, 0);
+    cumulativeActual += paidThisMonth;
 
     chartData.push({
       month: currentM.toLocaleString('default', { month: 'short' }),
-      Expected: config.monthlyAmount,
-      Actual: paidThisMonth
+      Expected: cumulativeExpected,
+      Actual: cumulativeActual
     });
     currentM.setMonth(currentM.getMonth() + 1);
   }
 
   // WhatsApp Link Generation
-  const waMessage = encodeURIComponent(`Hello ${config.studentName}, this is a gentle reminder that your next CFA tutoring payment of ${config.currency} ${config.monthlyAmount.toLocaleString()} is due on ${nextBillingDate.toLocaleDateString()}. Thank you for your continued dedication!`);
-  const waLink = `https://wa.me/?text=${waMessage}`;
+  const waMessage = encodeURIComponent(\`Hello \${config.studentName}, this is a gentle reminder that your next CFA tutoring payment of \${config.currency} \${config.monthlyAmount.toLocaleString()} is due on \${nextBillingDate.toLocaleDateString()}. Thank you for your continued dedication!\`);
+  const waLink = \`https://wa.me/?text=\${waMessage}\`;
 
   // Determine if Print View is active
   if (viewingReceipt) {
@@ -150,18 +145,6 @@ export function PaymentsHub() {
     );
   }
 
-  if (viewingStatement) {
-    return (
-      <StatementPrintView
-        tutorName={tutorName}
-        config={config}
-        records={records}
-        expectedTotal={expectedTotal}
-        onClose={() => setViewingStatement(false)}
-      />
-    );
-  }
-
   return (
     <div className="payments-hub luxury-dashboard">
       <header className="dashboard-header">
@@ -170,9 +153,6 @@ export function PaymentsHub() {
           <p>Real-time engagement revenue and printable invoicing.</p>
         </div>
         <div className="header-actions">
-          <button className="luxury-btn outline" onClick={() => setViewingStatement(true)}>
-            <FileText size={16} /> Ledger Statement
-          </button>
           <button className="luxury-btn icon-only outline" onClick={() => setShowConfig(true)} title="Settings">
             <Settings size={18} />
           </button>
@@ -195,8 +175,8 @@ export function PaymentsHub() {
           <div className="metric-icon teal"><CheckCircle2 size={24} /></div>
           <div className="metric-data">
             <span>Total Collected</span>
-            <strong className="text-teal">{formatDualCurrency(totalPaid, config.currency)}</strong>
-            <small>of {expectedTotal.toLocaleString()} Monthly Target</small>
+            <strong className="text-teal">{config.currency} {totalPaid.toLocaleString()}</strong>
+            <small>of {expectedTotal.toLocaleString()} Expected</small>
           </div>
           <div className="progress-ring-container">
              <svg viewBox="0 0 36 36" className="circular-chart teal">
@@ -206,7 +186,7 @@ export function PaymentsHub() {
                     a 15.9155 15.9155 0 0 1 0 -31.831"
                 />
                 <path className="circle"
-                  strokeDasharray={`${progressPct}, 100`}
+                  strokeDasharray={\`\${progressPct}, 100\`}
                   d="M18 2.0845
                     a 15.9155 15.9155 0 0 1 0 31.831
                     a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -250,11 +230,10 @@ export function PaymentsHub() {
                 </linearGradient>
               </defs>
               <XAxis dataKey="month" stroke="#a9bacd" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#a9bacd" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+              <YAxis stroke="#a9bacd" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => \`\${value}\`} />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#13263b', border: '1px solid #3b5065', borderRadius: '8px', color: '#fff' }}
                 itemStyle={{ color: '#fff' }}
-                formatter={(value: any) => [formatDualCurrency(Number(value) || 0, config.currency), undefined]}
               />
               <Area type="monotone" dataKey="Expected" stroke="#eab355" fillOpacity={1} fill="url(#colorExpected)" />
               <Area type="monotone" dataKey="Actual" stroke="#00b49f" fillOpacity={1} fill="url(#colorActual)" />
@@ -280,17 +259,19 @@ export function PaymentsHub() {
                   {r.status === 'paid' ? <CheckCircle2 className="text-teal" size={20} /> : <CircleDashed className="text-gold" size={20} />}
                 </div>
                 <div className="t-details">
-                  <h4>{formatDualCurrency(r.amount, config.currency)}</h4>
+                  <h4>{config.currency} {r.amount.toLocaleString()}</h4>
                   <small>{formatDate(r.dateRecorded, { day: 'numeric', month: 'short', year: 'numeric' })} &bull; REF-{r.id.slice(0,6).toUpperCase()}</small>
                 </div>
                 <div className="t-status">
-                  <span className={`luxury-badge ${r.status}`}>{r.status}</span>
+                  <span className={\`luxury-badge \${r.status}\`}>{r.status}</span>
                 </div>
                 <div className="t-actions">
                   <button className="luxury-btn outline sm" onClick={() => handlePrintReceipt(r)} title="Print Native Receipt">
                     <Printer size={14} /> Web Receipt
                   </button>
-
+                  <button className="luxury-btn outline sm icon-only" onClick={() => downloadReceipt(r)} title="Download Legacy PDF">
+                    <Download size={14} />
+                  </button>
                   <button className="luxury-btn outline sm icon-only" onClick={() => setEditingRecord(r)} title="Edit">
                     <Settings size={14} />
                   </button>
@@ -343,7 +324,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
         <div className="receipt-top-accent"></div>
         <div className="receipt-header">
           <div className="r-left">
-            <span className="r-project">HAMAD CFA MASTERY PATH</span>
+            <span className="r-project">PROJECT 202</span>
             <h1 className="r-title">{config.studentName}'s CFA Level I</h1>
             <h1 className="r-subtitle">Mastery System</h1>
           </div>
@@ -359,7 +340,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
         <div className="r-main-card">
           <div className="r-mc-left">
             <label>AMOUNT PAID</label>
-            <div className="r-amount" style={{fontSize: '32px'}}>{formatDualCurrency(payment.amount, config.currency)}</div>
+            <div className="r-amount">{config.currency} {payment.amount.toLocaleString()}</div>
           </div>
           <div className="r-mc-right">
             <div className="r-status-large">{payment.status === "paid" ? "PAID IN FULL" : payment.status.toUpperCase()}</div>
@@ -375,7 +356,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           </div>
           <div className="r-box">
             <div className="r-box-val">
-              {formatDate(config.engagementStartDate, { day: "numeric", month: "short", year: "numeric" }).toUpperCase()} - {formatDate(config.engagementEndDate, { day: "numeric", month: "short", year: "numeric" }).toUpperCase()}
+              {formatDate(config.engagementStartDate, { month: "short", year: "numeric" }).toUpperCase()} - {formatDate(config.engagementEndDate, { month: "short", year: "numeric" }).toUpperCase()}
             </div>
             <div className="r-box-lbl">ENGAGEMENT TERM</div>
           </div>
@@ -395,130 +376,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
         <div className="r-separator"></div>
 
         <div className="r-notes">
-          {payment.notes ? `Notes: ${payment.notes}` : "No additional notes."}
-        </div>
-
-        <div className="r-crypto-auth" style={{ marginTop: '40px', display: 'flex', alignItems: 'center', gap: '20px', borderTop: '1px dashed #3b5065', paddingTop: '20px' }}>
-          <div style={{ background: '#fff', padding: '10px', borderRadius: '8px', display: 'inline-block' }}>
-            <QRCode 
-              value={`AUTH: HAMAD-CFA-${payment.id.toUpperCase()} | ${payment.dateRecorded} | ${config.currency} ${payment.amount}`} 
-              size={80} 
-            />
-          </div>
-          <div style={{ color: '#a9bacd', fontSize: '10px', fontFamily: 'monospace', lineHeight: '1.4' }}>
-            <strong style={{ color: '#00b49f', fontSize: '12px', display: 'block', marginBottom: '4px' }}>VERIFIED DIGITAL SIGNATURE</strong>
-            CRYPTOGRAPHIC HASH: {btoa(`H-CFA-${payment.id}-${payment.amount}`).substring(0, 32)}<br />
-            TIMESTAMP: {new Date().toISOString()}<br />
-            SCAN FOR AUTHENTICITY
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ==========================================
-// STATEMENT OF ACCOUNT VIEW
-// ==========================================
-function StatementPrintView({ tutorName, config, records, expectedTotal, onClose }: { tutorName: string, config: PaymentConfig, records: PaymentRecord[], expectedTotal: number, onClose: () => void }) {
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const totalPaid = records.filter(r => r.status === "paid").reduce((acc, r) => acc + r.amount, 0);
-  const totalPending = records.filter(r => r.status === "pending" || r.status === "overdue").reduce((acc, r) => acc + r.amount, 0);
-
-  const sortedRecords = [...records].sort((a, b) => new Date(a.dateRecorded).getTime() - new Date(b.dateRecorded).getTime());
-
-  return (
-    <div className="receipt-print-view">
-      <div className="receipt-controls no-print">
-        <button className="luxury-btn outline" onClick={onClose}><ChevronLeft size={16} /> Back to Dashboard</button>
-        <button className="luxury-btn primary" onClick={handlePrint}><Printer size={16} /> Save as PDF / Print</button>
-      </div>
-
-      <div className="receipt-document">
-        <div className="receipt-top-accent"></div>
-        <div className="receipt-header">
-          <div className="r-left">
-            <span className="r-project">HAMAD CFA MASTERY PATH</span>
-            <h1 className="r-title">Statement of Account</h1>
-            <h1 className="r-subtitle">Ledger Summary</h1>
-          </div>
-          <div className="r-right">
-            <div className="r-pill">OFFICIAL LEDGER</div>
-          </div>
-        </div>
-
-        <p className="r-desc">
-          This document serves as an official consolidated statement of account for the executive coaching engagement between <strong>{tutorName}, CFA</strong> and <strong>{config.studentName}</strong>. 
-        </p>
-
-        <div className="r-grid" style={{ marginBottom: '30px' }}>
-          <div className="r-box">
-            <div className="r-box-val">{formatDate(todayDateOnly(), { day: "numeric", month: "short", year: "numeric" })}</div>
-            <div className="r-box-lbl">STATEMENT DATE</div>
-          </div>
-          <div className="r-box">
-            <div className="r-box-val">
-              {formatDate(config.engagementStartDate, { day: "numeric", month: "short", year: "numeric" }).toUpperCase()} - {formatDate(config.engagementEndDate, { day: "numeric", month: "short", year: "numeric" }).toUpperCase()}
-            </div>
-            <div className="r-box-lbl">ENGAGEMENT TERM</div>
-          </div>
-        </div>
-
-        <div className="r-main-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #3b5065', paddingBottom: '10px' }}>
-            <span style={{ color: '#a9bacd', fontSize: '12px', fontWeight: 600, letterSpacing: '1px' }}>TOTAL TARGET</span>
-            <strong style={{ color: '#fff', fontSize: '16px' }}>{formatDualCurrency(expectedTotal, config.currency)}</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #3b5065', paddingBottom: '10px' }}>
-            <span style={{ color: '#a9bacd', fontSize: '12px', fontWeight: 600, letterSpacing: '1px' }}>TOTAL CLEARED</span>
-            <strong style={{ color: '#00b49f', fontSize: '16px' }}>{formatDualCurrency(totalPaid, config.currency)}</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#a9bacd', fontSize: '12px', fontWeight: 600, letterSpacing: '1px' }}>OUTSTANDING BALANCE</span>
-            <strong style={{ color: '#eab355', fontSize: '16px' }}>{formatDualCurrency(totalPending, config.currency)}</strong>
-          </div>
-        </div>
-
-        <div className="statement-ledger">
-          <table className="ledger-table">
-            <thead>
-              <tr>
-                <th>DATE</th>
-                <th>REF ID</th>
-                <th>DESCRIPTION / NOTES</th>
-                <th>AMOUNT</th>
-                <th>STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRecords.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#a9bacd' }}>No transactions recorded yet.</td>
-                </tr>
-              ) : (
-                sortedRecords.map((r, idx) => (
-                  <tr key={r.id}>
-                    <td>{formatDate(r.dateRecorded, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                    <td>{r.id.slice(0, 8).toUpperCase()}</td>
-                    <td>{r.notes || "Professional Services Rendered"}</td>
-                    <td>{formatDualCurrency(r.amount, config.currency)}</td>
-                    <td style={{ color: r.status === 'paid' ? '#00b49f' : r.status === 'pending' ? '#eab355' : '#ff4b4b' }}>
-                      {r.status.toUpperCase()}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="r-separator" style={{ marginTop: '40px' }}></div>
-        
-        <div className="r-notes">
-          This statement reflects all transactions recorded up to the statement date. For any discrepancies, please contact the issuing party immediately.
+          {payment.notes ? \`Notes: \${payment.notes}\` : "No additional notes."}
         </div>
       </div>
     </div>
@@ -540,8 +398,8 @@ function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onCl
     let active = true;
     if (record.hasReceipt && record.id) {
       setLoadingPdf(true);
-      getPaymentReceipt(record.id).then(receipt => {
-        if (active && receipt?.dataUri) setExistingPdfUrl(receipt.dataUri);
+      getPaymentReceipt(record.id).then(url => {
+        if (active && url) setExistingPdfUrl(url);
         if (active) setLoadingPdf(false);
       });
     }
@@ -662,3 +520,7 @@ function ConfigModal({ config, onClose, onSave }: { config: PaymentConfig, onClo
     </div>
   );
 }
+`;
+
+fs.writeFileSync(path.join(__dirname, 'temp_hub.tsx'), content);
+console.log("Wrote temp_hub.tsx successfully");
