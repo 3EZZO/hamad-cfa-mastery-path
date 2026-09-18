@@ -12,13 +12,14 @@ export interface KeystrokeLog {
 interface BA2PlusProps {
   onLog: (log: KeystrokeLog) => void;
   startTime: number;
+  tvmState: TVMState;
+  onStateChange: (newState: TVMState) => void;
 }
 
-export function BA2Plus({ onLog, startTime }: BA2PlusProps) {
+export function BA2Plus({ onLog, startTime, tvmState, onStateChange }: BA2PlusProps) {
   const [display, setDisplay] = useState("0.00");
   const [inputState, setInputState] = useState<"READY" | "INPUT">("READY");
   const [is2nd, setIs2nd] = useState(false);
-  const [tvmState, setTvmState] = useState<TVMState>(defaultTVMState());
 
   const logStroke = (key: string, newDisplay: string, newState: TVMState) => {
     onLog({
@@ -31,7 +32,7 @@ export function BA2Plus({ onLog, startTime }: BA2PlusProps) {
 
   const updateDisplay = (val: string, newState = tvmState, key = "") => {
     setDisplay(val);
-    setTvmState(newState);
+    onStateChange(newState);
     if (key) {
       logStroke(key, val, newState);
     }

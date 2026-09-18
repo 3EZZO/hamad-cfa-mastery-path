@@ -39,6 +39,8 @@ import {
   updatePracticeQuestionState,
 } from "../../lib/practiceEngine";
 import { BA2Plus } from "./BA2Plus";
+import { defaultTVMState, type TVMState } from "../../lib/calculator";
+import { analyzeKeystrokes } from "../../lib/calculatorDiagnostics";
 import {
   buildPracticeInsights,
   type PracticeInsights,
@@ -141,6 +143,7 @@ export function PracticeCoach({
   const [modulePickerOpen, setModulePickerOpen] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [calculatorLog, setCalculatorLog] = useState<any[]>([]);
+  const [calculatorState, setCalculatorState] = useState(defaultTVMState());
   const answerStartedAt = useRef(Date.now());
 
   const questions = useMemo(() => banks.flatMap(bank => bank.questions), [banks]);
@@ -538,6 +541,8 @@ export function PracticeCoach({
               <BA2Plus 
                 onLog={(log) => setCalculatorLog(prev => [...prev, log])} 
                 startTime={answerStartedAt.current} 
+                tvmState={calculatorState}
+                onStateChange={setCalculatorState}
               />
             </div>
           )}
@@ -560,6 +565,13 @@ export function PracticeCoach({
   if (role === "student" && view === "results" && lastCompletedRun) {
     const percentage = completedAnswers.length ? Math.round((resultCorrect / completedAnswers.length) * 100) : 0;
     const repair = completedAnswers.filter(answer => !answer.correct || answer.confidence <= 2).length;
+    
+    // Analyze keystrokes for diagnostics
+    const allDiagnostics = completedAnswers.flatMap(answer => 
+      answer.calculatorLog ? analyzeKeystrokes(answer.calculatorLog) : []
+    );
+    const uniqueDiagnostics = Array.from(new Map(allDiagnostics.map(d => [d.type, d])).values());
+
     return (
       <section className="practice-results">
         <div className="practice-celebration" aria-hidden="true" />
@@ -574,6 +586,20 @@ export function PracticeCoach({
         <p className="practice-results__message">
           {percentage >= 80 ? "Strong execution. The adaptive queue will lengthen intervals only after repeated independent success." : "The missed and uncertain concepts are now prioritized in your Repair Queue."}
         </p>
+        
+        {uniqueDiagnostics.length > 0 && (
+          <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(234, 179, 85, 0.1)', border: '1px solid #eab355', borderRadius: '8px', textAlign: 'left' }}>
+            <h3 style={{ color: '#eab355', margin: '0 0 12px 0', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CircleAlert size={16} /> Calculator Diagnostics
+            </h3>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: '#c3cfd9', fontSize: '13px' }}>
+              {uniqueDiagnostics.map(diag => (
+                <li key={diag.type} style={{ marginBottom: '8px' }}>{diag.message}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="practice-results__actions">
           <button type="button" onClick={() => setView("hub")}>Return to Practice</button>
           {repair > 0 && <button type="button" className="is-primary" onClick={() => void begin("repair", Math.min(10, repair))}>Repair now</button>}
@@ -754,7 +780,9 @@ function PracticePerformance({
         </header>
         {visibleMisses.length ? (
           <div className="practice-mistake-review__list">
-            {visibleMisses.map(miss => (
+            {visibleMisses.map(miss => {
+              const diagnostics = miss.calculatorLog ? analyzeKeystrokes(miss.calculatorLog) : [];
+              return (
               <details key={miss.question.id}>
                 <summary>
                   <div><span>{miss.question.moduleId} · {formatPracticeDate(miss.answeredAt)}</span><strong>{miss.question.prompt}</strong></div>
@@ -764,12 +792,34 @@ function PracticePerformance({
                 <div className="practice-mistake-review__detail">
                   <div className="practice-mistake-review__answers"><p><span>Answer chosen</span><strong>{String.fromCharCode(65 + miss.selectedOption)}. {miss.question.options[miss.selectedOption]}</strong></p><p><span>Correct answer</span><strong>{String.fromCharCode(65 + miss.question.correctOption)}. {miss.question.options[miss.question.correctOption]}</strong></p></div>
                   <p>{miss.question.explanation}</p>
-                  {miss.question.formulae.length > 0 && <div className="practice-formulae">{miss.question.formulae.map(formula => <code className="financial-expression" key={formula}>{formula}</code>)}</div>}
+                  
+                  {role === "tutor" && miss.calculatorLog && miss.calculatorLog.length > 0 && (
+                    <div style={{ marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#c3cfd9' }}>Tutor Telemetry: Calculator Replay</h4>
+                      {diagnostics.length > 0 && (
+                        <div style={{ padding: '12px', background: 'rgba(234, 179, 85, 0.1)', border: '1px solid #eab355', borderRadius: '6px', marginBottom: '16px' }}>
+                          <h5 style={{ color: '#eab355', margin: '0 0 8px 0', fontSize: '12px' }}>Diagnosed Errors</h5>
+                          <ul style={{ margin: 0, paddingLeft: '16px', color: '#c3cfd9', fontSize: '12px' }}>
+                            {diagnostics.map(d => <li key={d.type}>{d.message}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {miss.calculatorLog.map((log: any, i: number) => (
+                          <div key={i} style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '11px', color: '#a0aec0', fontFamily: 'monospace' }}>
+                            <strong style={{ color: '#fff' }}>{log.key}</strong> <span style={{ opacity: 0.5 }}>→</span> {log.display}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {miss.question.formulae.length > 0 && <div className="practice-formulae" style={{ marginTop: '16px' }}>{miss.question.formulae.map(formula => <code className="financial-expression" key={formula}>{formula}</code>)}</div>}
                   {miss.question.working.length > 0 && <ol className="practice-working financial-working">{miss.question.working.map(step => <li key={step}>{step}</li>)}</ol>}
                   <aside><ShieldCheck size={17} /><p><strong>Exam trap</strong>{miss.question.examTrap}</p></aside>
                 </div>
               </details>
-            ))}
+            )})}
             {insights.missedQuestions.length > 4 && <button className="practice-mistake-review__more" type="button" onClick={() => setShowAllMisses(value => !value)}>{showAllMisses ? "Show recent four" : `Show all ${insights.missedQuestions.length} questions`}</button>}
           </div>
         ) : <p className="practice-performance__quiet">No incorrect answers are recorded. Low-confidence correct answers still remain in the adaptive queue.</p>}

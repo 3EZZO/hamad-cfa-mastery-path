@@ -26,6 +26,8 @@ export interface PracticeMissInsight {
   answeredAt: string;
   missCount: number;
   recovered: boolean;
+  calculatorLog?: any[];
+  diagnostics?: any[];
 }
 
 export interface PracticeRunInsight {
@@ -130,6 +132,7 @@ export function buildPracticeInsights({
         answeredAt: answer.answeredAt,
         missCount: 1,
         recovered: states[answer.questionId]?.lastCorrect === true,
+        calculatorLog: answer.calculatorLog,
       });
     });
   const missedQuestions = [...missesByQuestion.values()]
