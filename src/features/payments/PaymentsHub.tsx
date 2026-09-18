@@ -1,201 +1,172 @@
-import { useEffect, useState, useRef } from "react";
-import {
-  Banknote,
-  CalendarDays,
-  Check,
-  ChevronRight,
-  Clock,
-  Download,
-  FileText,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
-import {
-  getPaymentConfig,
-  savePaymentConfig,
-  listPaymentRecords,
-  savePaymentRecord,
-  deletePaymentRecord,
-  savePaymentReceipt,
-  getPaymentReceipt,
-  type PaymentConfig,
-  type PaymentRecord,
-} from "../../lib/cloudPayments";
+
+import React, { useState, useEffect } from "react";
+import { Plus, Download, Search, Settings, FileText, CheckCircle2, CircleDashed, Clock, ChevronLeft, X, Printer, MessageCircle } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { getPaymentConfig, savePaymentConfig, listPaymentRecords, savePaymentRecord, getPaymentReceipt, savePaymentReceipt, type PaymentConfig, type PaymentRecord } from "../../lib/cloudPayments";
 import { generatePaymentReceipt } from "./ReceiptGenerator";
-import { todayDateOnly, formatDate, toDateOnly } from "../../lib/dates";
-import { useTrackerSync } from "../../hooks/useTrackerSync";
+import { toDateOnly, todayDateOnly, formatDate } from "../../lib/dates";
 import "./payments.css";
 
+// Generate a random ID for new records
 function makeId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return Math.random().toString(36).substring(2, 15);
 }
 
 export function PaymentsHub() {
-  const { user, member } = useTrackerSync();
+  const tutorName = "Mohamed Ali"; // Placeholder for the 1:1 engagement
+  const studentUid = "student-001"; // Placeholder for the 1:1 engagement
+
   const [config, setConfig] = useState<PaymentConfig | null>(null);
   const [records, setRecords] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingRecord, setEditingRecord] = useState<PaymentRecord | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [filter, setFilter] = useState<"all" | "paid" | "pending" | "overdue">("all");
-
-  const tutorUid = user?.uid;
-  // Currently we use a hardcoded student UID or derived. We know there's one student.
-  // Wait, we can list members, or for now assume the tutor manages "the student".
-  // Since we don't have the student uid easily, let's use a standard string for the single student context.
-  const studentUid = "student-001"; // Placeholder for the 1:1 engagement
-
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let cfg = await getPaymentConfig(studentUid);
-      if (!cfg) {
-        // Seed initial data
-        cfg = {
-          studentUid,
-          studentName: "Hamad",
-          monthlyAmount: 1400,
-          currency: "USD",
-          engagementStartDate: "2026-09-18",
-          engagementEndDate: "2027-02-26",
-          billingDayOfMonth: 18,
-        };
-        await savePaymentConfig(cfg);
-        
-        const initialRecord: PaymentRecord = {
-          id: makeId(),
-          studentUid,
-          dateRecorded: "2026-09-18",
-          amount: 1400,
-          status: "paid",
-          hasReceipt: false,
-        };
-        await savePaymentRecord(initialRecord);
-      }
-      setConfig(cfg);
-      const recs = await listPaymentRecords(studentUid);
-      setRecords(recs);
-    } catch (e: any) {
-      console.error(e);
-      setError(e.message || String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [viewingReceipt, setViewingReceipt] = useState<{payment: PaymentRecord, blobUrl: string | null} | null>(null);
 
   useEffect(() => {
-    if (member?.role === "tutor") {
-      void loadData();
+    let active = true;
+    async function loadData() {
+      try {
+        let cfg = await getPaymentConfig(studentUid);
+        if (!cfg) {
+          cfg = {
+            studentUid,
+            studentName: "Hamad",
+            monthlyAmount: 1800,
+            currency: "USD",
+            engagementStartDate: "2026-09-18",
+            engagementEndDate: "2027-02-26",
+            billingDayOfMonth: 18,
+          };
+          await savePaymentConfig(cfg);
+        }
+        if (!active) return;
+        setConfig(cfg);
+        const recs = await listPaymentRecords(studentUid);
+        if (!active) return;
+        setRecords(recs.sort((a, b) => b.dateRecorded.localeCompare(a.dateRecorded)));
+      } catch (err: any) {
+        console.error("Failed to load payment data:", err);
+        if (active) setError(err.message || "Failed to load");
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-  }, [member?.role]);
+    loadData();
+    return () => { active = false; };
+  }, [studentUid]);
 
-  if (!member || member.role !== "tutor") {
-    return (
-      <div className="empty-state">
-        <Banknote size={24} />
-        <strong>Tutor access required</strong>
-        <p>This payment tracking hub is only available to the active tutor.</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="payments-hub loading">Loading financial dashboard...</div>;
+  if (error) return <div className="payments-hub error"><h3>Error</h3><p>{error}</p></div>;
+  if (!config) return null;
 
-  if (error) {
-    return (
-      <div className="empty-state">
-        <Banknote size={24} />
-        <strong>Error loading payments</strong>
-        <p>{error}</p>
-        <button className="button button-primary" onClick={loadData}>Retry</button>
-      </div>
-    );
-  }
-
-  if (loading || !config) {
-    return <div className="payments-loading">Loading payment records...</div>;
-  }
-
-  // Next payment calculation
-  const today = new Date(todayDateOnly());
-  const start = new Date(config.engagementStartDate);
-  const end = new Date(config.engagementEndDate);
-  
-  let nextDueDate = new Date(start);
-  while (nextDueDate < today) {
-    nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-  }
-  if (nextDueDate > end) nextDueDate = end; // Last payment is at the end of the engagement
-  
-  const daysUntilDue = Math.ceil((nextDueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  const isOverdue = daysUntilDue < 0; // Wait, nextDueDate is strictly >= today because of the loop.
-  // Actually, let's find the current month's due date.
-  let currentDue = new Date(today.getFullYear(), today.getMonth(), config.billingDayOfMonth);
-  if (currentDue > today) {
-    currentDue.setMonth(currentDue.getMonth() - 1); // Last due date
-  }
-  const expectedPayments = Math.max(1, Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30)) + 1);
-  const totalPaid = records.filter(r => r.status === "paid").reduce((sum, r) => sum + r.amount, 0);
-  const expectedTotal = expectedPayments * config.monthlyAmount;
-
-  const handleSaveRecord = async (record: PaymentRecord, fileDataUri?: string) => {
-    await savePaymentRecord(record);
-    if (fileDataUri) {
-      await savePaymentReceipt(record.id, fileDataUri);
+  const handleSaveRecord = async (rec: PaymentRecord, file: File | null) => {
+    if (file) {
+      const reader = new FileReader();
+      const p = new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+      });
+      reader.readAsDataURL(file);
+      const dataUri = await p;
+      await savePaymentReceipt(rec.id, dataUri);
+      rec.hasReceipt = true;
     }
-    await loadData();
+    await savePaymentRecord(rec);
+    setRecords(prev => {
+      const idx = prev.findIndex(r => r.id === rec.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = rec;
+        return next;
+      }
+      return [rec, ...prev].sort((a, b) => b.dateRecorded.localeCompare(a.dateRecorded));
+    });
     setEditingRecord(null);
   };
 
-  const handleDeleteRecord = async (id: string) => {
-    if (!confirm("Delete this payment record?")) return;
-    await deletePaymentRecord(id);
-    await loadData();
-  };
-
-  const downloadStudentReceipt = (record: PaymentRecord) => {
-    const blob = generatePaymentReceipt(user?.displayName || "Tutor", config, record);
+  const downloadReceipt = (rec: PaymentRecord) => {
+    const blob = generatePaymentReceipt(tutorName, config, rec);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Receipt_${record.dateRecorded}_${record.amount}.pdf`;
-    document.body.appendChild(a);
+    a.download = `Receipt-${rec.id.slice(0,8)}.pdf`;
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  const openUploadedReceipt = async (paymentId: string) => {
-    const receipt = await getPaymentReceipt(paymentId);
-    if (receipt?.dataUri) {
-      const w = window.open();
-      if (w) {
-        w.document.write(`<iframe src="${receipt.dataUri}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-      }
-    } else {
-      alert("Receipt file not found.");
-    }
+  const handlePrintReceipt = (rec: PaymentRecord) => {
+    setViewingReceipt({ payment: rec, blobUrl: null });
   };
 
-  const filteredRecords = records.filter(r => filter === "all" || r.status === filter);
+  // Engagement calculations
+  const totalPaid = records.filter(r => r.status === "paid").reduce((sum, r) => sum + r.amount, 0);
+  const startObj = new Date(config.engagementStartDate);
+  const endObj = new Date(config.engagementEndDate);
+  const monthsDiff = (endObj.getFullYear() - startObj.getFullYear()) * 12 + (endObj.getMonth() - startObj.getMonth()) + 1;
+  const expectedTotal = config.monthlyAmount * Math.max(1, monthsDiff);
+  
+  const today = new Date();
+  let nextBillingDate = new Date(today.getFullYear(), today.getMonth(), config.billingDayOfMonth);
+  if (nextBillingDate <= today) {
+    nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+  }
+  const daysUntilDue = Math.ceil((nextBillingDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  const progressPct = Math.min(100, Math.round((totalPaid / expectedTotal) * 100)) || 0;
+
+  // Generate Chart Data
+  const chartData = [];
+  let cumulativeExpected = 0;
+  let cumulativeActual = 0;
+  let currentM = new Date(startObj);
+  while (currentM <= endObj || chartData.length < monthsDiff) {
+    cumulativeExpected += config.monthlyAmount;
+    
+    // Find payments in this month
+    const mStr = currentM.toISOString().slice(0, 7); // YYYY-MM
+    const paidThisMonth = records.filter(r => r.status === "paid" && r.dateRecorded.startsWith(mStr)).reduce((s, r) => s + r.amount, 0);
+    cumulativeActual += paidThisMonth;
+
+    chartData.push({
+      month: currentM.toLocaleString('default', { month: 'short' }),
+      Expected: cumulativeExpected,
+      Actual: cumulativeActual
+    });
+    currentM.setMonth(currentM.getMonth() + 1);
+  }
+
+  // WhatsApp Link Generation
+  const waMessage = encodeURIComponent(`Hello ${config.studentName}, this is a gentle reminder that your next CFA tutoring payment of ${config.currency} ${config.monthlyAmount.toLocaleString()} is due on ${nextBillingDate.toLocaleDateString()}. Thank you for your continued dedication!`);
+  const waLink = `https://wa.me/?text=${waMessage}`;
+
+  // Determine if Print View is active
+  if (viewingReceipt) {
+    return (
+      <ReceiptPrintView 
+        tutorName={tutorName} 
+        config={config} 
+        payment={viewingReceipt.payment} 
+        onClose={() => setViewingReceipt(null)} 
+      />
+    );
+  }
 
   return (
-    <div className="payments-hub">
-      <div className="payments-header">
+    <div className="payments-hub luxury-dashboard">
+      <header className="dashboard-header">
         <div>
-          <h2>Tutor Payments</h2>
-          <p>Track engagement income and issue receipts.</p>
+          <h2 className="gradient-text">Financial Command Center</h2>
+          <p>Real-time engagement revenue and printable invoicing.</p>
         </div>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <button className="button" onClick={() => setShowConfig(true)}>
-            Settings
+        <div className="header-actions">
+          <button className="luxury-btn icon-only outline" onClick={() => setShowConfig(true)} title="Settings">
+            <Settings size={18} />
           </button>
-          <button className="button button-primary" onClick={() => setEditingRecord({
+          <button className="luxury-btn primary" onClick={() => setEditingRecord({
             id: makeId(),
             studentUid,
             dateRecorded: todayDateOnly(),
@@ -203,93 +174,121 @@ export function PaymentsHub() {
             status: "paid",
             hasReceipt: false,
           })}>
-            <Plus size={16} /> Log Payment
+            <Plus size={16} /> Log Transaction
           </button>
         </div>
-      </div>
+      </header>
 
-      <div className="payments-metrics">
-        <div className="metric-card">
-          <span>Expected So Far</span>
-          <strong>{config.currency} {expectedTotal.toLocaleString()}</strong>
-        </div>
-        <div className="metric-card">
-          <span>Total Paid</span>
-          <strong>{config.currency} {totalPaid.toLocaleString()}</strong>
-        </div>
-        <div className="metric-card">
-          <span>Next Billing Date</span>
-          <strong>{formatDate(toDateOnly(nextDueDate), { day: "numeric", month: "short" })}</strong>
-        </div>
-      </div>
-
-      {daysUntilDue <= 3 && daysUntilDue >= 0 && (
-        <div className="payments-banner warning">
-          <CalendarDays size={18} />
-          <span>Payment due in {daysUntilDue} day{daysUntilDue === 1 ? '' : 's'}. Consider sending a WhatsApp reminder to {config.studentName}.</span>
-        </div>
-      )}
-
-      {expectedTotal > totalPaid && (
-        <div className="payments-banner danger">
-          <Clock size={18} />
-          <span>There is an overdue balance of {config.currency} {(expectedTotal - totalPaid).toLocaleString()}.</span>
-        </div>
-      )}
-
-      <div className="payments-list-section">
-        <div className="list-controls">
-          <select value={filter} onChange={e => setFilter(e.target.value as any)}>
-            <option value="all">All Payments</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
-            <option value="overdue">Overdue</option>
-          </select>
-        </div>
-
-        {filteredRecords.length === 0 ? (
-          <div className="empty-state">
-            <Banknote size={24} />
-            <strong>No payment records</strong>
-            <p>You haven't logged any payments for this filter yet.</p>
+      {/* Metrics Row */}
+      <div className="metrics-grid">
+        <div className="glass-card metric-card">
+          <div className="metric-icon teal"><CheckCircle2 size={24} /></div>
+          <div className="metric-data">
+            <span>Total Collected</span>
+            <strong className="text-teal">{config.currency} {totalPaid.toLocaleString()}</strong>
+            <small>of {expectedTotal.toLocaleString()} Expected</small>
           </div>
+          <div className="progress-ring-container">
+             <svg viewBox="0 0 36 36" className="circular-chart teal">
+                <path className="circle-bg"
+                  d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831
+                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path className="circle"
+                  strokeDasharray={`${progressPct}, 100`}
+                  d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831
+                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <text x="18" y="20.35" className="percentage">{progressPct}%</text>
+              </svg>
+          </div>
+        </div>
+
+        <div className="glass-card metric-card">
+          <div className="metric-icon gold"><Clock size={24} /></div>
+          <div className="metric-data">
+            <span>Next Payment Due</span>
+            <strong className="text-gold">{formatDate(toDateOnly(nextBillingDate), { month: 'short', day: 'numeric' })}</strong>
+            {daysUntilDue <= 3 ? (
+              <small className="alert-text">Due in {daysUntilDue} days</small>
+            ) : (
+              <small>in {daysUntilDue} days</small>
+            )}
+          </div>
+          <a href={waLink} target="_blank" rel="noreferrer" className="luxury-btn sm outline gold wa-btn">
+            <MessageCircle size={14} /> Send Reminder
+          </a>
+        </div>
+      </div>
+
+      {/* Trajectory Chart */}
+      <div className="glass-card chart-card">
+        <h3>Income Trajectory</h3>
+        <div className="chart-wrapper">
+          <ResponsiveContainer width="100%" height={250}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#00b49f" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#00b49f" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorExpected" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#eab355" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#eab355" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="month" stroke="#a9bacd" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="#a9bacd" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#13263b', border: '1px solid #3b5065', borderRadius: '8px', color: '#fff' }}
+                itemStyle={{ color: '#fff' }}
+              />
+              <Area type="monotone" dataKey="Expected" stroke="#eab355" fillOpacity={1} fill="url(#colorExpected)" />
+              <Area type="monotone" dataKey="Actual" stroke="#00b49f" fillOpacity={1} fill="url(#colorActual)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Interactive Transactions List */}
+      <div className="glass-card transactions-card">
+        <div className="transactions-header">
+          <h3>Transaction History</h3>
+          <span className="badge">{records.length} Records</span>
+        </div>
+        
+        {records.length === 0 ? (
+          <div className="empty-state">No payments logged yet.</div>
         ) : (
-          <table className="payments-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Notes</th>
-                <th className="table-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRecords.map(record => (
-                <tr key={record.id}>
-                  <td>{formatDate(record.dateRecorded, { day: "numeric", month: "short", year: "numeric" })}</td>
-                  <td>{config.currency} {record.amount.toLocaleString()}</td>
-                  <td>
-                    <span className={`status-badge status-${record.status}`}>{record.status}</span>
-                  </td>
-                  <td className="notes-col">{record.notes || "-"}</td>
-                  <td className="table-actions">
-                    {record.hasReceipt && (
-                      <button className="icon-button" onClick={() => openUploadedReceipt(record.id)} title="View uploaded transfer receipt">
-                        <FileText size={16} />
-                      </button>
-                    )}
-                    <button className="icon-button" onClick={() => downloadStudentReceipt(record)} title="Generate PDF receipt for student">
-                      <Download size={16} />
-                    </button>
-                    <button className="icon-button danger-text" onClick={() => handleDeleteRecord(record.id)} title="Delete record">
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="transactions-list">
+            {records.map(r => (
+              <div key={r.id} className="transaction-row">
+                <div className="t-icon">
+                  {r.status === 'paid' ? <CheckCircle2 className="text-teal" size={20} /> : <CircleDashed className="text-gold" size={20} />}
+                </div>
+                <div className="t-details">
+                  <h4>{config.currency} {r.amount.toLocaleString()}</h4>
+                  <small>{formatDate(r.dateRecorded, { day: 'numeric', month: 'short', year: 'numeric' })} &bull; REF-{r.id.slice(0,6).toUpperCase()}</small>
+                </div>
+                <div className="t-status">
+                  <span className={`luxury-badge ${r.status}`}>{r.status}</span>
+                </div>
+                <div className="t-actions">
+                  <button className="luxury-btn outline sm" onClick={() => handlePrintReceipt(r)} title="Print Native Receipt">
+                    <Printer size={14} /> Web Receipt
+                  </button>
+                  <button className="luxury-btn outline sm icon-only" onClick={() => downloadReceipt(r)} title="Download Legacy PDF">
+                    <Download size={14} />
+                  </button>
+                  <button className="luxury-btn outline sm icon-only" onClick={() => setEditingRecord(r)} title="Edit">
+                    <Settings size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -301,7 +300,7 @@ export function PaymentsHub() {
         />
       )}
 
-      {showConfig && config && (
+      {showConfig && (
         <ConfigModal
           config={config}
           onClose={() => setShowConfig(false)}
@@ -316,47 +315,127 @@ export function PaymentsHub() {
   );
 }
 
-function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onClose: () => void, onSave: (r: PaymentRecord, fileData?: string) => void }) {
-  const [data, setData] = useState(record);
-  const [file, setFile] = useState<File | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    setSaving(true);
-    let dataUri: string | undefined = undefined;
-    
-    if (file) {
-      if (file.size > 700000) {
-        alert("File is too large. Please upload a smaller PDF (under 700KB).");
-        setSaving(false);
-        return;
-      }
-      dataUri = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-      data.hasReceipt = true;
-    }
-    
-    await onSave(data, dataUri);
+// ==========================================
+// RECEIPT PRINT VIEW (NATIVE HTML->PDF)
+// ==========================================
+function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: string, config: PaymentConfig, payment: PaymentRecord, onClose: () => void }) {
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content payment-modal">
+    <div className="receipt-print-view">
+      <div className="receipt-controls no-print">
+        <button className="luxury-btn outline" onClick={onClose}><ChevronLeft size={16} /> Back to Dashboard</button>
+        <button className="luxury-btn primary" onClick={handlePrint}><Printer size={16} /> Save as PDF / Print</button>
+      </div>
+
+      <div className="receipt-document">
+        <div className="receipt-top-accent"></div>
+        <div className="receipt-header">
+          <div className="r-left">
+            <span className="r-project">PROJECT 202</span>
+            <h1 className="r-title">{config.studentName}'s CFA Level I</h1>
+            <h1 className="r-subtitle">Mastery System</h1>
+          </div>
+          <div className="r-right">
+            <div className="r-pill">OFFICIAL RECEIPT</div>
+          </div>
+        </div>
+
+        <p className="r-desc">
+          This document serves as an official receipt of payment for the private tutoring engagement between the stated candidate and tutor.
+        </p>
+
+        <div className="r-main-card">
+          <div className="r-mc-left">
+            <label>AMOUNT PAID</label>
+            <div className="r-amount">{config.currency} {payment.amount.toLocaleString()}</div>
+          </div>
+          <div className="r-mc-right">
+            <div className="r-status-large">{payment.status === "paid" ? "PAID IN FULL" : payment.status.toUpperCase()}</div>
+            <div className="r-meta">RECEIPT REF: RCPT-{payment.id.slice(0, 8).toUpperCase()}</div>
+            <div className="r-meta">ISSUED: {formatDate(todayDateOnly(), { day: "numeric", month: "short", year: "numeric" }).toUpperCase()}</div>
+          </div>
+        </div>
+
+        <div className="r-grid">
+          <div className="r-box">
+            <div className="r-box-val">{formatDate(payment.dateRecorded, { day: "numeric", month: "short", year: "numeric" })}</div>
+            <div className="r-box-lbl">PAYMENT DATE</div>
+          </div>
+          <div className="r-box">
+            <div className="r-box-val">
+              {formatDate(config.engagementStartDate, { month: "short", year: "numeric" }).toUpperCase()} - {formatDate(config.engagementEndDate, { month: "short", year: "numeric" }).toUpperCase()}
+            </div>
+            <div className="r-box-lbl">ENGAGEMENT TERM</div>
+          </div>
+        </div>
+
+        <div className="r-footer-details">
+          <div className="r-party">
+            <label>TUTOR</label>
+            <strong>{tutorName}, CFA</strong>
+          </div>
+          <div className="r-party">
+            <label>CANDIDATE</label>
+            <strong>{config.studentName}</strong>
+          </div>
+        </div>
+
+        <div className="r-separator"></div>
+
+        <div className="r-notes">
+          {payment.notes ? `Notes: ${payment.notes}` : "No additional notes."}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// MODALS
+// ==========================================
+
+function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onClose: () => void, onSave: (rec: PaymentRecord, file: File | null) => Promise<void> }) {
+  const [data, setData] = useState(record);
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [existingPdfUrl, setExistingPdfUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (record.hasReceipt && record.id) {
+      setLoadingPdf(true);
+      getPaymentReceipt(record.id).then(receipt => {
+        if (active && receipt?.dataUri) setExistingPdfUrl(receipt.dataUri);
+        if (active) setLoadingPdf(false);
+      });
+    }
+    return () => { active = false; };
+  }, [record]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(data, file);
+  };
+
+  return (
+    <div className="modal-overlay luxury-modal">
+      <div className="modal-content glass-card">
         <header className="modal-header">
-          <h3>Log Payment</h3>
+          <h3>{record.hasReceipt ? "Edit Transaction" : "Log Transaction"}</h3>
           <button className="icon-button" onClick={onClose} disabled={saving}><X size={18} /></button>
         </header>
-        <div className="modal-body">
+        <div className="modal-body glass-inputs">
           <label>
             <span>Date Recorded</span>
-            <input type="date" value={data.dateRecorded} onChange={e => setData({...data, dateRecorded: e.target.value})} disabled={saving} required />
+            <input type="date" value={data.dateRecorded} onChange={e => setData({...data, dateRecorded: e.target.value})} disabled={saving} />
           </label>
           <label>
             <span>Amount</span>
-            <input type="number" value={data.amount} onChange={e => setData({...data, amount: Number(e.target.value)})} disabled={saving} required />
+            <input type="number" value={data.amount} onChange={e => setData({...data, amount: Number(e.target.value)})} disabled={saving} />
           </label>
           <label>
             <span>Status</span>
@@ -368,18 +447,28 @@ function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onCl
           </label>
           <label>
             <span>Notes (Optional)</span>
-            <input type="text" value={data.notes || ""} onChange={e => setData({...data, notes: e.target.value})} disabled={saving} placeholder="e.g. Bank transfer ref #1234" />
+            <input type="text" value={data.notes || ""} onChange={e => setData({...data, notes: e.target.value})} disabled={saving} placeholder="e.g. Bank transfer reference" />
           </label>
-          <label>
-            <span>Transfer Receipt PDF (Optional)</span>
-            <input type="file" accept="application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} disabled={saving} />
-            <small>Max size: 700KB</small>
-          </label>
+          
+          <div className="receipt-upload-section">
+            <label>
+              <span>Bank Transfer Screenshot (PDF)</span>
+              <input type="file" accept="application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} disabled={saving} />
+              <small>Max size: 700KB. Leave blank to keep existing.</small>
+            </label>
+            
+            {loadingPdf && <p className="text-muted"><small>Loading existing transfer proof...</small></p>}
+            {existingPdfUrl && (
+              <div className="existing-receipt">
+                <a href={existingPdfUrl} target="_blank" rel="noreferrer" className="luxury-btn outline sm"><FileText size={14}/> View Attached Proof</a>
+              </div>
+            )}
+          </div>
         </div>
         <footer className="modal-footer">
-          <button className="button" onClick={onClose} disabled={saving}>Cancel</button>
-          <button className="button button-primary" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Payment"}
+          <button className="luxury-btn outline" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="luxury-btn primary" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Transaction"}
           </button>
         </footer>
       </div>
@@ -397,41 +486,43 @@ function ConfigModal({ config, onClose, onSave }: { config: PaymentConfig, onClo
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content payment-modal">
+    <div className="modal-overlay luxury-modal">
+      <div className="modal-content glass-card">
         <header className="modal-header">
           <h3>Payment Settings</h3>
           <button className="icon-button" onClick={onClose} disabled={saving}><X size={18} /></button>
         </header>
-        <div className="modal-body">
-          <label>
-            <span>Student Name</span>
-            <input type="text" value={data.studentName} onChange={e => setData({...data, studentName: e.target.value})} disabled={saving} />
-          </label>
-          <label>
-            <span>Currency</span>
-            <input type="text" value={data.currency} onChange={e => setData({...data, currency: e.target.value})} disabled={saving} />
-          </label>
-          <label>
-            <span>Monthly Amount</span>
-            <input type="number" value={data.monthlyAmount} onChange={e => setData({...data, monthlyAmount: Number(e.target.value)})} disabled={saving} />
-          </label>
-          <label>
-            <span>Engagement Start Date</span>
-            <input type="date" value={data.engagementStartDate} onChange={e => setData({...data, engagementStartDate: e.target.value})} disabled={saving} />
-          </label>
-          <label>
-            <span>Engagement End Date</span>
-            <input type="date" value={data.engagementEndDate} onChange={e => setData({...data, engagementEndDate: e.target.value})} disabled={saving} />
-          </label>
-          <label>
-            <span>Billing Day of Month</span>
-            <input type="number" min={1} max={31} value={data.billingDayOfMonth} onChange={e => setData({...data, billingDayOfMonth: Number(e.target.value)})} disabled={saving} />
-          </label>
+        <div className="modal-body glass-inputs">
+          <div className="input-grid">
+            <label>
+              <span>Student Name</span>
+              <input type="text" value={data.studentName} onChange={e => setData({...data, studentName: e.target.value})} disabled={saving} />
+            </label>
+            <label>
+              <span>Currency</span>
+              <input type="text" value={data.currency} onChange={e => setData({...data, currency: e.target.value})} disabled={saving} />
+            </label>
+            <label>
+              <span>Monthly Amount</span>
+              <input type="number" value={data.monthlyAmount} onChange={e => setData({...data, monthlyAmount: Number(e.target.value)})} disabled={saving} />
+            </label>
+            <label>
+              <span>Billing Day of Month</span>
+              <input type="number" min={1} max={31} value={data.billingDayOfMonth} onChange={e => setData({...data, billingDayOfMonth: Number(e.target.value)})} disabled={saving} />
+            </label>
+            <label>
+              <span>Engagement Start</span>
+              <input type="date" value={data.engagementStartDate} onChange={e => setData({...data, engagementStartDate: e.target.value})} disabled={saving} />
+            </label>
+            <label>
+              <span>Engagement End</span>
+              <input type="date" value={data.engagementEndDate} onChange={e => setData({...data, engagementEndDate: e.target.value})} disabled={saving} />
+            </label>
+          </div>
         </div>
         <footer className="modal-footer">
-          <button className="button" onClick={onClose} disabled={saving}>Cancel</button>
-          <button className="button button-primary" onClick={handleSave} disabled={saving}>
+          <button className="luxury-btn outline" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="luxury-btn primary" onClick={handleSave} disabled={saving}>
             {saving ? "Saving..." : "Save Settings"}
           </button>
         </footer>
