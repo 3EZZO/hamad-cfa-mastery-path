@@ -14,12 +14,12 @@
 .payments-header h2 {
   margin: 0 0 8px 0;
   font-size: 24px;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .payments-header p {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--muted);
 }
 
 .payments-metrics {
@@ -30,8 +30,8 @@
 }
 
 .metric-card {
-  background: var(--surface-2);
-  border: 1px solid var(--border-color);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -41,14 +41,14 @@
 
 .metric-card span {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .metric-card strong {
   font-size: 24px;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .payments-banner {
@@ -62,27 +62,27 @@
 }
 
 .payments-banner.warning {
-  background: var(--surface-gold-subtle);
-  color: var(--text-gold);
-  border: 1px solid var(--border-gold);
+  background: var(--surface);
+  color: #d97706;
+  border: 1px solid #d97706;
 }
 
 .payments-banner.danger {
-  background: var(--surface-danger-subtle);
-  color: var(--text-danger);
-  border: 1px solid var(--border-danger);
+  background: var(--surface);
+  color: #dc2626;
+  border: 1px solid #dc2626;
 }
 
 .payments-list-section {
-  background: var(--surface-1);
-  border: 1px solid var(--border-color);
+  background: var(--paper);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .list-controls {
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
 }
@@ -90,9 +90,9 @@
 .list-controls select {
   padding: 6px 12px;
   border-radius: 4px;
-  border: 1px solid var(--border-color);
-  background: var(--surface-2);
-  color: var(--text-primary);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
 }
 
 .payments-table {
@@ -104,23 +104,23 @@
 .payments-table td {
   padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
 }
 
 .payments-table th {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--surface-2);
+  color: var(--muted);
+  background: var(--surface);
 }
 
 .payments-table td {
   font-size: 14px;
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
 .notes-col {
-  color: var(--text-secondary) !important;
+  color: var(--muted) !important;
   max-width: 250px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -146,18 +146,18 @@
 }
 
 .status-paid {
-  background: var(--surface-positive-subtle);
-  color: var(--text-positive);
+  background: #16a34a22;
+  color: #16a34a;
 }
 
 .status-pending {
-  background: var(--surface-gold-subtle);
-  color: var(--text-gold);
+  background: #d9770622;
+  color: #d97706;
 }
 
 .status-overdue {
-  background: var(--surface-danger-subtle);
-  color: var(--text-danger);
+  background: #dc262622;
+  color: #dc2626;
 }
 
 /* Modal */
