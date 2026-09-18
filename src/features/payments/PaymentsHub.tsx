@@ -23,7 +23,7 @@ import {
   type PaymentRecord,
 } from "../../lib/cloudPayments";
 import { generatePaymentReceipt } from "./ReceiptGenerator";
-import { todayDateOnly, formatDate } from "../../lib/dates";
+import { todayDateOnly, formatDate, toDateOnly } from "../../lib/dates";
 import { useTrackerSync } from "../../hooks/useTrackerSync";
 import "./payments.css";
 
@@ -214,7 +214,7 @@ export function PaymentsHub() {
         </div>
         <div className="metric-card">
           <span>Next Billing Date</span>
-          <strong>{formatDate(nextDueDate.toISOString(), { day: "numeric", month: "short" })}</strong>
+          <strong>{formatDate(toDateOnly(nextDueDate), { day: "numeric", month: "short" })}</strong>
         </div>
       </div>
 
