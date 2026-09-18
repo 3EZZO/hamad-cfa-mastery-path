@@ -339,9 +339,17 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
         <button className="luxury-btn primary" onClick={handlePrint}><Printer size={16} /> Save as PDF / Print</button>
       </div>
 
-      <div className="receipt-document">
-        <div className="receipt-top-accent"></div>
-        <div className="receipt-header">
+      <div className="receipt-document" style={{ position: 'relative', overflow: 'hidden' }}>
+        <div className="receipt-watermark" style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-45deg)',
+          fontSize: '48px', fontWeight: 800, color: '#00b49f', opacity: 0.08, whiteSpace: 'nowrap',
+          pointerEvents: 'none', zIndex: 0, textAlign: 'center'
+        }}>
+          CONFIDENTIAL &bull; PREPARED EXCLUSIVELY FOR {config.studentName.toUpperCase()}
+        </div>
+        
+        <div className="receipt-top-accent" style={{ position: 'relative', zIndex: 1 }}></div>
+        <div className="receipt-header" style={{ position: 'relative', zIndex: 1 }}>
           <div className="r-left">
             <span className="r-project">HAMAD CFA MASTERY PATH</span>
             <h1 className="r-title">{config.studentName}'s CFA Level I</h1>
@@ -352,11 +360,11 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           </div>
         </div>
 
-        <p className="r-desc">
+        <p className="r-desc" style={{ position: 'relative', zIndex: 1 }}>
           This document serves as an official receipt of payment for the private tutoring engagement between the stated candidate and tutor.
         </p>
 
-        <div className="r-main-card">
+        <div className="r-main-card" style={{ position: 'relative', zIndex: 1 }}>
           <div className="r-mc-left">
             <label>AMOUNT PAID</label>
             <div className="r-amount" style={{fontSize: '32px'}}>{formatDualCurrency(payment.amount, config.currency)}</div>
@@ -368,7 +376,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           </div>
         </div>
 
-        <div className="r-grid">
+        <div className="r-grid" style={{ position: 'relative', zIndex: 1 }}>
           <div className="r-box">
             <div className="r-box-val">{formatDate(payment.dateRecorded, { day: "numeric", month: "short", year: "numeric" })}</div>
             <div className="r-box-lbl">PAYMENT DATE</div>
@@ -381,10 +389,20 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           </div>
         </div>
 
-        <div className="r-footer-details">
-          <div className="r-party">
-            <label>TUTOR</label>
-            <strong>{tutorName}, CFA</strong>
+        <div className="r-footer-details" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="r-party" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div>
+              <label>TUTOR</label>
+              <strong>{tutorName}, CFA</strong>
+            </div>
+            <div style={{ width: '48px', height: '48px', color: '#eab355', flexShrink: 0 }}>
+              <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 2 L54 10 L63 7 L65 16 L74 15 L74 24 L83 25 L80 34 L88 37 L83 45 L90 50 L83 55 L88 63 L80 66 L83 75 L74 76 L74 85 L65 84 L63 93 L54 90 L50 98 L46 90 L37 93 L35 84 L26 85 L26 76 L17 75 L20 66 L12 63 L17 55 L10 50 L17 45 L12 37 L20 34 L17 25 L26 24 L26 15 L35 16 L37 7 L46 10 Z" stroke="currentColor" strokeWidth="3" fill="#00b49f" fillOpacity="0.1" />
+                <circle cx="50" cy="50" r="34" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 2" />
+                <circle cx="50" cy="50" r="28" stroke="currentColor" strokeWidth="1" />
+                <path d="M38 50 L46 58 L62 40" stroke="#00b49f" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
           </div>
           <div className="r-party">
             <label>CANDIDATE</label>
@@ -392,13 +410,13 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           </div>
         </div>
 
-        <div className="r-separator"></div>
+        <div className="r-separator" style={{ position: 'relative', zIndex: 1 }}></div>
 
-        <div className="r-notes">
+        <div className="r-notes" style={{ position: 'relative', zIndex: 1 }}>
           {payment.notes ? `Notes: ${payment.notes}` : "No additional notes."}
         </div>
 
-        <div className="r-crypto-auth" style={{ marginTop: '40px', display: 'flex', alignItems: 'center', gap: '20px', borderTop: '1px dashed #3b5065', paddingTop: '20px' }}>
+        <div className="r-crypto-auth" style={{ position: 'relative', zIndex: 1, marginTop: '40px', display: 'flex', alignItems: 'center', gap: '20px', borderTop: '1px dashed #3b5065', paddingTop: '20px' }}>
           <div style={{ background: '#fff', padding: '10px', borderRadius: '8px', display: 'inline-block' }}>
             <QRCode 
               value={`${window.location.origin}${window.location.pathname}?verify_receipt=${payment.id.slice(0,8).toUpperCase()}`} 
