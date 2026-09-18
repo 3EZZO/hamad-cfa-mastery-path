@@ -61,6 +61,11 @@ export function BA2Plus({ onLog, startTime, tvmState, onStateChange }: BA2PlusPr
     updateDisplay(newVal, tvmState, "+/-");
   };
 
+  const handleEnter = () => {
+    updateDisplay(display, tvmState, "ENTER");
+    setInputState("READY");
+  };
+
 
 
   const handleCPT = (register: "N" | "IY" | "PV" | "PMT" | "FV") => {
