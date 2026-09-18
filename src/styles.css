@@ -5516,3 +5516,13 @@ summary:focus-visible {
   }
   .app-shell.sidebar-collapsed .nav-button { justify-content: center; padding-left: 0; padding-right: 0; }
 }
+
+@media (max-width: 699px) {
+  .metric-gauge-layout { gap: 8px; margin-top: 8px; }
+  .metric-gauge { flex: 0 0 40px; }
+  .metric-gauge svg { width: 40px; height: 40px; }
+  .metric-stats { min-width: 0; }
+  .metric-stats strong { font-size: 1.25rem; }
+  .metric-stats p { font-size: 0.6rem; overflow-wrap: break-word; word-break: break-word; }
+  .metric-card { overflow: hidden; }
+}
