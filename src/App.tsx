@@ -789,6 +789,19 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const receiptRef = params.get("verify_receipt");
+    if (receiptRef) {
+      setToast({
+        message: `✅ SECURE RECEIPT AUTHENTICATED [REF: ${receiptRef}]`,
+        tone: "success"
+      });
+      // Clean URL without reloading
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   if (!cloudConfigured) {
     return <CloudConfigurationScreen missingKeys={missingConfiguration} />;
   }
