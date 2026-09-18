@@ -1002,7 +1002,7 @@ html:root[data-theme="dark"] .practice-formulae code { border-color: #455b72; }
 .practice-calculator-wrapper {
   position: sticky;
   top: 156px;
-  max-height: calc(100vh - 170px);
+  max-height: calc(100vh - 240px);
   overflow-y: auto;
   overflow-x: hidden;
 }
