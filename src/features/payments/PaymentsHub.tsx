@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Download, Search, Settings, FileText, CheckCircle2, CircleDashed, Clock, ChevronLeft, X, Printer, MessageCircle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getPaymentConfig, savePaymentConfig, listPaymentRecords, savePaymentRecord, getPaymentReceipt, type PaymentConfig, type PaymentRecord } from "../../lib/cloudPayments";
+import { getPaymentConfig, savePaymentConfig, listPaymentRecords, savePaymentRecord, getPaymentReceipt, savePaymentReceipt, type PaymentConfig, type PaymentRecord } from "../../lib/cloudPayments";
 import { generatePaymentReceipt } from "./ReceiptGenerator";
 import { toDateOnly, todayDateOnly, formatDate } from "../../lib/dates";
 import "./payments.css";
@@ -15,7 +15,10 @@ function makeId() {
   return Math.random().toString(36).substring(2, 15);
 }
 
-export function PaymentsHub({ tutorName, studentUid }: { tutorName: string, studentUid: string }) {
+export function PaymentsHub() {
+  const tutorName = "Mohamed Ali"; // Placeholder for the 1:1 engagement
+  const studentUid = "student-001"; // Placeholder for the 1:1 engagement
+
   const [config, setConfig] = useState<PaymentConfig | null>(null);
   const [records, setRecords] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +65,17 @@ export function PaymentsHub({ tutorName, studentUid }: { tutorName: string, stud
   if (!config) return null;
 
   const handleSaveRecord = async (rec: PaymentRecord, file: File | null) => {
-    await savePaymentRecord(rec, file);
+    if (file) {
+      const reader = new FileReader();
+      const p = new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+      });
+      reader.readAsDataURL(file);
+      const dataUri = await p;
+      await savePaymentReceipt(rec.id, dataUri);
+      rec.hasReceipt = true;
+    }
+    await savePaymentRecord(rec);
     setRecords(prev => {
       const idx = prev.findIndex(r => r.id === rec.id);
       if (idx >= 0) {
@@ -395,8 +408,8 @@ function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onCl
     let active = true;
     if (record.hasReceipt && record.id) {
       setLoadingPdf(true);
-      getPaymentReceipt(record.id).then(url => {
-        if (active && url) setExistingPdfUrl(url);
+      getPaymentReceipt(record.id).then(receipt => {
+        if (active && receipt?.dataUri) setExistingPdfUrl(receipt.dataUri);
         if (active) setLoadingPdf(false);
       });
     }
