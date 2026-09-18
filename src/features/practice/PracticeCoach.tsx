@@ -537,7 +537,7 @@ export function PracticeCoach({
           )}
         </main>
           {showCalculator && (
-            <div style={{ position: 'sticky', top: '20px', maxHeight: 'calc(100vh - 40px)', overflowY: 'auto', overflowX: 'hidden' }}>
+            <div className="practice-calculator-wrapper">
               <BA2Plus 
                 onLog={(log) => setCalculatorLog(prev => [...prev, log])} 
                 startTime={answerStartedAt.current} 

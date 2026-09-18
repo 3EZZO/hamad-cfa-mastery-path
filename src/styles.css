@@ -5511,7 +5511,8 @@ summary:focus-visible {
     display: none;
   }
   .app-shell.sidebar-collapsed .main-shell {
-    padding-left: 80px;
+    margin-left: 80px;
+    padding-left: 0;
   }
   .app-shell.sidebar-collapsed .nav-button { justify-content: center; padding-left: 0; padding-right: 0; }
 }
