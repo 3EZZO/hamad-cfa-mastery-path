@@ -1108,7 +1108,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={cx("app-shell", activeTab === "practice" && "sidebar-collapsed")}>
       <a className="skip-link" href="#tracker-content">Skip to content</a>
       <aside className="sidebar">
         <div className="brand-lockup">

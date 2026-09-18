@@ -547,12 +547,19 @@ h4 { font-weight: var(--weight-h4); }
 
 .metric-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   color: var(--muted);
   font-size: 0.67rem;
   font-weight: 700;
+  line-height: 1.25;
+}
+
+.metric-top span {
+  flex: 1;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .metric-top svg {
@@ -5488,4 +5495,23 @@ summary:focus-visible {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+@media (min-width: 1024px) {
+  .app-shell.sidebar-collapsed .sidebar {
+    width: 80px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .app-shell.sidebar-collapsed .sidebar-exam,
+  .app-shell.sidebar-collapsed .nav-group-label,
+  .app-shell.sidebar-collapsed .brand-lockup > div,
+  .app-shell.sidebar-collapsed .nav-button span,
+  .app-shell.sidebar-collapsed .sidebar-local > div {
+    display: none;
+  }
+  .app-shell.sidebar-collapsed .main-shell {
+    padding-left: 80px;
+  }
+  .app-shell.sidebar-collapsed .nav-button { justify-content: center; padding-left: 0; padding-right: 0; }
 }

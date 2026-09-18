@@ -470,8 +470,8 @@ export function PracticeCoach({
             return <div key={id} className={`practice-progress-segment ${isFilled ? "is-filled" : ""}`} />;
           })}
         </div>
-        <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
-          <main className="practice-question practice-slide-in" key={currentQuestion.id} style={{ flex: 1 }}>
+        <div className="practice-player__layout">
+          <main className="practice-question practice-slide-in" key={currentQuestion.id}>
             <div className="practice-question__meta">
               <span>{currentQuestion.moduleId}</span>
               <span>Level {currentQuestion.difficulty}/5</span>
@@ -537,7 +537,7 @@ export function PracticeCoach({
           )}
         </main>
           {showCalculator && (
-            <div style={{ position: 'sticky', top: '20px' }}>
+            <div style={{ position: 'sticky', top: '20px', maxHeight: 'calc(100vh - 40px)', overflowY: 'auto', overflowX: 'hidden' }}>
               <BA2Plus 
                 onLog={(log) => setCalculatorLog(prev => [...prev, log])} 
                 startTime={answerStartedAt.current} 

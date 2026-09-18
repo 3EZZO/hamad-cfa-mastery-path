@@ -416,7 +416,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           {payment.notes ? `Notes: ${payment.notes}` : "No additional notes."}
         </div>
 
-        <div className="r-crypto-auth" style={{ position: 'relative', zIndex: 1, marginTop: '40px', display: 'flex', alignItems: 'center', gap: '20px', borderTop: '1px dashed #3b5065', paddingTop: '20px' }}>
+        <div className="r-crypto-auth" style={{ position: 'relative', zIndex: 1, marginTop: '40px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px', borderTop: '1px dashed #3b5065', paddingTop: '20px' }}>
           <div style={{ background: '#fff', padding: '10px', borderRadius: '8px', display: 'inline-block' }}>
             <QRCode 
               value={`${window.location.origin}${window.location.pathname}?verify_receipt=${payment.id.slice(0,8).toUpperCase()}`} 

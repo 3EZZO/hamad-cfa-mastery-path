@@ -649,3 +649,18 @@
   vertical-align: middle; 
 }
 
+
+@media (max-width: 699px) {
+  .dashboard-header { flex-direction: column; align-items: flex-start; }
+  .header-actions { flex-wrap: wrap; }
+  .metrics-grid { grid-template-columns: 1fr; }
+  .input-grid { grid-template-columns: 1fr; }
+  .r-grid { grid-template-columns: 1fr; }
+  .r-main-card { flex-direction: column; align-items: flex-start; gap: 20px; }
+  .r-mc-right { text-align: left; }
+  .r-amount { font-size: 36px; }
+  .r-crypto-auth, .r-party { flex-direction: column; align-items: flex-start; }
+  .receipt-document { padding: 20px; }
+  .transaction-row { flex-wrap: wrap; }
+  .t-details { flex: 1 1 100%; margin: 10px 0; }
+}

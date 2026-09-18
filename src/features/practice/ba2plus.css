@@ -2,7 +2,9 @@
   background: #1a222c;
   border-radius: 12px;
   padding: 24px;
-  width: 380px;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
   border: 1px solid #2a3b4c;
   display: flex;
@@ -111,4 +113,11 @@
 
 .ba-key.op {
   background: #4a5568;
+}
+
+@media (max-width: 400px) {
+  .ba2plus { padding: 16px; gap: 12px; }
+  .ba2-grid { gap: 6px; }
+  .ba-key { height: 36px; font-size: 11px; }
+  .ba-secondary { font-size: 7px; }
 }
