@@ -348,7 +348,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           CONFIDENTIAL &bull; PREPARED EXCLUSIVELY FOR {config.studentName.toUpperCase()}
         </div>
         
-        <div className="receipt-top-accent" style={{ position: 'relative', zIndex: 1 }}></div>
+        <div className="receipt-top-accent" style={{ zIndex: 1 }}></div>
         <div className="receipt-header" style={{ position: 'relative', zIndex: 1 }}>
           <div className="r-left">
             <span className="r-project">HAMAD CFA MASTERY PATH</span>
