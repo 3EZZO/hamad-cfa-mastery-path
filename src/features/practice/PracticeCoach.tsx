@@ -1,7 +1,9 @@
 import {
   ArrowLeft,
   ArrowRight,
+  BarChart3,
   BookOpenCheck,
+  BookX,
   BrainCircuit,
   Check,
   CheckCircle2,
@@ -17,11 +19,14 @@ import {
   Sparkles,
   Target,
   TimerReset,
+  TrendingUp,
+  UserRoundCheck,
   WifiOff,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  listActiveStudentMembers,
   listPracticeRuns,
   listPublishedPracticeBanks,
   loadPracticeAssignment,
@@ -30,10 +35,13 @@ import {
   savePracticeRun,
 } from "../../lib/cloud";
 import {
-  practiceAccuracy,
   selectPracticeQuestions,
   updatePracticeQuestionState,
 } from "../../lib/practiceEngine";
+import {
+  buildPracticeInsights,
+  type PracticeInsights,
+} from "../../lib/practiceInsights";
 import {
   cachePracticeBanks,
   cachePracticeRun,
@@ -117,6 +125,10 @@ export function PracticeCoach({
 }: PracticeCoachProps) {
   const [banks, setBanks] = useState<PublishedPracticeBank[]>([]);
   const [states, setStates] = useState<Record<string, PracticeQuestionState>>({});
+  const [runs, setRuns] = useState<PracticeRun[]>([]);
+  const [practiceOwnerUid, setPracticeOwnerUid] = useState<string | null>(
+    role === "student" ? uid : null
+  );
   const [activeRun, setActiveRun] = useState<PracticeRun | null>(null);
   const [lastCompletedRun, setLastCompletedRun] = useState<PracticeRun | null>(null);
   const [view, setView] = useState<CoachView>("hub");
@@ -142,7 +154,11 @@ export function PracticeCoach({
     () => [...new Set(questions.map(question => question.moduleId))],
     [questions]
   );
-  const dueCount = Object.values(states).filter(state => Date.parse(state.dueAt) <= Date.now()).length;
+  const insights = useMemo(
+    () => buildPracticeInsights({ questions, states, runs }),
+    [questions, runs, states]
+  );
+  const dueCount = insights.dueQuestions;
   const currentQuestions = useMemo(
     () => runQuestions(activeRun, questionsById),
     [activeRun, questionsById]
@@ -177,12 +193,40 @@ export function PracticeCoach({
     for (const write of pending) await writeCloud(write.kind, write.value);
   }, [uid, writeCloud]);
 
+  const rememberRun = useCallback((run: PracticeRun) => {
+    setRuns(current => [run, ...current.filter(item => item.id !== run.id)]);
+  }, []);
+
   useEffect(() => {
     let active = true;
     const load = async () => {
+      let ownerUid = uid;
+      if (role === "tutor") {
+        try {
+          const students = await listActiveStudentMembers();
+          ownerUid = students[0]?.uid ?? "";
+          if (!ownerUid) {
+            if (active) {
+              setPracticeOwnerUid(null);
+              setMessage("No active student membership is available for Practice reporting.");
+              setSync("error");
+            }
+            return;
+          }
+        } catch {
+          if (active) {
+            setPracticeOwnerUid(null);
+            setMessage("Hamad's Practice record could not be opened. Confirm that the latest Firestore rules are deployed.");
+            setSync("error");
+          }
+          return;
+        }
+      }
+      if (!active) return;
+      setPracticeOwnerUid(ownerUid);
       const [cachedBanks, cachedStates, cachedRuns] = await Promise.all([
         loadCachedPracticeBanks(),
-        loadCachedPracticeStates(uid),
+        loadCachedPracticeStates(ownerUid),
         loadCachedPracticeRuns(),
       ]);
       if (!active) return;
@@ -190,16 +234,18 @@ export function PracticeCoach({
       if (cachedStates.length) {
         setStates(Object.fromEntries(cachedStates.map(state => [state.questionId, state])));
       }
+      const ownerCachedRuns = cachedRuns.filter(run => run.uid === ownerUid);
+      setRuns(ownerCachedRuns);
       const cachedActive = cachedRuns
-        .filter(run => run.uid === uid && run.status === "active")
+        .filter(run => run.uid === ownerUid && run.status === "active")
         .sort((a, b) => b.updatedAtClient.localeCompare(a.updatedAtClient))[0];
-      if (cachedActive) setActiveRun(cachedActive);
+      if (role === "student" && cachedActive) setActiveRun(cachedActive);
       try {
         const [cloudBanks, assignment, cloudStates, cloudRuns] = await Promise.all([
           listPublishedPracticeBanks(),
           loadPracticeAssignment(),
-          loadPracticeQuestionStates(uid),
-          listPracticeRuns(uid),
+          loadPracticeQuestionStates(ownerUid),
+          listPracticeRuns(ownerUid),
         ]);
         if (!active) return;
         const assigned = role === "tutor"
@@ -207,20 +253,23 @@ export function PracticeCoach({
           : cloudBanks.filter(bank => assignment?.bankStorageIds.includes(bank.storageId));
         setBanks(assigned);
         setStates(Object.fromEntries(cloudStates.map(state => [state.questionId, state])));
+        setRuns(cloudRuns);
         const cloudActive = cloudRuns.find(run => run.status === "active");
-        if (cloudActive) setActiveRun(cloudActive);
+        if (role === "student" && cloudActive) setActiveRun(cloudActive);
         await cachePracticeBanks(assigned);
-        await Promise.all(cloudStates.map(state => cachePracticeState(uid, state)));
+        await Promise.all(cloudStates.map(state => cachePracticeState(ownerUid, state)));
         await Promise.all(cloudRuns.map(cachePracticeRun));
         setSync("synced");
-        void flushPending();
+        if (role === "student") void flushPending();
       } catch {
         if (!active) return;
         setSync(cachedBanks.length ? "offline" : "error");
       }
     };
     void load();
-    const online = () => void flushPending();
+    const online = () => {
+      if (role === "student") void flushPending();
+    };
     window.addEventListener("online", online);
     return () => {
       active = false;
@@ -269,6 +318,7 @@ export function PracticeCoach({
       completedAtClient: null,
     };
     setActiveRun(run);
+    rememberRun(run);
     setMessage("");
     setView("run");
     await cachePracticeRun(run);
@@ -303,6 +353,7 @@ export function PracticeCoach({
     };
     setStates(current => ({ ...current, [currentQuestion.id]: nextState }));
     setActiveRun(nextRun);
+    rememberRun(nextRun);
     setSubmitted(true);
     await Promise.all([
       cachePracticeState(uid, nextState),
@@ -324,6 +375,7 @@ export function PracticeCoach({
     };
     setActiveRun(null);
     setLastCompletedRun(complete);
+    rememberRun(complete);
     setView("results");
     await cachePracticeRun(complete);
     void writeCloud("run", complete);
@@ -358,6 +410,7 @@ export function PracticeCoach({
       updatedAtClient: new Date().toISOString(),
     };
     setActiveRun(nextRun);
+    rememberRun(nextRun);
     setSubmitted(false);
     setSelectedOption(null);
     await cachePracticeRun(nextRun);
@@ -380,9 +433,7 @@ export function PracticeCoach({
 
   const completedAnswers = lastCompletedRun?.answers ?? [];
   const resultCorrect = completedAnswers.filter(answer => answer.correct).length;
-  const globalAccuracy = practiceAccuracy(Object.values(states));
-
-  if (view === "run" && activeRun && currentQuestion) {
+  if (role === "student" && view === "run" && activeRun && currentQuestion) {
     const progress = ((activeRun.currentIndex + (submitted ? 1 : 0)) / activeRun.questionIds.length) * 100;
     const correct = selectedOption === currentQuestion.correctOption;
     return (
@@ -480,7 +531,7 @@ export function PracticeCoach({
     );
   }
 
-  if (view === "results" && lastCompletedRun) {
+  if (role === "student" && view === "results" && lastCompletedRun) {
     const percentage = completedAnswers.length ? Math.round((resultCorrect / completedAnswers.length) * 100) : 0;
     const repair = completedAnswers.filter(answer => !answer.correct || answer.confidence <= 2).length;
     return (
@@ -509,14 +560,16 @@ export function PracticeCoach({
     <div className="practice-coach">
       <section className="practice-hero">
         <div>
-          <p>Independent practice</p>
-          <h2>What should you strengthen now?</h2>
-          <span>The queue balances overdue concepts, mistakes, confidence, and response time.</span>
+          <p>{role === "tutor" ? "Student performance" : "Independent practice"}</p>
+          <h2>{role === "tutor" ? "Hamad's practice evidence" : "What should you strengthen now?"}</h2>
+          <span>{role === "tutor"
+            ? "A read-only view of Hamad's attempts, accuracy, confidence gaps, module health, and questions requiring review."
+            : "The queue balances overdue concepts, mistakes, confidence, and response time."}</span>
         </div>
         <PracticeSync state={sync} />
       </section>
 
-      {activeRun && (
+      {role === "student" && activeRun && (
         <button className="practice-resume" type="button" onClick={resume}>
           <span><Play size={20} /></span>
           <div><small>Continue where you stopped</small><strong>{modeLabel(activeRun.mode)} · question {activeRun.currentIndex + 1} of {activeRun.questionIds.length}</strong></div>
@@ -528,13 +581,9 @@ export function PracticeCoach({
 
       {banks.length ? (
         <>
-          <section className="practice-snapshot" aria-label="Practice snapshot">
-            <article><BrainCircuit /><div><strong>{questions.length}</strong><span>available questions</span></div></article>
-            <article><TimerReset /><div><strong>{dueCount}</strong><span>reviews due</span></div></article>
-            <article><Target /><div><strong>{globalAccuracy === null ? "—" : `${globalAccuracy}%`}</strong><span>lifetime accuracy</span></div></article>
-          </section>
+          <PracticePerformance role={role} insights={insights} />
 
-          <section className="practice-actions" aria-label="Start practice">
+          {role === "student" && <section className="practice-actions" aria-label="Start practice">
             <button className="practice-action is-primary" type="button" onClick={() => void begin("quick", 5)}>
               <span><Sparkles /></span><div><small>Recommended now</small><strong>Quick 5</strong><p>Five adaptive questions for a focused mobile study break.</p></div><ArrowRight />
             </button>
@@ -547,9 +596,9 @@ export function PracticeCoach({
             <button className="practice-action" type="button" onClick={() => void begin("exam", 20)}>
               <span><Clock3 /></span><div><small>Feedback at the end</small><strong>Exam Drill</strong><p>Timed practice without immediate answer disclosure.</p></div><ArrowRight />
             </button>
-          </section>
+          </section>}
 
-          <section className="practice-modules">
+          {role === "student" && <section className="practice-modules">
             <button type="button" className="practice-modules__heading" onClick={() => setModulePickerOpen(value => !value)} aria-expanded={modulePickerOpen}>
               <div><span>Choose a module</span><strong>Focused module practice</strong></div><ChevronDown />
             </button>
@@ -558,11 +607,11 @@ export function PracticeCoach({
               const attempted = moduleQuestions.filter(question => states[question.id]).length;
               return <button type="button" key={moduleId} onClick={() => void begin("module", 10, moduleId)}><div><strong>{moduleId}</strong><span>{moduleQuestions.length} questions · {attempted} attempted</span></div><ArrowRight /></button>;
             })}</div>}
-          </section>
+          </section>}
         </>
       ) : (
         <section className="practice-empty">
-          {sync === "loading" ? <><span className="practice-loading" /><h2>Preparing Practice Coach</h2><p>Loading assigned modules and your latest review schedule.</p></> : <><BookOpenCheck /><h2>No practice module is assigned yet</h2><p>Mohamed will publish and unlock an independent question bank here. Your existing manual Practice Log remains available below.</p></>}
+          {sync === "loading" ? <><span className="practice-loading" /><h2>Preparing Practice Coach</h2><p>Loading assigned modules and the latest review schedule.</p></> : role === "tutor" && !practiceOwnerUid ? <><UserRoundCheck /><h2>Student record unavailable</h2><p>Deploy the updated Firestore rules and confirm that Hamad has one active student membership.</p></> : <><BookOpenCheck /><h2>No practice module is assigned yet</h2><p>Publish and unlock an independent question bank here. The existing manual Practice Log remains available below.</p></>}
         </section>
       )}
 
@@ -571,6 +620,133 @@ export function PracticeCoach({
         <div>{manualLog}</div>
       </details>
     </div>
+  );
+}
+
+function formatPracticeDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function PracticePerformance({
+  role,
+  insights,
+}: {
+  role: ProjectRole;
+  insights: PracticeInsights;
+}) {
+  const [showAllMisses, setShowAllMisses] = useState(false);
+  const visibleMisses = showAllMisses
+    ? insights.missedQuestions
+    : insights.missedQuestions.slice(0, 4);
+  const attemptedCoverage = insights.availableQuestions
+    ? Math.round((insights.practicedQuestions / insights.availableQuestions) * 100)
+    : 0;
+
+  if (!insights.totalAttempts) {
+    return (
+      <section className="practice-performance practice-performance--empty">
+        <BarChart3 />
+        <div>
+          <h3>{role === "tutor" ? "No student attempts yet" : "Your performance record starts here"}</h3>
+          <p>{role === "tutor"
+            ? "Hamad's accuracy, weak modules, and missed-question review will appear after his first submitted answers."
+            : "Complete the first set to unlock accuracy, module health, and a private review of missed questions."}</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="practice-performance" aria-label="Practice performance and review">
+      <header className="practice-performance__header">
+        <div>
+          <span>{role === "tutor" ? "Live student evidence" : "Your evidence"}</span>
+          <h3>Performance and review</h3>
+          <p>{role === "tutor"
+            ? "Use the weak-module ranking and confidence gaps to choose the next coaching intervention."
+            : "Understand the pattern behind mistakes before starting the next set."}</p>
+        </div>
+        <div className="practice-performance__accuracy" aria-label={`${insights.accuracy ?? 0}% lifetime accuracy`}>
+          <strong>{insights.accuracy ?? 0}%</strong>
+          <span>lifetime accuracy</span>
+        </div>
+      </header>
+
+      <div className="practice-performance__metrics">
+        <article><BookOpenCheck /><strong>{insights.totalAttempts}</strong><span>answers submitted</span></article>
+        <article><TrendingUp /><strong>{insights.recentAccuracy === null ? "—" : `${insights.recentAccuracy}%`}</strong><span>last 7 days · {insights.recentAttempts} answers</span></article>
+        <article><TimerReset /><strong>{insights.dueQuestions}</strong><span>questions due now</span></article>
+        <article><CircleAlert /><strong>{insights.confidenceGaps}</strong><span>confidence gaps</span></article>
+      </div>
+
+      <div className="practice-performance__coverage">
+        <div><strong>Question coverage</strong><span>{insights.practicedQuestions} of {insights.availableQuestions} seen · {insights.masteredQuestions} stable{insights.averageResponseSeconds === null ? "" : ` · ${insights.averageResponseSeconds}s average response`}</span></div>
+        <div className="practice-performance__bar" role="progressbar" aria-label="Question coverage" aria-valuemin={0} aria-valuemax={100} aria-valuenow={attemptedCoverage}><span style={{ width: `${attemptedCoverage}%` }} /></div>
+      </div>
+
+      <div className="practice-performance__grid">
+        <section className="practice-module-health">
+          <header><div><span>Priority order</span><h4>Module health</h4></div><BrainCircuit /></header>
+          <div className="practice-module-health__list">
+            {insights.modules.map(module => (
+              <article key={module.moduleId}>
+                <div className="practice-module-health__title"><strong>{module.moduleId}</strong><span>{module.attempted ? `${module.attempted} attempts` : "Not started"}</span></div>
+                <div className="practice-module-health__score"><strong>{module.accuracy === null ? "—" : `${module.accuracy}%`}</strong><span>{module.due} due · {module.lapses} lapses</span></div>
+                <div className="practice-performance__bar"><span style={{ width: `${module.accuracy ?? 0}%` }} /></div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="practice-recent-sets">
+          <header><div><span>Latest evidence</span><h4>Recent sets</h4></div><BarChart3 /></header>
+          {insights.recentRuns.length ? (
+            <div>
+              {insights.recentRuns.slice(0, 6).map(run => (
+                <article key={run.id}>
+                  <div><strong>{modeLabel(run.mode)}</strong><span>{formatPracticeDate(run.completedAt)}</span></div>
+                  <div><strong>{run.accuracy}%</strong><span>{run.correct}/{run.attempted} · confidence {run.averageConfidence}/5</span></div>
+                </article>
+              ))}
+            </div>
+          ) : <p className="practice-performance__quiet">No completed sets yet. Submitted answers are still included in the totals.</p>}
+        </section>
+      </div>
+
+      <section className="practice-mistake-review">
+        <header>
+          <div><span>Review ledger</span><h4>Questions answered incorrectly</h4><p>{insights.missedQuestions.length} unique {insights.missedQuestions.length === 1 ? "question" : "questions"} retained with the chosen answer and correction.</p></div>
+          <BookX />
+        </header>
+        {visibleMisses.length ? (
+          <div className="practice-mistake-review__list">
+            {visibleMisses.map(miss => (
+              <details key={miss.question.id}>
+                <summary>
+                  <div><span>{miss.question.moduleId} · {formatPracticeDate(miss.answeredAt)}</span><strong>{miss.question.prompt}</strong></div>
+                  <div className="practice-mistake-review__status"><span className={miss.recovered ? "is-recovered" : "is-due"}>{miss.recovered ? "Recovered" : "Review due"}</span><small>{miss.missCount > 1 ? `${miss.missCount} misses` : `confidence ${miss.confidence}/5`}</small></div>
+                  <ChevronDown />
+                </summary>
+                <div className="practice-mistake-review__detail">
+                  <div className="practice-mistake-review__answers"><p><span>Answer chosen</span><strong>{String.fromCharCode(65 + miss.selectedOption)}. {miss.question.options[miss.selectedOption]}</strong></p><p><span>Correct answer</span><strong>{String.fromCharCode(65 + miss.question.correctOption)}. {miss.question.options[miss.question.correctOption]}</strong></p></div>
+                  <p>{miss.question.explanation}</p>
+                  {miss.question.formulae.length > 0 && <div className="practice-formulae">{miss.question.formulae.map(formula => <code className="financial-expression" key={formula}>{formula}</code>)}</div>}
+                  {miss.question.working.length > 0 && <ol className="practice-working financial-working">{miss.question.working.map(step => <li key={step}>{step}</li>)}</ol>}
+                  <aside><ShieldCheck size={17} /><p><strong>Exam trap</strong>{miss.question.examTrap}</p></aside>
+                </div>
+              </details>
+            ))}
+            {insights.missedQuestions.length > 4 && <button className="practice-mistake-review__more" type="button" onClick={() => setShowAllMisses(value => !value)}>{showAllMisses ? "Show recent four" : `Show all ${insights.missedQuestions.length} questions`}</button>}
+          </div>
+        ) : <p className="practice-performance__quiet">No incorrect answers are recorded. Low-confidence correct answers still remain in the adaptive queue.</p>}
+      </section>
+    </section>
   );
 }
 

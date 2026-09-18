@@ -13,6 +13,16 @@ function blockBetween(start: string, end: string): string {
 }
 
 describe("private tutor Firestore rule boundary", () => {
+  it("lets only the active tutor resolve the student practice owner", () => {
+    const members = blockBetween(
+      "match /programs/project-202/members/{uid}",
+      "match /programs/project-202/tracker/current"
+    );
+    expect(members).toContain("allow get: if signedIn() && request.auth.uid == uid");
+    expect(members).toContain("allow list: if activeProject202Role('tutor')");
+    expect(members).toContain("allow create, update, delete: if false");
+  });
+
   it("accepts the September migration without permitting a schema downgrade or student schedule change", () => {
     expect(rules).toContain("scheduleVersion in ['weekly-saturday-v2', 'weekly-saturday-v3', 'weekly-saturday-v4']");
     expect(rules).toContain("resource.data.state.scheduleVersion != 'weekly-saturday-v4'");

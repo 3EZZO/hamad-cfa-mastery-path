@@ -209,10 +209,13 @@ service cloud.firestore {
 
     // Membership is provisioned only by the project owner in the Firebase
     // console or another trusted admin environment. A client may read its own
-    // record to display its role, but cannot list or change the allowlist.
+    // record; only the tutor may list records to resolve the student report.
     match /programs/project-202/members/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;
-      allow list: if false;
+      // The tutor may resolve the active student UID in order to open the
+      // student's read-only Practice performance record. Students still
+      // cannot enumerate the membership allowlist.
+      allow list: if activeProject202Role('tutor');
       allow create, update, delete: if false;
     }
 

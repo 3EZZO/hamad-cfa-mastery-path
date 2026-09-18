@@ -47,7 +47,7 @@ If Email/Password is used, choose long, unique passwords and store them in a pas
      - `active`: Boolean `true`
      - `role`: String `student`
 
-The client reads only its own membership record so the interface can apply the correct role. It cannot create, list, edit, or delete membership documents. To revoke access, change that member's `active` field to `false` in the Firebase console and disable the Authentication account.
+The client reads its own membership record so the interface can apply the correct role. The active tutor may also list membership records solely to resolve the active student whose read-only Practice performance should be displayed; student accounts cannot enumerate the allowlist. No client can create, edit, or delete membership documents. To revoke access, change that member's `active` field to `false` in the Firebase console and disable the Authentication account.
 
 The synchronized tracker document is `programs/project-202/tracker/current`. The tutor account creates it through the first cloud save, confirmed import, or pre-launch reset. The student account cannot initialize or administratively replace the shared document.
 
