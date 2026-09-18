@@ -38,6 +38,7 @@ import {
   selectPracticeQuestions,
   updatePracticeQuestionState,
 } from "../../lib/practiceEngine";
+import { BA2Plus } from "./BA2Plus";
 import {
   buildPracticeInsights,
   type PracticeInsights,
@@ -138,6 +139,8 @@ export function PracticeCoach({
   const [confidence, setConfidence] = useState(3);
   const [submitted, setSubmitted] = useState(false);
   const [modulePickerOpen, setModulePickerOpen] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [calculatorLog, setCalculatorLog] = useState<any[]>([]);
   const answerStartedAt = useRef(Date.now());
 
   const questions = useMemo(() => banks.flatMap(bank => bank.questions), [banks]);
@@ -337,6 +340,7 @@ export function PracticeCoach({
       confidence,
       responseMs,
       answeredAt: timestamp,
+      calculatorLog,
     };
     const nextState = updatePracticeQuestionState({
       previous: states[currentQuestion.id],
@@ -413,6 +417,10 @@ export function PracticeCoach({
     rememberRun(nextRun);
     setSubmitted(false);
     setSelectedOption(null);
+    setConfidence(3);
+    setCalculatorLog([]);
+    setShowCalculator(false);
+    answerStartedAt.current = Date.now();
     await cachePracticeRun(nextRun);
     void writeCloud("run", nextRun);
   };
@@ -443,6 +451,14 @@ export function PracticeCoach({
           <div>
             <span>{modeLabel(activeRun.mode)}</span>
           </div>
+          <button 
+            type="button" 
+            className="luxury-btn outline" 
+            style={{ marginLeft: 'auto', marginRight: '10px', fontSize: '11px', padding: '4px 12px' }}
+            onClick={() => setShowCalculator(!showCalculator)}
+          >
+            BA II PLUS
+          </button>
           <PracticeSync state={sync} />
         </header>
         <div className="practice-progress-segments" role="progressbar" aria-label="Practice-set progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
@@ -451,13 +467,14 @@ export function PracticeCoach({
             return <div key={id} className={`practice-progress-segment ${isFilled ? "is-filled" : ""}`} />;
           })}
         </div>
-        <main className="practice-question practice-slide-in" key={currentQuestion.id}>
-          <div className="practice-question__meta">
-            <span>{currentQuestion.moduleId}</span>
-            <span>Level {currentQuestion.difficulty}/5</span>
-            <span><Clock3 size={14} /> {Math.ceil(currentQuestion.estimatedSeconds / 60)} min</span>
-          </div>
-          <h2>{currentQuestion.prompt}</h2>
+        <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
+          <main className="practice-question practice-slide-in" key={currentQuestion.id} style={{ flex: 1 }}>
+            <div className="practice-question__meta">
+              <span>{currentQuestion.moduleId}</span>
+              <span>Level {currentQuestion.difficulty}/5</span>
+              <span><Clock3 size={14} /> {Math.ceil(currentQuestion.estimatedSeconds / 60)} min</span>
+            </div>
+            <h2>{currentQuestion.prompt}</h2>
           <div className="practice-options" role="radiogroup" aria-label="Answer choices">
             {currentQuestion.options.map((option, index) => {
               const optionIndex = index as 0 | 1 | 2;
@@ -516,6 +533,15 @@ export function PracticeCoach({
             </section>
           )}
         </main>
+          {showCalculator && (
+            <div style={{ position: 'sticky', top: '20px' }}>
+              <BA2Plus 
+                onLog={(log) => setCalculatorLog(prev => [...prev, log])} 
+                startTime={answerStartedAt.current} 
+              />
+            </div>
+          )}
+        </div>
         <footer className="practice-player__dock">
           {!submitted ? (
             <button type="button" disabled={selectedOption === null} onClick={() => void submitAnswer()}>

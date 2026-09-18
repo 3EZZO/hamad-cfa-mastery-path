@@ -67,6 +67,7 @@ export interface PracticeAnswerRecord {
   confidence: number;
   responseMs: number;
   answeredAt: string;
+  calculatorLog?: any[];
 }
 
 export type PracticeRunMode = "quick" | "module" | "exam" | "repair" | "mixed";

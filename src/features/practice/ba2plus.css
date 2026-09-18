@@ -1,0 +1,114 @@
+.ba2plus {
+  background: #1a222c;
+  border-radius: 12px;
+  padding: 24px;
+  width: 380px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
+  border: 1px solid #2a3b4c;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+}
+
+.ba2-brand {
+  color: #a0aec0;
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 600;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.ba2-screen {
+  background: #c3cfd9;
+  border-radius: 6px;
+  padding: 12px;
+  border: 4px solid #0f161c;
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  min-height: 80px;
+  justify-content: space-between;
+}
+
+.ba2-annunciators {
+  display: flex;
+  gap: 12px;
+  height: 14px;
+}
+
+.ba2-annunciators span {
+  font-size: 10px;
+  font-weight: 800;
+  color: #1a222c;
+  letter-spacing: 0.5px;
+}
+
+.ba2-digits {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 36px;
+  font-weight: 600;
+  color: #000;
+  text-align: right;
+  letter-spacing: -1px;
+}
+
+.ba2-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px 8px;
+}
+
+.ba-key-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ba-secondary {
+  font-size: 9px;
+  color: #eab355;
+  font-weight: 600;
+  text-align: center;
+  height: 12px;
+}
+
+.ba-key {
+  width: 100%;
+  height: 40px;
+  border-radius: 4px;
+  border: none;
+  background: #2a3b4c;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.1s;
+  box-shadow: 0 4px 0 #0f161c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ba-key:active, .ba-key.active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #0f161c;
+}
+
+.ba-key.tvm {
+  background: #3b5065;
+  color: #fff;
+}
+
+.ba-key.num {
+  background: #e2e8f0;
+  color: #1a222c;
+  font-size: 16px;
+}
+
+.ba-key.op {
+  background: #4a5568;
+}
