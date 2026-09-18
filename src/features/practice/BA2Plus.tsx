@@ -61,6 +61,11 @@ export function BA2Plus({ onLog, startTime, tvmState, onStateChange }: BA2PlusPr
     updateDisplay(newVal, tvmState, "+/-");
   };
 
+  const handleEnter = () => {
+    updateDisplay(display, tvmState, "ENTER");
+    setInputState("READY");
+  };
+
 
 
   const handleCPT = (register: "N" | "IY" | "PV" | "PMT" | "FV") => {
@@ -147,45 +152,59 @@ export function BA2Plus({ onLog, startTime, tvmState, onStateChange }: BA2PlusPr
         <div className="ba2-digits">{display}</div>
       </div>
       <div className="ba2-grid">
-        <button className={`ba-key ${is2nd ? 'active' : ''}`} onClick={handle2nd} style={{background: '#eab355', color: '#1a222c'}}>2ND</button>
-        <button className={`ba-key ${isCpt ? 'active' : ''}`} onClick={handleCPTMode}>CPT</button>
-        <button className="ba-key">ENTER</button>
-        <button className="ba-key" onClick={handleClear}>CE/C</button>
-        <button className="ba-key num" onClick={handleSign}>+/-</button>
+        <div className="ba-key-group"><span className="ba-secondary">QUIT</span><button className={`ba-key ${isCpt ? 'active' : ''}`} onClick={handleCPTMode}>CPT</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">SET</span><button className="ba-key" onClick={handleEnter}>ENTER</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">DEL</span><button className="ba-key">↑</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">INS</span><button className="ba-key">↓</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key">ON/OFF</button></div>
 
-        <div className="ba-key-group">
-          <span className="ba-secondary">xP/Y</span>
-          <button className="ba-key tvm" onClick={() => handleTVM("N")}>N</button>
-        </div>
-        <div className="ba-key-group">
-          <span className="ba-secondary">P/Y</span>
-          <button className="ba-key tvm" onClick={() => handleTVM("IY")}>I/Y</button>
-        </div>
-        <div className="ba-key-group">
-          <span className="ba-secondary">AMORT</span>
-          <button className="ba-key tvm" onClick={() => handleTVM("PV")}>PV</button>
-        </div>
-        <div className="ba-key-group">
-          <span className="ba-secondary">BGN</span>
-          <button className="ba-key tvm" onClick={() => is2nd ? handleBGN() : handleTVM("PMT")}>PMT</button>
-        </div>
-        <div className="ba-key-group">
-          <span className="ba-secondary">CLR TVM</span>
-          <button className="ba-key tvm" onClick={() => is2nd ? handleClrTVM() : handleTVM("FV")}>FV</button>
-        </div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className={`ba-key ${is2nd ? 'active' : ''}`} onClick={handle2nd} style={{background: '#eab355', color: '#1a222c'}}>2ND</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key">CF</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key">NPV</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key">IRR</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">CLR WORK</span><button className="ba-key" onClick={handleClear}>CE/C</button></div>
 
-        {/* Numpad Block */}
-        <button className="ba-key num" onClick={() => handleNum("7")}>7</button>
-        <button className="ba-key num" onClick={() => handleNum("8")}>8</button>
-        <button className="ba-key num" onClick={() => handleNum("9")}>9</button>
-        <button className="ba-key num" onClick={() => handleNum("4")}>4</button>
-        <button className="ba-key num" onClick={() => handleNum("5")}>5</button>
-        <button className="ba-key num" onClick={() => handleNum("6")}>6</button>
-        <button className="ba-key num" onClick={() => handleNum("1")}>1</button>
-        <button className="ba-key num" onClick={() => handleNum("2")}>2</button>
-        <button className="ba-key num" onClick={() => handleNum("3")}>3</button>
-        <button className="ba-key num" onClick={() => handleNum("0")} style={{gridColumn: "span 2"}}>0</button>
-        <button className="ba-key num" onClick={() => handleNum(".")}>.</button>
+        <div className="ba-key-group"><span className="ba-secondary">xP/Y</span><button className="ba-key tvm" onClick={() => handleTVM("N")}>N</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">P/Y</span><button className="ba-key tvm" onClick={() => handleTVM("IY")}>I/Y</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">AMORT</span><button className="ba-key tvm" onClick={() => handleTVM("PV")}>PV</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">BGN</span><button className="ba-key tvm" onClick={() => is2nd ? handleBGN() : handleTVM("PMT")}>PMT</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">CLR TVM</span><button className="ba-key tvm" onClick={() => is2nd ? handleClrTVM() : handleTVM("FV")}>FV</button></div>
+
+        <div className="ba-key-group"><span className="ba-secondary">K</span><button className="ba-key">%</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">SIN</span><button className="ba-key">√x</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">COS</span><button className="ba-key">x²</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">TAN</span><button className="ba-key">1/x</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">π</span><button className="ba-key op">÷</button></div>
+
+        <div className="ba-key-group"><span className="ba-secondary">HYP</span><button className="ba-key">INV</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key">(</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key">)</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key">y^x</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key op">×</button></div>
+
+        <div className="ba-key-group"><span className="ba-secondary">STAT</span><button className="ba-key">LN</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">DATA</span><button className="ba-key num" onClick={() => handleNum("7")}>7</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key num" onClick={() => handleNum("8")}>8</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key num" onClick={() => handleNum("9")}>9</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key op">-</button></div>
+
+        <div className="ba-key-group"><span className="ba-secondary">BOND</span><button className="ba-key">STO</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">DEPR</span><button className="ba-key num" onClick={() => handleNum("4")}>4</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key num" onClick={() => handleNum("5")}>5</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key num" onClick={() => handleNum("6")}>6</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key op">+</button></div>
+
+        <div className="ba-key-group"><span className="ba-secondary">nPr</span><button className="ba-key">RCL</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">nCr</span><button className="ba-key num" onClick={() => handleNum("1")}>1</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key num" onClick={() => handleNum("2")}>2</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key num" onClick={() => handleNum("3")}>3</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key op">=</button></div>
+
+        <div className="ba-key-group"><span className="ba-secondary">FORMAT</span><button className="ba-key">RESET</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key num" onClick={() => handleNum("0")}>0</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key num" onClick={() => handleNum(".")}>.</button></div>
+        <div className="ba-key-group"><span className="ba-secondary">ANS</span><button className="ba-key num" onClick={handleSign}>+/-</button></div>
+        <div className="ba-key-group"><span className="ba-secondary"></span><button className="ba-key op" onClick={handleEnter}>ENTER</button></div>
       </div>
     </div>
   );
