@@ -292,6 +292,14 @@ function getFirebaseServices(): FirebaseServices {
   return cachedServices;
 }
 
+export function getCloudFirestore(): Firestore {
+  return getFirebaseServices().firestore;
+}
+
+export function getCloudAuth(): Auth {
+  return getFirebaseServices().auth;
+}
+
 function toCloudUser(user: User): CloudUser {
   return {
     uid: user.uid,
