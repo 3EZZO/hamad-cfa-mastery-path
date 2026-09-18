@@ -586,6 +586,21 @@ export function observeCurrentProjectMember(
   );
 }
 
+export async function listActiveStudentMembers(): Promise<ProjectMember[]> {
+  try {
+    const { auth, firestore } = getFirebaseServices();
+    requireAuthenticatedUser(auth);
+    const snapshot = await getDocs(
+      collection(firestore, "programs", PROGRAM_ID, "members")
+    );
+    return snapshot.docs
+      .map(item => parseProjectMember(item.id, item.data()))
+      .filter(member => member.active && member.role === "student");
+  } catch (error) {
+    throw mapCloudError(error);
+  }
+}
+
 function createEnvelope(
   state: TrackerState,
   revision: number,
