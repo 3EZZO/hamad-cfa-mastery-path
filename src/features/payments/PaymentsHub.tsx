@@ -401,7 +401,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
         <div className="r-crypto-auth" style={{ marginTop: '40px', display: 'flex', alignItems: 'center', gap: '20px', borderTop: '1px dashed #3b5065', paddingTop: '20px' }}>
           <div style={{ background: '#fff', padding: '10px', borderRadius: '8px', display: 'inline-block' }}>
             <QRCode 
-              value={`AUTH: HAMAD-CFA-${payment.id.toUpperCase()} | ${payment.dateRecorded} | ${config.currency} ${payment.amount}`} 
+              value={`${window.location.origin}${window.location.pathname}?verify_receipt=${payment.id.slice(0,8).toUpperCase()}`} 
               size={80} 
             />
           </div>
