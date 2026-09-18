@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { type PaymentRecord, type PaymentConfig } from "../../lib/cloudPayments";
-import { formatDate } from "../../lib/dates";
+import { formatDate, toDateOnly } from "../../lib/dates";
 
 export function generatePaymentReceipt(
   tutorName: string,
@@ -27,7 +27,7 @@ export function generatePaymentReceipt(
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text(`Receipt Reference: RCPT-${payment.id.slice(0, 8).toUpperCase()}`, margin, y);
-  doc.text(`Date of Issue: ${formatDate(new Date().toISOString(), { day: "numeric", month: "short", year: "numeric" })}`, pageWidth - margin, y, { align: "right" });
+  doc.text(`Date of Issue: ${formatDate(toDateOnly(new Date()), { day: "numeric", month: "short", year: "numeric" })}`, pageWidth - margin, y, { align: "right" });
   
   y += 20;
   
