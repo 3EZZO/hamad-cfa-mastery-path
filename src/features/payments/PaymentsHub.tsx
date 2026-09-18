@@ -39,6 +39,7 @@ export function PaymentsHub() {
   const [config, setConfig] = useState<PaymentConfig | null>(null);
   const [records, setRecords] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editingRecord, setEditingRecord] = useState<PaymentRecord | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +53,7 @@ export function PaymentsHub() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       let cfg = await getPaymentConfig(studentUid);
       if (!cfg) {
@@ -80,8 +82,9 @@ export function PaymentsHub() {
       setConfig(cfg);
       const recs = await listPaymentRecords(studentUid);
       setRecords(recs);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setError(e.message || String(e));
     } finally {
       setLoading(false);
     }
@@ -99,6 +102,17 @@ export function PaymentsHub() {
         <Banknote size={24} />
         <strong>Tutor access required</strong>
         <p>This payment tracking hub is only available to the active tutor.</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="empty-state">
+        <Banknote size={24} />
+        <strong>Error loading payments</strong>
+        <p>{error}</p>
+        <button className="button button-primary" onClick={loadData}>Retry</button>
       </div>
     );
   }
