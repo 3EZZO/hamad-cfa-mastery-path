@@ -605,10 +605,16 @@
     box-shadow: none;
     max-width: none;
     width: 100%;
+    min-height: auto !important;
+    height: auto !important;
     padding: 40px !important;
+    margin: 0 !important;
     background: #0c1825 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+  @page {
+    margin: 0;
   }
   .no-print {
     display: none !important;
