@@ -60,19 +60,7 @@ export function BA2Plus({ onLog, startTime }: BA2PlusProps) {
     updateDisplay(newVal, tvmState, "+/-");
   };
 
-  const handleTVM = (register: "N" | "IY" | "PV" | "PMT" | "FV") => {
-    if (inputState === "INPUT") {
-      // Store current display to register
-      const val = parseFloat(display);
-      const newState = { ...tvmState, [register]: val };
-      updateDisplay(display, newState, register);
-      setInputState("READY");
-    } else {
-      // Recall (not standard without RCL, but convenient for UX)
-      // Actually standard BA II requires RCL + N. We'll just show it if pressed in READY.
-      updateDisplay(tvmState[register].toFixed(2), tvmState, register);
-    }
-  };
+
 
   const handleCPT = (register: "N" | "IY" | "PV" | "PMT" | "FV") => {
     try {
