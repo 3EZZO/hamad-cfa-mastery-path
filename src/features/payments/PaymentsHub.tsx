@@ -109,21 +109,16 @@ export function PaymentsHub() {
 
   // Generate Chart Data
   const chartData = [];
-  let cumulativeExpected = 0;
-  let cumulativeActual = 0;
   let currentM = new Date(startObj);
   while (currentM <= endObj || chartData.length < monthsDiff) {
-    cumulativeExpected += config.monthlyAmount;
-    
     // Find payments in this month
     const mStr = currentM.toISOString().slice(0, 7); // YYYY-MM
     const paidThisMonth = records.filter(r => r.status === "paid" && r.dateRecorded.startsWith(mStr)).reduce((s, r) => s + r.amount, 0);
-    cumulativeActual += paidThisMonth;
 
     chartData.push({
       month: currentM.toLocaleString('default', { month: 'short' }),
-      Expected: cumulativeExpected,
-      Actual: cumulativeActual
+      Expected: config.monthlyAmount,
+      Actual: paidThisMonth
     });
     currentM.setMonth(currentM.getMonth() + 1);
   }
@@ -353,7 +348,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           </div>
           <div className="r-box">
             <div className="r-box-val">
-              {formatDate(config.engagementStartDate, { month: "short", year: "numeric" }).toUpperCase()} - {formatDate(config.engagementEndDate, { month: "short", year: "numeric" }).toUpperCase()}
+              {formatDate(config.engagementStartDate, { day: "numeric", month: "short", year: "numeric" }).toUpperCase()} - {formatDate(config.engagementEndDate, { day: "numeric", month: "short", year: "numeric" }).toUpperCase()}
             </div>
             <div className="r-box-lbl">ENGAGEMENT TERM</div>
           </div>
