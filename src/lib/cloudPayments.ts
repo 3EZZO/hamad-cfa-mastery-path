@@ -4,12 +4,11 @@ import {
   doc,
   getDoc,
   getDocs,
-  getFirestore,
   query,
   setDoc,
   where,
 } from "firebase/firestore";
-import { CloudClientError, getCloudConfigurationStatus, getCurrentCloudUser } from "./cloud";
+import { CloudClientError, getCloudConfigurationStatus, getCurrentCloudUser, getCloudFirestore } from "./cloud";
 
 const PROGRAM_ID = "project-202";
 
@@ -21,7 +20,7 @@ function getServices() {
   if (!user) {
     throw new CloudClientError("authentication-required");
   }
-  return { firestore: getFirestore(), user };
+  return { firestore: getCloudFirestore(), user };
 }
 
 export interface PaymentConfig {
