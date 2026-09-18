@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { Plus, Download, Search, Settings, FileText, CheckCircle2, CircleDashed, Clock, ChevronLeft, X, Printer, MessageCircle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { getPaymentConfig, savePaymentConfig, listPaymentRecords, savePaymentRecord, getPaymentReceipt, savePaymentReceipt, type PaymentConfig, type PaymentRecord } from "../../lib/cloudPayments";
-import { generatePaymentReceipt } from "./ReceiptGenerator";
 import { toDateOnly, todayDateOnly, formatDate } from "../../lib/dates";
 import "./payments.css";
 
@@ -36,7 +35,7 @@ export function PaymentsHub() {
           cfg = {
             studentUid,
             studentName: "Hamad",
-            monthlyAmount: 1800,
+            monthlyAmount: 1400,
             currency: "USD",
             engagementStartDate: "2026-09-18",
             engagementEndDate: "2027-02-26",
@@ -88,16 +87,6 @@ export function PaymentsHub() {
     setEditingRecord(null);
   };
 
-  const downloadReceipt = (rec: PaymentRecord) => {
-    const blob = generatePaymentReceipt(tutorName, config, rec);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Receipt-${rec.id.slice(0,8)}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const handlePrintReceipt = (rec: PaymentRecord) => {
     setViewingReceipt({ payment: rec, blobUrl: null });
   };
@@ -107,7 +96,7 @@ export function PaymentsHub() {
   const startObj = new Date(config.engagementStartDate);
   const endObj = new Date(config.engagementEndDate);
   const monthsDiff = (endObj.getFullYear() - startObj.getFullYear()) * 12 + (endObj.getMonth() - startObj.getMonth()) + 1;
-  const expectedTotal = config.monthlyAmount * Math.max(1, monthsDiff);
+  const expectedTotal = config.monthlyAmount; // Just display the monthly amount instead of total
   
   const today = new Date();
   let nextBillingDate = new Date(today.getFullYear(), today.getMonth(), config.billingDayOfMonth);
@@ -186,7 +175,7 @@ export function PaymentsHub() {
           <div className="metric-data">
             <span>Total Collected</span>
             <strong className="text-teal">{config.currency} {totalPaid.toLocaleString()}</strong>
-            <small>of {expectedTotal.toLocaleString()} Expected</small>
+            <small>of {expectedTotal.toLocaleString()} Monthly Target</small>
           </div>
           <div className="progress-ring-container">
              <svg viewBox="0 0 36 36" className="circular-chart teal">
@@ -279,9 +268,7 @@ export function PaymentsHub() {
                   <button className="luxury-btn outline sm" onClick={() => handlePrintReceipt(r)} title="Print Native Receipt">
                     <Printer size={14} /> Web Receipt
                   </button>
-                  <button className="luxury-btn outline sm icon-only" onClick={() => downloadReceipt(r)} title="Download Legacy PDF">
-                    <Download size={14} />
-                  </button>
+
                   <button className="luxury-btn outline sm icon-only" onClick={() => setEditingRecord(r)} title="Edit">
                     <Settings size={14} />
                   </button>
@@ -334,7 +321,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
         <div className="receipt-top-accent"></div>
         <div className="receipt-header">
           <div className="r-left">
-            <span className="r-project">PROJECT 202</span>
+            <span className="r-project">HAMAD CFA MASTERY PATH</span>
             <h1 className="r-title">{config.studentName}'s CFA Level I</h1>
             <h1 className="r-subtitle">Mastery System</h1>
           </div>
