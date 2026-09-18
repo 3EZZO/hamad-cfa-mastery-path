@@ -1,5 +1,6 @@
 import {
   Archive,
+  Banknote,
   BarChart3,
   BookOpenCheck,
   CalendarClock,
@@ -104,6 +105,7 @@ import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
 import { PracticeCoach } from "./features/practice/PracticeCoach";
 import { PracticeBankAdmin } from "./features/practice/PracticeBankAdmin";
+import { PaymentsHub } from "./features/payments/PaymentsHub";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
@@ -129,7 +131,8 @@ type TabId =
   | "errors"
   | "notes"
   | "live"
-  | "coach";
+  | "coach"
+  | "payments";
 
 type UpdateTracker = (
   recipe: (current: TrackerState) => TrackerState,
@@ -162,6 +165,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "notes", label: "Notes & Data", mobileLabel: "Notes", icon: NotebookPen, hint: "General notes & backups" },
   { id: "live", label: "Session Mode", mobileLabel: "Teach", icon: PlayCircle },
   { id: "coach", label: "Tutor Admin", mobileLabel: "Admin", icon: UserCog },
+  { id: "payments", label: "Payments", mobileLabel: "Payments", icon: Banknote },
 ];
 
 const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
@@ -169,7 +173,7 @@ const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
   { label: "Plan", ids: ["roadmap", "sessions"] },
   { label: "Evidence", ids: ["practice", "mastery", "mocks", "errors"] },
   { label: "Records", ids: ["notes"] },
-  { label: "Tutor", ids: ["live", "coach"] },
+  { label: "Tutor", ids: ["live", "coach", "payments"] },
 ];
 
 const MOBILE_PRIMARY_IDS: TabId[] = [
@@ -187,6 +191,7 @@ const MOBILE_MORE_IDS: TabId[] = [
   "notes",
   "live",
   "coach",
+  "payments",
 ];
 
 const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: string }> = {
@@ -244,6 +249,11 @@ const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: str
     eyebrow: "Tutor-only administration",
     title: "Tutor Admin",
     description: "Manage approvals, schedules, launch checks, and recovery controls away from the live lesson.",
+  },
+  payments: {
+    eyebrow: "Tutor-only billing",
+    title: "Payments",
+    description: "Track engagement income, log transfer receipts, and issue PDFs.",
   },
 };
 
@@ -1036,6 +1046,8 @@ function App() {
             Tutor Admin is protected for approvals, schedule changes, launch checks, and recovery controls.
           </EmptyState>
         );
+      case "payments":
+        return <PaymentsHub />;
     }
   };
 

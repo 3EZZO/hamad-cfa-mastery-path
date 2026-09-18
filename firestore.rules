@@ -861,6 +861,17 @@ service cloud.firestore {
       allow delete: if activeProject202Role('tutor');
     }
 
+    // Tutor Payments configuration, records, and receipts
+    match /programs/project-202/tutorPaymentConfigs/{studentUid} {
+      allow read, write: if activeProject202Role('tutor');
+    }
+    match /programs/project-202/tutorPaymentRecords/{paymentId} {
+      allow read, write: if activeProject202Role('tutor');
+    }
+    match /programs/project-202/tutorPaymentReceipts/{paymentId} {
+      allow read, write: if activeProject202Role('tutor');
+    }
+
     // Everything not explicitly listed above is denied.
     match /{document=**} {
       allow read, write: if false;
