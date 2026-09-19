@@ -20,6 +20,92 @@ export const defaultTVMState = (): TVMState => ({
   isBGN: false,
 });
 
+export interface CashFlowState {
+  values: number[];
+}
+
+export const defaultCashFlowState = (): CashFlowState => ({ values: [0] });
+
+function validateCashFlows(cashFlows: readonly number[]): void {
+  if (cashFlows.length < 2) {
+    throw new Error("Error 5: Enter CF0 and at least one future cash flow");
+  }
+  if (cashFlows.length > 100 || cashFlows.some(value => !Number.isFinite(value))) {
+    throw new Error("Error 5: Invalid cash-flow worksheet");
+  }
+}
+
+export function computeNPV(
+  cashFlows: readonly number[],
+  discountRatePercent: number,
+): number {
+  validateCashFlows(cashFlows);
+  if (!Number.isFinite(discountRatePercent) || discountRatePercent <= -100) {
+    throw new Error("Error 5: Invalid discount rate");
+  }
+  const rate = discountRatePercent / 100;
+  return cashFlows.reduce(
+    (total, cashFlow, period) =>
+      total + cashFlow / Math.pow(1 + rate, period),
+    0,
+  );
+}
+
+export function computeIRR(cashFlows: readonly number[]): number {
+  validateCashFlows(cashFlows);
+  if (
+    !cashFlows.some(value => value < 0) ||
+    !cashFlows.some(value => value > 0)
+  ) {
+    throw new Error("Error 5: IRR requires positive and negative cash flows");
+  }
+
+  const npvAtZero = computeNPV(cashFlows, 0);
+  if (Math.abs(npvAtZero) < 1e-10) return 0;
+
+  // Scan a logarithmic rate domain from nearly -100% to 100,000%. This finds
+  // a stable bracket before bisection and avoids silently returning a Newton
+  // iteration that converged to an unrelated or non-finite value.
+  const lowerLog = Math.log(0.0001);
+  const upperLog = Math.log(1001);
+  let previousRate = Math.exp(lowerLog) - 1;
+  let previousValue = computeNPV(cashFlows, previousRate * 100);
+
+  for (let index = 1; index <= 800; index += 1) {
+    const position = lowerLog + ((upperLog - lowerLog) * index) / 800;
+    const rate = Math.exp(position) - 1;
+    const value = computeNPV(cashFlows, rate * 100);
+    if (Math.abs(value) < 1e-10) return rate * 100;
+    if (
+      Number.isFinite(previousValue) &&
+      Number.isFinite(value) &&
+      Math.sign(previousValue) !== Math.sign(value)
+    ) {
+      let low = previousRate;
+      let high = rate;
+      let lowValue = previousValue;
+      for (let iteration = 0; iteration < 160; iteration += 1) {
+        const midpoint = (low + high) / 2;
+        const midpointValue = computeNPV(cashFlows, midpoint * 100);
+        if (Math.abs(midpointValue) < 1e-10 || Math.abs(high - low) < 1e-12) {
+          return midpoint * 100;
+        }
+        if (Math.sign(lowValue) === Math.sign(midpointValue)) {
+          low = midpoint;
+          lowValue = midpointValue;
+        } else {
+          high = midpoint;
+        }
+      }
+      return ((low + high) / 2) * 100;
+    }
+    previousRate = rate;
+    previousValue = value;
+  }
+
+  throw new Error("Error 5: No IRR solution");
+}
+
 export function computeTVM(
   target: "N" | "IY" | "PV" | "PMT" | "FV",
   state: TVMState

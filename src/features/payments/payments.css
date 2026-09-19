@@ -649,6 +649,237 @@
   vertical-align: middle; 
 }
 
+.receipt-verification-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 85% 10%, rgba(59, 130, 246, 0.12), transparent 30%),
+    #0f172a;
+}
+
+.receipt-verification-card {
+  width: min(100%, 580px);
+  padding: clamp(28px, 5vw, 48px);
+  border: 1px solid #334155;
+  border-top: 4px solid #64748b;
+  border-radius: 14px;
+  background: #1e293b;
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.42);
+}
+
+.receipt-verification-card.is-valid {
+  border-top-color: #38bdf8;
+}
+
+.receipt-verification-card.is-revoked,
+.receipt-verification-card.is-missing {
+  border-top-color: #f59e0b;
+}
+
+.receipt-verification-card.is-error {
+  border-top-color: #818cf8;
+}
+
+.receipt-verification-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 24px;
+  border: 1px solid #475569;
+  border-radius: 12px;
+  color: #cbd5e1;
+  background: #0f172a;
+}
+
+.is-valid .receipt-verification-mark {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.is-revoked .receipt-verification-mark,
+.is-missing .receipt-verification-mark {
+  color: #fbbf24;
+}
+
+.is-error .receipt-verification-mark {
+  color: #a5b4fc;
+}
+
+.receipt-verification-mark .is-spinning {
+  animation: receipt-verification-spin 0.9s linear infinite;
+}
+
+@keyframes receipt-verification-spin {
+  to { transform: rotate(360deg); }
+}
+
+.receipt-verification-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.receipt-verification-card h1 {
+  margin: 0 0 12px;
+  color: #f8fafc;
+  font-size: clamp(28px, 5vw, 40px);
+  line-height: 1.1;
+}
+
+.receipt-verification-card > p:not(.receipt-verification-brand) {
+  max-width: 52ch;
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.receipt-verification-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 28px 0 20px;
+  overflow: hidden;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #334155;
+}
+
+.receipt-verification-facts div {
+  padding: 15px 16px;
+  background: #172033;
+}
+
+.receipt-verification-facts dt {
+  margin-bottom: 5px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.receipt-verification-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.receipt-verification-note {
+  display: block;
+  padding-top: 18px;
+  border-top: 1px solid #334155;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.payment-action-error,
+.payment-modal-error {
+  color: #ddd6fe;
+  border: 1px solid rgba(129, 140, 248, 0.5);
+  background: rgba(79, 70, 229, 0.16);
+}
+
+.payment-action-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+.payment-action-error button {
+  color: inherit;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payment-modal-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+}
+
+.payment-student-picker {
+  display: grid;
+  gap: 4px;
+  color: #a9bacd;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.payment-student-picker select {
+  min-height: 38px;
+  max-width: 220px;
+  padding: 0 32px 0 10px;
+  color: #f8fafc;
+  border: 1px solid #3b5065;
+  border-radius: 8px;
+  background: #13263b;
+}
+
+.payment-setup-state {
+  min-height: min(70vh, 620px);
+  display: grid;
+  place-items: center;
+}
+
+.payment-setup-card {
+  width: min(100%, 620px);
+  padding: clamp(24px, 5vw, 42px);
+}
+
+.payment-setup-card h2 {
+  margin: 0 0 10px;
+}
+
+.payment-setup-card > p {
+  max-width: 54ch;
+  color: var(--theme-muted, #64748b);
+  line-height: 1.6;
+}
+
+.payment-setup-card dl {
+  display: grid;
+  gap: 1px;
+  margin: 24px 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border, #cbd5e1);
+  border-radius: 8px;
+  background: var(--theme-border, #cbd5e1);
+}
+
+.payment-setup-card dl div {
+  padding: 12px 14px;
+  background: var(--theme-surface, #fff);
+}
+
+.payment-setup-card dt {
+  color: var(--theme-muted, #64748b);
+  font-size: 12px;
+}
+
+.payment-setup-card dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
 
 @media (max-width: 699px) {
   .dashboard-header { flex-direction: column; align-items: flex-start; }
@@ -659,8 +890,17 @@
   .r-main-card { flex-direction: column; align-items: flex-start; gap: 20px; }
   .r-mc-right { text-align: left; }
   .r-amount { font-size: 36px; }
-  .r-crypto-auth, .r-party { flex-direction: column; align-items: flex-start; }
+  .r-ledger-verification, .r-party { flex-direction: column; align-items: flex-start; }
   .receipt-document { padding: 20px; }
   .transaction-row { flex-wrap: wrap; }
   .t-details { flex: 1 1 100%; margin: 10px 0; }
+  .receipt-verification-page { padding: 14px; }
+  .receipt-verification-card { padding: 24px 20px; }
+  .receipt-verification-facts { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .receipt-verification-mark .is-spinning {
+    animation-duration: 0.01ms;
+  }
 }

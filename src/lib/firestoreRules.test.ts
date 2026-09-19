@@ -98,4 +98,20 @@ describe("private tutor Firestore rule boundary", () => {
     expect(practice).toContain("validPracticeQuestionState(questionId)");
     expect(practice).toContain("validPracticeRun(runId, uid)");
   });
+
+  it("allows exact public receipt lookup while preventing enumeration and fact changes", () => {
+    const receipts = blockBetween(
+      "function validPublicReceiptVerification(token)",
+      "// Tutor Payments configuration",
+    );
+    expect(receipts).toContain(
+      "match /programs/project-202/publicReceiptVerifications/{token}",
+    );
+    expect(receipts).toContain("allow get: if true");
+    expect(receipts).toContain("allow list, delete: if false");
+    expect(receipts).toContain("activeProject202Role('tutor')");
+    expect(receipts).toContain("data.token == token");
+    expect(receipts).toContain("request.resource.data.issuedBy == request.auth.uid");
+    expect(receipts).toContain(".hasOnly(['status', 'revokedAtClient'])");
+  });
 });

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { computeTVM, defaultTVMState } from "./calculator";
+import {
+  computeIRR,
+  computeNPV,
+  computeTVM,
+  defaultTVMState,
+} from "./calculator";
 
 describe("BA II Plus TVM Engine", () => {
   it("calculates PV of an ordinary annuity", () => {
@@ -53,5 +58,24 @@ describe("BA II Plus TVM Engine", () => {
   it("throws error for mathematically impossible N", () => {
     const state = { ...defaultTVMState(), IY: 10, PV: -100, PMT: 5, FV: 0 };
     expect(() => computeTVM("N", state)).toThrow();
+  });
+});
+
+describe("BA II Plus cash-flow worksheet engine", () => {
+  it("calculates NPV from CF0 and future cash flows", () => {
+    expect(computeNPV([-1000, 600, 600], 10)).toBeCloseTo(41.3223, 4);
+  });
+
+  it("calculates IRR for a conventional investment", () => {
+    expect(computeIRR([-1000, 600, 600])).toBeCloseTo(13.0662, 4);
+  });
+
+  it("rejects worksheets that cannot produce an IRR", () => {
+    expect(() => computeIRR([100, 50, 25])).toThrow(
+      "IRR requires positive and negative cash flows",
+    );
+    expect(() => computeNPV([100], 10)).toThrow(
+      "Enter CF0 and at least one future cash flow",
+    );
   });
 });

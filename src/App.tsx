@@ -107,6 +107,7 @@ import { useDialogFocus } from "./features/liveSession/useDialogFocus";
 import { PracticeCoach } from "./features/practice/PracticeCoach";
 import { PracticeBankAdmin } from "./features/practice/PracticeBankAdmin";
 import { PaymentsHub } from "./features/payments/PaymentsHub";
+import { ReceiptVerificationScreen } from "./features/payments/ReceiptVerification";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
@@ -789,19 +790,6 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const receiptRef = params.get("verify_receipt");
-    if (receiptRef) {
-      setToast({
-        message: `✅ SECURE RECEIPT AUTHENTICATED [REF: ${receiptRef}]`,
-        tone: "success"
-      });
-      // Clean URL without reloading
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
-
   if (!cloudConfigured) {
     return <CloudConfigurationScreen missingKeys={missingConfiguration} />;
   }
@@ -1062,7 +1050,15 @@ function App() {
           </EmptyState>
         );
       case "payments":
-        return <PaymentsHub />;
+        return capabilities.canUseLiveSession ? (
+          <PaymentsHub
+            tutorName={user.displayName?.trim() || user.email || "Tutor"}
+          />
+        ) : (
+          <EmptyState icon={ShieldCheck} title="Tutor access only">
+            Payment records and receipt issuance are available only to the tutor.
+          </EmptyState>
+        );
     }
   };
 
@@ -2750,25 +2746,12 @@ function MiniMetric({ label, value, icon: Icon }: { label: string; value: string
 export default function AppWithDialogs() {
   const params = new URLSearchParams(window.location.search);
   const receiptRef = params.get("verify_receipt");
-  
+
   if (receiptRef) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c1825', color: '#fff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-        <div style={{ background: '#13263b', padding: '40px', borderRadius: '16px', border: '1px solid #00b49f', textAlign: 'center', maxWidth: '400px', margin: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-          <div style={{ background: '#00b49f', color: '#0c1825', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-            <Check size={32} strokeWidth={3} />
-          </div>
-          <h2 style={{ margin: '0 0 12px', fontSize: '20px', letterSpacing: '0.5px' }}>SECURE RECEIPT<br/>AUTHENTICATED</h2>
-          <p style={{ color: '#a9bacd', margin: '0 0 24px', fontSize: '14px', lineHeight: '1.6' }}>This digital receipt has been cryptographically verified against the official Hamad CFA Mastery Path secure ledger.</p>
-          <div style={{ background: '#09131d', padding: '16px', borderRadius: '8px', border: '1px dashed #3b5065' }}>
-            <div style={{ fontSize: '11px', color: '#a9bacd', marginBottom: '6px', letterSpacing: '1px' }}>REFERENCE ID</div>
-            <div style={{ fontSize: '22px', fontWeight: 'bold', fontFamily: 'monospace', color: '#eab355' }}>RCPT-{receiptRef}</div>
-          </div>
-          <div style={{ marginTop: '24px', fontSize: '12px', color: '#3b5065' }}>
-            Verified on {new Date().toLocaleDateString()}
-          </div>
-        </div>
-      </div>
+      <ThemeProvider>
+        <ReceiptVerificationScreen token={receiptRef} />
+      </ThemeProvider>
     );
   }
 

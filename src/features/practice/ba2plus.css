@@ -9,7 +9,7 @@
   border: 1px solid #2a3b4c;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   user-select: none;
 }
@@ -33,6 +33,15 @@
   flex-direction: column;
   min-height: 80px;
   justify-content: space-between;
+}
+
+.ba2-worksheet-status {
+  min-height: 18px;
+  color: #b8c5d3;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  text-align: right;
 }
 
 .ba2-annunciators {
@@ -78,6 +87,10 @@
   height: 12px;
 }
 
+.ba-secondary--unavailable {
+  color: #8493a3;
+}
+
 .ba-key {
   width: 100%;
   height: 40px;
@@ -93,6 +106,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.ba-key--second {
+  background: #eab355;
+  color: #1a222c;
+}
+
+.ba-key:disabled {
+  background: #202d39;
+  color: #788797;
+  box-shadow: 0 2px 0 #0f161c;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.ba-key:disabled:active {
+  transform: none;
+  box-shadow: 0 2px 0 #0f161c;
 }
 
 .ba-key:active, .ba-key.active {
@@ -120,4 +151,5 @@
   .ba2-grid { gap: 6px; }
   .ba-key { height: 36px; font-size: 11px; }
   .ba-secondary { font-size: 7px; }
+  .ba2-worksheet-status { font-size: 9px; }
 }

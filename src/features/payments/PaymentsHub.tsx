@@ -2,7 +2,20 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Download, Search, Settings, FileText, CheckCircle2, CircleDashed, Clock, ChevronLeft, X, Printer, MessageCircle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getPaymentConfig, savePaymentConfig, listPaymentRecords, savePaymentRecord, getPaymentReceipt, savePaymentReceipt, type PaymentConfig, type PaymentRecord } from "../../lib/cloudPayments";
+import {
+  getPaymentConfig,
+  getPaymentReceipt,
+  issuePaymentReceiptVerification,
+  listPaymentRecords,
+  revokeReceiptVerification,
+  savePaymentConfig,
+  savePaymentReceipt,
+  savePaymentRecord,
+  type PaymentConfig,
+  type PaymentRecord,
+} from "../../lib/cloudPayments";
+import { listActiveStudentMembers, type ProjectMember } from "../../lib/cloud";
+import type { PublicReceiptVerification } from "../../lib/receiptVerification";
 import { toDateOnly, todayDateOnly, formatDate } from "../../lib/dates";
 import QRCode from "react-qr-code";
 import "./payments.css";
@@ -24,9 +37,13 @@ function makeId() {
   return Math.random().toString(36).substring(2, 15);
 }
 
-export function PaymentsHub() {
-  const tutorName = "Mohamed Ali"; // Placeholder for the 1:1 engagement
-  const studentUid = "student-001"; // Placeholder for the 1:1 engagement
+interface PaymentsHubProps {
+  tutorName: string;
+}
+
+export function PaymentsHub({ tutorName }: PaymentsHubProps) {
+  const [students, setStudents] = useState<ProjectMember[]>([]);
+  const [studentUid, setStudentUid] = useState<string | null>(null);
 
   const [config, setConfig] = useState<PaymentConfig | null>(null);
   const [records, setRecords] = useState<PaymentRecord[]>([]);
@@ -34,29 +51,72 @@ export function PaymentsHub() {
   const [error, setError] = useState<string | null>(null);
   const [editingRecord, setEditingRecord] = useState<PaymentRecord | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [viewingReceipt, setViewingReceipt] = useState<{payment: PaymentRecord, blobUrl: string | null} | null>(null);
+  const [viewingReceipt, setViewingReceipt] = useState<{
+    payment: PaymentRecord;
+    verification: PublicReceiptVerification;
+  } | null>(null);
   const [viewingStatement, setViewingStatement] = useState(false);
+  const [receiptBusyId, setReceiptBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    async function loadData() {
+    async function resolveStudents() {
       try {
-        let cfg = await getPaymentConfig(studentUid);
+        const activeStudents = await listActiveStudentMembers();
+        if (!active) return;
+        setStudents(activeStudents);
+        if (activeStudents.length === 0) {
+          setError(
+            "No active student membership was found. Check the members collection before using Payments.",
+          );
+          setLoading(false);
+          return;
+        }
+        setStudentUid(current =>
+          current && activeStudents.some(student => student.uid === current)
+            ? current
+            : activeStudents[0].uid,
+        );
+      } catch (err) {
+        if (!active) return;
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to resolve the active student account.",
+        );
+        setLoading(false);
+      }
+    }
+    void resolveStudents();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!studentUid) return;
+    const selectedStudentUid = studentUid;
+    let active = true;
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+      try {
+        let cfg = await getPaymentConfig(selectedStudentUid);
         if (!cfg) {
           cfg = {
-            studentUid,
-            studentName: "Hamad",
-            monthlyAmount: 1400,
+            studentUid: selectedStudentUid,
+            studentName: "",
+            monthlyAmount: 0,
             currency: "USD",
-            engagementStartDate: "2026-09-18",
+            engagementStartDate: todayDateOnly(),
             engagementEndDate: "2027-02-26",
-            billingDayOfMonth: 18,
+            billingDayOfMonth: new Date().getDate(),
           };
-          await savePaymentConfig(cfg);
         }
         if (!active) return;
         setConfig(cfg);
-        const recs = await listPaymentRecords(studentUid);
+        const recs = await listPaymentRecords(selectedStudentUid);
         if (!active) return;
         setRecords(recs.sort((a, b) => b.dateRecorded.localeCompare(a.dateRecorded)));
       } catch (err: any) {
@@ -72,9 +132,24 @@ export function PaymentsHub() {
 
   if (loading) return <div className="payments-hub loading">Loading financial dashboard...</div>;
   if (error) return <div className="payments-hub error"><h3>Error</h3><p>{error}</p></div>;
-  if (!config) return null;
+  if (!config || !studentUid) return null;
 
   const handleSaveRecord = async (rec: PaymentRecord, file: File | null) => {
+    const previous = records.find(record => record.id === rec.id);
+    let nextRecord = { ...rec };
+    if (
+      previous?.verificationToken &&
+      (previous.amount !== rec.amount ||
+        previous.dateRecorded !== rec.dateRecorded ||
+        previous.studentUid !== rec.studentUid)
+    ) {
+      await revokeReceiptVerification(previous.verificationToken);
+      const { verificationToken, verificationIssuedAt, ...unsignedRecord } =
+        nextRecord;
+      void verificationToken;
+      void verificationIssuedAt;
+      nextRecord = unsignedRecord;
+    }
     if (file) {
       const reader = new FileReader();
       const p = new Promise<string>((resolve) => {
@@ -82,25 +157,84 @@ export function PaymentsHub() {
       });
       reader.readAsDataURL(file);
       const dataUri = await p;
-      await savePaymentReceipt(rec.id, dataUri);
-      rec.hasReceipt = true;
+      await savePaymentReceipt(nextRecord.id, dataUri);
+      nextRecord = { ...nextRecord, hasReceipt: true };
     }
-    await savePaymentRecord(rec);
+    await savePaymentRecord(nextRecord);
     setRecords(prev => {
-      const idx = prev.findIndex(r => r.id === rec.id);
+      const idx = prev.findIndex(r => r.id === nextRecord.id);
       if (idx >= 0) {
         const next = [...prev];
-        next[idx] = rec;
+        next[idx] = nextRecord;
         return next;
       }
-      return [rec, ...prev].sort((a, b) => b.dateRecorded.localeCompare(a.dateRecorded));
+      return [nextRecord, ...prev].sort((a, b) => b.dateRecorded.localeCompare(a.dateRecorded));
     });
     setEditingRecord(null);
   };
 
-  const handlePrintReceipt = (rec: PaymentRecord) => {
-    setViewingReceipt({ payment: rec, blobUrl: null });
+  const handlePrintReceipt = async (rec: PaymentRecord) => {
+    setReceiptBusyId(rec.id);
+    setActionError(null);
+    try {
+      const issued = await issuePaymentReceiptVerification(
+        rec,
+        config,
+        tutorName,
+      );
+      setRecords(current =>
+        current.map(record =>
+          record.id === issued.payment.id ? issued.payment : record,
+        ),
+      );
+      setViewingReceipt(issued);
+    } catch (err) {
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "The receipt could not be issued or verified.",
+      );
+    } finally {
+      setReceiptBusyId(null);
+    }
   };
+
+  const configReady =
+    config.studentName.trim().length > 0 &&
+    Number.isFinite(config.monthlyAmount) &&
+    config.monthlyAmount > 0;
+
+  if (!configReady) {
+    return (
+      <div className="payments-hub luxury-dashboard payment-setup-state">
+        <div className="glass-card payment-setup-card">
+          <h2>Complete billing setup</h2>
+          <p>
+            The active student account was resolved securely. Add the display
+            name and billing terms before recording a transaction.
+          </p>
+          <dl>
+            <div><dt>Student account</dt><dd>{studentUid}</dd></div>
+            <div><dt>Tutor</dt><dd>{tutorName}</dd></div>
+          </dl>
+          <button className="luxury-btn primary" onClick={() => setShowConfig(true)}>
+            <Settings size={16} /> Configure billing
+          </button>
+        </div>
+        {showConfig && (
+          <ConfigModal
+            config={config}
+            onClose={() => setShowConfig(false)}
+            onSave={async newConfig => {
+              await savePaymentConfig({ ...newConfig, studentUid });
+              setConfig({ ...newConfig, studentUid });
+              setShowConfig(false);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
 
   // Engagement calculations
   const totalPaid = records.filter(r => r.status === "paid").reduce((sum, r) => sum + r.amount, 0);
@@ -142,9 +276,10 @@ export function PaymentsHub() {
   if (viewingReceipt) {
     return (
       <ReceiptPrintView 
-        tutorName={tutorName} 
+        tutorName={viewingReceipt.verification.tutorName}
         config={config} 
         payment={viewingReceipt.payment} 
+        verification={viewingReceipt.verification}
         onClose={() => setViewingReceipt(null)} 
       />
     );
@@ -167,9 +302,24 @@ export function PaymentsHub() {
       <header className="dashboard-header">
         <div>
           <h2 className="gradient-text">Financial Command Center</h2>
-          <p>Real-time engagement revenue and printable invoicing.</p>
+          <p>{config.studentName} · Billing records and ledger-verified receipts.</p>
         </div>
         <div className="header-actions">
+          {students.length > 1 && (
+            <label className="payment-student-picker">
+              <span>Student account</span>
+              <select
+                value={studentUid}
+                onChange={event => setStudentUid(event.target.value)}
+              >
+                {students.map(student => (
+                  <option key={student.uid} value={student.uid}>
+                    {student.uid}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <button className="luxury-btn outline" onClick={() => setViewingStatement(true)}>
             <FileText size={16} /> Ledger Statement
           </button>
@@ -188,6 +338,13 @@ export function PaymentsHub() {
           </button>
         </div>
       </header>
+
+      {actionError && (
+        <div className="payment-action-error" role="alert">
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError(null)}>Dismiss</button>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div className="metrics-grid">
@@ -287,8 +444,15 @@ export function PaymentsHub() {
                   <span className={`luxury-badge ${r.status}`}>{r.status}</span>
                 </div>
                 <div className="t-actions">
-                  <button className="luxury-btn outline sm" onClick={() => handlePrintReceipt(r)} title="Print Native Receipt">
-                    <Printer size={14} /> Web Receipt
+                  <button
+                    className="luxury-btn outline sm"
+                    onClick={() => void handlePrintReceipt(r)}
+                    title={r.status === "paid"
+                      ? "Issue or open the ledger-verified receipt"
+                      : "Mark this transaction paid before issuing a receipt"}
+                    disabled={receiptBusyId === r.id || r.status !== "paid"}
+                  >
+                    <Printer size={14} /> {receiptBusyId === r.id ? "Issuing…" : "Verified receipt"}
                   </button>
 
                   <button className="luxury-btn outline sm icon-only" onClick={() => setEditingRecord(r)} title="Edit">
@@ -314,8 +478,9 @@ export function PaymentsHub() {
           config={config}
           onClose={() => setShowConfig(false)}
           onSave={async (newConfig) => {
-            await savePaymentConfig(newConfig);
-            setConfig(newConfig);
+            const safeConfig = { ...newConfig, studentUid };
+            await savePaymentConfig(safeConfig);
+            setConfig(safeConfig);
             setShowConfig(false);
           }}
         />
@@ -327,7 +492,7 @@ export function PaymentsHub() {
 // ==========================================
 // RECEIPT PRINT VIEW (NATIVE HTML->PDF)
 // ==========================================
-function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: string, config: PaymentConfig, payment: PaymentRecord, onClose: () => void }) {
+function ReceiptPrintView({ tutorName, config, payment, verification, onClose }: { tutorName: string, config: PaymentConfig, payment: PaymentRecord, verification: PublicReceiptVerification, onClose: () => void }) {
   const handlePrint = () => {
     window.print();
   };
@@ -345,18 +510,18 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           fontSize: '48px', fontWeight: 800, color: '#00b49f', opacity: 0.08, whiteSpace: 'nowrap',
           pointerEvents: 'none', zIndex: 0, textAlign: 'center'
         }}>
-          CONFIDENTIAL &bull; PREPARED EXCLUSIVELY FOR {config.studentName.toUpperCase()}
+          CONFIDENTIAL &bull; PREPARED EXCLUSIVELY FOR {verification.studentName.toUpperCase()}
         </div>
         
         <div className="receipt-top-accent" style={{ zIndex: 1 }}></div>
         <div className="receipt-header" style={{ position: 'relative', zIndex: 1 }}>
           <div className="r-left">
             <span className="r-project">HAMAD CFA MASTERY PATH</span>
-            <h1 className="r-title">{config.studentName}'s CFA Level I</h1>
+            <h1 className="r-title">{verification.studentName}'s CFA Level I</h1>
             <h1 className="r-subtitle">Mastery System</h1>
           </div>
           <div className="r-right">
-            <div className="r-pill">OFFICIAL RECEIPT</div>
+            <div className="r-pill">LEDGER-VERIFIED RECEIPT</div>
           </div>
         </div>
 
@@ -367,12 +532,12 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
         <div className="r-main-card" style={{ position: 'relative', zIndex: 1 }}>
           <div className="r-mc-left">
             <label>AMOUNT PAID</label>
-            <div className="r-amount" style={{fontSize: '32px'}}>{formatDualCurrency(payment.amount, config.currency)}</div>
+            <div className="r-amount" style={{fontSize: '32px'}}>{formatDualCurrency(payment.amount, verification.currency)}</div>
           </div>
           <div className="r-mc-right">
             <div className="r-status-large">{payment.status === "paid" ? "PAID IN FULL" : payment.status.toUpperCase()}</div>
-            <div className="r-meta">RECEIPT REF: RCPT-{payment.id.slice(0, 8).toUpperCase()}</div>
-            <div className="r-meta">ISSUED: {formatDate(todayDateOnly(), { day: "numeric", month: "short", year: "numeric" }).toUpperCase()}</div>
+            <div className="r-meta">RECEIPT REF: {verification.reference}</div>
+            <div className="r-meta">ISSUED: {new Date(verification.issuedAtClient).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" }).toUpperCase()}</div>
           </div>
         </div>
 
@@ -406,7 +571,7 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           </div>
           <div className="r-party">
             <label>CANDIDATE</label>
-            <strong>{config.studentName}</strong>
+            <strong>{verification.studentName}</strong>
           </div>
         </div>
 
@@ -416,18 +581,18 @@ function ReceiptPrintView({ tutorName, config, payment, onClose }: { tutorName: 
           {payment.notes ? `Notes: ${payment.notes}` : "No additional notes."}
         </div>
 
-        <div className="r-crypto-auth" style={{ position: 'relative', zIndex: 1, marginTop: '40px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px', borderTop: '1px dashed #3b5065', paddingTop: '20px' }}>
+        <div className="r-ledger-verification" style={{ position: 'relative', zIndex: 1, marginTop: '40px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px', borderTop: '1px dashed #3b5065', paddingTop: '20px' }}>
           <div style={{ background: '#fff', padding: '10px', borderRadius: '8px', display: 'inline-block' }}>
             <QRCode 
-              value={`${window.location.origin}${window.location.pathname}?verify_receipt=${payment.id.slice(0,8).toUpperCase()}`} 
+              value={`${window.location.origin}${window.location.pathname}?verify_receipt=${encodeURIComponent(verification.token)}`}
               size={80} 
             />
           </div>
           <div style={{ color: '#a9bacd', fontSize: '10px', fontFamily: 'monospace', lineHeight: '1.4' }}>
-            <strong style={{ color: '#00b49f', fontSize: '12px', display: 'block', marginBottom: '4px' }}>VERIFIED DIGITAL SIGNATURE</strong>
-            CRYPTOGRAPHIC HASH: {btoa(`H-CFA-${payment.id}-${payment.amount}`).substring(0, 32)}<br />
-            TIMESTAMP: {new Date().toISOString()}<br />
-            SCAN FOR AUTHENTICITY
+            <strong style={{ color: '#00b49f', fontSize: '12px', display: 'block', marginBottom: '4px' }}>ACTIVE OFFICIAL LEDGER RECORD</strong>
+            REFERENCE: {verification.reference}<br />
+            ISSUED: {new Date(verification.issuedAtClient).toLocaleString()}<br />
+            SCAN TO CHECK CURRENT STATUS
           </div>
         </div>
       </div>
@@ -553,22 +718,43 @@ function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onCl
   const [saving, setSaving] = useState(false);
   const [existingPdfUrl, setExistingPdfUrl] = useState<string | null>(null);
   const [loadingPdf, setLoadingPdf] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     if (record.hasReceipt && record.id) {
       setLoadingPdf(true);
-      getPaymentReceipt(record.id).then(receipt => {
-        if (active && receipt?.dataUri) setExistingPdfUrl(receipt.dataUri);
-        if (active) setLoadingPdf(false);
-      });
+      getPaymentReceipt(record.id)
+        .then(receipt => {
+          if (active && receipt?.dataUri) setExistingPdfUrl(receipt.dataUri);
+        })
+        .catch(err => {
+          if (active) {
+            setSaveError(
+              err instanceof Error
+                ? err.message
+                : "The transfer proof could not be loaded.",
+            );
+          }
+        })
+        .finally(() => {
+          if (active) setLoadingPdf(false);
+        });
     }
     return () => { active = false; };
   }, [record]);
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave(data, file);
+    setSaveError(null);
+    try {
+      await onSave(data, file);
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : "The transaction could not be saved.",
+      );
+      setSaving(false);
+    }
   };
 
   return (
@@ -614,6 +800,7 @@ function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onCl
               </div>
             )}
           </div>
+          {saveError && <p className="payment-modal-error" role="alert">{saveError}</p>}
         </div>
         <footer className="modal-footer">
           <button className="luxury-btn outline" onClick={onClose} disabled={saving}>Cancel</button>
@@ -626,13 +813,34 @@ function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onCl
   );
 }
 
-function ConfigModal({ config, onClose, onSave }: { config: PaymentConfig, onClose: () => void, onSave: (cfg: PaymentConfig) => void }) {
+function ConfigModal({ config, onClose, onSave }: { config: PaymentConfig, onClose: () => void, onSave: (cfg: PaymentConfig) => Promise<void> | void }) {
   const [data, setData] = useState(config);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleSave = async () => {
+    if (!data.studentName.trim()) {
+      setSaveError("Enter the student's display name.");
+      return;
+    }
+    if (!Number.isFinite(data.monthlyAmount) || data.monthlyAmount <= 0) {
+      setSaveError("Enter a monthly amount greater than zero.");
+      return;
+    }
     setSaving(true);
-    await onSave(data);
+    setSaveError(null);
+    try {
+      await onSave({
+        ...data,
+        studentName: data.studentName.trim(),
+        currency: data.currency.trim().toUpperCase(),
+      });
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : "Payment settings could not be saved.",
+      );
+      setSaving(false);
+    }
   };
 
   return (
@@ -669,6 +877,7 @@ function ConfigModal({ config, onClose, onSave }: { config: PaymentConfig, onClo
               <input type="date" value={data.engagementEndDate} onChange={e => setData({...data, engagementEndDate: e.target.value})} disabled={saving} />
             </label>
           </div>
+          {saveError && <p className="payment-modal-error" role="alert">{saveError}</p>}
         </div>
         <footer className="modal-footer">
           <button className="luxury-btn outline" onClick={onClose} disabled={saving}>Cancel</button>

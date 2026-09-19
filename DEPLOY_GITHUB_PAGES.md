@@ -82,12 +82,22 @@ The rules intentionally allow:
 - only the tutor role to read or write `programs/project-202/tutorPrivate/notes`;
 - only the tutor role to get or publish a playbook manifest and its immutable versioned chunks;
 - only the tutor role to get, create, advance, complete, or delete a private live run;
+- only the tutor role to create and revoke receipt-verification ledger records;
+- an unauthenticated QR holder to get one receipt-verification record by its full unguessable token, while forbidding collection listing and deletion;
 - no client to list or edit the membership allowlist;
 - no student access, including direct-path access, to playbooks, chunks, or live runs;
 - no client access to any other Firestore path;
 - no client deletion of the tracker document.
 
 Repeat the deploy command after every intentional change to `firestore.rules`. Rules are not deployed by the GitHub Pages workflow. For this release, deploy the backward-compatible rules before publishing the new Pages build so the private Session Mode paths, session-approval fields, and private-note path are authorized when the client becomes live.
+
+The Payments receipt flow also depends on these rules. A printed receipt contains
+an unguessable UUID in its QR link. The verification page performs an exact read
+of `programs/project-202/publicReceiptVerifications/{token}` and reports only the
+current ledger status and the receipt facts stored there. Firestore forbids
+listing this collection; payment edits and deletions revoke the old record. This
+is database-backed verification, not a standalone digital signature. Deploy the
+rules before using **Verified receipt** in production.
 
 For a controlled remote deployment, create a protected GitHub environment named
 `firebase-production`, require reviewer approval, and add an environment secret
@@ -256,6 +266,7 @@ Delete any previously imported legacy Project 202 calendar events before importi
 - Firebase Web App values identify the project; Firestore Rules authorize access.
 - The `members` allowlist is the access boundary. An authenticated but unlisted Firebase user cannot read or change tracker data.
 - Membership `role` is also enforced by Firestore Rules, not only hidden or disabled in the interface. Keep Mohamed's role exactly `tutor` and Hamad's exactly `student`.
+- Receipt-verification links intentionally expose the candidate name, tutor name, amount, currency, payment date, reference, and current active/revoked status to anyone who possesses the full QR URL. The collection cannot be listed. Revoke a receipt after any material correction and do not post QR links publicly.
 - Import, reset, session scheduling, tutor-session records, session approval, playbook publishing, private live runs, topic mastery, mock administration, and private tutor notes are tutor-controlled. Hamad may complete independent/evidence tasks, request or withdraw session completion, record confidence-rated practice and mistakes, and manage shared notes.
 - Every cloud snapshot and imported backup is normalized before rendering. Malformed evidence records are discarded, numeric/text fields are bounded, duplicate record IDs are removed, and schedule overrides are accepted only when all 24 checkpoints remain in their original program week and before the exam. The only valid exception is the Friday immediately before that checkpoint's canonical Saturday, still at 09:00 and with a tutor reason.
 - Firestore Rules enforce roles, top-level types, collection limits and revision/timestamp consistency. During rollout they accept v2 and v3 but forbid downgrading v3, including from an old tutor tab. Only the tutor can migrate the shared schedule. Up to 64 approval entries retain historical audit pairs alongside active approvals; the current application accepts Session 01-24 overrides. Because the tracker intentionally remains one Firestore document, Rules cannot iterate through every object in its large evidence arrays; the application normalizer is the detailed record-shape boundary and JSON export remains a recovery path.
