@@ -34,6 +34,7 @@ function getServices() {
 export interface PaymentConfig {
   studentUid: string;
   studentName: string;
+  tutorName: string;
   monthlyAmount: number;
   currency: string;
   engagementStartDate: string;
@@ -62,7 +63,13 @@ export async function getPaymentConfig(studentUid: string): Promise<PaymentConfi
   const ref = doc(firestore, "programs", PROGRAM_ID, "tutorPaymentConfigs", studentUid);
   const snapshot = await getDoc(ref);
   if (!snapshot.exists()) return null;
-  return snapshot.data() as PaymentConfig;
+  const data = snapshot.data() as Omit<PaymentConfig, "tutorName"> & {
+    tutorName?: unknown;
+  };
+  return {
+    ...data,
+    tutorName: typeof data.tutorName === "string" ? data.tutorName : "",
+  };
 }
 
 export async function savePaymentConfig(config: PaymentConfig): Promise<void> {
@@ -158,7 +165,6 @@ export async function getPublicReceiptVerification(
 export async function issuePaymentReceiptVerification(
   payment: PaymentRecord,
   config: PaymentConfig,
-  tutorName: string,
 ): Promise<{
   payment: PaymentRecord;
   verification: PublicReceiptVerification;
@@ -197,7 +203,7 @@ export async function issuePaymentReceiptVerification(
       token,
       paymentId: payment.id,
       studentName: config.studentName,
-      tutorName,
+      tutorName: config.tutorName,
       amount: payment.amount,
       currency: config.currency,
       paymentDate: payment.dateRecorded,
@@ -210,10 +216,10 @@ export async function issuePaymentReceiptVerification(
   const expected = createPublicReceiptVerification({
     token,
     paymentId: payment.id,
-    studentName: verification.studentName,
-    tutorName: verification.tutorName,
+    studentName: config.studentName,
+    tutorName: config.tutorName,
     amount: payment.amount,
-    currency: verification.currency,
+    currency: config.currency,
     paymentDate: payment.dateRecorded,
     issuedAtClient: verification.issuedAtClient,
     issuedBy: verification.issuedBy,

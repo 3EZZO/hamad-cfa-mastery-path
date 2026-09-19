@@ -4,6 +4,7 @@ const harness = vi.hoisted(() => ({
   documents: new Map<string, unknown>(),
   commitError: null as Error | null,
   deletes: [] as string[],
+  sets: [] as Array<{ path: string; value: unknown }>,
   updates: [] as Array<{ path: string; value: unknown }>,
 }));
 
@@ -26,7 +27,9 @@ vi.mock("firebase/firestore", () => ({
     delete: (reference: { path: string }) => {
       harness.deletes.push(reference.path);
     },
-    set: vi.fn(),
+    set: (reference: { path: string }, value: unknown) => {
+      harness.sets.push({ path: reference.path, value });
+    },
     update: (reference: { path: string }, value: unknown) => {
       harness.updates.push({ path: reference.path, value });
     },
@@ -45,6 +48,7 @@ vi.mock("./cloud", () => ({
 
 import {
   deletePaymentRecord,
+  getPaymentConfig,
   issuePaymentReceiptVerification,
 } from "./cloudPayments";
 
@@ -53,6 +57,7 @@ describe("payment deletion", () => {
     harness.documents.clear();
     harness.commitError = null;
     harness.deletes = [];
+    harness.sets = [];
     harness.updates = [];
   });
 
@@ -100,14 +105,65 @@ describe("payment deletion", () => {
         {
           studentUid: "student-uid",
           studentName: "Hamad",
+          tutorName: "Mohamed Ali",
           monthlyAmount: 1500,
           currency: "USD",
           engagementStartDate: "2026-09-01",
           engagementEndDate: "2027-02-26",
           billingDayOfMonth: 19,
         },
-        "Mohamed Ali",
       ),
     ).rejects.toThrow("Only a paid transaction");
+  });
+
+  it("migrates a legacy billing config to require an explicit tutor name", async () => {
+    const configPath =
+      "programs/project-202/tutorPaymentConfigs/student-uid";
+    harness.documents.set(configPath, {
+      studentUid: "student-uid",
+      studentName: "Hamad",
+      monthlyAmount: 1500,
+      currency: "USD",
+      engagementStartDate: "2026-09-01",
+      engagementEndDate: "2027-02-26",
+      billingDayOfMonth: 19,
+    });
+
+    await expect(getPaymentConfig("student-uid")).resolves.toMatchObject({
+      tutorName: "",
+    });
+  });
+
+  it("copies the configured tutor display name into a new ledger record", async () => {
+    const result = await issuePaymentReceiptVerification(
+      {
+        id: "payment-2026-09",
+        studentUid: "student-uid",
+        dateRecorded: "2026-09-19",
+        amount: 1500,
+        status: "paid",
+        hasReceipt: false,
+      },
+      {
+        studentUid: "student-uid",
+        studentName: "Hamad",
+        tutorName: "Mohamed Ali",
+        monthlyAmount: 1500,
+        currency: "USD",
+        engagementStartDate: "2026-09-01",
+        engagementEndDate: "2027-02-26",
+        billingDayOfMonth: 19,
+      },
+    );
+
+    expect(result.verification.tutorName).toBe("Mohamed Ali");
+    expect(harness.sets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: expect.stringContaining("publicReceiptVerifications"),
+          value: expect.objectContaining({ tutorName: "Mohamed Ali" }),
+        }),
+      ]),
+    );
   });
 });

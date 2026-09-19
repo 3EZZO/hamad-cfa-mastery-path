@@ -37,11 +37,7 @@ function makeId() {
   return Math.random().toString(36).substring(2, 15);
 }
 
-interface PaymentsHubProps {
-  tutorName: string;
-}
-
-export function PaymentsHub({ tutorName }: PaymentsHubProps) {
+export function PaymentsHub() {
   const [students, setStudents] = useState<ProjectMember[]>([]);
   const [studentUid, setStudentUid] = useState<string | null>(null);
 
@@ -107,6 +103,7 @@ export function PaymentsHub({ tutorName }: PaymentsHubProps) {
           cfg = {
             studentUid: selectedStudentUid,
             studentName: "",
+            tutorName: "",
             monthlyAmount: 0,
             currency: "USD",
             engagementStartDate: todayDateOnly(),
@@ -133,6 +130,43 @@ export function PaymentsHub({ tutorName }: PaymentsHubProps) {
   if (loading) return <div className="payments-hub loading">Loading financial dashboard...</div>;
   if (error) return <div className="payments-hub error"><h3>Error</h3><p>{error}</p></div>;
   if (!config || !studentUid) return null;
+
+  const handleSaveConfig = async (newConfig: PaymentConfig) => {
+    const safeConfig = {
+      ...newConfig,
+      studentUid,
+      studentName: newConfig.studentName.trim(),
+      tutorName: newConfig.tutorName.trim(),
+      currency: newConfig.currency.trim().toUpperCase(),
+    };
+    const receiptIdentityChanged =
+      config.studentName !== safeConfig.studentName ||
+      config.tutorName !== safeConfig.tutorName ||
+      config.currency !== safeConfig.currency;
+
+    let nextRecords = records;
+    if (receiptIdentityChanged) {
+      nextRecords = [];
+      for (const record of records) {
+        if (!record.verificationToken) {
+          nextRecords.push(record);
+          continue;
+        }
+        await revokeReceiptVerification(record.verificationToken);
+        const { verificationToken, verificationIssuedAt, ...unsignedRecord } =
+          record;
+        void verificationToken;
+        void verificationIssuedAt;
+        await savePaymentRecord(unsignedRecord);
+        nextRecords.push(unsignedRecord);
+      }
+    }
+
+    await savePaymentConfig(safeConfig);
+    setRecords(nextRecords);
+    setConfig(safeConfig);
+    setShowConfig(false);
+  };
 
   const handleSaveRecord = async (rec: PaymentRecord, file: File | null) => {
     const previous = records.find(record => record.id === rec.id);
@@ -180,7 +214,6 @@ export function PaymentsHub({ tutorName }: PaymentsHubProps) {
       const issued = await issuePaymentReceiptVerification(
         rec,
         config,
-        tutorName,
       );
       setRecords(current =>
         current.map(record =>
@@ -201,6 +234,7 @@ export function PaymentsHub({ tutorName }: PaymentsHubProps) {
 
   const configReady =
     config.studentName.trim().length > 0 &&
+    config.tutorName.trim().length > 0 &&
     Number.isFinite(config.monthlyAmount) &&
     config.monthlyAmount > 0;
 
@@ -210,12 +244,13 @@ export function PaymentsHub({ tutorName }: PaymentsHubProps) {
         <div className="glass-card payment-setup-card">
           <h2>Complete billing setup</h2>
           <p>
-            The active student account was resolved securely. Add the display
-            name and billing terms before recording a transaction.
+            The active student account was resolved securely. Add the tutor and
+            student display names with the billing terms before recording a
+            transaction.
           </p>
           <dl>
             <div><dt>Student account</dt><dd>{studentUid}</dd></div>
-            <div><dt>Tutor</dt><dd>{tutorName}</dd></div>
+            <div><dt>Tutor</dt><dd>{config.tutorName || "Name required"}</dd></div>
           </dl>
           <button className="luxury-btn primary" onClick={() => setShowConfig(true)}>
             <Settings size={16} /> Configure billing
@@ -225,11 +260,7 @@ export function PaymentsHub({ tutorName }: PaymentsHubProps) {
           <ConfigModal
             config={config}
             onClose={() => setShowConfig(false)}
-            onSave={async newConfig => {
-              await savePaymentConfig({ ...newConfig, studentUid });
-              setConfig({ ...newConfig, studentUid });
-              setShowConfig(false);
-            }}
+            onSave={handleSaveConfig}
           />
         )}
       </div>
@@ -288,7 +319,7 @@ export function PaymentsHub({ tutorName }: PaymentsHubProps) {
   if (viewingStatement) {
     return (
       <StatementPrintView
-        tutorName={tutorName}
+        tutorName={config.tutorName}
         config={config}
         records={records}
         expectedTotal={expectedTotal}
@@ -477,12 +508,7 @@ export function PaymentsHub({ tutorName }: PaymentsHubProps) {
         <ConfigModal
           config={config}
           onClose={() => setShowConfig(false)}
-          onSave={async (newConfig) => {
-            const safeConfig = { ...newConfig, studentUid };
-            await savePaymentConfig(safeConfig);
-            setConfig(safeConfig);
-            setShowConfig(false);
-          }}
+          onSave={handleSaveConfig}
         />
       )}
     </div>
@@ -823,6 +849,10 @@ function ConfigModal({ config, onClose, onSave }: { config: PaymentConfig, onClo
       setSaveError("Enter the student's display name.");
       return;
     }
+    if (!data.tutorName.trim()) {
+      setSaveError("Enter the tutor name to display on receipts.");
+      return;
+    }
     if (!Number.isFinite(data.monthlyAmount) || data.monthlyAmount <= 0) {
       setSaveError("Enter a monthly amount greater than zero.");
       return;
@@ -833,6 +863,7 @@ function ConfigModal({ config, onClose, onSave }: { config: PaymentConfig, onClo
       await onSave({
         ...data,
         studentName: data.studentName.trim(),
+        tutorName: data.tutorName.trim(),
         currency: data.currency.trim().toUpperCase(),
       });
     } catch (err) {
@@ -852,6 +883,10 @@ function ConfigModal({ config, onClose, onSave }: { config: PaymentConfig, onClo
         </header>
         <div className="modal-body glass-inputs">
           <div className="input-grid">
+            <label>
+              <span>Tutor Display Name</span>
+              <input type="text" value={data.tutorName} onChange={e => setData({...data, tutorName: e.target.value})} disabled={saving} placeholder="Name shown on receipts" />
+            </label>
             <label>
               <span>Student Name</span>
               <input type="text" value={data.studentName} onChange={e => setData({...data, studentName: e.target.value})} disabled={saving} />
