@@ -12,6 +12,7 @@ import {
   Clock3,
   Cloud,
   CloudOff,
+  Calculator,
   Layers3,
   Play,
   RotateCcw,
@@ -451,18 +452,21 @@ export function PracticeCoach({
       <section className="practice-player" aria-label={`${modeLabel(activeRun.mode)} practice set`}>
         <header className="practice-player__header">
           <button type="button" onClick={abandon} aria-label="Return to Practice home"><ArrowLeft /></button>
-          <div>
+          <div className="practice-player__identity">
             <span>{modeLabel(activeRun.mode)}</span>
           </div>
-          <button 
-            type="button" 
-            className="luxury-btn outline" 
-            style={{ marginLeft: 'auto', marginRight: '10px', fontSize: '11px', padding: '4px 12px' }}
-            onClick={() => setShowCalculator(!showCalculator)}
-          >
-            BA II PLUS
-          </button>
-          <PracticeSync state={sync} />
+          <div className="practice-player__utilities">
+            <button
+              type="button"
+              className={`practice-calculator-toggle${showCalculator ? " is-active" : ""}`}
+              aria-pressed={showCalculator}
+              onClick={() => setShowCalculator(!showCalculator)}
+            >
+              <Calculator size={17} aria-hidden="true" />
+              <span>BA II Plus</span>
+            </button>
+            <PracticeSync state={sync} />
+          </div>
         </header>
         <div className="practice-progress-segments" role="progressbar" aria-label="Practice-set progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
           {activeRun.questionIds.map((id, index) => {
