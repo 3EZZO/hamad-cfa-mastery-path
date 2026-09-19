@@ -1051,9 +1051,7 @@ function App() {
         );
       case "payments":
         return capabilities.canUseLiveSession ? (
-          <PaymentsHub
-            tutorName={user.displayName?.trim() || user.email || "Tutor"}
-          />
+          <PaymentsHub />
         ) : (
           <EmptyState icon={ShieldCheck} title="Tutor access only">
             Payment records and receipt issuance are available only to the tutor.
