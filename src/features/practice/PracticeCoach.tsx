@@ -88,6 +88,7 @@ interface PracticeCoachProps {
 
 type CoachView = "hub" | "run" | "results";
 type CoachSync = "loading" | "synced" | "offline" | "saving" | "error";
+type PerformanceContext = ProjectRole | "rehearsal";
 
 function makeId(prefix: string): string {
   const random = typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -130,6 +131,12 @@ export function PracticeCoach({
   const [banks, setBanks] = useState<PublishedPracticeBank[]>([]);
   const [states, setStates] = useState<Record<string, PracticeQuestionState>>({});
   const [runs, setRuns] = useState<PracticeRun[]>([]);
+  const [assignedBankIds, setAssignedBankIds] = useState<string[]>([]);
+  const [assignmentLoaded, setAssignmentLoaded] = useState(false);
+  const [isRehearsal, setIsRehearsal] = useState(false);
+  const [rehearsalStates, setRehearsalStates] = useState<Record<string, PracticeQuestionState>>({});
+  const [rehearsalRuns, setRehearsalRuns] = useState<PracticeRun[]>([]);
+  const [exitConfirmationOpen, setExitConfirmationOpen] = useState(false);
   const [practiceOwnerUid, setPracticeOwnerUid] = useState<string | null>(
     role === "student" ? uid : null
   );
@@ -148,27 +155,42 @@ export function PracticeCoach({
   const answerStartedAt = useRef(Date.now());
 
   const questions = useMemo(() => banks.flatMap(bank => bank.questions), [banks]);
-  const questionsById = useMemo(
-    () => new Map(questions.map(question => [question.id, question])),
-    [questions]
+  const rehearsalBanks = useMemo(
+    () => banks.filter(bank => assignedBankIds.includes(bank.storageId)),
+    [assignedBankIds, banks]
   );
-  const bankByQuestion = useMemo(() => {
+  const runnerBanks = isRehearsal ? rehearsalBanks : banks;
+  const runnerQuestions = useMemo(
+    () => runnerBanks.flatMap(bank => bank.questions),
+    [runnerBanks]
+  );
+  const runnerQuestionsById = useMemo(
+    () => new Map(runnerQuestions.map(question => [question.id, question])),
+    [runnerQuestions]
+  );
+  const runnerBankByQuestion = useMemo(() => {
     const result = new Map<string, string>();
-    banks.forEach(bank => bank.questions.forEach(question => result.set(question.id, bank.storageId)));
+    runnerBanks.forEach(bank => bank.questions.forEach(question => result.set(question.id, bank.storageId)));
     return result;
-  }, [banks]);
+  }, [runnerBanks]);
   const modules = useMemo(
-    () => [...new Set(questions.map(question => question.moduleId))],
-    [questions]
+    () => [...new Set(runnerQuestions.map(question => question.moduleId))],
+    [runnerQuestions]
   );
   const insights = useMemo(
     () => buildPracticeInsights({ questions, states, runs }),
     [questions, runs, states]
   );
-  const dueCount = insights.dueQuestions;
+  const rehearsalInsights = useMemo(
+    () => buildPracticeInsights({ questions: runnerQuestions, states: rehearsalStates, runs: rehearsalRuns }),
+    [rehearsalRuns, rehearsalStates, runnerQuestions]
+  );
+  const runnerStates = isRehearsal ? rehearsalStates : states;
+  const displayedInsights = isRehearsal ? rehearsalInsights : insights;
+  const dueCount = displayedInsights.dueQuestions;
   const currentQuestions = useMemo(
-    () => runQuestions(activeRun, questionsById),
-    [activeRun, questionsById]
+    () => runQuestions(activeRun, runnerQuestionsById),
+    [activeRun, runnerQuestionsById]
   );
   const currentQuestion = activeRun
     ? currentQuestions[activeRun.currentIndex]
@@ -201,8 +223,10 @@ export function PracticeCoach({
   }, [uid, writeCloud]);
 
   const rememberRun = useCallback((run: PracticeRun) => {
-    setRuns(current => [run, ...current.filter(item => item.id !== run.id)]);
-  }, []);
+    const update = (current: PracticeRun[]) => [run, ...current.filter(item => item.id !== run.id)];
+    if (isRehearsal) setRehearsalRuns(update);
+    else setRuns(update);
+  }, [isRehearsal]);
 
   useEffect(() => {
     let active = true;
@@ -255,6 +279,8 @@ export function PracticeCoach({
           listPracticeRuns(ownerUid),
         ]);
         if (!active) return;
+        setAssignedBankIds(assignment?.bankStorageIds ?? []);
+        setAssignmentLoaded(true);
         const assigned = role === "tutor"
           ? cloudBanks
           : cloudBanks.filter(bank => assignment?.bankStorageIds.includes(bank.storageId));
@@ -270,6 +296,7 @@ export function PracticeCoach({
         if (role === "student") void flushPending();
       } catch {
         if (!active) return;
+        setAssignmentLoaded(true);
         setSync(cachedBanks.length ? "offline" : "error");
       }
     };
@@ -299,8 +326,8 @@ export function PracticeCoach({
     moduleId: string | null = null
   ) => {
     const selected = selectPracticeQuestions({
-      questions,
-      states,
+      questions: runnerQuestions,
+      states: runnerStates,
       mode,
       count,
       moduleId,
@@ -314,7 +341,7 @@ export function PracticeCoach({
       id: makeId("practice"),
       uid,
       mode,
-      bankStorageIds: [...new Set(selected.map(question => bankByQuestion.get(question.id)).filter(Boolean))] as string[],
+      bankStorageIds: [...new Set(selected.map(question => runnerBankByQuestion.get(question.id)).filter(Boolean))] as string[],
       moduleId,
       questionIds: selected.map(question => question.id),
       answers: [],
@@ -328,8 +355,10 @@ export function PracticeCoach({
     rememberRun(run);
     setMessage("");
     setView("run");
-    await cachePracticeRun(run);
-    void writeCloud("run", run);
+    if (!isRehearsal) {
+      await cachePracticeRun(run);
+      void writeCloud("run", run);
+    }
   };
 
   const submitAnswer = async () => {
@@ -347,9 +376,9 @@ export function PracticeCoach({
       calculatorLog,
     };
     const nextState = updatePracticeQuestionState({
-      previous: states[currentQuestion.id],
+      previous: runnerStates[currentQuestion.id],
       question: currentQuestion,
-      bankStorageId: bankByQuestion.get(currentQuestion.id) ?? activeRun.bankStorageIds[0] ?? "unknown",
+      bankStorageId: runnerBankByQuestion.get(currentQuestion.id) ?? activeRun.bankStorageIds[0] ?? "unknown",
       correct,
       confidence,
       responseMs,
@@ -359,16 +388,22 @@ export function PracticeCoach({
       answers: [...activeRun.answers.filter(item => item.questionId !== currentQuestion.id), answer],
       updatedAtClient: timestamp,
     };
-    setStates(current => ({ ...current, [currentQuestion.id]: nextState }));
+    if (isRehearsal) {
+      setRehearsalStates(current => ({ ...current, [currentQuestion.id]: nextState }));
+    } else {
+      setStates(current => ({ ...current, [currentQuestion.id]: nextState }));
+    }
     setActiveRun(nextRun);
     rememberRun(nextRun);
     setSubmitted(true);
-    await Promise.all([
-      cachePracticeState(uid, nextState),
-      cachePracticeRun(nextRun),
-    ]);
-    void writeCloud("state", nextState);
-    void writeCloud("run", nextRun);
+    if (!isRehearsal) {
+      await Promise.all([
+        cachePracticeState(uid, nextState),
+        cachePracticeRun(nextRun),
+      ]);
+      void writeCloud("state", nextState);
+      void writeCloud("run", nextRun);
+    }
     if (activeRun.mode === "exam") void advance(nextRun);
   };
 
@@ -385,25 +420,29 @@ export function PracticeCoach({
     setLastCompletedRun(complete);
     rememberRun(complete);
     setView("results");
-    await cachePracticeRun(complete);
-    void writeCloud("run", complete);
+    if (!isRehearsal) {
+      await cachePracticeRun(complete);
+      void writeCloud("run", complete);
+    }
     const correct = complete.answers.filter(answer => answer.correct).length;
     const averageConfidence = complete.answers.length
       ? Math.round(complete.answers.reduce((sum, answer) => sum + answer.confidence, 0) / complete.answers.length)
       : 3;
     const topic = complete.moduleId
-      ? banks.find(bank => bank.moduleIds.includes(complete.moduleId!))?.topic ?? "Quantitative Methods"
-      : banks[0]?.topic ?? "Quantitative Methods";
-    onComplete({
-      date: today(),
-      topic,
-      attempted: complete.answers.length,
-      correct,
-      confidence: averageConfidence,
-      source: `Practice Coach · ${modeLabel(complete.mode)}`,
-      note: `${correct}/${complete.answers.length} correct; detailed adaptive review retained in Practice Coach.`,
-    });
-    notify("Practice set completed and synchronized with the tracker.");
+      ? runnerBanks.find(bank => bank.moduleIds.includes(complete.moduleId!))?.topic ?? "Quantitative Methods"
+      : runnerBanks[0]?.topic ?? "Quantitative Methods";
+    if (!isRehearsal) {
+      onComplete({
+        date: today(),
+        topic,
+        attempted: complete.answers.length,
+        correct,
+        confidence: averageConfidence,
+        source: `Practice Coach · ${modeLabel(complete.mode)}`,
+        note: `${correct}/${complete.answers.length} correct; detailed adaptive review retained in Practice Coach.`,
+      });
+      notify("Practice set completed and synchronized with the tracker.");
+    }
   };
 
   const advance = async (run = activeRun) => {
@@ -425,8 +464,42 @@ export function PracticeCoach({
     setCalculatorLog([]);
     setShowCalculator(false);
     answerStartedAt.current = Date.now();
-    await cachePracticeRun(nextRun);
-    void writeCloud("run", nextRun);
+    if (!isRehearsal) {
+      await cachePracticeRun(nextRun);
+      void writeCloud("run", nextRun);
+    }
+  };
+
+  const enterRehearsal = () => {
+    setRehearsalStates({});
+    setRehearsalRuns([]);
+    setActiveRun(null);
+    setLastCompletedRun(null);
+    setSelectedOption(null);
+    setSubmitted(false);
+    setModulePickerOpen(false);
+    setMessage("");
+    setView("hub");
+    setIsRehearsal(true);
+  };
+
+  const exitRehearsal = () => {
+    setIsRehearsal(false);
+    setExitConfirmationOpen(false);
+    setRehearsalStates({});
+    setRehearsalRuns([]);
+    setActiveRun(null);
+    setLastCompletedRun(null);
+    setSelectedOption(null);
+    setSubmitted(false);
+    setShowCalculator(false);
+    setMessage("");
+    setView("hub");
+  };
+
+  const requestRehearsalExit = () => {
+    if (activeRun?.status === "active") setExitConfirmationOpen(true);
+    else exitRehearsal();
   };
 
   const abandon = async () => {
@@ -436,7 +509,7 @@ export function PracticeCoach({
 
   const resume = () => {
     if (!activeRun) return;
-    if (!runQuestions(activeRun, questionsById).length) {
+    if (!runQuestions(activeRun, runnerQuestionsById).length) {
       setMessage("This saved set needs a practice bank that is not available on this device.");
       return;
     }
@@ -445,11 +518,12 @@ export function PracticeCoach({
 
   const completedAnswers = lastCompletedRun?.answers ?? [];
   const resultCorrect = completedAnswers.filter(answer => answer.correct).length;
-  if (role === "student" && view === "run" && activeRun && currentQuestion) {
+  if ((role === "student" || isRehearsal) && view === "run" && activeRun && currentQuestion) {
     const progress = ((activeRun.currentIndex + (submitted ? 1 : 0)) / activeRun.questionIds.length) * 100;
     const correct = selectedOption === currentQuestion.correctOption;
     return (
       <section className="practice-player" aria-label={`${modeLabel(activeRun.mode)} practice set`}>
+        {isRehearsal && <RehearsalBanner onExit={requestRehearsalExit} />}
         <header className="practice-player__header">
           <button type="button" onClick={abandon} aria-label="Return to Practice home"><ArrowLeft /></button>
           <div className="practice-player__identity">
@@ -465,7 +539,7 @@ export function PracticeCoach({
               <Calculator size={17} aria-hidden="true" />
               <span>BA II Plus</span>
             </button>
-            <PracticeSync state={sync} />
+            {isRehearsal ? <RehearsalStatus /> : <PracticeSync state={sync} />}
           </div>
         </header>
         <div className="practice-progress-segments" role="progressbar" aria-label="Practice-set progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
@@ -562,11 +636,17 @@ export function PracticeCoach({
             </button>
           ) : null}
         </footer>
+        {exitConfirmationOpen && (
+          <RehearsalExitDialog
+            onCancel={() => setExitConfirmationOpen(false)}
+            onConfirm={exitRehearsal}
+          />
+        )}
       </section>
     );
   }
 
-  if (role === "student" && view === "results" && lastCompletedRun) {
+  if ((role === "student" || isRehearsal) && view === "results" && lastCompletedRun) {
     const percentage = completedAnswers.length ? Math.round((resultCorrect / completedAnswers.length) * 100) : 0;
     const repair = completedAnswers.filter(answer => !answer.correct || answer.confidence <= 2).length;
     
@@ -578,9 +658,10 @@ export function PracticeCoach({
 
     return (
       <section className="practice-results">
+        {isRehearsal && <RehearsalBanner onExit={requestRehearsalExit} />}
         <div className="practice-celebration" aria-hidden="true" />
         <div className="practice-results__mark"><Target /></div>
-        <p>Practice set complete</p>
+        <p>{isRehearsal ? "Rehearsal complete" : "Practice set complete"}</p>
         <h2>{percentage}% accuracy</h2>
         <div className="practice-results__metrics">
           <div><strong>{resultCorrect}/{completedAnswers.length}</strong><span>correct</span></div>
@@ -588,7 +669,13 @@ export function PracticeCoach({
           <div><strong>{modeLabel(lastCompletedRun.mode)}</strong><span>set</span></div>
         </div>
         <p className="practice-results__message">
-          {percentage >= 80 ? "Strong execution. The adaptive queue will lengthen intervals only after repeated independent success." : "The missed and uncertain concepts are now prioritized in your Repair Queue."}
+          {isRehearsal
+            ? percentage >= 80
+              ? "Strong rehearsal. These temporary results will be discarded when you exit."
+              : "Missed and uncertain concepts are available in this rehearsal's Repair Queue until you exit."
+            : percentage >= 80
+              ? "Strong execution. The adaptive queue will lengthen intervals only after repeated independent success."
+              : "The missed and uncertain concepts are now prioritized in your Repair Queue."}
         </p>
         
         {uniqueDiagnostics.length > 0 && (
@@ -614,18 +701,37 @@ export function PracticeCoach({
 
   return (
     <div className="practice-coach">
+      {isRehearsal && <RehearsalBanner onExit={requestRehearsalExit} />}
       <section className="practice-hero">
         <div>
-          <p>{role === "tutor" ? "Student performance" : "Independent practice"}</p>
-          <h2>{role === "tutor" ? "Hamad's practice evidence" : "What should you strengthen now?"}</h2>
-          <span>{role === "tutor"
+          <p>{isRehearsal ? "Tutor rehearsal" : role === "tutor" ? "Student performance" : "Independent practice"}</p>
+          <h2>{isRehearsal ? "Experience practice as Hamad does" : role === "tutor" ? "Hamad's practice evidence" : "What should you strengthen now?"}</h2>
+          <span>{isRehearsal
+            ? "Use Hamad's assigned question banks in a clean sandbox. Nothing attempted here is saved."
+            : role === "tutor"
             ? "A read-only view of Hamad's attempts, accuracy, confidence gaps, module health, and questions requiring review."
             : "The queue balances overdue concepts, mistakes, confidence, and response time."}</span>
         </div>
-        <PracticeSync state={sync} />
+        <div className="practice-hero__actions">
+          {role === "tutor" && !isRehearsal && (
+            <button
+              className="practice-rehearsal-launch"
+              type="button"
+              onClick={enterRehearsal}
+              disabled={!assignmentLoaded || rehearsalBanks.length === 0}
+              title={assignmentLoaded && rehearsalBanks.length === 0 ? "Assign and publish a practice bank before rehearsing." : undefined}
+            >
+              <Play size={17} /> Rehearse as student
+            </button>
+          )}
+          {role === "tutor" && !isRehearsal && assignmentLoaded && rehearsalBanks.length === 0 && (
+            <small className="practice-rehearsal-unavailable">Assign and publish a practice bank first.</small>
+          )}
+          {isRehearsal ? <RehearsalStatus /> : <PracticeSync state={sync} />}
+        </div>
       </section>
 
-      {role === "student" && activeRun && (
+      {(role === "student" || isRehearsal) && activeRun && (
         <button className="practice-resume" type="button" onClick={resume}>
           <span><Play size={20} /></span>
           <div><small>Continue where you stopped</small><strong>{modeLabel(activeRun.mode)} · question {activeRun.currentIndex + 1} of {activeRun.questionIds.length}</strong></div>
@@ -637,11 +743,11 @@ export function PracticeCoach({
 
       {banks.length ? (
         <>
-          <PracticePerformance role={role} insights={insights} />
+          <PracticePerformance context={isRehearsal ? "rehearsal" : role} insights={displayedInsights} />
 
-          {role === "tutor" && <PracticeLibrary questions={questions} />}
+          {role === "tutor" && !isRehearsal && <PracticeLibrary questions={questions} />}
 
-          {role === "student" && <section className="practice-actions" aria-label="Start practice">
+          {(role === "student" || isRehearsal) && <section className="practice-actions" aria-label="Start practice">
             <button className="practice-action is-primary" type="button" onClick={() => void begin("quick", 5)}>
               <span><Sparkles /></span><div><small>Recommended now</small><strong>Quick 5</strong><p>Five adaptive questions for a focused mobile study break.</p></div><ArrowRight />
             </button>
@@ -656,13 +762,13 @@ export function PracticeCoach({
             </button>
           </section>}
 
-          {role === "student" && <section className="practice-modules">
+          {(role === "student" || isRehearsal) && <section className="practice-modules">
             <button type="button" className="practice-modules__heading" onClick={() => setModulePickerOpen(value => !value)} aria-expanded={modulePickerOpen}>
               <div><span>Choose a module</span><strong>Focused module practice</strong></div><ChevronDown />
             </button>
             {modulePickerOpen && <div>{modules.map(moduleId => {
-              const moduleQuestions = questions.filter(question => question.moduleId === moduleId);
-              const attempted = moduleQuestions.filter(question => states[question.id]).length;
+              const moduleQuestions = runnerQuestions.filter(question => question.moduleId === moduleId);
+              const attempted = moduleQuestions.filter(question => runnerStates[question.id]).length;
               return <button type="button" key={moduleId} onClick={() => void begin("module", 10, moduleId)}><div><strong>{moduleId}</strong><span>{moduleQuestions.length} questions · {attempted} attempted</span></div><ArrowRight /></button>;
             })}</div>}
           </section>}
@@ -673,10 +779,45 @@ export function PracticeCoach({
         </section>
       )}
 
-      <details className="practice-manual">
+      {!isRehearsal && <details className="practice-manual">
         <summary><BookOpenCheck size={18} /><div><strong>Practice history and manual log</strong><span>Record work completed outside Practice Coach.</span></div><ChevronDown size={18} /></summary>
         <div>{manualLog}</div>
-      </details>
+      </details>}
+    </div>
+  );
+}
+
+function RehearsalStatus() {
+  return <span className="practice-rehearsal-status"><ShieldCheck size={16} />Not saved</span>;
+}
+
+function RehearsalBanner({ onExit }: { onExit: () => void }) {
+  return (
+    <aside className="practice-rehearsal-banner" role="status">
+      <div><ShieldCheck size={18} /><span><strong>Tutor rehearsal</strong>Results are not saved to Hamad's record.</span></div>
+      <button type="button" onClick={onExit}>Exit rehearsal</button>
+    </aside>
+  );
+}
+
+function RehearsalExitDialog({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="practice-rehearsal-dialog-backdrop" role="presentation">
+      <section className="practice-rehearsal-dialog" role="dialog" aria-modal="true" aria-labelledby="rehearsal-exit-title" aria-describedby="rehearsal-exit-description" onKeyDown={event => { if (event.key === "Escape") onCancel(); }}>
+        <CircleAlert />
+        <h2 id="rehearsal-exit-title">Discard this rehearsal?</h2>
+        <p id="rehearsal-exit-description">Your unfinished answers exist only in this rehearsal and will be permanently discarded.</p>
+        <div>
+          <button type="button" autoFocus onClick={onCancel}>Continue rehearsing</button>
+          <button type="button" className="is-danger" onClick={onConfirm}>Discard and exit</button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -692,10 +833,10 @@ function formatPracticeDate(value: string): string {
 }
 
 function PracticePerformance({
-  role,
+  context,
   insights,
 }: {
-  role: ProjectRole;
+  context: PerformanceContext;
   insights: PracticeInsights;
 }) {
   const [showAllMisses, setShowAllMisses] = useState(false);
@@ -711,10 +852,12 @@ function PracticePerformance({
       <section className="practice-performance practice-performance--empty">
         <BarChart3 />
         <div>
-          <h3>{role === "tutor" ? "No student attempts yet" : "Your performance record starts here"}</h3>
-          <p>{role === "tutor"
+          <h3>{context === "tutor" ? "No student attempts yet" : context === "rehearsal" ? "Rehearsal evidence starts here" : "Your performance record starts here"}</h3>
+          <p>{context === "tutor"
             ? "Hamad's accuracy, weak modules, and missed-question review will appear after his first submitted answers."
-            : "Complete the first set to unlock accuracy, module health, and a private review of missed questions."}</p>
+            : context === "rehearsal"
+              ? "Complete a set to review temporary accuracy and mistakes. Everything resets when you exit rehearsal."
+              : "Complete the first set to unlock accuracy, module health, and a private review of missed questions."}</p>
         </div>
       </section>
     );
@@ -724,15 +867,17 @@ function PracticePerformance({
     <section className="practice-performance" aria-label="Practice performance and review">
       <header className="practice-performance__header">
         <div>
-          <span>{role === "tutor" ? "Live student evidence" : "Your evidence"}</span>
+          <span>{context === "tutor" ? "Live student evidence" : context === "rehearsal" ? "This rehearsal" : "Your evidence"}</span>
           <h3>Performance and review</h3>
-          <p>{role === "tutor"
+          <p>{context === "tutor"
             ? "Use the weak-module ranking and confidence gaps to choose the next coaching intervention."
-            : "Understand the pattern behind mistakes before starting the next set."}</p>
+            : context === "rehearsal"
+              ? "Review the temporary pattern, then retry or exit without changing Hamad's record."
+              : "Understand the pattern behind mistakes before starting the next set."}</p>
         </div>
-        <div className="practice-performance__accuracy" aria-label={`${insights.accuracy ?? 0}% lifetime accuracy`}>
+        <div className="practice-performance__accuracy" aria-label={`${insights.accuracy ?? 0}% ${context === "rehearsal" ? "rehearsal" : "lifetime"} accuracy`}>
           <strong>{insights.accuracy ?? 0}%</strong>
-          <span>lifetime accuracy</span>
+          <span>{context === "rehearsal" ? "rehearsal accuracy" : "lifetime accuracy"}</span>
         </div>
       </header>
 
@@ -797,7 +942,7 @@ function PracticePerformance({
                   <div className="practice-mistake-review__answers"><p><span>Answer chosen</span><strong>{String.fromCharCode(65 + miss.selectedOption)}. {miss.question.options[miss.selectedOption]}</strong></p><p><span>Correct answer</span><strong>{String.fromCharCode(65 + miss.question.correctOption)}. {miss.question.options[miss.question.correctOption]}</strong></p></div>
                   <p>{miss.question.explanation}</p>
                   
-                  {role === "tutor" && miss.calculatorLog && miss.calculatorLog.length > 0 && (
+                  {context === "tutor" && miss.calculatorLog && miss.calculatorLog.length > 0 && (
                     <div style={{ marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
                       <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#c3cfd9' }}>Tutor Telemetry: Calculator Replay</h4>
                       {diagnostics.length > 0 && (
