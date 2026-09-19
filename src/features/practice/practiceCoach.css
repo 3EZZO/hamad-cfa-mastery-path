@@ -47,6 +47,93 @@
 .practice-hero h2 { margin: 0; max-width: 640px; color: #fff; font-size: clamp(1.45rem, 5vw, 2.3rem); line-height: 1.08; }
 .practice-hero > div > span { display: block; margin-top: 10px; max-width: 650px; color: #c7e1eb; line-height: 1.55; }
 
+.practice-hero__actions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; max-width: 360px; }
+.practice-rehearsal-launch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid #8de3d3;
+  border-radius: 10px;
+  color: #083f46;
+  background: #9df0dc;
+  font-weight: 850;
+  cursor: pointer;
+}
+.practice-rehearsal-launch:disabled { opacity: .55; cursor: not-allowed; }
+.practice-rehearsal-unavailable { flex-basis: 100%; color: #c7e1eb; text-align: right; }
+
+.practice-rehearsal-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #85c9c4;
+  border-radius: 12px;
+  color: #123f49;
+  background: #e5f7f3;
+  text-align: left;
+}
+.practice-rehearsal-banner > div { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.practice-rehearsal-banner span { display: flex; flex-wrap: wrap; gap: 4px 8px; line-height: 1.35; }
+.practice-rehearsal-banner button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid #367b79;
+  border-radius: 8px;
+  color: #174f52;
+  background: transparent;
+  font-weight: 800;
+  cursor: pointer;
+}
+.practice-rehearsal-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #72dfbf;
+  border-radius: 999px;
+  color: #72dfbf;
+  font-size: .78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.practice-rehearsal-dialog-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5, 20, 34, .7);
+}
+.practice-rehearsal-dialog {
+  display: grid;
+  width: min(100%, 440px);
+  gap: 12px;
+  padding: 24px;
+  border: 1px solid var(--pc-line);
+  border-radius: 16px;
+  color: var(--pc-ink);
+  background: var(--pc-surface);
+  box-shadow: 0 24px 70px rgba(5, 20, 34, .28);
+  text-align: left;
+}
+.practice-rehearsal-dialog > svg { color: #b46618; }
+.practice-rehearsal-dialog h2,
+.practice-rehearsal-dialog p { margin: 0; }
+.practice-rehearsal-dialog p { color: var(--pc-muted); line-height: 1.5; }
+.practice-rehearsal-dialog > div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.practice-rehearsal-dialog button { min-height: 42px; padding: 8px 12px; border: 1px solid var(--pc-line); border-radius: 9px; color: var(--pc-ink); background: var(--pc-surface); font-weight: 800; cursor: pointer; }
+.practice-rehearsal-dialog button.is-danger { color: #fff; border-color: #a43c36; background: #a43c36; }
+
 .practice-sync {
   display: inline-flex;
   align-items: center;
@@ -670,6 +757,8 @@
 
 html:root[data-theme="dark"] .practice-action > span { color: #87d9c8; background: #193f3c; }
 html:root[data-theme="dark"] .practice-action.is-primary > span { color: #fff; background: #ffffff1f; }
+html:root[data-theme="dark"] .practice-rehearsal-banner { color: #bcebe3; border-color: #417c78; background: #173c3a; }
+html:root[data-theme="dark"] .practice-rehearsal-banner button { color: #bcebe3; border-color: #62a8a1; }
 html:root[data-theme="dark"] .practice-message,
 html:root[data-theme="dark"] .practice-feedback aside { color: #f1ce88; border-color: #95794b; background: #423724; }
 html:root[data-theme="dark"] .practice-options button.is-correct { color: #e5edf5; border-color: #4c947d; background: #193f3c; }
@@ -686,6 +775,11 @@ html:root[data-theme="dark"] .practice-mistake-review__detail aside { color: #f1
 @media (max-width: 640px) {
   .practice-coach { gap: 12px; }
   .practice-hero { padding: 18px; border-radius: 17px; }
+  .practice-hero__actions { align-items: flex-end; flex-direction: column; }
+  .practice-rehearsal-launch { padding-inline: 10px; font-size: .78rem; }
+  .practice-rehearsal-banner { align-items: stretch; flex-direction: column; }
+  .practice-rehearsal-banner button { width: 100%; }
+  .practice-rehearsal-dialog > div { flex-direction: column; }
   .practice-hero .practice-sync { position: absolute; right: 34px; }
   .practice-hero > div > span { padding-right: 18px; }
   .practice-snapshot { grid-template-columns: repeat(3, 1fr); }

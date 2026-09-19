@@ -11,6 +11,11 @@ const harness = vi.hoisted(() => ({
   loadedStateUid: "",
   loadedRunUid: "",
   rosterCalls: 0,
+  saveState: vi.fn(),
+  saveRun: vi.fn(),
+  cacheRun: vi.fn(),
+  cacheState: vi.fn(),
+  queueWrite: vi.fn(),
 }));
 
 const bank: PublishedPracticeBank = {
@@ -41,6 +46,18 @@ const bank: PublishedPracticeBank = {
     distractorExplanations: ["It does not compound.", "Correct.", "It answers a different question."],
     examTrap: "Do not substitute an arithmetic average for compounded growth.",
     tags: ["return-measures"],
+  }],
+};
+
+const unassignedBank: PublishedPracticeBank = {
+  ...bank,
+  id: "session-02-practice",
+  storageId: "session-02-practice--v1",
+  title: "Unassigned practice",
+  questions: [{
+    ...bank.questions[0],
+    id: "question-unassigned",
+    prompt: "This question must not appear in rehearsal.",
   }],
 };
 
@@ -89,7 +106,7 @@ vi.mock("../../lib/cloud", () => ({
     harness.rosterCalls += 1;
     return [{ uid: "student-uid", role: "student", active: true }];
   },
-  listPublishedPracticeBanks: async () => [bank],
+  listPublishedPracticeBanks: async () => [bank, unassignedBank],
   loadPracticeAssignment: async () => ({
     bankStorageIds: [bank.storageId],
     updatedBy: "tutor-uid",
@@ -103,19 +120,19 @@ vi.mock("../../lib/cloud", () => ({
     harness.loadedRunUid = uid;
     return [{ ...run, uid }];
   },
-  savePracticeQuestionState: vi.fn(),
-  savePracticeRun: vi.fn(),
+  savePracticeQuestionState: harness.saveState,
+  savePracticeRun: harness.saveRun,
 }));
 
 vi.mock("../../lib/practiceOffline", () => ({
   cachePracticeBanks: async () => {},
-  cachePracticeRun: async () => {},
-  cachePracticeState: async () => {},
+  cachePracticeRun: harness.cacheRun,
+  cachePracticeState: harness.cacheState,
   loadCachedPracticeBanks: async () => [],
   loadCachedPracticeRuns: async () => [],
   loadCachedPracticeStates: async () => [],
   loadPendingPracticeWrites: async () => [],
-  queuePracticeWrite: async () => {},
+  queuePracticeWrite: harness.queueWrite,
   removePendingPracticeWrite: async () => {},
 }));
 
@@ -125,7 +142,24 @@ function renderedText(tree: ReactTestRenderer): string {
   return JSON.stringify(tree.toJSON());
 }
 
-async function render(role: "tutor" | "student", uid: string) {
+function nodeText(node: { children?: Array<unknown> }): string {
+  return (node.children ?? []).map(child => {
+    if (typeof child === "string" || typeof child === "number") return String(child);
+    if (child && typeof child === "object") return nodeText(child as { children?: Array<unknown> });
+    return "";
+  }).join("");
+}
+
+function button(tree: ReactTestRenderer, label: string) {
+  return tree.root.findAllByType("button").find(candidate => nodeText(candidate).includes(label));
+}
+
+async function render(
+  role: "tutor" | "student",
+  uid: string,
+  onComplete = vi.fn(),
+  notify = vi.fn()
+) {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
@@ -133,8 +167,8 @@ async function render(role: "tutor" | "student", uid: string) {
         uid={uid}
         role={role}
         manualLog={<div>Manual evidence</div>}
-        onComplete={() => {}}
-        notify={() => {}}
+        onComplete={onComplete}
+        notify={notify}
       />
     );
     await Promise.resolve();
@@ -153,6 +187,11 @@ describe("Practice Coach role views", () => {
     harness.loadedStateUid = "";
     harness.loadedRunUid = "";
     harness.rosterCalls = 0;
+    harness.saveState.mockClear();
+    harness.saveRun.mockClear();
+    harness.cacheRun.mockClear();
+    harness.cacheState.mockClear();
+    harness.queueWrite.mockClear();
   });
 
   afterEach(() => vi.unstubAllGlobals());
@@ -180,6 +219,72 @@ describe("Practice Coach role views", () => {
     expect(text).toContain("Your evidence");
     expect(text).toContain("Recommended now");
     expect(text).toContain("Which return measure preserves compounded wealth?");
+    await act(async () => tree.unmount());
+  });
+
+  it("preserves normal student persistence", async () => {
+    const tree = await render("student", "student-uid");
+    harness.saveState.mockClear();
+    harness.saveRun.mockClear();
+    harness.cacheState.mockClear();
+    harness.cacheRun.mockClear();
+
+    await act(async () => button(tree, "Quick 5")!.props.onClick());
+    const firstAnswer = tree.root.findAllByProps({ role: "radio" })[0];
+    await act(async () => firstAnswer.props.onClick());
+    await act(async () => button(tree, "Submit answer")!.props.onClick());
+
+    expect(harness.saveState).toHaveBeenCalledTimes(1);
+    expect(harness.saveRun).toHaveBeenCalled();
+    expect(harness.cacheState).toHaveBeenCalledTimes(1);
+    expect(harness.cacheRun).toHaveBeenCalled();
+    await act(async () => tree.unmount());
+  });
+
+  it("runs an assigned-only tutor rehearsal without persisting any activity", async () => {
+    const onComplete = vi.fn();
+    const notify = vi.fn();
+    const tree = await render("tutor", "tutor-uid", onComplete, notify);
+    harness.cacheRun.mockClear();
+    harness.cacheState.mockClear();
+
+    await act(async () => button(tree, "Rehearse as student")!.props.onClick());
+    let text = renderedText(tree);
+    expect(text).toContain("Tutor rehearsal");
+    expect(text).toContain("Quick 5");
+    expect(text).toContain("Mixed Review");
+    expect(text).toContain("Exam Drill");
+    expect(text).not.toContain("This question must not appear in rehearsal.");
+
+    await act(async () => button(tree, "Quick 5")!.props.onClick());
+    const firstAnswer = tree.root.findAllByProps({ role: "radio" })[0];
+    await act(async () => firstAnswer.props.onClick());
+    await act(async () => button(tree, "Submit answer")!.props.onClick());
+    await act(async () => button(tree, "View results")!.props.onClick());
+
+    text = renderedText(tree);
+    expect(text).toContain("Rehearsal complete");
+    expect(harness.saveState).not.toHaveBeenCalled();
+    expect(harness.saveRun).not.toHaveBeenCalled();
+    expect(harness.cacheState).not.toHaveBeenCalled();
+    expect(harness.cacheRun).not.toHaveBeenCalled();
+    expect(harness.queueWrite).not.toHaveBeenCalled();
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+    await act(async () => tree.unmount());
+  });
+
+  it("confirms before discarding an unfinished rehearsal", async () => {
+    const tree = await render("tutor", "tutor-uid");
+    await act(async () => button(tree, "Rehearse as student")!.props.onClick());
+    await act(async () => button(tree, "Quick 5")!.props.onClick());
+    await act(async () => button(tree, "Exit rehearsal")!.props.onClick());
+
+    expect(renderedText(tree)).toContain("Discard this rehearsal?");
+    await act(async () => button(tree, "Discard and exit")!.props.onClick());
+    const text = renderedText(tree);
+    expect(text).toContain("Hamad's practice evidence");
+    expect(text).not.toContain("Tutor rehearsal");
     await act(async () => tree.unmount());
   });
 });
