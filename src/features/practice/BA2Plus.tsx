@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  computeArithmetic,
   computeIRR,
   computeNPV,
   computeTVM,
+  computeUnary,
   defaultCashFlowState,
+  defaultTVMState,
+  type ArithmeticOperator,
   type CashFlowState,
   type TVMState,
+  type UnaryOperation,
 } from "../../lib/calculator";
 import "./ba2plus.css";
 
@@ -26,6 +31,11 @@ interface BA2PlusProps {
 type TVMRegister = "N" | "IY" | "PV" | "PMT" | "FV";
 type Worksheet = "TVM" | "CF";
 
+interface ArithmeticFrame {
+  accumulator: number | null;
+  operator: ArithmeticOperator | null;
+}
+
 function cashFlowLabel(index: number): string {
   return index === 0 ? "CF0" : `C${String(index).padStart(2, "0")}`;
 }
@@ -44,7 +54,7 @@ export function BA2Plus({
 }: BA2PlusProps) {
   const [display, setDisplay] = useState("0.00");
   const [screenLabel, setScreenLabel] = useState("TVM");
-  const [inputState, setInputState] = useState<"READY" | "INPUT">("READY");
+  const [inputState, setInputState] = useState<"READY" | "INPUT" | "RESULT">("READY");
   const [is2nd, setIs2nd] = useState(false);
   const [isCpt, setIsCpt] = useState(false);
   const [worksheet, setWorksheet] = useState<Worksheet>("TVM");
@@ -52,6 +62,10 @@ export function BA2Plus({
     defaultCashFlowState,
   );
   const [cashFlowIndex, setCashFlowIndex] = useState(0);
+  const [arithmeticAccumulator, setArithmeticAccumulator] = useState<number | null>(null);
+  const [pendingOperator, setPendingOperator] = useState<ArithmeticOperator | null>(null);
+  const [arithmeticStack, setArithmeticStack] = useState<ArithmeticFrame[]>([]);
+  const [memory, setMemory] = useState(0);
 
   const logStroke = useCallback(
     (key: string, newDisplay: string, newState: TVMState = tvmState) => {
@@ -77,7 +91,10 @@ export function BA2Plus({
   const handleNum = useCallback(
     (number: string) => {
       let next = display;
-      if (inputState === "READY" || display.startsWith("Error")) {
+      if (inputState !== "INPUT" || display.startsWith("Error")) {
+        if (pendingOperator === null && arithmeticStack.length === 0) {
+          setArithmeticAccumulator(null);
+        }
         next = number === "." ? "0." : number;
         setInputState("INPUT");
       } else {
@@ -86,7 +103,7 @@ export function BA2Plus({
       }
       updateDisplay(next, tvmState, number);
     },
-    [display, inputState, tvmState, updateDisplay],
+    [arithmeticStack.length, display, inputState, pendingOperator, tvmState, updateDisplay],
   );
 
   const handleClear = useCallback(() => {
@@ -100,15 +117,192 @@ export function BA2Plus({
     } else {
       setIs2nd(false);
       updateDisplay("0.00", tvmState, "CE/C");
+      if (pendingOperator === null) {
+        setArithmeticAccumulator(null);
+        setArithmeticStack([]);
+      }
     }
     setInputState("READY");
-  }, [is2nd, tvmState, updateDisplay, worksheet]);
+  }, [is2nd, pendingOperator, tvmState, updateDisplay, worksheet]);
 
   const handleSign = useCallback(() => {
     if (display === "0.00" || display === "0") return;
     const next = display.startsWith("-") ? display.slice(1) : `-${display}`;
     updateDisplay(next, tvmState, "+/-");
+    setInputState("INPUT");
   }, [display, tvmState, updateDisplay]);
+
+  const handleOperator = useCallback(
+    (operator: ArithmeticOperator, label: string) => {
+      const value = Number(display);
+      if (!Number.isFinite(value)) return;
+      try {
+        let nextAccumulator = arithmeticAccumulator ?? value;
+        if (
+          arithmeticAccumulator !== null &&
+          pendingOperator !== null &&
+          inputState !== "READY"
+        ) {
+          nextAccumulator = computeArithmetic(
+            arithmeticAccumulator,
+            pendingOperator,
+            value,
+          );
+        }
+        setArithmeticAccumulator(nextAccumulator);
+        setPendingOperator(operator);
+        setWorksheet("TVM");
+        setScreenLabel(label);
+        updateDisplay(formatDisplay(nextAccumulator), tvmState, label);
+      } catch {
+        setArithmeticAccumulator(null);
+        setPendingOperator(null);
+        updateDisplay("Error 5", tvmState, `${label} (Error)`);
+      }
+      setInputState("READY");
+      setIs2nd(false);
+      setIsCpt(false);
+    },
+    [
+      arithmeticAccumulator,
+      display,
+      inputState,
+      pendingOperator,
+      tvmState,
+      updateDisplay,
+    ],
+  );
+
+  const handleEquals = useCallback(() => {
+    const value = Number(display);
+    if (!Number.isFinite(value)) return;
+    try {
+      const result =
+        arithmeticAccumulator !== null && pendingOperator !== null
+          ? computeArithmetic(arithmeticAccumulator, pendingOperator, value)
+          : arithmeticAccumulator ?? value;
+      setArithmeticAccumulator(result);
+      setPendingOperator(null);
+      setWorksheet("TVM");
+      setScreenLabel("=");
+      updateDisplay(formatDisplay(result), tvmState, "=");
+    } catch {
+      setArithmeticAccumulator(null);
+      setPendingOperator(null);
+      updateDisplay("Error 5", tvmState, "= (Error)");
+    }
+    setInputState("READY");
+    setIs2nd(false);
+    setIsCpt(false);
+  }, [arithmeticAccumulator, display, pendingOperator, tvmState, updateDisplay]);
+
+  const handleUnary = useCallback(
+    (operation: UnaryOperation, label: string) => {
+      const value = Number(display);
+      if (!Number.isFinite(value)) return;
+      try {
+        const result = computeUnary(value, operation);
+        if (pendingOperator === null) setArithmeticAccumulator(result);
+        setWorksheet("TVM");
+        setScreenLabel(label);
+        updateDisplay(formatDisplay(result), tvmState, label);
+      } catch {
+        if (pendingOperator === null) setArithmeticAccumulator(null);
+        updateDisplay("Error 5", tvmState, `${label} (Error)`);
+      }
+      setInputState("RESULT");
+      setIs2nd(false);
+      setIsCpt(false);
+    },
+    [display, pendingOperator, tvmState, updateDisplay],
+  );
+
+  const handleOpenParenthesis = useCallback(() => {
+    setArithmeticStack(current => [
+      ...current,
+      { accumulator: arithmeticAccumulator, operator: pendingOperator },
+    ]);
+    setArithmeticAccumulator(null);
+    setPendingOperator(null);
+    setWorksheet("TVM");
+    setScreenLabel("(");
+    updateDisplay("0.00", tvmState, "(");
+    setInputState("RESULT");
+    setIs2nd(false);
+  }, [arithmeticAccumulator, pendingOperator, tvmState, updateDisplay]);
+
+  const handleCloseParenthesis = useCallback(() => {
+    if (arithmeticStack.length === 0) {
+      updateDisplay("Error 5", tvmState, ") (Error)");
+      setInputState("READY");
+      return;
+    }
+    const value = Number(display);
+    if (!Number.isFinite(value)) return;
+    try {
+      const innerResult =
+        arithmeticAccumulator !== null && pendingOperator !== null
+          ? computeArithmetic(arithmeticAccumulator, pendingOperator, value)
+          : arithmeticAccumulator ?? value;
+      const frame = arithmeticStack[arithmeticStack.length - 1];
+      const result =
+        frame.accumulator !== null && frame.operator !== null
+          ? computeArithmetic(frame.accumulator, frame.operator, innerResult)
+          : innerResult;
+      setArithmeticStack(current => current.slice(0, -1));
+      setArithmeticAccumulator(result);
+      setPendingOperator(null);
+      setScreenLabel(")");
+      updateDisplay(formatDisplay(result), tvmState, ")");
+    } catch {
+      setArithmeticStack([]);
+      setArithmeticAccumulator(null);
+      setPendingOperator(null);
+      updateDisplay("Error 5", tvmState, ") (Error)");
+    }
+    setInputState("READY");
+    setIs2nd(false);
+  }, [
+    arithmeticAccumulator,
+    arithmeticStack,
+    display,
+    pendingOperator,
+    tvmState,
+    updateDisplay,
+  ]);
+
+  const handleStore = useCallback(() => {
+    const value = Number(display);
+    if (!Number.isFinite(value)) return;
+    setMemory(value);
+    setScreenLabel("STO");
+    logStroke("STO", display);
+    setInputState("READY");
+    setIs2nd(false);
+  }, [display, logStroke]);
+
+  const handleRecall = useCallback(() => {
+    setScreenLabel("RCL");
+    updateDisplay(formatDisplay(memory), tvmState, "RCL");
+    setInputState("RESULT");
+    setIs2nd(false);
+  }, [memory, tvmState, updateDisplay]);
+
+  const handleReset = useCallback(() => {
+    const resetTVM = defaultTVMState();
+    setCashFlows(defaultCashFlowState());
+    setCashFlowIndex(0);
+    setArithmeticAccumulator(null);
+    setPendingOperator(null);
+    setArithmeticStack([]);
+    setMemory(0);
+    setWorksheet("TVM");
+    setScreenLabel("TVM");
+    setInputState("READY");
+    setIs2nd(false);
+    setIsCpt(false);
+    updateDisplay("0.00", resetTVM, "RESET");
+  }, [updateDisplay]);
 
   const commitCashFlow = useCallback(() => {
     if (worksheet !== "CF" || inputState !== "INPUT") return;
@@ -123,10 +317,19 @@ export function BA2Plus({
   }, [cashFlowIndex, display, inputState, logStroke, worksheet]);
 
   const handleEnter = useCallback(() => {
-    commitCashFlow();
+    if (worksheet === "CF") {
+      commitCashFlow();
+      logStroke("ENTER", display);
+      setInputState("READY");
+      return;
+    }
+    if (pendingOperator !== null) {
+      handleEquals();
+      return;
+    }
     logStroke("ENTER", display);
     setInputState("READY");
-  }, [commitCashFlow, display, logStroke]);
+  }, [commitCashFlow, display, handleEquals, logStroke, pendingOperator, worksheet]);
 
   const handleCPT = useCallback(
     (register: TVMRegister) => {
@@ -285,6 +488,22 @@ export function BA2Plus({
       const key = event.key.toUpperCase();
       if (/^[0-9.]$/.test(key)) handleNum(key);
       else if (key === "BACKSPACE" || key === "ESCAPE") handleClear();
+      else if (key === "+") handleOperator("add", "+");
+      else if (key === "-") handleOperator("subtract", "−");
+      else if (key === "*") handleOperator("multiply", "×");
+      else if (key === "/") {
+        event.preventDefault();
+        handleOperator("divide", "÷");
+      }
+      else if (key === "^") handleOperator("power", "yˣ");
+      else if (key === "%") handleUnary("percent", "%");
+      else if (key === "(") handleOpenParenthesis();
+      else if (key === ")") handleCloseParenthesis();
+      else if (key === "=" || key === "ENTER") {
+        event.preventDefault();
+        if (worksheet === "CF") handleEnter();
+        else handleEquals();
+      }
       else if (key === "N") handleTVM("N");
       else if (key === "I") handleTVM("IY");
       else if (key === "P") handleTVM("PV");
@@ -298,9 +517,15 @@ export function BA2Plus({
   }, [
     handleCPTMode,
     handleClear,
+    handleCloseParenthesis,
     handleEnter,
+    handleEquals,
     handleNum,
+    handleOpenParenthesis,
+    handleOperator,
     handleTVM,
+    handleUnary,
+    worksheet,
   ]);
 
   const unavailable = (feature: string) => ({
@@ -360,37 +585,37 @@ export function BA2Plus({
         <div className="ba-key-group">{secondary("BGN", true)}<button type="button" className="ba-key tvm" onClick={() => is2nd ? handleBGN() : handleTVM("PMT")}>PMT</button></div>
         <div className="ba-key-group">{secondary("CLR TVM", true)}<button type="button" className="ba-key tvm" onClick={() => is2nd ? handleClrTVM() : handleTVM("FV")}>FV</button></div>
 
-        <div className="ba-key-group">{secondary("K")}<button type="button" className="ba-key" {...unavailable("Percent calculations")}>%</button></div>
-        <div className="ba-key-group">{secondary("SIN")}<button type="button" className="ba-key" {...unavailable("Square root")}>√x</button></div>
-        <div className="ba-key-group">{secondary("COS")}<button type="button" className="ba-key" {...unavailable("Square")}>x²</button></div>
-        <div className="ba-key-group">{secondary("TAN")}<button type="button" className="ba-key" {...unavailable("Reciprocal")}>1/x</button></div>
-        <div className="ba-key-group">{secondary("π")}<button type="button" className="ba-key op" {...unavailable("Division")}>÷</button></div>
+        <div className="ba-key-group">{secondary("K")}<button type="button" className="ba-key" aria-label="Percent" onClick={() => handleUnary("percent", "%")}>%</button></div>
+        <div className="ba-key-group">{secondary("SIN")}<button type="button" className="ba-key" aria-label="Square root" onClick={() => handleUnary("squareRoot", "√x")}>√x</button></div>
+        <div className="ba-key-group">{secondary("COS")}<button type="button" className="ba-key" aria-label="Square" onClick={() => handleUnary("square", "x²")}>x²</button></div>
+        <div className="ba-key-group">{secondary("TAN")}<button type="button" className="ba-key" aria-label="Reciprocal" onClick={() => handleUnary("reciprocal", "1/x")}>1/x</button></div>
+        <div className="ba-key-group">{secondary("π")}<button type="button" className="ba-key op" aria-label="Divide" onClick={() => handleOperator("divide", "÷")}>÷</button></div>
 
         <div className="ba-key-group">{secondary("HYP")}<button type="button" className="ba-key" {...unavailable("Inverse functions")}>INV</button></div>
-        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key" {...unavailable("Open parenthesis")}>(</button></div>
-        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key" {...unavailable("Close parenthesis")}>)</button></div>
-        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key" {...unavailable("Power calculations")}>y^x</button></div>
-        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key op" {...unavailable("Multiplication")}>×</button></div>
+        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key" aria-label="Open parenthesis" onClick={handleOpenParenthesis}>(</button></div>
+        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key" aria-label="Close parenthesis" onClick={handleCloseParenthesis}>)</button></div>
+        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key" aria-label="Power" onClick={() => handleOperator("power", "yˣ")}>y^x</button></div>
+        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key op" aria-label="Multiply" onClick={() => handleOperator("multiply", "×")}>×</button></div>
 
-        <div className="ba-key-group">{secondary("STAT")}<button type="button" className="ba-key" {...unavailable("Statistics worksheet")}>LN</button></div>
+        <div className="ba-key-group">{secondary("STAT")}<button type="button" className="ba-key" aria-label="Natural logarithm" onClick={() => handleUnary("naturalLog", "LN")}>LN</button></div>
         <div className="ba-key-group">{secondary("DATA")}<button type="button" className="ba-key num" onClick={() => handleNum("7")}>7</button></div>
         <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key num" onClick={() => handleNum("8")}>8</button></div>
         <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key num" onClick={() => handleNum("9")}>9</button></div>
-        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key op" {...unavailable("Subtraction")}>−</button></div>
+        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key op" aria-label="Subtract" onClick={() => handleOperator("subtract", "−")}>−</button></div>
 
-        <div className="ba-key-group">{secondary("BOND")}<button type="button" className="ba-key" {...unavailable("Bond worksheet")}>STO</button></div>
+        <div className="ba-key-group">{secondary("BOND")}<button type="button" className="ba-key" aria-label="Store in memory" onClick={handleStore}>STO</button></div>
         <div className="ba-key-group">{secondary("DEPR")}<button type="button" className="ba-key num" onClick={() => handleNum("4")}>4</button></div>
         <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key num" onClick={() => handleNum("5")}>5</button></div>
         <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key num" onClick={() => handleNum("6")}>6</button></div>
-        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key op" {...unavailable("Addition")}>+</button></div>
+        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key op" aria-label="Add" onClick={() => handleOperator("add", "+")}>+</button></div>
 
-        <div className="ba-key-group">{secondary("nPr")}<button type="button" className="ba-key" {...unavailable("Stored values")}>RCL</button></div>
+        <div className="ba-key-group">{secondary("nPr")}<button type="button" className="ba-key" aria-label="Recall memory" onClick={handleRecall}>RCL</button></div>
         <div className="ba-key-group">{secondary("nCr")}<button type="button" className="ba-key num" onClick={() => handleNum("1")}>1</button></div>
         <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key num" onClick={() => handleNum("2")}>2</button></div>
         <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key num" onClick={() => handleNum("3")}>3</button></div>
-        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key op" {...unavailable("Arithmetic result")}>＝</button></div>
+        <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key op" aria-label="Equals" onClick={handleEquals}>＝</button></div>
 
-        <div className="ba-key-group">{secondary("FORMAT")}<button type="button" className="ba-key" {...unavailable("Calculator reset")}>RESET</button></div>
+        <div className="ba-key-group">{secondary("FORMAT")}<button type="button" className="ba-key" aria-label="Reset calculator" onClick={handleReset}>RESET</button></div>
         <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key num" onClick={() => handleNum("0")}>0</button></div>
         <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key num" onClick={() => handleNum(".")}>.</button></div>
         <div className="ba-key-group">{secondary("ANS")}<button type="button" className="ba-key num" onClick={handleSign}>+/-</button></div>

@@ -1,10 +1,36 @@
 import { describe, it, expect } from "vitest";
 import {
+  computeArithmetic,
   computeIRR,
   computeNPV,
   computeTVM,
+  computeUnary,
   defaultTVMState,
 } from "./calculator";
+
+describe("BA II Plus arithmetic engine", () => {
+  it("supports the ordinary arithmetic and power keys", () => {
+    expect(computeArithmetic(12, "add", 8)).toBe(20);
+    expect(computeArithmetic(12, "subtract", 8)).toBe(4);
+    expect(computeArithmetic(12, "multiply", 8)).toBe(96);
+    expect(computeArithmetic(12, "divide", 8)).toBe(1.5);
+    expect(computeArithmetic(3, "power", 4)).toBe(81);
+  });
+
+  it("supports the ordinary unary-function keys", () => {
+    expect(computeUnary(25, "percent")).toBe(0.25);
+    expect(computeUnary(81, "squareRoot")).toBe(9);
+    expect(computeUnary(12, "square")).toBe(144);
+    expect(computeUnary(4, "reciprocal")).toBe(0.25);
+    expect(computeUnary(Math.E, "naturalLog")).toBeCloseTo(1, 10);
+  });
+
+  it("rejects invalid arithmetic domains", () => {
+    expect(() => computeArithmetic(1, "divide", 0)).toThrow("Division by zero");
+    expect(() => computeUnary(-1, "squareRoot")).toThrow("non-negative");
+    expect(() => computeUnary(0, "naturalLog")).toThrow("positive value");
+  });
+});
 
 describe("BA II Plus TVM Engine", () => {
   it("calculates PV of an ordinary annuity", () => {

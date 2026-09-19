@@ -26,6 +26,77 @@ export interface CashFlowState {
 
 export const defaultCashFlowState = (): CashFlowState => ({ values: [0] });
 
+export type ArithmeticOperator = "add" | "subtract" | "multiply" | "divide" | "power";
+export type UnaryOperation = "percent" | "squareRoot" | "square" | "reciprocal" | "naturalLog";
+
+export function computeArithmetic(
+  left: number,
+  operator: ArithmeticOperator,
+  right: number,
+): number {
+  if (!Number.isFinite(left) || !Number.isFinite(right)) {
+    throw new Error("Error 5: Invalid arithmetic input");
+  }
+
+  let result: number;
+  switch (operator) {
+    case "add":
+      result = left + right;
+      break;
+    case "subtract":
+      result = left - right;
+      break;
+    case "multiply":
+      result = left * right;
+      break;
+    case "divide":
+      if (right === 0) throw new Error("Error 5: Division by zero");
+      result = left / right;
+      break;
+    case "power":
+      result = Math.pow(left, right);
+      break;
+  }
+
+  if (!Number.isFinite(result)) {
+    throw new Error("Error 5: Arithmetic result is outside the calculator range");
+  }
+  return result;
+}
+
+export function computeUnary(value: number, operation: UnaryOperation): number {
+  if (!Number.isFinite(value)) {
+    throw new Error("Error 5: Invalid arithmetic input");
+  }
+
+  let result: number;
+  switch (operation) {
+    case "percent":
+      result = value / 100;
+      break;
+    case "squareRoot":
+      if (value < 0) throw new Error("Error 5: Square root requires a non-negative value");
+      result = Math.sqrt(value);
+      break;
+    case "square":
+      result = value * value;
+      break;
+    case "reciprocal":
+      if (value === 0) throw new Error("Error 5: Reciprocal of zero is undefined");
+      result = 1 / value;
+      break;
+    case "naturalLog":
+      if (value <= 0) throw new Error("Error 5: Natural log requires a positive value");
+      result = Math.log(value);
+      break;
+  }
+
+  if (!Number.isFinite(result)) {
+    throw new Error("Error 5: Arithmetic result is outside the calculator range");
+  }
+  return result;
+}
+
 function validateCashFlows(cashFlows: readonly number[]): void {
   if (cashFlows.length < 2) {
     throw new Error("Error 5: Enter CF0 and at least one future cash flow");
