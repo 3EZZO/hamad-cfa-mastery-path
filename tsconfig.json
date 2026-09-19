@@ -18,6 +18,7 @@
   },
   "include": [
     "app",
+    "functions",
     "src",
     "worker",
     "vite.config.ts",
