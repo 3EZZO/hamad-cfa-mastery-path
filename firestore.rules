@@ -864,7 +864,78 @@ service cloud.firestore {
       allow delete: if activeProject202Role('tutor');
     }
 
-    // Tutor Payments configuration, records, and receipts
+    function validPublicReceiptVerification(token) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'schemaVersion',
+          'token',
+          'paymentId',
+          'reference',
+          'studentName',
+          'tutorName',
+          'amount',
+          'currency',
+          'paymentDate',
+          'issuedAtClient',
+          'issuedBy',
+          'status',
+          'revokedAtClient'
+        ])
+        && data.keys().hasAll([
+          'schemaVersion',
+          'token',
+          'paymentId',
+          'reference',
+          'studentName',
+          'tutorName',
+          'amount',
+          'currency',
+          'paymentDate',
+          'issuedAtClient',
+          'issuedBy',
+          'status',
+          'revokedAtClient'
+        ])
+        && data.schemaVersion == 1
+        && data.token == token
+        && data.token is string && data.token.size() == 36
+        && data.paymentId is string && data.paymentId.size() > 0 && data.paymentId.size() <= 100
+        && data.reference is string && data.reference.size() > 5 && data.reference.size() <= 24
+        && data.studentName is string && data.studentName.size() > 0 && data.studentName.size() <= 120
+        && data.tutorName is string && data.tutorName.size() > 0 && data.tutorName.size() <= 120
+        && data.amount is number && data.amount > 0 && data.amount <= 1000000
+        && data.currency is string && data.currency.size() > 0 && data.currency.size() <= 12
+        && data.paymentDate is string && data.paymentDate.size() == 10
+        && data.issuedAtClient is string && data.issuedAtClient.size() <= 40
+        && data.issuedBy is string && data.issuedBy.size() > 0 && data.issuedBy.size() <= 128
+        && data.status in ['active', 'revoked']
+        && (
+          data.revokedAtClient == null
+          || (data.revokedAtClient is string && data.revokedAtClient.size() <= 40)
+        );
+    }
+
+    // A QR holder may verify one unguessable receipt token without signing in.
+    // Listing is forbidden, and only the active tutor can issue or revoke a
+    // record. Issued receipt facts are immutable.
+    match /programs/project-202/publicReceiptVerifications/{token} {
+      allow get: if true;
+      allow list, delete: if false;
+      allow create: if activeProject202Role('tutor')
+        && validPublicReceiptVerification(token)
+        && request.resource.data.status == 'active'
+        && request.resource.data.revokedAtClient == null
+        && request.resource.data.issuedBy == request.auth.uid;
+      allow update: if activeProject202Role('tutor')
+        && validPublicReceiptVerification(token)
+        && resource.data.status == 'active'
+        && request.resource.data.status == 'revoked'
+        && request.resource.data.revokedAtClient is string
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'revokedAtClient']);
+    }
+
+    // Tutor Payments configuration, records, and attached transfer proofs.
     match /programs/project-202/tutorPaymentConfigs/{studentUid} {
       allow read, write: if activeProject202Role('tutor');
     }
