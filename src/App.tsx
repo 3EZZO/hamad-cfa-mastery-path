@@ -98,6 +98,7 @@ import {
   type TrackerSyncStatus,
   useTrackerSync,
 } from "./hooks/useTrackerSync";
+import { useHashTab } from "./hooks/useHashTab";
 import CalendarExportDialog from "./components/CalendarExportDialog";
 import { ThemeProvider, ThemeToggle } from "./components/ThemeToggle";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
@@ -169,6 +170,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: "coach", label: "Tutor Admin", mobileLabel: "Admin", icon: UserCog },
   { id: "payments", label: "Payments", mobileLabel: "Payments", icon: Banknote },
 ];
+
+const TAB_IDS: readonly TabId[] = NAV_ITEMS.map((item) => item.id);
 
 const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
   { label: "Focus", ids: ["dashboard", "weekly"] },
@@ -742,13 +745,17 @@ function WorkspaceActions({
 function App() {
   const rawProgramWeek = getProgramWeek();
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
-  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+  const [activeTab, setActiveTab] = useHashTab<TabId>(TAB_IDS, "dashboard", {
+    title: (tab) => `${TAB_COPY[tab].title} · Hamad CFA Mastery`,
+  });
   const [selectedWeek, setSelectedWeek] = useState(initialWeek);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const mobileDialogRef = useRef<HTMLElement>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
   useDialogFocus(mobileMoreOpen, mobileDialogRef, mobileCloseRef, () => setMobileMoreOpen(false));
+  // Back/forward can change the tab without going through navigate().
+  useEffect(() => setMobileMoreOpen(false), [activeTab]);
   const {
     tracker,
     updateTracker,
