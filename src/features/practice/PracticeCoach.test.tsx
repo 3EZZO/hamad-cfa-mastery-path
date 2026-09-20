@@ -288,3 +288,114 @@ describe("Practice Coach role views", () => {
     await act(async () => tree.unmount());
   });
 });
+
+describe("UI/UX behaviors", () => {
+  let windowListeners: Record<string, Function[]> = {};
+
+  beforeEach(() => {
+    windowListeners = {};
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("window", {
+      addEventListener: vi.fn((event, callback) => {
+        if (!windowListeners[event]) windowListeners[event] = [];
+        windowListeners[event].push(callback);
+      }),
+      removeEventListener: vi.fn((event, callback) => {
+        if (!windowListeners[event]) return;
+        windowListeners[event] = windowListeners[event].filter(cb => cb !== callback);
+      }),
+      dispatchEvent: vi.fn((event) => {
+        if (windowListeners[event.type]) {
+          windowListeners[event.type].forEach(cb => cb(event));
+        }
+      }),
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("handles calculator drawer closing via Escape key", async () => {
+    let tree: ReactTestRenderer;
+    await act(async () => {
+      tree = create(
+        <PracticeCoach
+          uid="student-01"
+          role="student"
+          manualLog={null}
+          onComplete={vi.fn()}
+          notify={vi.fn()}
+        />
+      );
+    });
+    await act(async () => {
+      const button = tree.root.findAllByType("button").find(b => b.props.onClick && typeof b.props.children === 'object' && b.props.children[1]?.props?.children[1]?.props?.children === 'Quick 5');
+      button?.props.onClick();
+    });
+
+    await act(async () => {
+      const toggle = tree.root.findAllByType("button").find(b => b.props.className?.includes("practice-calculator-toggle"));
+      toggle?.props.onClick();
+    });
+
+    const hasCalc = () => tree.root.findAllByProps({ "aria-label": "BA II Plus Calculator" }).length > 0;
+    expect(hasCalc()).toBe(true);
+
+    await act(async () => {
+      const event = { type: "keydown", key: "Escape" };
+      window.dispatchEvent(event as any);
+    });
+
+    expect(hasCalc()).toBe(false);
+  });
+
+  it("updates saved timestamp only on explicit save", async () => {
+    let resolveSave: (value?: any) => void = () => {};
+    const savePromise = new Promise(r => { resolveSave = r; });
+    harness.saveState.mockImplementation(() => savePromise);
+    harness.saveRun.mockImplementation(() => savePromise);
+
+    let tree: ReactTestRenderer;
+    await act(async () => {
+      tree = create(
+        <PracticeCoach
+          uid="student-01"
+          role="student"
+          manualLog={null}
+          onComplete={vi.fn()}
+          notify={vi.fn()}
+        />
+      );
+    });
+
+    const hasTimestamp = () => tree.root.findAllByType("span").find(s => s.props.className?.includes("practice-sync"))?.children.join("").includes("Saved");
+    expect(hasTimestamp()).toBe(false);
+
+    await act(async () => {
+      const button = tree.root.findAllByType("button").find(b => b.props.onClick && typeof b.props.children === 'object' && b.props.children[1]?.props?.children[1]?.props?.children === 'Quick 5');
+      button?.props.onClick();
+    });
+
+    await act(async () => {
+      const optionA = tree.root.findAllByType("button").find(b => b.props.role === "radio");
+      optionA?.props.onClick();
+    });
+
+    await act(async () => {
+      const submit = tree.root.findAllByType("button").find(b => typeof b.props.children === 'object' && b.props.children[0]?.includes?.("Submit answer"));
+      submit?.props.onClick();
+    });
+
+    // While saving is pending, timestamp should still not be updated
+    expect(hasTimestamp()).toBe(false);
+
+    await act(async () => {
+      resolveSave();
+    });
+
+    // After resolving, timestamp should be updated
+    expect(hasTimestamp()).toBe(true);
+  });
+});
