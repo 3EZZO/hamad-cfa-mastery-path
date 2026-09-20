@@ -1130,17 +1130,6 @@ html:root[data-theme="dark"] .practice-formulae code { border-color: #455b72; }
   .practice-player__layout { padding-bottom: 160px; }
 }
 
-.practice-calculator-wrapper {
-  position: sticky;
-  top: 156px;
-  max-height: calc(100vh - 240px);
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-@media (max-width: 699px) {
-  .practice-calculator-wrapper { position: static; max-height: none; overflow: visible; }
-}
-
 .practice-progress-text {
   font-size: 0.8rem;
   font-weight: 700;
