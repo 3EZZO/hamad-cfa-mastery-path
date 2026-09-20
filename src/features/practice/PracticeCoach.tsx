@@ -153,6 +153,7 @@ export function PracticeCoach({
   const [calculatorLog, setCalculatorLog] = useState<any[]>([]);
   const [calculatorState, setCalculatorState] = useState(defaultTVMState());
   const answerStartedAt = useRef(Date.now());
+  const calculatorCloseRef = useRef<HTMLButtonElement>(null);
 
   const questions = useMemo(() => banks.flatMap(bank => bank.questions), [banks]);
   const rehearsalBanks = useMemo(
@@ -319,6 +320,19 @@ export function PracticeCoach({
     setSubmitted(Boolean(answer));
     answerStartedAt.current = Date.now();
   }, [activeRun?.currentIndex, currentQuestion?.id]);
+
+  useEffect(() => {
+    if (!showCalculator) return;
+    calculatorCloseRef.current?.focus();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowCalculator(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showCalculator]);
+
 
   const begin = async (
     mode: PracticeRunMode,
@@ -542,11 +556,16 @@ export function PracticeCoach({
             {isRehearsal ? <RehearsalStatus /> : <PracticeSync state={sync} />}
           </div>
         </header>
-        <div className="practice-progress-segments" role="progressbar" aria-label="Practice-set progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
-          {activeRun.questionIds.map((id, index) => {
-            const isFilled = index < activeRun.currentIndex || (index === activeRun.currentIndex && submitted);
-            return <div key={id} className={`practice-progress-segment ${isFilled ? "is-filled" : ""}`} />;
-          })}
+        <div className="practice-progress-wrapper">
+          <div className="practice-progress-segments" role="progressbar" aria-label="Practice-set progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+            {activeRun.questionIds.map((id, index) => {
+              const isFilled = index < activeRun.currentIndex || (index === activeRun.currentIndex && submitted);
+              return <div key={id} className={`practice-progress-segment ${isFilled ? "is-filled" : ""}`} />;
+            })}
+          </div>
+          <span className="practice-progress-text">
+            {activeRun.currentIndex + 1} of {activeRun.questionIds.length}
+          </span>
         </div>
         <div className="practice-player__layout">
           <main className="practice-question practice-slide-in" key={currentQuestion.id}>
@@ -615,21 +634,42 @@ export function PracticeCoach({
           )}
         </main>
           {showCalculator && (
-            <div className="practice-calculator-wrapper">
-              <BA2Plus 
-                onLog={(log) => setCalculatorLog(prev => [...prev, log])} 
-                startTime={answerStartedAt.current} 
-                tvmState={calculatorState}
-                onStateChange={setCalculatorState}
+            <>
+              <div 
+                className="practice-calculator-backdrop" 
+                onClick={() => setShowCalculator(false)} 
+                aria-hidden="true" 
               />
-            </div>
+              <div 
+                className="practice-calculator-wrapper" 
+                role="dialog" 
+                aria-modal="true" 
+                aria-label="BA II Plus Calculator"
+              >
+                <div className="practice-calculator-header">
+                  <h3>Calculator</h3>
+                  <button type="button" ref={calculatorCloseRef} onClick={() => setShowCalculator(false)} aria-label="Close calculator">
+                    <X size={20} />
+                  </button>
+                </div>
+                <BA2Plus 
+                  onLog={(log) => setCalculatorLog(prev => [...prev, log])} 
+                  startTime={answerStartedAt.current} 
+                  tvmState={calculatorState}
+                  onStateChange={setCalculatorState}
+                />
+              </div>
+            </>
           )}
         </div>
         <footer className="practice-player__dock">
           {!submitted ? (
-            <button type="button" disabled={selectedOption === null} onClick={() => void submitAnswer()}>
-              Submit answer <ArrowRight size={20} />
-            </button>
+            <div className="practice-submit-container">
+              <button type="button" disabled={selectedOption === null} onClick={() => void submitAnswer()}>
+                Submit answer <ArrowRight size={20} />
+              </button>
+              {selectedOption === null && <span className="practice-submit-help">Select an option to enable</span>}
+            </div>
           ) : activeRun.mode !== "exam" ? (
             <button type="button" onClick={() => void advance()}>
               {activeRun.currentIndex + 1 >= activeRun.questionIds.length ? "View results" : "Next question"} <ArrowRight size={20} />
@@ -978,10 +1018,23 @@ function PracticePerformance({
 }
 
 function PracticeSync({ state }: { state: CoachSync }) {
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const prevState = useRef<CoachSync>(state);
+
+  useEffect(() => {
+    if (state === "synced" && prevState.current === "saving") {
+      setLastSaved(new Date());
+    }
+    prevState.current = state;
+  }, [state]);
+
   const content = {
     loading: { icon: Cloud, label: "Loading" },
     saving: { icon: Cloud, label: "Saving" },
-    synced: { icon: Check, label: "Synced" },
+    synced: { 
+      icon: Check, 
+      label: lastSaved ? `Saved ${lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : "Synced" 
+    },
     offline: { icon: WifiOff, label: "Saved on device" },
     error: { icon: CloudOff, label: "Retry pending" },
   }[state];
