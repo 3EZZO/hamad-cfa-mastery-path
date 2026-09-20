@@ -5526,3 +5526,28 @@ summary:focus-visible {
   .metric-stats p { font-size: 0.6rem; overflow-wrap: break-word; word-break: break-word; }
   .metric-card { overflow: hidden; }
 }
+
+/* Tab switches cross-fade through the View Transitions API (no-op where
+   unsupported). The app chrome keeps its own snapshot so only the page
+   content animates; each name is unique at any width because the sidebar
+   and the mobile nav are never displayed together. */
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: 180ms; }
+.sidebar { view-transition-name: sidebar; }
+.topbar { view-transition-name: topbar; }
+.mobile-nav { view-transition-name: mobile-nav; }
+
+/* Mobile "More" sheet: slide up on entry (progressive enhancement). */
+.mobile-more-sheet {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease;
+}
+@starting-style {
+  .mobile-more-sheet { transform: translateY(24px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+  .mobile-more-sheet { transition: none; }
+}
