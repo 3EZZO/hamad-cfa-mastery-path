@@ -36,6 +36,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
 }
 
+/** Current theme and toggler for controls rendered outside ThemeToggle. */
+export function useTheme() {
+  return useContext(ThemeContext);
+}
+
 export function ThemeToggle() {
   const { theme, toggle } = useContext(ThemeContext);
   const dark = theme === "dark";
