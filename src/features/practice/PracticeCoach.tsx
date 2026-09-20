@@ -66,6 +66,7 @@ import type {
   PublishedPracticeBank,
 } from "../../lib/practiceContent";
 import type { ProjectRole } from "../../lib/permissions";
+import { useDialogFocus } from "../liveSession/useDialogFocus";
 import "./practiceCoach.css";
 
 export interface PracticeCompletionSummary {
@@ -154,6 +155,8 @@ export function PracticeCoach({
   const [calculatorState, setCalculatorState] = useState(defaultTVMState());
   const answerStartedAt = useRef(Date.now());
   const calculatorCloseRef = useRef<HTMLButtonElement>(null);
+  const calculatorDialogRef = useRef<HTMLDivElement>(null);
+  const closeCalculator = useCallback(() => setShowCalculator(false), []);
 
   const questions = useMemo(() => banks.flatMap(bank => bank.questions), [banks]);
   const rehearsalBanks = useMemo(
@@ -321,18 +324,9 @@ export function PracticeCoach({
     answerStartedAt.current = Date.now();
   }, [activeRun?.currentIndex, currentQuestion?.id]);
 
-  useEffect(() => {
-    if (!showCalculator) return;
-    calculatorCloseRef.current?.focus();
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setShowCalculator(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showCalculator]);
-
+  // Escape is intercepted in the document capture phase so it closes the
+  // drawer without reaching the calculator's own window listener.
+  useDialogFocus(showCalculator, calculatorDialogRef, calculatorCloseRef, closeCalculator);
 
   const begin = async (
     mode: PracticeRunMode,
@@ -635,20 +629,27 @@ export function PracticeCoach({
         </main>
           {showCalculator && (
             <>
-              <div 
-                className="practice-calculator-backdrop" 
-                onClick={() => setShowCalculator(false)} 
-                aria-hidden="true" 
+              <div
+                className="practice-calculator-backdrop"
+                onClick={closeCalculator}
+                aria-hidden="true"
               />
-              <div 
-                className="practice-calculator-wrapper" 
-                role="dialog" 
-                aria-modal="true" 
+              <div
+                ref={calculatorDialogRef}
+                tabIndex={-1}
+                className="practice-calculator-wrapper"
+                role="dialog"
+                aria-modal="true"
                 aria-label="BA II Plus Calculator"
+                onKeyDown={event => {
+                  // Let Enter activate the Close button natively instead of
+                  // being consumed as "=" by the calculator's window listener.
+                  if (event.key === "Enter" && event.target === calculatorCloseRef.current) event.stopPropagation();
+                }}
               >
                 <div className="practice-calculator-header">
                   <h3>Calculator</h3>
-                  <button type="button" ref={calculatorCloseRef} onClick={() => setShowCalculator(false)} aria-label="Close calculator">
+                  <button type="button" ref={calculatorCloseRef} onClick={closeCalculator} aria-label="Close calculator">
                     <X size={20} />
                   </button>
                 </div>

@@ -289,36 +289,89 @@ describe("Practice Coach role views", () => {
   });
 });
 
+// Deliberately a DOM model (as in useDialogFocus.test.tsx), not a claim of
+// rendered-browser verification. Browser checks are listed in the PR notes.
+class ElementModel {
+  parentElement: ElementModel | null = null;
+  children: ElementModel[] = [];
+  attrs: Record<string, string> = {};
+  style = { display: "block", visibility: "visible" };
+  tabIndex = 0;
+  isConnected = true;
+  constructor(public tagName = "DIV") {}
+  contains(node: unknown): boolean { return node === this || this.children.some(child => child.contains(node)); }
+  hasAttribute(name: string) { return name in this.attrs; }
+  matches() { return false; }
+  closest() { return null; }
+  querySelector() { return null; }
+  querySelectorAll(): ElementModel[] { return []; }
+  focus() { doc.activeElement = this; }
+}
+
+type Listener = (event: any) => void;
+const documentListeners = new Map<string, Set<Listener>>();
+const windowListeners = new Map<string, Set<Listener>>();
+const listen = (store: Map<string, Set<Listener>>) => ({
+  addEventListener: (name: string, fn: Listener) => {
+    if (!store.has(name)) store.set(name, new Set());
+    store.get(name)!.add(fn);
+  },
+  removeEventListener: (name: string, fn: Listener) => store.get(name)?.delete(fn),
+});
+const doc = { activeElement: null as ElementModel | null, ...listen(documentListeners) };
+
+/**
+ * Mirrors browser propagation order for the two listeners involved: the
+ * dialog hook (document, capture) runs first; the calculator's window
+ * listener runs only if propagation was not stopped.
+ */
+function dispatchKey(key: string, target: ElementModel | null = doc.activeElement) {
+  let stopped = false;
+  const event = {
+    type: "keydown",
+    key,
+    target,
+    ctrlKey: false,
+    metaKey: false,
+    altKey: false,
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(() => { stopped = true; }),
+  };
+  for (const fn of [...(documentListeners.get("keydown") ?? [])]) fn(event);
+  if (!stopped) for (const fn of [...(windowListeners.get("keydown") ?? [])]) fn(event);
+  return event;
+}
+
 describe("UI/UX behaviors", () => {
-  let windowListeners: Record<string, Function[]> = {};
+  let tree: ReactTestRenderer | undefined;
+  let nodes: { toggle?: ElementModel; close?: ElementModel; dialog?: ElementModel };
 
   beforeEach(() => {
-    windowListeners = {};
+    documentListeners.clear();
+    windowListeners.clear();
+    doc.activeElement = null;
+    nodes = {};
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("HTMLElement", ElementModel);
+    vi.stubGlobal("document", doc);
     vi.stubGlobal("window", {
-      addEventListener: vi.fn((event, callback) => {
-        if (!windowListeners[event]) windowListeners[event] = [];
-        windowListeners[event].push(callback);
-      }),
-      removeEventListener: vi.fn((event, callback) => {
-        if (!windowListeners[event]) return;
-        windowListeners[event] = windowListeners[event].filter(cb => cb !== callback);
-      }),
-      dispatchEvent: vi.fn((event) => {
-        if (windowListeners[event.type]) {
-          windowListeners[event.type].forEach(cb => cb(event));
-        }
-      }),
+      ...listen(windowListeners),
+      getComputedStyle: (node: ElementModel) => node.style,
     });
+    harness.saveState.mockReset();
+    harness.saveRun.mockReset();
+    harness.cacheRun.mockClear();
+    harness.cacheState.mockClear();
+    harness.queueWrite.mockClear();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (tree) await act(async () => tree!.unmount());
+    tree = undefined;
     vi.unstubAllGlobals();
-    vi.clearAllMocks();
   });
 
-  it("handles calculator drawer closing via Escape key", async () => {
-    let tree: ReactTestRenderer;
+  async function renderStudent() {
     await act(async () => {
       tree = create(
         <PracticeCoach
@@ -327,28 +380,93 @@ describe("UI/UX behaviors", () => {
           manualLog={null}
           onComplete={vi.fn()}
           notify={vi.fn()}
-        />
+        />,
+        {
+          createNodeMock: element => {
+            const node = new ElementModel(String(element.type).toUpperCase());
+            const props = element.props as Record<string, unknown>;
+            if (props["aria-label"] === "Close calculator") nodes.close = node;
+            if (props.role === "dialog") nodes.dialog = node;
+            return node;
+          },
+        }
       );
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    await act(async () => {
-      const button = tree.root.findAllByType("button").find(b => b.props.onClick && typeof b.props.children === 'object' && b.props.children[1]?.props?.children[1]?.props?.children === 'Quick 5');
-      button?.props.onClick();
-    });
+    return tree!;
+  }
 
-    await act(async () => {
-      const toggle = tree.root.findAllByType("button").find(b => b.props.className?.includes("practice-calculator-toggle"));
-      toggle?.props.onClick();
-    });
+  const hasCalc = () => tree!.root.findAllByProps({ "aria-label": "BA II Plus Calculator" }).length > 0;
+  const closeButton = () => tree!.root.findAllByType("button").find(b => b.props["aria-label"] === "Close calculator")!;
 
-    const hasCalc = () => tree.root.findAllByProps({ "aria-label": "BA II Plus Calculator" }).length > 0;
+  async function openCalculator() {
+    await act(async () => button(tree!, "Quick 5")!.props.onClick());
+    const toggle = tree!.root.findAllByType("button").find(b => b.props.className?.includes("practice-calculator-toggle"))!;
+    // The toggle carries no ref, so model the element that had focus at open.
+    nodes.toggle = new ElementModel("BUTTON");
+    nodes.toggle.focus();
+    await act(async () => toggle.props.onClick());
+    expect(hasCalc()).toBe(true);
+  }
+
+  it("closes via Escape at the dialog level without logging a calculator clear", async () => {
+    await renderStudent();
+    await openCalculator();
+
+    await act(async () => button(tree!, "7")!.props.onClick());
+    let event!: ReturnType<typeof dispatchKey>;
+    await act(async () => { event = dispatchKey("Escape"); });
+
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(hasCalc()).toBe(false);
+
+    await act(async () => tree!.root.findAllByProps({ role: "radio" })[0].props.onClick());
+    await act(async () => button(tree!, "Submit answer")!.props.onClick());
+
+    const savedRun = harness.saveRun.mock.calls.at(-1)?.[0] as PracticeRun;
+    const keys = savedRun.answers[0].calculatorLog?.map((entry: { key: string }) => entry.key);
+    expect(keys).toEqual(["7"]);
+  });
+
+  it("keeps the calculator's own clear shortcut while the drawer is open", async () => {
+    await renderStudent();
+    await openCalculator();
+    await act(async () => button(tree!, "7")!.props.onClick());
+    // Backspace is not a dialog key, so it reaches the calculator's listener.
+    await act(async () => { dispatchKey("Backspace"); });
     expect(hasCalc()).toBe(true);
 
-    await act(async () => {
-      const event = { type: "keydown", key: "Escape" };
-      window.dispatchEvent(event as any);
-    });
+    await act(async () => closeButton().props.onClick());
+    await act(async () => tree!.root.findAllByProps({ role: "radio" })[0].props.onClick());
+    await act(async () => button(tree!, "Submit answer")!.props.onClick());
 
+    const savedRun = harness.saveRun.mock.calls.at(-1)?.[0] as PracticeRun;
+    expect(savedRun.answers[0].calculatorLog?.map((entry: { key: string }) => entry.key)).toEqual(["7", "CE/C"]);
+  });
+
+  it("focuses the Close button on open and restores the toggle on close", async () => {
+    await renderStudent();
+    await openCalculator();
+    expect(doc.activeElement).toBe(nodes.close);
+
+    await act(async () => closeButton().props.onClick());
     expect(hasCalc()).toBe(false);
+    expect(doc.activeElement).toBe(nodes.toggle);
+  });
+
+  it("lets Enter activate the Close button natively", async () => {
+    await renderStudent();
+    await openCalculator();
+    const dialog = tree!.root.find(node => typeof node.type === "string" && node.props.role === "dialog");
+
+    const onClose = { key: "Enter", target: nodes.close, stopPropagation: vi.fn() };
+    dialog.props.onKeyDown(onClose);
+    expect(onClose.stopPropagation).toHaveBeenCalledTimes(1);
+
+    const elsewhere = { key: "Enter", target: nodes.dialog, stopPropagation: vi.fn() };
+    dialog.props.onKeyDown(elsewhere);
+    expect(elsewhere.stopPropagation).not.toHaveBeenCalled();
   });
 
   it("updates saved timestamp only on explicit save", async () => {
@@ -357,36 +475,14 @@ describe("UI/UX behaviors", () => {
     harness.saveState.mockImplementation(() => savePromise);
     harness.saveRun.mockImplementation(() => savePromise);
 
-    let tree: ReactTestRenderer;
-    await act(async () => {
-      tree = create(
-        <PracticeCoach
-          uid="student-01"
-          role="student"
-          manualLog={null}
-          onComplete={vi.fn()}
-          notify={vi.fn()}
-        />
-      );
-    });
+    await renderStudent();
 
-    const hasTimestamp = () => tree.root.findAllByType("span").find(s => s.props.className?.includes("practice-sync"))?.children.join("").includes("Saved");
+    const hasTimestamp = () => tree!.root.findAllByType("span").find(s => s.props.className?.includes("practice-sync"))?.children.join("").includes("Saved");
     expect(hasTimestamp()).toBe(false);
 
-    await act(async () => {
-      const button = tree.root.findAllByType("button").find(b => b.props.onClick && typeof b.props.children === 'object' && b.props.children[1]?.props?.children[1]?.props?.children === 'Quick 5');
-      button?.props.onClick();
-    });
-
-    await act(async () => {
-      const optionA = tree.root.findAllByType("button").find(b => b.props.role === "radio");
-      optionA?.props.onClick();
-    });
-
-    await act(async () => {
-      const submit = tree.root.findAllByType("button").find(b => typeof b.props.children === 'object' && b.props.children[0]?.includes?.("Submit answer"));
-      submit?.props.onClick();
-    });
+    await act(async () => button(tree!, "Quick 5")!.props.onClick());
+    await act(async () => tree!.root.findAllByProps({ role: "radio" })[0].props.onClick());
+    await act(async () => button(tree!, "Submit answer")!.props.onClick());
 
     // While saving is pending, timestamp should still not be updated
     expect(hasTimestamp()).toBe(false);
