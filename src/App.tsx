@@ -13,6 +13,7 @@ import {
   CircleAlert,
   CircleCheckBig,
   Cloud,
+  Command,
   Clock3,
   Copy,
   Download,
@@ -25,6 +26,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  Moon,
   MoreHorizontal,
   NotebookPen,
   PlayCircle,
@@ -33,6 +35,7 @@ import {
   RotateCcw,
   ShieldCheck,
   Sparkles,
+  Sun,
   Target,
   TimerReset,
   Trash2,
@@ -100,7 +103,10 @@ import {
 } from "./hooks/useTrackerSync";
 import { useHashTab } from "./hooks/useHashTab";
 import CalendarExportDialog from "./components/CalendarExportDialog";
-import { ThemeProvider, ThemeToggle } from "./components/ThemeToggle";
+import { ThemeProvider, ThemeToggle, useTheme } from "./components/ThemeToggle";
+import { CommandPalette } from "./components/CommandPalette";
+import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
+import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { PlanRouteGraphic } from "./components/PlanRouteGraphic";
@@ -750,6 +756,7 @@ function App() {
   });
   const [selectedWeek, setSelectedWeek] = useState(initialWeek);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const mobileDialogRef = useRef<HTMLElement>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
@@ -785,6 +792,18 @@ function App() {
     updatePrivateTutorNotes,
   } = useTrackerSync();
   const dialog = useAppDialog(`${user?.uid ?? "signed-out"}:${role}:${activeTab}`);
+  const { theme, toggle: toggleTheme } = useTheme();
+  const isLiveShell = activeTab === "live" && capabilities.canUseLiveSession;
+  const visibleNav = NAV_ITEMS.filter(
+    (item) => capabilities.canUseLiveSession || !NAV_GROUPS.some((group) => group.label === "Tutor" && group.ids.includes(item.id)),
+  );
+  useGlobalShortcuts({
+    onTogglePalette: () => setPaletteOpen((open) => !open),
+    tabs: isLiveShell ? [] : visibleNav.map((item) => () => setActiveTab(item.id)),
+    paletteOpen,
+    helpKey: !isLiveShell,
+    enabled: Boolean(user && trackerReady),
+  });
   const [toast, setToast] = useState<{
     message: string;
     tone: "success" | "warning";
@@ -852,6 +871,66 @@ function App() {
     downloadBackup(tracker);
     notify("JSON backup downloaded.");
   };
+
+  const commands: PaletteCommand[] = [
+    ...visibleNav.map<PaletteCommand>((item, index) => ({
+      id: `go-${item.id}`,
+      label: item.label,
+      group: "Go to",
+      hint: item.hint ?? TAB_COPY[item.id].description,
+      keywords: [item.mobileLabel],
+      shortcut: index < 9 ? `Alt+${index + 1}` : undefined,
+      icon: item.icon,
+      run: () => navigate(item.id),
+    })),
+    {
+      id: "theme",
+      label: theme === "dark" ? "Switch to light theme" : "Switch to dark theme",
+      group: "Actions",
+      keywords: ["theme", "dark", "light", "appearance"],
+      icon: theme === "dark" ? Sun : Moon,
+      run: toggleTheme,
+    },
+    {
+      id: "export",
+      label: "Download backup",
+      group: "Actions",
+      hint: "Keep a copy of shared progress",
+      keywords: ["json", "export"],
+      icon: Download,
+      run: handleExport,
+    },
+    {
+      id: "calendar",
+      label: "Export calendar",
+      group: "Actions",
+      hint: "Riyadh times and reminders",
+      keywords: ["ics", "reminders"],
+      icon: CalendarPlus,
+      run: () => setCalendarDialogOpen(true),
+    },
+    ...(capabilities.canUseLiveSession && !isLiveShell
+      ? [{ id: "live", label: "Open Session Mode", group: "Actions", hint: "Private tutor workspace", keywords: ["teach", "classroom"], icon: PlayCircle, run: () => navigate("live") } satisfies PaletteCommand]
+      : []),
+    ...(capabilities.canImportData && !isLiveShell
+      ? [{ id: "import", label: "Import backup", group: "Actions", hint: "Restore shared tracker data", keywords: ["restore", "json"], icon: Upload, run: () => importRef.current?.click() } satisfies PaletteCommand]
+      : []),
+    {
+      id: "signout",
+      label: "Sign out",
+      group: "Actions",
+      keywords: ["logout", "log out"],
+      icon: LogOut,
+      run: () => {
+        void dialog.confirm("Sign out of the tracker on this device?").then((confirmed) => {
+          if (confirmed) void signOut();
+        });
+      },
+    },
+  ];
+  const palette = (
+    <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
+  );
 
   const handleCalendarExport = (preferences: CalendarExportPreferences) => {
     downloadProject202Calendar({
@@ -1091,6 +1170,7 @@ function App() {
             onExit={() => navigate("dashboard")}
           />
         </Suspense>
+        {palette}
         {toast && (
           <div
             className={cx("toast", toast.tone === "warning" && "toast-warning")}
@@ -1181,6 +1261,16 @@ function App() {
           </div>
           <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
           <div className="data-actions">
+            <button
+              type="button"
+              className="theme-toggle command-palette-launch"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Open command palette"
+              title="Command palette (Ctrl+K)"
+            >
+              <Command size={17} />
+              <span>Ctrl+K</span>
+            </button>
             <ThemeToggle />
             <span className={cx("sync-chip", syncCopy.tone)} title={syncCopy.detail} role={syncStatus === "error" || syncStatus === "offline" ? undefined : "status"} aria-atomic="true" aria-label={`${syncCopy.label}. ${syncCopy.detail}`}>
               <SyncIcon size={15} />
@@ -1314,6 +1404,7 @@ function App() {
         onClose={() => setCalendarDialogOpen(false)}
         onExport={handleCalendarExport}
       />
+      {palette}
 
       {toast && (
         <div className={cx("toast", toast.tone === "warning" && "toast-warning")} role="status">
