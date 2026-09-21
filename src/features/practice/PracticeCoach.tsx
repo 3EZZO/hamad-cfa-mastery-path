@@ -848,14 +848,19 @@ function RehearsalExitDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  // Same contract as the calculator drawer: focus trapped, Escape cancels
+  // wherever focus is, and "Exit rehearsal" regains focus on close.
+  useDialogFocus(true, dialogRef, cancelRef, onCancel);
   return (
     <div className="practice-rehearsal-dialog-backdrop" role="presentation">
-      <section className="practice-rehearsal-dialog" role="dialog" aria-modal="true" aria-labelledby="rehearsal-exit-title" aria-describedby="rehearsal-exit-description" onKeyDown={event => { if (event.key === "Escape") onCancel(); }}>
+      <section ref={dialogRef} tabIndex={-1} className="practice-rehearsal-dialog" role="dialog" aria-modal="true" aria-labelledby="rehearsal-exit-title" aria-describedby="rehearsal-exit-description">
         <CircleAlert />
         <h2 id="rehearsal-exit-title">Discard this rehearsal?</h2>
         <p id="rehearsal-exit-description">Your unfinished answers exist only in this rehearsal and will be permanently discarded.</p>
         <div>
-          <button type="button" autoFocus onClick={onCancel}>Continue rehearsing</button>
+          <button ref={cancelRef} type="button" onClick={onCancel}>Continue rehearsing</button>
           <button type="button" className="is-danger" onClick={onConfirm}>Discard and exit</button>
         </div>
       </section>

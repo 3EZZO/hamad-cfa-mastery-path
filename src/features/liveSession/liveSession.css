@@ -5268,7 +5268,7 @@
 .ls-count-legend dd:last-child { margin-bottom: 0; }
 .ls-deck-console__coverage .ls-count-legend { grid-column: 1 / -1; }
 .ls-deck-console__coverage .ls-count-legend > dl { position: absolute; z-index: 110; top: 100%; left: 0; width: min(480px, calc(100vw - 56px)); max-height: 55dvh; overflow-y: auto; box-shadow: 0 12px 40px #132c4433; }
-.ls-count-legend summary:focus-visible { outline: 3px solid #315fce; outline-offset: 2px; }
+.ls-count-legend summary:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .ls-workspace-tools--embedded .ls-workspace-tools__menu {
   position: static;
   width: auto;
@@ -5447,7 +5447,7 @@
 .live-session .ls-deck-console__coverage strong,
 .live-session .ls-stage-card__identity .ls-eyebrow { color: var(--ls-teal-deep); }
 .live-session :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 3px solid #315fce; outline-offset: 2px; box-shadow: 0 0 0 2px #fff;
+  outline: 3px solid var(--focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring-halo);
 }
 .live-session .ls-command-block__body:focus-visible { outline-offset: -3px; }
 .live-session .ls-livebar :is(button, a):focus-visible { outline-color: #dceef4; box-shadow: 0 0 0 2px #132c44; }
