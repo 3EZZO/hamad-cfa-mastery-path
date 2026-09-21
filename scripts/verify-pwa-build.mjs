@@ -11,6 +11,10 @@ const requiredFiles = [
   "icons/project-202-maskable-192.png",
   "icons/project-202-maskable-512.png",
   "icons/project-202-apple-touch.png",
+  "fonts/sora-100-800-latin.woff2",
+  "fonts/ibm-plex-sans-400-700-latin.woff2",
+  "fonts/ibm-plex-mono-500-latin.woff2",
+  "fonts/ibm-plex-mono-600-latin.woff2",
 ];
 
 await Promise.all(
@@ -18,6 +22,12 @@ await Promise.all(
 );
 
 const html = await readFile(`${outputDirectory}/index.html`, "utf8");
+if (/fonts\.googleapis\.com|fonts\.gstatic\.com/i.test(html)) {
+  throw new Error("Built index.html still references Google Fonts; fonts must be self-hosted.");
+}
+if (!/<link[^>]+rel=["']preload["'][^>]+as=["']font["']/i.test(html)) {
+  throw new Error("Built index.html does not preload the self-hosted body font.");
+}
 if (!/<link[^>]+rel=["']manifest["']/i.test(html)) {
   throw new Error("Built index.html does not link the web app manifest.");
 }
