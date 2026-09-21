@@ -102,6 +102,8 @@ import {
   useTrackerSync,
 } from "./hooks/useTrackerSync";
 import { useHashTab } from "./hooks/useHashTab";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { DiagnosticsPanel } from "./components/DiagnosticsPanel";
 import CalendarExportDialog from "./components/CalendarExportDialog";
 import { ThemeProvider, ThemeToggle, useTheme } from "./components/ThemeToggle";
 import { CommandPalette } from "./components/CommandPalette";
@@ -1001,7 +1003,15 @@ function App() {
     }));
   };
 
-  const renderView = () => {
+  // Each tab renders inside its own error boundary so a failing view leaves
+  // the shell, navigation and the other tabs usable; switching tab resets it.
+  const renderView = () => (
+    <ErrorBoundary scope={`view:${activeTab}`} variant="view" resetKey={activeTab}>
+      {renderActiveView()}
+    </ErrorBoundary>
+  );
+
+  const renderActiveView = () => {
     switch (activeTab) {
       case "dashboard":
         return (
@@ -1161,14 +1171,16 @@ function App() {
             </main>
           }
         >
-          <TutorSessionWorkspace
-            userUid={user.uid}
-            tracker={tracker}
-            updateTracker={updateTracker}
-            updatePrivateTutorNotes={updatePrivateTutorNotes}
-            notify={notify}
-            onExit={() => navigate("dashboard")}
-          />
+          <ErrorBoundary scope="session-mode" variant="session">
+            <TutorSessionWorkspace
+              userUid={user.uid}
+              tracker={tracker}
+              updateTracker={updateTracker}
+              updatePrivateTutorNotes={updatePrivateTutorNotes}
+              notify={notify}
+              onExit={() => navigate("dashboard")}
+            />
+          </ErrorBoundary>
         </Suspense>
         {palette}
         {toast && (
@@ -2829,6 +2841,7 @@ function NotesView({
           ) : <EmptyState icon={ShieldCheck} title="No private notes">Choose Private tutor note above when an observation should remain visible only to Mohamed.</EmptyState>}
         </section>
       )}
+      {role === "tutor" && <DiagnosticsPanel />}
     </div>
   );
 }
