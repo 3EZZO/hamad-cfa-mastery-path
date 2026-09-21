@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { parseHash, readSegment, writeSegment } from "../lib/hashRoute";
 
 interface HashTabOptions<T extends string> {
   /** Window title for a tab; applied on every change and on first load. */
@@ -8,7 +9,9 @@ interface HashTabOptions<T extends string> {
 
 function readHash<T extends string>(allowed: readonly T[], fallback: T): T {
   if (typeof window === "undefined") return fallback;
-  const candidate = window.location.hash.replace(/^#/, "");
+  // `#tab/segment`: only the tab part selects the view; the segment belongs
+  // to that view (see useHashSegment).
+  const candidate = parseHash(window.location.hash).tab;
   return (allowed as readonly string[]).includes(candidate) ? (candidate as T) : fallback;
 }
 
@@ -72,4 +75,34 @@ export function useHashTab<T extends string>(
   }, [applyTab]);
 
   return [tab, navigate];
+}
+
+/**
+ * The `segment` part of `#tab/segment` for one view. Reads the current value
+ * on mount and follows `hashchange` (back/forward, pasted links); `set`
+ * rewrites the hash in place without adding a history entry. Reading and
+ * writing are limited to the time `tab` is the active tab, so a mounted but
+ * hidden consumer never touches another view's URL.
+ */
+export function useHashSegment(
+  tab: string,
+  activeTab: string,
+): [string, (segment: string) => void] {
+  const active = tab === activeTab;
+  const [segment, setSegment] = useState(() => (active ? readSegment(tab) : ""));
+
+  useEffect(() => {
+    if (!active || typeof window === "undefined") return;
+    setSegment(readSegment(tab));
+    const onHashChange = () => setSegment(readSegment(tab));
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [active, tab]);
+
+  const set = useCallback((next: string) => {
+    setSegment(next);
+    if (active) writeSegment(tab, next);
+  }, [active, tab]);
+
+  return [segment, set];
 }
