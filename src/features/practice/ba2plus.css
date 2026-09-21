@@ -153,3 +153,10 @@
   .ba-secondary { font-size: 7px; }
   .ba2-worksheet-status { font-size: 9px; }
 }
+
+/* Finger-sized keys on touch devices (desktop keeps the compact 40px key). */
+@media (pointer: coarse) {
+  .ba-key {
+    height: 44px;
+  }
+}
