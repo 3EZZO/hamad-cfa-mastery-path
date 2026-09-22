@@ -1257,3 +1257,18 @@ html:root[data-theme="dark"] .practice-calculator-wrapper {
   .practice-formula-sheet__module .practice-formulae code { background: none; color: #000; padding: 2px 0; border-bottom: 1px solid #ccc; border-radius: 0; }
 }
 html:root[data-theme="dark"] .practice-formula-sheet__search:focus-within { box-shadow: 0 0 0 3px #315fce55; }
+/* Exam Drill ------------------------------------------------------------- */
+.practice-player__identity > .practice-exam-clock { display: inline-flex; align-items: center; gap: 5px; justify-self: start; padding: 3px 9px; border-radius: 999px; background: var(--pc-soft); color: var(--pc-ink); font-variant-numeric: tabular-nums; font-weight: 700; font-size: .9rem; letter-spacing: 0; text-transform: none; }
+.practice-player__identity > .practice-exam-clock.is-urgent { color: #8f2b34; background: #fde5e8; }
+.practice-exam-report { margin-top: 20px; padding: 16px; border: 1px solid var(--pc-line); border-radius: 16px; background: var(--pc-surface); text-align: left; }
+.practice-exam-report h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 1rem; }
+.practice-exam-report__time { margin: 0 0 12px; color: var(--pc-muted); }
+.practice-exam-report table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.practice-exam-report th, .practice-exam-report td { padding: 8px 6px; border-top: 1px solid var(--pc-line); text-align: left; vertical-align: top; }
+.practice-exam-report thead th { border-top: 0; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--pc-muted); }
+.practice-exam-report tbody th { font-weight: 600; }
+.practice-exam-report td:nth-child(n + 2), .practice-exam-report thead th:nth-child(n + 2) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.practice-exam-report td small { color: var(--pc-muted); }
+.practice-exam-report tr.is-weak td:nth-child(3) { color: #8f2b34; font-weight: 700; }
+html:root[data-theme="dark"] .practice-player__identity > .practice-exam-clock.is-urgent { color: #ffabb6; background: #492d3c; }
+html:root[data-theme="dark"] .practice-exam-report tr.is-weak td:nth-child(3) { color: #ffabb6; }
