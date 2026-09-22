@@ -1,0 +1,11 @@
+Self-hosted web fonts (latin subsets, WOFF2), unmodified copies of the files
+Google Fonts served to this app before they were moved in-repo.
+
+- Sora (variable, weights 100-800) — Copyright 2018 The Sora Project Authors.
+  SIL Open Font License 1.1. https://github.com/sora-xor/sora-font
+- IBM Plex Sans (variable, weights 400-700) and IBM Plex Mono (500, 600) —
+  Copyright IBM Corp. 2017. SIL Open Font License 1.1.
+  https://github.com/IBM/plex
+
+The OFL permits bundling and redistribution with software; the fonts
+themselves are not sold. Declarations live in src/fonts.css.
