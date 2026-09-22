@@ -221,6 +221,55 @@ describe("Practice Coach role views", () => {
     await act(async () => tree.unmount());
   });
 
+  it("runs Exam Drill against a 90-second-per-question clock and auto-submits when it expires", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(new Date("2026-10-03T09:00:00.000Z"));
+    try {
+      const onComplete = vi.fn();
+      const tree = await render("student", "student-01", onComplete);
+      await act(async () => button(tree, "Exam Drill")!.props.onClick());
+      const clock = () => tree.root.findAllByProps({ role: "timer" }).find(node => typeof node.type === "string")!;
+      expect(clock().children.join("")).toContain("1:30");
+      await act(async () => { vi.advanceTimersByTime(30_000); });
+      expect(clock().children.join("")).toContain("1:00");
+      expect(clock().props.className).toContain("is-urgent");
+      expect(harness.saveRun).toHaveBeenCalled();
+      const savedBefore = harness.saveRun.mock.calls.length;
+
+      // The clock runs out with nothing marked: the run completes, the question stays unanswered.
+      await act(async () => { vi.advanceTimersByTime(61_000); });
+      await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+      const text = renderedText(tree);
+      expect(text).toContain("Practice set complete");
+      expect(text).toContain("Time expired with 1 question unanswered");
+      expect(text).toContain('"children":["0","/","1"]');
+      expect(text).toContain("Exam report");
+      expect(text).toContain("module-01");
+      expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ attempted: 1, correct: 0, source: "Practice Coach · Exam drill" }));
+      expect(onComplete.mock.calls[0]![0].note).toContain("1 unanswered when time expired");
+      const completed = harness.saveRun.mock.calls.at(-1)![0];
+      expect(harness.saveRun.mock.calls.length).toBeGreaterThan(savedBefore);
+      expect(completed).toMatchObject({ status: "completed", currentIndex: 1, answers: [] });
+      expect(completed.completedAtClient).toEqual(expect.any(String));
+      await act(async () => tree.unmount());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps ordinary practice untimed and never auto-advances it", async () => {
+    const tree = await render("student", "student-01");
+    await act(async () => button(tree, "Quick 5")!.props.onClick());
+    expect(tree.root.findAllByProps({ role: "timer" })).toHaveLength(0);
+    const firstAnswer = tree.root.findAllByProps({ role: "radio" })[0];
+    await act(async () => firstAnswer.props.onClick());
+    await act(async () => button(tree, "Submit answer")!.props.onClick());
+    // Feedback is shown and the learner moves on only by pressing the button.
+    expect(renderedText(tree)).toContain("View results");
+    expect(renderedText(tree)).not.toContain("Practice set complete");
+    await act(async () => tree.unmount());
+  });
+
   it("shows the tutor Hamad's read-only performance and missed answer", async () => {
     const tree = await render("tutor", "tutor-uid");
     const text = renderedText(tree);

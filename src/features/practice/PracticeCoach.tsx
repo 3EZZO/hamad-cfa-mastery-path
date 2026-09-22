@@ -70,6 +70,7 @@ import type { ProjectRole } from "../../lib/permissions";
 import { useDialogFocus } from "../liveSession/useDialogFocus";
 import { buildFormulaSheet, countFormulae } from "../../lib/formulaSheet";
 import { FormulaSheet } from "./FormulaSheet";
+import { buildExamReport, examRemainingMs, formatClock } from "../../lib/examDrill";
 import "./practiceCoach.css";
 
 export interface PracticeCompletionSummary {
@@ -155,6 +156,9 @@ export function PracticeCoach({
   const [modulePickerOpen, setModulePickerOpen] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [calculatorLog, setCalculatorLog] = useState<any[]>([]);
+  // Exam Drill clock: ticks once a second while a timed run is on screen.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const examExpiring = useRef(false);
   const [calculatorState, setCalculatorState] = useState(defaultTVMState());
   const answerStartedAt = useRef(Date.now());
   const calculatorCloseRef = useRef<HTMLButtonElement>(null);
@@ -181,6 +185,11 @@ export function PracticeCoach({
   const runnerBankByQuestion = useMemo(() => {
     const result = new Map<string, string>();
     runnerBanks.forEach(bank => bank.questions.forEach(question => result.set(question.id, bank.storageId)));
+    return result;
+  }, [runnerBanks]);
+  const runnerTopicByQuestion = useMemo(() => {
+    const result = new Map<string, string>();
+    runnerBanks.forEach(bank => bank.questions.forEach(question => result.set(question.id, bank.topic)));
     return result;
   }, [runnerBanks]);
   const modules = useMemo(
@@ -375,7 +384,7 @@ export function PracticeCoach({
     }
   };
 
-  const submitAnswer = async () => {
+  const submitAnswer = async (options: { finishAfter?: boolean } = {}) => {
     if (!activeRun || !currentQuestion || selectedOption === null || submitted) return;
     const timestamp = new Date().toISOString();
     const responseMs = Math.max(1_000, Date.now() - answerStartedAt.current);
@@ -418,7 +427,8 @@ export function PracticeCoach({
       void writeCloud("state", nextState);
       void writeCloud("run", nextRun);
     }
-    if (activeRun.mode === "exam") void advance(nextRun);
+    if (options.finishAfter) await finish(nextRun);
+    else if (activeRun.mode === "exam") void advance(nextRun);
   };
 
   const finish = async (run: PracticeRun) => {
@@ -439,6 +449,9 @@ export function PracticeCoach({
       void writeCloud("run", complete);
     }
     const correct = complete.answers.filter(answer => answer.correct).length;
+    // An exam counts every question: unanswered ones when the clock ran out are wrong.
+    const attempted = complete.mode === "exam" ? complete.questionIds.length : complete.answers.length;
+    const unanswered = complete.questionIds.length - complete.answers.length;
     const averageConfidence = complete.answers.length
       ? Math.round(complete.answers.reduce((sum, answer) => sum + answer.confidence, 0) / complete.answers.length)
       : 3;
@@ -449,11 +462,11 @@ export function PracticeCoach({
       onComplete({
         date: today(),
         topic,
-        attempted: complete.answers.length,
+        attempted,
         correct,
         confidence: averageConfidence,
         source: `Practice Coach · ${modeLabel(complete.mode)}`,
-        note: `${correct}/${complete.answers.length} correct; detailed adaptive review retained in Practice Coach.`,
+        note: `${correct}/${attempted} correct${complete.mode === "exam" && unanswered > 0 ? `; ${unanswered} unanswered when time expired` : ""}; detailed adaptive review retained in Practice Coach.`,
       });
       notify("Practice set completed and synchronized with the tracker.");
     }
@@ -527,8 +540,35 @@ export function PracticeCoach({
       setMessage("This saved set needs a practice bank that is not available on this device.");
       return;
     }
+    // Time away from the question is not response time.
+    answerStartedAt.current = Date.now();
     setView("run");
   };
+
+  const examOnScreen = view === "run" && activeRun?.mode === "exam" && activeRun.status === "active";
+  useEffect(() => {
+    if (!examOnScreen) return;
+    setNowMs(Date.now());
+    const handle = setInterval(() => setNowMs(Date.now()), 1_000);
+    return () => clearInterval(handle);
+  }, [examOnScreen, activeRun?.id]);
+  const examRemaining = examOnScreen && activeRun
+    ? examRemainingMs(activeRun, answerStartedAt.current, nowMs)
+    : null;
+  useEffect(() => {
+    if (examRemaining !== 0 || examExpiring.current || !activeRun) return;
+    examExpiring.current = true;
+    // Time is up: a marked answer counts, everything else stays unanswered.
+    void (async () => {
+      try {
+        if (selectedOption !== null && !submitted) await submitAnswer({ finishAfter: true });
+        else await finish(activeRun);
+      } finally {
+        examExpiring.current = false;
+      }
+    })();
+    // Runs only on the transition to zero; the handlers read current state.
+  }, [examRemaining]);
 
   const completedAnswers = lastCompletedRun?.answers ?? [];
   const resultCorrect = completedAnswers.filter(answer => answer.correct).length;
@@ -542,6 +582,15 @@ export function PracticeCoach({
           <button type="button" onClick={abandon} aria-label="Return to Practice home"><ArrowLeft /></button>
           <div className="practice-player__identity">
             <span>{modeLabel(activeRun.mode)}</span>
+            {examRemaining !== null && (
+              <span
+                className={`practice-exam-clock${examRemaining <= 120_000 ? " is-urgent" : ""}`}
+                role="timer"
+                aria-label={`Time remaining ${formatClock(examRemaining)}`}
+              >
+                <Clock3 size={15} aria-hidden="true" />{formatClock(examRemaining)}
+              </span>
+            )}
           </div>
           <div className="practice-player__utilities">
             <button
@@ -703,7 +752,11 @@ export function PracticeCoach({
   }
 
   if ((role === "student" || isRehearsal) && view === "results" && lastCompletedRun) {
-    const percentage = completedAnswers.length ? Math.round((resultCorrect / completedAnswers.length) * 100) : 0;
+    const examReport = lastCompletedRun.mode === "exam"
+      ? buildExamReport(lastCompletedRun, runnerQuestionsById, id => runnerTopicByQuestion.get(id))
+      : null;
+    const scored = examReport ? examReport.total : completedAnswers.length;
+    const percentage = scored ? Math.round((resultCorrect / scored) * 100) : 0;
     const repair = completedAnswers.filter(answer => !answer.correct || answer.confidence <= 2).length;
     
     // Analyze keystrokes for diagnostics
@@ -720,7 +773,7 @@ export function PracticeCoach({
         <p>{isRehearsal ? "Rehearsal complete" : "Practice set complete"}</p>
         <h2>{percentage}% accuracy</h2>
         <div className="practice-results__metrics">
-          <div><strong>{resultCorrect}/{completedAnswers.length}</strong><span>correct</span></div>
+          <div><strong>{resultCorrect}/{scored}</strong><span>correct</span></div>
           <div><strong>{repair}</strong><span>review due</span></div>
           <div><strong>{modeLabel(lastCompletedRun.mode)}</strong><span>set</span></div>
         </div>
@@ -734,6 +787,30 @@ export function PracticeCoach({
               : "The missed and uncertain concepts are now prioritized in your Repair Queue."}
         </p>
         
+        {examReport && (
+          <section className="practice-exam-report" aria-labelledby="practice-exam-report-title">
+            <h3 id="practice-exam-report-title"><Clock3 size={16} aria-hidden="true" /> Exam report</h3>
+            <p className="practice-exam-report__time">
+              {examReport.expired
+                ? `Time expired with ${examReport.unanswered} ${examReport.unanswered === 1 ? "question" : "questions"} unanswered (counted as wrong).`
+                : `Finished in ${formatClock(examReport.elapsedMs)} of ${formatClock(examReport.timeLimitMs)}.`}
+            </p>
+            <table>
+              <thead><tr><th scope="col">Section</th><th scope="col">Correct</th><th scope="col">Accuracy</th><th scope="col">Avg time</th></tr></thead>
+              <tbody>
+                {examReport.sections.map(section => (
+                  <tr key={section.label} className={section.accuracy < 70 ? "is-weak" : undefined}>
+                    <th scope="row">{section.label}</th>
+                    <td>{section.correct}/{section.attempted + section.unanswered}{section.unanswered > 0 && <small> · {section.unanswered} blank</small>}</td>
+                    <td>{section.accuracy}%</td>
+                    <td>{section.averageResponseMs === null ? "—" : formatClock(section.averageResponseMs)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+
         {uniqueDiagnostics.length > 0 && (
           <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(234, 179, 85, 0.1)', border: '1px solid #eab355', borderRadius: '8px', textAlign: 'left' }}>
             <h3 style={{ color: '#eab355', margin: '0 0 12px 0', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -814,7 +891,7 @@ export function PracticeCoach({
               <span><Layers3 /></span><div><small>Across unlocked modules</small><strong>Mixed Review</strong><p>Twenty questions with deliberate topic variety.</p></div><ArrowRight />
             </button>
             <button className="practice-action" type="button" onClick={() => void begin("exam", 20)}>
-              <span><Clock3 /></span><div><small>Feedback at the end</small><strong>Exam Drill</strong><p>Timed practice without immediate answer disclosure.</p></div><ArrowRight />
+              <span><Clock3 /></span><div><small>Feedback at the end</small><strong>Exam Drill</strong><p>Twenty questions in 30 minutes, 90 seconds each; answers and a section report at the end.</p></div><ArrowRight />
             </button>
           </section>}
 
