@@ -45,20 +45,39 @@ type IdleScheduler = Pick<typeof globalThis, "setTimeout"> & {
 };
 
 /**
- * Fetch the practice chunk once the shell has painted so the student never
- * waits on it. Uses idle time when the browser offers it, otherwise a short
- * timer. Failures are ignored: the real navigation will retry the import.
+ * Fetch the given chunks once the shell has painted so nobody waits on them
+ * later. Uses idle time when the browser offers it, otherwise a short timer,
+ * and loads the chunks one after another so they never compete with each
+ * other or with the first data fetch. Failures are ignored: the real
+ * navigation will retry the import.
  */
-export function warmUpPracticeView(
+export function warmUpViews(
+  loads: readonly (() => Promise<unknown>)[],
   scheduler: IdleScheduler = globalThis,
-  load: () => Promise<unknown> = loadPracticeCoach,
 ): void {
   const run = () => {
-    void load().catch(() => undefined);
+    // The first import starts at once; each later one waits for the previous.
+    void loads.reduce<Promise<unknown> | null>(
+      (chain, load) => (chain ? chain.then(() => load()) : load()).catch(() => undefined),
+      null,
+    );
   };
   if (typeof scheduler.requestIdleCallback === "function") {
     scheduler.requestIdleCallback(run, { timeout: 4000 });
     return;
   }
   scheduler.setTimeout(run, 1500);
+}
+
+/** The student's hot path: practice first; the chart follows for Mock Results. */
+export function warmUpPracticeView(
+  scheduler: IdleScheduler = globalThis,
+  load: () => Promise<unknown> = loadPracticeCoach,
+): void {
+  warmUpViews([load], scheduler);
+}
+
+/** Tutor accounts also open Session Mode and the score chart most days. */
+export function warmUpTutorViews(scheduler: IdleScheduler = globalThis): void {
+  warmUpViews([loadPracticeCoach, loadTutorSessionWorkspace, loadMockScoreChart], scheduler);
 }

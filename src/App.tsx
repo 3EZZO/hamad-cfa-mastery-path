@@ -123,6 +123,7 @@ import {
   ReceiptVerificationScreen,
   TutorSessionWorkspace,
   warmUpPracticeView,
+  warmUpTutorViews,
 } from "./lazyViews";
 import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
@@ -827,10 +828,12 @@ function App() {
   });
   const shellReady = Boolean(user && trackerReady);
   useEffect(() => {
-    // Warm the practice chunk after the shell paints so the student never
-    // waits on it; every other split view loads on first open.
-    if (shellReady) warmUpPracticeView();
-  }, [shellReady]);
+    // Warm the chunks this account opens most after the shell paints, so
+    // nobody waits on them; the rest load on first open.
+    if (!shellReady) return;
+    if (capabilities.canUseLiveSession) warmUpTutorViews();
+    else warmUpPracticeView();
+  }, [shellReady, capabilities.canUseLiveSession]);
   const [toast, setToast] = useState<{
     message: string;
     tone: "success" | "warning";
@@ -1397,7 +1400,7 @@ function App() {
 
         <div className="page-shell" id="tracker-content" tabIndex={-1}>
           {activeTab !== "dashboard" && activeTab !== "weekly" && <PageHeading tab={activeTab} />}
-          <Suspense fallback={<ViewSkeleton />}>{renderView()}</Suspense>
+          <Suspense fallback={<ViewSkeleton label={`Loading ${TAB_COPY[activeTab].title}`} />}>{renderView()}</Suspense>
         </div>
       </main>
 

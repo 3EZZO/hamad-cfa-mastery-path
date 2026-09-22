@@ -1,9 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TOPICS } from "../data/plan";
 import { cascadeReschedule } from "./schedule";
-import { createDefaultState, normalizeState } from "./storage";
+import { createDefaultState, hasSavedState, normalizeState, STORAGE_KEY } from "./storage";
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("tracker backup invariants", () => {
+  it("knows whether this device has a saved tracker, even when storage is blocked", () => {
+    expect(hasSavedState()).toBe(false);
+    const store = new Map<string, string>();
+    vi.stubGlobal("window", { localStorage: { getItem: (key: string) => store.get(key) ?? null } });
+    expect(hasSavedState()).toBe(false);
+    store.set(STORAGE_KEY, "{}");
+    expect(hasSavedState()).toBe(true);
+    vi.stubGlobal("window", { localStorage: { getItem: () => { throw new Error("blocked"); } } });
+    expect(hasSavedState()).toBe(false);
+  });
+
   it("creates a mastery field for every curriculum topic", () => {
     const state = createDefaultState();
     expect(Object.keys(state.topicMastery)).toEqual([...TOPICS]);
