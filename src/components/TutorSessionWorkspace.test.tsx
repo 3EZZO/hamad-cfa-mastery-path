@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TutorSessionWorkspace from "./TutorSessionWorkspace";
 import { LiveSessionConsole } from "../features/liveSession";
 import { createDefaultState } from "../lib/storage";
-import { getTutorSession } from "../lib/tutorSessionCatalog";
+import { getTutorSession, TUTOR_SESSION_NUMBERS } from "../lib/tutorSessionCatalog";
 import { asDraft, syntheticPlaybook } from "../testFixtures/tutorPlaybooks";
 import {
   applyTutorLiveRunAction,
@@ -82,7 +82,9 @@ beforeEach(async () => {
     if (id === s1.manifest.id) return s1;
     if (id === s2.manifest.id) return s2;
     if (id === s3.manifest.id) return s3;
-    return s4;
+    if (id === s4.manifest.id) return s4;
+    // Sessions 05-23 exist in the catalog but have no published playbook yet.
+    return null;
   });
   mocks.cache.mockResolvedValue({ ready: true });
   mocks.cacheRun.mockResolvedValue(undefined);
@@ -162,6 +164,23 @@ describe("Session Mode workspace isolation", () => {
       number: 4,
       date: "2026-10-10",
     });
+  });
+
+  it("lists every plan session and opens an unauthored one on the private import screen", async () => {
+    await mount();
+    const switcher = tree!.root.findAllByType("button").filter(button => "aria-pressed" in button.props);
+    expect(switcher).toHaveLength(23);
+    expect(switcher.map(button => button.props.children[0])).toEqual(TUTOR_SESSION_NUMBERS.map(number => `Session ${String(number).padStart(2, "0")}`));
+    await choose(5);
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(consoleFor(1).props.active).toBe(false);
+    expect(tree!.root.findAllByType(LiveSessionConsole).some(node => node.props.session.number === 5)).toBe(false);
+    const setup = tree!.root.findAllByProps({ id: "private-setup-title" }).find(node => typeof node.type === "string");
+    expect(setup).toBeDefined();
+    expect(JSON.stringify(setup!.children)).toContain("Session 05");
+    expect(mocks.publish).not.toHaveBeenCalled();
+    await choose(1);
+    expect(consoleFor(1).props.active).toBe(true);
   });
 
   it("rejects a wrong-session upload before any cloud or offline publication, retaining the live console", async () => {

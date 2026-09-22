@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   getTutorSession,
+  isTutorSessionNumber,
+  TUTOR_SESSION_NUMBERS,
   tutorSessionRunId,
   validateSessionImport,
 } from "./tutorSessionCatalog";
+import { PLAN, getWeekSessions } from "../data/plan";
 import { computeTutorPlaybookManifestContentHash } from "./tutorContent";
 import { asDraft, syntheticPlaybook } from "../testFixtures/tutorPlaybooks";
 
@@ -61,6 +64,23 @@ describe("session catalog and import boundary", () => {
     const s2 = asDraft(await syntheticPlaybook(2));
     s2.chunks[0]!.stages[0]!.cards[0]!.answer = "Tampered";
     await expect(validateSessionImport(s2, 2)).rejects.toThrow();
+  });
+
+  it("derives all 23 plan sessions in order, each with a stable id, task and topic", () => {
+    expect(TUTOR_SESSION_NUMBERS).toEqual(Array.from({ length: 23 }, (_, index) => index + 1));
+    expect(TUTOR_SESSION_NUMBERS).toEqual(PLAN.flatMap(week => getWeekSessions(week).map(session => session.number)));
+    expect(isTutorSessionNumber(23)).toBe(true);
+    expect(isTutorSessionNumber(24)).toBe(false);
+    expect(() => getTutorSession(24)).toThrow(/missing from the study plan/);
+    const entries = TUTOR_SESSION_NUMBERS.map(number => getTutorSession(number));
+    expect(new Set(entries.map(entry => entry.playbookId)).size).toBe(23);
+    expect(new Set(entries.map(entry => entry.taskId)).size).toBe(23);
+    expect(new Set(entries.map(entry => entry.runIdBase)).size).toBe(23);
+    expect(getTutorSession(5)).toMatchObject({ label: "Session 05", playbookId: "hamad-cfa-mastery-session-05", topic: "Financial Statement Analysis" });
+    expect(getTutorSession(18).topic).toBe("Mixed Curriculum");
+    expect(getTutorSession(23).week.week).toBe(24);
+    // The legacy S1 run id is the only one carrying a date suffix.
+    expect(entries.filter(entry => entry.runIdBase !== entry.playbookId).map(entry => entry.number)).toEqual([1]);
   });
 
   it("exposes each session's plan-week topic for closeout records", () => {
