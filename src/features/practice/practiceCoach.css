@@ -1218,3 +1218,42 @@ html:root[data-theme="dark"] .practice-calculator-wrapper {
   background: #111a22;
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
 }
+
+/* Formula sheet ----------------------------------------------------------- */
+.practice-reference { margin-top: 14px; }
+.practice-action--reference { width: 100%; }
+.practice-formula-sheet { display: grid; gap: 16px; }
+.practice-formula-sheet__header { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 14px; }
+.practice-formula-sheet__header h2 { margin: 0; font-size: 1.35rem; }
+.practice-formula-sheet__eyebrow { margin: 0 0 2px; font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--pc-muted); }
+.practice-formula-sheet__summary { margin: 4px 0 0; color: var(--pc-muted); }
+.practice-formula-sheet__back,
+.practice-formula-sheet__print { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--pc-line); border-radius: 12px; background: var(--pc-surface); color: var(--pc-ink); font: inherit; font-weight: 600; cursor: pointer; }
+.practice-formula-sheet__search { position: relative; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid var(--pc-line); border-radius: 14px; background: var(--pc-surface); color: var(--pc-muted); }
+.practice-formula-sheet__search input { flex: 1; min-width: 0; min-height: 48px; border: 0; background: transparent; color: var(--pc-ink); font: inherit; font-size: 1rem; }
+.practice-formula-sheet__search input:focus { outline: none; }
+.practice-formula-sheet__search:focus-within { border-color: var(--pc-blue); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc-blue) 22%, transparent); }
+.practice-formula-sheet__search button { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 10px; background: var(--pc-soft); color: var(--pc-ink); cursor: pointer; }
+.practice-formula-sheet__count { min-height: 1.2em; margin: -8px 0 0; font-size: .85rem; color: var(--pc-muted); }
+.practice-formula-sheet__module { padding: 16px; border: 1px solid var(--pc-line); border-radius: 18px; background: var(--pc-surface); }
+.practice-formula-sheet__module h3 { display: grid; gap: 2px; margin: 0 0 12px; font-size: 1.05rem; }
+.practice-formula-sheet__module h3 span { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--pc-teal); }
+.practice-formula-sheet__module .practice-formulae { margin: 0; padding: 0; list-style: none; }
+.practice-formula-sheet__module .practice-formulae li { display: grid; gap: 4px; }
+.practice-formula-sheet__module .practice-formulae small { color: var(--pc-muted); }
+.practice-formula-sheet__empty { display: grid; justify-items: center; gap: 10px; padding: 32px 16px; border: 1px dashed var(--pc-line); border-radius: 18px; color: var(--pc-muted); text-align: center; }
+@media (max-width: 600px) {
+  .practice-formula-sheet__header { grid-template-columns: 1fr 1fr; }
+  .practice-formula-sheet__header > div { grid-column: 1 / -1; order: 1; }
+  .practice-formula-sheet__print { justify-self: end; }
+}
+/* Print: only the sheet, as plain black text, one module per block. */
+@media print {
+  body * { visibility: hidden; }
+  .practice-formula-sheet, .practice-formula-sheet * { visibility: visible; }
+  .practice-formula-sheet { position: absolute; inset: 0 auto auto 0; width: 100%; padding: 0; }
+  .practice-formula-sheet__back, .practice-formula-sheet__print, .practice-formula-sheet__search, .practice-formula-sheet__count { display: none; }
+  .practice-formula-sheet__module { break-inside: avoid; border: 0; padding: 0 0 14px; }
+  .practice-formula-sheet__module .practice-formulae code { background: none; color: #000; padding: 2px 0; border-bottom: 1px solid #ccc; border-radius: 0; }
+}
+html:root[data-theme="dark"] .practice-formula-sheet__search:focus-within { box-shadow: 0 0 0 3px #315fce55; }

@@ -17,6 +17,7 @@ import {
   Play,
   RotateCcw,
   ShieldCheck,
+  Sigma,
   Sparkles,
   Target,
   TimerReset,
@@ -67,6 +68,8 @@ import type {
 } from "../../lib/practiceContent";
 import type { ProjectRole } from "../../lib/permissions";
 import { useDialogFocus } from "../liveSession/useDialogFocus";
+import { buildFormulaSheet, countFormulae } from "../../lib/formulaSheet";
+import { FormulaSheet } from "./FormulaSheet";
 import "./practiceCoach.css";
 
 export interface PracticeCompletionSummary {
@@ -87,7 +90,7 @@ interface PracticeCoachProps {
   notify: (message: string, tone?: "success" | "warning") => void;
 }
 
-type CoachView = "hub" | "run" | "results";
+type CoachView = "hub" | "run" | "results" | "formulas";
 type CoachSync = "loading" | "synced" | "offline" | "saving" | "error";
 type PerformanceContext = ProjectRole | "rehearsal";
 
@@ -164,6 +167,9 @@ export function PracticeCoach({
     [assignedBankIds, banks]
   );
   const runnerBanks = isRehearsal ? rehearsalBanks : banks;
+  // Reference material from the same cached banks, so it is available offline.
+  const formulaGroups = useMemo(() => buildFormulaSheet(runnerBanks), [runnerBanks]);
+  const formulaCount = countFormulae(formulaGroups);
   const runnerQuestions = useMemo(
     () => runnerBanks.flatMap(bank => bank.questions),
     [runnerBanks]
@@ -687,6 +693,15 @@ export function PracticeCoach({
     );
   }
 
+  if (view === "formulas") {
+    return (
+      <div className="practice-coach">
+        {isRehearsal && <RehearsalBanner onExit={requestRehearsalExit} />}
+        <FormulaSheet groups={formulaGroups} onBack={() => setView("hub")} />
+      </div>
+    );
+  }
+
   if ((role === "student" || isRehearsal) && view === "results" && lastCompletedRun) {
     const percentage = completedAnswers.length ? Math.round((resultCorrect / completedAnswers.length) * 100) : 0;
     const repair = completedAnswers.filter(answer => !answer.correct || answer.confidence <= 2).length;
@@ -800,6 +815,12 @@ export function PracticeCoach({
             </button>
             <button className="practice-action" type="button" onClick={() => void begin("exam", 20)}>
               <span><Clock3 /></span><div><small>Feedback at the end</small><strong>Exam Drill</strong><p>Timed practice without immediate answer disclosure.</p></div><ArrowRight />
+            </button>
+          </section>}
+
+          {formulaCount > 0 && <section className="practice-reference" aria-label="Reference">
+            <button className="practice-action practice-action--reference" type="button" onClick={() => setView("formulas")}>
+              <span><Sigma /></span><div><small>Works offline · printable</small><strong>Formula sheet</strong><p>{formulaCount === 1 ? "1 formula" : `${formulaCount} formulae`} across {formulaGroups.length} {formulaGroups.length === 1 ? "module" : "modules"}, from the assigned banks.</p></div><ArrowRight />
             </button>
           </section>}
 
