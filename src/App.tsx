@@ -49,7 +49,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   type FormEvent,
   type ReactNode,
-  lazy,
   Suspense,
   useEffect,
   useMemo,
@@ -111,10 +110,16 @@ import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { PlanRouteGraphic } from "./components/PlanRouteGraphic";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
-import { PracticeCoach } from "./features/practice/PracticeCoach";
-import { PracticeBankAdmin } from "./features/practice/PracticeBankAdmin";
-import { PaymentsHub } from "./features/payments/PaymentsHub";
-import { ReceiptVerificationScreen } from "./features/payments/ReceiptVerification";
+import {
+  MockScoreChart,
+  PaymentsHub,
+  PracticeBankAdmin,
+  PracticeCoach,
+  ReceiptVerificationScreen,
+  TutorSessionWorkspace,
+  warmUpPracticeView,
+} from "./lazyViews";
+import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
@@ -284,11 +289,6 @@ const NOTE_CATEGORIES = [
   "Resource link",
   "Exam logistics",
 ];
-
-const MockScoreChart = lazy(() => import("./components/MockScoreChart"));
-const TutorSessionWorkspace = lazy(
-  () => import("./components/TutorSessionWorkspace"),
-);
 
 const PLANNED_SESSIONS = PLAN.flatMap((week) =>
   getWeekSessions(week).map((session) => ({
@@ -804,6 +804,12 @@ function App() {
     helpKey: !isLiveShell,
     enabled: Boolean(user && trackerReady),
   });
+  const shellReady = Boolean(user && trackerReady);
+  useEffect(() => {
+    // Warm the practice chunk after the shell paints so the student never
+    // waits on it; every other split view loads on first open.
+    if (shellReady) warmUpPracticeView();
+  }, [shellReady]);
   const [toast, setToast] = useState<{
     message: string;
     tone: "success" | "warning";
@@ -1352,7 +1358,7 @@ function App() {
 
         <div className="page-shell" id="tracker-content" tabIndex={-1}>
           {activeTab !== "dashboard" && activeTab !== "weekly" && <PageHeading tab={activeTab} />}
-          {renderView()}
+          <Suspense fallback={<ViewSkeleton />}>{renderView()}</Suspense>
         </div>
       </main>
 
@@ -2846,7 +2852,9 @@ export default function AppWithDialogs() {
   if (receiptRef) {
     return (
       <ThemeProvider>
-        <ReceiptVerificationScreen token={receiptRef} />
+        <Suspense fallback={<ViewSkeleton label="Checking receipt" />}>
+          <ReceiptVerificationScreen token={receiptRef} />
+        </Suspense>
       </ThemeProvider>
     );
   }
