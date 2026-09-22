@@ -493,6 +493,16 @@ export function normalizeState(value: unknown): TrackerState {
   };
 }
 
+/** True once this device has saved a tracker, i.e. loadState() is not the default. */
+export function hasSavedState(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export function loadState(): TrackerState {
   if (typeof window === "undefined") return createDefaultState();
   const saved = window.localStorage.getItem(STORAGE_KEY);

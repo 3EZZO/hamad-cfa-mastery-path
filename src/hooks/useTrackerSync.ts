@@ -33,6 +33,7 @@ import { mergeTrackerStates } from "../lib/stateMerge";
 import {
   clearPendingSync,
   createDefaultState,
+  hasSavedState,
   loadPendingSync,
   loadState,
   normalizeState,
@@ -380,7 +381,11 @@ export function useTrackerSync(): TrackerSyncController {
     ) {
       return;
     }
-    setTrackerReady(!onlineNow());
+    // A device that has synced before paints from its saved tracker at once
+    // and shows "loading" in the sidebar until the cloud snapshot merges in;
+    // edits made meanwhile are rebased onto it exactly as offline edits are.
+    // A first-time device still waits, since it has nothing to show.
+    setTrackerReady(!onlineNow() || hasSavedState());
     setSyncStatus(onlineNow() ? "loading" : "offline");
     setSyncError(null);
 
