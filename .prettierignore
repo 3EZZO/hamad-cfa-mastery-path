@@ -1,0 +1,8 @@
+dist
+dist-pages
+node_modules
+package-lock.json
+public
+tmp
+verification
+*.json

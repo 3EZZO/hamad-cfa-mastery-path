@@ -2,7 +2,7 @@
 
 ## Architecture & Tooling
 - **Framework:** React 19 + TypeScript.
-- **Build Systems:** Vite for GitHub Pages (production target), Vinext for alternate Sites path.
+- **Build Systems:** Vite for GitHub Pages (the only build; `npm run dev`, `build` and `preview` all use `vite.pages.config.mjs`).
 - **Database & Auth:** Firebase Authentication and Cloud Firestore.
 - **Styling & UI:** Custom CSS (`styles.css`, `theme.css`), Lucide icons, Recharts.
 - **Testing:** Vitest and React component tests (`react-test-renderer`).
