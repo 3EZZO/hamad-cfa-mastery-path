@@ -49,7 +49,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   type FormEvent,
   type ReactNode,
-  lazy,
   Suspense,
   useEffect,
   useMemo,
@@ -102,19 +101,30 @@ import {
   useTrackerSync,
 } from "./hooks/useTrackerSync";
 import { useHashTab } from "./hooks/useHashTab";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { DiagnosticsPanel } from "./components/DiagnosticsPanel";
 import CalendarExportDialog from "./components/CalendarExportDialog";
 import { ThemeProvider, ThemeToggle, useTheme } from "./components/ThemeToggle";
 import { CommandPalette } from "./components/CommandPalette";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
+import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
+import { useHashSegment } from "./hooks/useHashTab";
+import { parseWeekSegment, readSegment, weekSegment } from "./lib/hashRoute";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { PlanRouteGraphic } from "./components/PlanRouteGraphic";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
-import { PracticeCoach } from "./features/practice/PracticeCoach";
-import { PracticeBankAdmin } from "./features/practice/PracticeBankAdmin";
-import { PaymentsHub } from "./features/payments/PaymentsHub";
-import { ReceiptVerificationScreen } from "./features/payments/ReceiptVerification";
+import {
+  MockScoreChart,
+  PaymentsHub,
+  PracticeBankAdmin,
+  PracticeCoach,
+  ReceiptVerificationScreen,
+  TutorSessionWorkspace,
+  warmUpPracticeView,
+} from "./lazyViews";
+import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import type {
   ErrorEntry,
@@ -284,11 +294,6 @@ const NOTE_CATEGORIES = [
   "Resource link",
   "Exam logistics",
 ];
-
-const MockScoreChart = lazy(() => import("./components/MockScoreChart"));
-const TutorSessionWorkspace = lazy(
-  () => import("./components/TutorSessionWorkspace"),
-);
 
 const PLANNED_SESSIONS = PLAN.flatMap((week) =>
   getWeekSessions(week).map((session) => ({
@@ -754,13 +759,29 @@ function App() {
   const [activeTab, setActiveTab] = useHashTab<TabId>(TAB_IDS, "dashboard", {
     title: (tab) => `${TAB_COPY[tab].title} · Hamad CFA Mastery`,
   });
-  const [selectedWeek, setSelectedWeek] = useState(initialWeek);
+  // This Week mirrors its week to `#weekly/week-N` so reload, back/forward
+  // and pasted links land on the same week; a deep link wins over the
+  // programme week only on first load.
+  const [weeklySegment, setWeeklySegment] = useHashSegment("weekly", activeTab);
+  const [selectedWeek, setSelectedWeek] = useState(
+    () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS) ?? initialWeek,
+  );
+  useEffect(() => {
+    const linked = parseWeekSegment(weeklySegment, TOTAL_WEEKS);
+    if (linked) setSelectedWeek(linked);
+  }, [weeklySegment]);
+  useEffect(() => {
+    if (activeTab === "weekly") setWeeklySegment(weekSegment(selectedWeek));
+  }, [activeTab, selectedWeek, setWeeklySegment]);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const mobileDialogRef = useRef<HTMLElement>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
   useDialogFocus(mobileMoreOpen, mobileDialogRef, mobileCloseRef, () => setMobileMoreOpen(false));
+  // Roving tabindex: Tab lands on the active section, arrow keys browse the rest.
+  const sidebarKeyDown = useRovingNav("vertical");
+  const mobileNavKeyDown = useRovingNav("horizontal");
   // Back/forward can change the tab without going through navigate().
   useEffect(() => setMobileMoreOpen(false), [activeTab]);
   const {
@@ -804,6 +825,12 @@ function App() {
     helpKey: !isLiveShell,
     enabled: Boolean(user && trackerReady),
   });
+  const shellReady = Boolean(user && trackerReady);
+  useEffect(() => {
+    // Warm the practice chunk after the shell paints so the student never
+    // waits on it; every other split view loads on first open.
+    if (shellReady) warmUpPracticeView();
+  }, [shellReady]);
   const [toast, setToast] = useState<{
     message: string;
     tone: "success" | "warning";
@@ -1001,7 +1028,15 @@ function App() {
     }));
   };
 
-  const renderView = () => {
+  // Each tab renders inside its own error boundary so a failing view leaves
+  // the shell, navigation and the other tabs usable; switching tab resets it.
+  const renderView = () => (
+    <ErrorBoundary scope={`view:${activeTab}`} variant="view" resetKey={activeTab}>
+      {renderActiveView()}
+    </ErrorBoundary>
+  );
+
+  const renderActiveView = () => {
     switch (activeTab) {
       case "dashboard":
         return (
@@ -1161,14 +1196,16 @@ function App() {
             </main>
           }
         >
-          <TutorSessionWorkspace
-            userUid={user.uid}
-            tracker={tracker}
-            updateTracker={updateTracker}
-            updatePrivateTutorNotes={updatePrivateTutorNotes}
-            notify={notify}
-            onExit={() => navigate("dashboard")}
-          />
+          <ErrorBoundary scope="session-mode" variant="session">
+            <TutorSessionWorkspace
+              userUid={user.uid}
+              tracker={tracker}
+              updateTracker={updateTracker}
+              updatePrivateTutorNotes={updatePrivateTutorNotes}
+              notify={notify}
+              onExit={() => navigate("dashboard")}
+            />
+          </ErrorBoundary>
         </Suspense>
         {palette}
         {toast && (
@@ -1187,6 +1224,13 @@ function App() {
       </>
     );
   }
+
+  const sidebarGroups = NAV_GROUPS.filter(
+    (group) => group.label !== "Tutor" || capabilities.canUseLiveSession,
+  );
+  const sidebarIds = sidebarGroups.flatMap((group) => group.ids);
+  // The "More" button stands in for sections that live behind the sheet.
+  const mobileTabbable: TabId | "more" = MOBILE_PRIMARY_IDS.includes(activeTab) ? activeTab : "more";
 
   return (
     <div className={cx("app-shell", activeTab === "practice" && "sidebar-collapsed")}>
@@ -1207,10 +1251,8 @@ function App() {
           <small>{daysUntilExam()} days to prepare</small>
         </div>
 
-        <nav className="sidebar-nav" aria-label="Project sections">
-          {NAV_GROUPS.filter(
-            (group) => group.label !== "Tutor" || capabilities.canUseLiveSession,
-          ).map((group) => (
+        <nav className="sidebar-nav" aria-label="Project sections" onKeyDown={sidebarKeyDown}>
+          {sidebarGroups.map((group) => (
             <div className="nav-group" key={group.label}>
               <span className="nav-group-label">{group.label}</span>
               {group.ids.map((id) => {
@@ -1222,6 +1264,7 @@ function App() {
                     key={item.id}
                     onClick={() => navigate(item.id)}
                     aria-current={activeTab === item.id ? "page" : undefined}
+                    tabIndex={rovingTabIndex(sidebarIds, activeTab, item.id)}
                     type="button"
                   >
                     <Icon size={17} />
@@ -1318,7 +1361,7 @@ function App() {
         </header>
 
         <SyncRecoveryNotice state={syncStatus} message={syncError} onRetry={retrySync} />
-        <nav className="mobile-nav" aria-label="Primary project sections">
+        <nav className="mobile-nav" aria-label="Primary project sections" onKeyDown={mobileNavKeyDown}>
           {MOBILE_PRIMARY_IDS.map((id) => {
             const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
             const Icon = item.icon;
@@ -1328,6 +1371,7 @@ function App() {
                 key={item.id}
                 onClick={() => navigate(item.id)}
                 aria-current={activeTab === item.id ? "page" : undefined}
+                tabIndex={mobileTabbable === item.id ? 0 : -1}
                 type="button"
               >
                 <Icon size={17} />
@@ -1341,6 +1385,7 @@ function App() {
               (mobileMoreOpen || MOBILE_MORE_IDS.includes(activeTab)) && "is-active",
             )}
             type="button"
+            tabIndex={mobileTabbable === "more" ? 0 : -1}
             aria-expanded={mobileMoreOpen}
             aria-controls="mobile-more-menu"
             onClick={() => setMobileMoreOpen((open) => !open)}
@@ -1352,7 +1397,7 @@ function App() {
 
         <div className="page-shell" id="tracker-content" tabIndex={-1}>
           {activeTab !== "dashboard" && activeTab !== "weekly" && <PageHeading tab={activeTab} />}
-          {renderView()}
+          <Suspense fallback={<ViewSkeleton />}>{renderView()}</Suspense>
         </div>
       </main>
 
@@ -1786,6 +1831,16 @@ function RoadmapView({
   onNavigate: (tab: TabId, week?: number) => void;
 }) {
   const [phase, setPhase] = useState("All phases");
+  // Only mounted while Study Plan is the active tab, so the segment is ours.
+  const [segment, setSegment] = useHashSegment("roadmap", "roadmap");
+  const focusWeek = parseWeekSegment(segment, TOTAL_WEEKS);
+  const openWeek = focusWeek ?? currentWeek;
+  const scrolledTo = useRef<number | null>(null);
+  const scrollToWeek = (node: HTMLDetailsElement | null, week: number) => {
+    if (!node || focusWeek !== week || scrolledTo.current === week) return;
+    scrolledTo.current = week;
+    if (typeof node.scrollIntoView === "function") node.scrollIntoView({ block: "start" });
+  };
   const visibleWeeks = phase === "All phases" ? PLAN : PLAN.filter((week) => week.phase === phase);
   const totalQuestions = PLAN.reduce((sum, week) => sum + week.questionTarget, 0);
   const plannedSessions = PLAN.flatMap(getWeekSessions);
@@ -1830,7 +1885,13 @@ function RoadmapView({
         {visibleWeeks.map((week) => {
           const progress = getWeekProgressForState(week, tracker);
           return (
-            <details className={cx("timeline-week", week.week === currentWeek && "is-current")} key={week.week} open={week.week === currentWeek}>
+            <details
+              className={cx("timeline-week", week.week === currentWeek && "is-current")}
+              key={week.week}
+              open={week.week === openWeek}
+              ref={(node) => scrollToWeek(node, week.week)}
+              onToggle={(event) => { if (event.currentTarget.open) setSegment(weekSegment(week.week)); }}
+            >
               <summary>
                 <span className="timeline-index">{String(week.week).padStart(2, "0")}</span>
                 <span className="timeline-summary-copy">
@@ -2829,6 +2890,7 @@ function NotesView({
           ) : <EmptyState icon={ShieldCheck} title="No private notes">Choose Private tutor note above when an observation should remain visible only to Mohamed.</EmptyState>}
         </section>
       )}
+      {role === "tutor" && <DiagnosticsPanel />}
     </div>
   );
 }
@@ -2846,7 +2908,9 @@ export default function AppWithDialogs() {
   if (receiptRef) {
     return (
       <ThemeProvider>
-        <ReceiptVerificationScreen token={receiptRef} />
+        <Suspense fallback={<ViewSkeleton label="Checking receipt" />}>
+          <ReceiptVerificationScreen token={receiptRef} />
+        </Suspense>
       </ThemeProvider>
     );
   }

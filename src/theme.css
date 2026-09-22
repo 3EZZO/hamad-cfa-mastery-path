@@ -29,6 +29,7 @@ html:root[data-theme="dark"] {
   --paper: #0d1723; --surface: #172638; --surface-2: #1d3043;
   --border: #3b5065; --forest-soft: #203958; --gold-pale: #423724;
   --surface-3: #24394f; --surface-floating: rgba(23, 38, 56, 0.9);
+  --focus-ring: #a8c5ff; --focus-ring-halo: #101c2a;
   --gold: #f1ce88; --gold-bright: #f5deaa;
   --green: #87d9c8; --green-pale: #193f3c;
   --danger: #ffabb6; --danger-pale: #492d3c;
@@ -307,7 +308,7 @@ html:root[data-theme="dark"] .live-session :is(.ls-teach-flow > button.is-curren
 html:root[data-theme="dark"] .live-session :is(.ls-proof-rail li.is-passed > span,
   .is-ready .ls-checkbox, .is-ready .ls-offline-card__icon) { background: var(--theme-teal); }
 html:root[data-theme="dark"] :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 3px solid #a8c5ff; outline-offset: 2px; box-shadow: 0 0 0 2px #101c2a;
+  outline: 3px solid var(--focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring-halo);
 }
 html:root[data-theme="dark"] .live-session .ls-command-block__body:focus-visible { outline-offset: -3px; }
 @media (forced-colors: active) {
