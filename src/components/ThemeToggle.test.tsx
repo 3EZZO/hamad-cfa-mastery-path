@@ -79,6 +79,18 @@ describe("shared tracker and Session Mode theme", () => {
     expect(css).toContain('html:root[data-theme="dark"] .timeline-body');
     expect(css).not.toMatch(/filter:\s*(invert|brightness)/);
   });
+  it("routes the global focus rings through one token pair per theme", () => {
+    // Source contract only: the rendered ring still needs a browser check.
+    const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+    const theme = readFileSync(new URL("../theme.css", import.meta.url), "utf8");
+    const session = readFileSync(new URL("../features/liveSession/liveSession.css", import.meta.url), "utf8");
+    expect(styles).toMatch(/:root\s*\{[^}]*--focus-ring:\s*#315fce;[^}]*--focus-ring-halo:\s*#fff;/);
+    expect(theme).toMatch(/html:root\[data-theme="dark"\]\s*\{[^}]*--focus-ring:\s*#a8c5ff;[^}]*--focus-ring-halo:\s*#101c2a;/);
+    const globalRing = /:is\((?:a, button|button, a), input, select, textarea, summary, \[tabindex\]\):focus-visible\s*\{\s*outline: 3px solid var\(--focus-ring\); outline-offset: 2px; box-shadow: 0 0 0 2px var\(--focus-ring-halo\);/;
+    expect(styles).toMatch(globalRing);
+    expect(theme).toMatch(globalRing);
+    expect(session).toMatch(globalRing);
+  });
   it("keeps authored dark text and focus pairs above WCAG contrast thresholds", () => {
     const luminance = (hex: string) => {
       const channels = hex.match(/\w\w/g)!.map(value => parseInt(value, 16) / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);

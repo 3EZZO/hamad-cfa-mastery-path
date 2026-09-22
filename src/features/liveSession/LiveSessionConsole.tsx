@@ -330,6 +330,17 @@ function LiveSessionWorkspace({
   const [discardConfirming, setDiscardConfirming] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [discardError, setDiscardError] = useState("");
+  // The inline confirm replaces its trigger, so move keyboard focus with it
+  // and hand it back on "Keep rehearsal". No key bindings: Session Mode
+  // owns Escape and the letter shortcuts.
+  const discardTriggerRef = useRef<HTMLButtonElement>(null);
+  const keepRehearsalRef = useRef<HTMLButtonElement>(null);
+  const wasConfirmingRef = useRef(false);
+  useEffect(() => {
+    if (discardConfirming) keepRehearsalRef.current?.focus();
+    else if (wasConfirmingRef.current) discardTriggerRef.current?.focus();
+    wasConfirmingRef.current = discardConfirming;
+  }, [discardConfirming]);
   const [calculatorReady, setCalculatorReady] = useState(false);
   const [timerReady, setTimerReady] = useState(
     Boolean(initialRun && initialRun.phase !== "launch")
@@ -742,6 +753,7 @@ function LiveSessionWorkspace({
             <div className="ls-rehearsal-reset">
               {!discardConfirming ? (
                 <button
+                  ref={discardTriggerRef}
                   className="ls-button ls-button--primary ls-button--large"
                   type="button"
                   onClick={() => {
@@ -773,6 +785,7 @@ function LiveSessionWorkspace({
                   )}
                   <div>
                     <button
+                      ref={keepRehearsalRef}
                       className="ls-button ls-button--quiet"
                       type="button"
                       disabled={discarding}

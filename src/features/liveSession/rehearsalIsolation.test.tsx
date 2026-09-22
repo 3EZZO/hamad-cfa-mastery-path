@@ -45,6 +45,27 @@ describe("P5 live/rehearsal isolation", () => {
     await act(async () => tree!.update(<LiveSessionConsole {...props} active />));
     expect(runner().props.mode).not.toBe("rehearsal");
   });
+  it("moves keyboard focus into the discard confirm and back to its trigger", async () => {
+    const playbook = adaptTutorPlaybookPackage(await syntheticPlaybook(1));
+    const closeout = { sessionId: "real-session", routeId: playbook.routes[0]!.id, actualMinutes: 30, evidence: [], mastery: [], outcome: "ok", nextAction: "", homework: "", delayedRetest: "", privateTutorNote: "", completedAt: "2026-09-12T05:00:00Z" };
+    const initialRun: LiveSessionRunSnapshot = { phase: "complete", routeId: closeout.routeId, stageIndex: 0, questionIndex: 0, evidence: [], completedDeskIds: [], timer: { status: "paused", durationMs: 9_000_000, runningSince: null, elapsedBeforeRunMs: 0, updatedAt: closeout.completedAt }, updatedAt: closeout.completedAt, closeout };
+    // Modeled focus: each element records focus() calls; no browser focus is claimed.
+    const focused: string[] = [];
+    const text = (children: unknown): string => Array.isArray(children) ? children.map(text).join("") : typeof children === "string" ? children : "";
+    await act(async () => {
+      tree = create(
+        <LiveSessionConsole session={{ id: "real-session", number: 1, date: "2026-09-12", startTime: "09:00", title: "Fixture", candidateName: "Hamad", topic: "Quant" }} playbook={playbook} initialRun={initialRun} onComplete={vi.fn()} onDiscardRehearsal={vi.fn()} />,
+        { createNodeMock: element => ({ focus: () => { focused.push(text((element.props as { children?: unknown }).children).trim()); } }) },
+      );
+    });
+    const button = (label: string) => tree!.root.findAllByType("button").find(node => text(node.props.children).includes(label))!;
+    await act(async () => button("Discard rehearsal").props.onClick());
+    expect(tree!.root.findAllByProps({ role: "alertdialog" })).toHaveLength(1);
+    expect(focused).toEqual(["Keep rehearsal"]);
+    await act(async () => button("Keep rehearsal").props.onClick());
+    expect(tree!.root.findAllByProps({ role: "alertdialog" })).toHaveLength(0);
+    expect(focused).toEqual(["Keep rehearsal", "Discard rehearsal & start fresh"]);
+  });
   it("can rehearse from launch without passing the live-start gate", async () => {
     const playbook = adaptTutorPlaybookPackage(await syntheticPlaybook(2));
     const complete = vi.fn();

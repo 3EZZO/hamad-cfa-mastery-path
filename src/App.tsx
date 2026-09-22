@@ -107,6 +107,7 @@ import CalendarExportDialog from "./components/CalendarExportDialog";
 import { ThemeProvider, ThemeToggle, useTheme } from "./components/ThemeToggle";
 import { CommandPalette } from "./components/CommandPalette";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
+import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
 import { useHashSegment } from "./hooks/useHashTab";
 import { parseWeekSegment, readSegment, weekSegment } from "./lib/hashRoute";
 import type { PaletteCommand } from "./lib/commandPalette";
@@ -778,6 +779,9 @@ function App() {
   const mobileDialogRef = useRef<HTMLElement>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
   useDialogFocus(mobileMoreOpen, mobileDialogRef, mobileCloseRef, () => setMobileMoreOpen(false));
+  // Roving tabindex: Tab lands on the active section, arrow keys browse the rest.
+  const sidebarKeyDown = useRovingNav("vertical");
+  const mobileNavKeyDown = useRovingNav("horizontal");
   // Back/forward can change the tab without going through navigate().
   useEffect(() => setMobileMoreOpen(false), [activeTab]);
   const {
@@ -1221,6 +1225,13 @@ function App() {
     );
   }
 
+  const sidebarGroups = NAV_GROUPS.filter(
+    (group) => group.label !== "Tutor" || capabilities.canUseLiveSession,
+  );
+  const sidebarIds = sidebarGroups.flatMap((group) => group.ids);
+  // The "More" button stands in for sections that live behind the sheet.
+  const mobileTabbable: TabId | "more" = MOBILE_PRIMARY_IDS.includes(activeTab) ? activeTab : "more";
+
   return (
     <div className={cx("app-shell", activeTab === "practice" && "sidebar-collapsed")}>
       <a className="skip-link" href="#tracker-content">Skip to content</a>
@@ -1240,10 +1251,8 @@ function App() {
           <small>{daysUntilExam()} days to prepare</small>
         </div>
 
-        <nav className="sidebar-nav" aria-label="Project sections">
-          {NAV_GROUPS.filter(
-            (group) => group.label !== "Tutor" || capabilities.canUseLiveSession,
-          ).map((group) => (
+        <nav className="sidebar-nav" aria-label="Project sections" onKeyDown={sidebarKeyDown}>
+          {sidebarGroups.map((group) => (
             <div className="nav-group" key={group.label}>
               <span className="nav-group-label">{group.label}</span>
               {group.ids.map((id) => {
@@ -1255,6 +1264,7 @@ function App() {
                     key={item.id}
                     onClick={() => navigate(item.id)}
                     aria-current={activeTab === item.id ? "page" : undefined}
+                    tabIndex={rovingTabIndex(sidebarIds, activeTab, item.id)}
                     type="button"
                   >
                     <Icon size={17} />
@@ -1351,7 +1361,7 @@ function App() {
         </header>
 
         <SyncRecoveryNotice state={syncStatus} message={syncError} onRetry={retrySync} />
-        <nav className="mobile-nav" aria-label="Primary project sections">
+        <nav className="mobile-nav" aria-label="Primary project sections" onKeyDown={mobileNavKeyDown}>
           {MOBILE_PRIMARY_IDS.map((id) => {
             const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
             const Icon = item.icon;
@@ -1361,6 +1371,7 @@ function App() {
                 key={item.id}
                 onClick={() => navigate(item.id)}
                 aria-current={activeTab === item.id ? "page" : undefined}
+                tabIndex={mobileTabbable === item.id ? 0 : -1}
                 type="button"
               >
                 <Icon size={17} />
@@ -1374,6 +1385,7 @@ function App() {
               (mobileMoreOpen || MOBILE_MORE_IDS.includes(activeTab)) && "is-active",
             )}
             type="button"
+            tabIndex={mobileTabbable === "more" ? 0 : -1}
             aria-expanded={mobileMoreOpen}
             aria-controls="mobile-more-menu"
             onClick={() => setMobileMoreOpen((open) => !open)}

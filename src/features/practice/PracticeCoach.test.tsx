@@ -274,19 +274,6 @@ describe("Practice Coach role views", () => {
     await act(async () => tree.unmount());
   });
 
-  it("confirms before discarding an unfinished rehearsal", async () => {
-    const tree = await render("tutor", "tutor-uid");
-    await act(async () => button(tree, "Rehearse as student")!.props.onClick());
-    await act(async () => button(tree, "Quick 5")!.props.onClick());
-    await act(async () => button(tree, "Exit rehearsal")!.props.onClick());
-
-    expect(renderedText(tree)).toContain("Discard this rehearsal?");
-    await act(async () => button(tree, "Discard and exit")!.props.onClick());
-    const text = renderedText(tree);
-    expect(text).toContain("Hamad's practice evidence");
-    expect(text).not.toContain("Tutor rehearsal");
-    await act(async () => tree.unmount());
-  });
 });
 
 // Deliberately a DOM model (as in useDialogFocus.test.tsx), not a claim of
@@ -409,6 +396,61 @@ describe("UI/UX behaviors", () => {
     await act(async () => toggle.props.onClick());
     expect(hasCalc()).toBe(true);
   }
+
+  // The exit dialog is modal, so its tests need the modeled document too.
+  async function renderTutor() {
+    await act(async () => {
+      tree = create(
+        <PracticeCoach uid="tutor-uid" role="tutor" manualLog={null} onComplete={vi.fn()} notify={vi.fn()} />,
+        {
+          createNodeMock: element => {
+            const node = new ElementModel(String(element.type).toUpperCase());
+            const props = element.props as Record<string, unknown>;
+            if (props.role === "dialog") nodes.dialog = node;
+            if (props.children === "Continue rehearsing") nodes.close = node;
+            return node;
+          },
+        }
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    return tree!;
+  }
+
+  it("confirms before discarding an unfinished rehearsal", async () => {
+    await renderTutor();
+    await act(async () => button(tree!, "Rehearse as student")!.props.onClick());
+    await act(async () => button(tree!, "Quick 5")!.props.onClick());
+    await act(async () => button(tree!, "Exit rehearsal")!.props.onClick());
+
+    expect(renderedText(tree!)).toContain("Discard this rehearsal?");
+    await act(async () => button(tree!, "Discard and exit")!.props.onClick());
+    const text = renderedText(tree!);
+    expect(text).toContain("Hamad's practice evidence");
+    expect(text).not.toContain("Tutor rehearsal");
+  });
+
+  it("cancels the rehearsal exit dialog with Escape from anywhere and restores focus", async () => {
+    await renderTutor();
+    await act(async () => button(tree!, "Rehearse as student")!.props.onClick());
+    await act(async () => button(tree!, "Quick 5")!.props.onClick());
+    // The exit button carries no ref, so model the element that had focus.
+    nodes.toggle = new ElementModel("BUTTON");
+    nodes.toggle.focus();
+    await act(async () => button(tree!, "Exit rehearsal")!.props.onClick());
+    expect(renderedText(tree!)).toContain("Discard this rehearsal?");
+    expect(doc.activeElement).toBe(nodes.close);
+
+    // Escape with focus outside the dialog (e.g. on the page) still cancels.
+    const outside = new ElementModel("BUTTON");
+    let event!: ReturnType<typeof dispatchKey>;
+    await act(async () => { event = dispatchKey("Escape", outside); });
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(renderedText(tree!)).not.toContain("Discard this rehearsal?");
+    expect(renderedText(tree!)).toContain("Exit rehearsal");
+    expect(doc.activeElement).toBe(nodes.toggle);
+  });
 
   it("closes via Escape at the dialog level without logging a calculator clear", async () => {
     await renderStudent();

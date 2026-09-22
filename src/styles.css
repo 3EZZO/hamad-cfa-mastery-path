@@ -104,7 +104,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
-  outline: 3px solid rgba(49, 95, 206, 0.3);
+  outline: 3px solid var(--focus-ring, #315fce);
   outline-offset: 2px;
 }
 
@@ -4370,6 +4370,10 @@ body {
   --border: #d5dee8;
   --shadow-soft: 0 1px 2px rgba(19, 44, 68, 0.045);
   --shadow: 0 12px 32px rgba(19, 44, 68, 0.07);
+  /* Keyboard focus ring: one colour app-wide; the halo separates it from
+     filled controls. theme.css overrides both for dark mode. */
+  --focus-ring: #315fce;
+  --focus-ring-halo: #fff;
 }
 
 body {
@@ -4382,7 +4386,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
-  outline: 3px solid #315fce;
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -5326,7 +5330,7 @@ summary:focus-visible {
   padding: 0 18px 18px;
 }
 .tracker-secondary-tools > summary:focus-visible {
-  outline: 3px solid #315fce;
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
   border-radius: 12px;
 }
@@ -5359,7 +5363,7 @@ summary:focus-visible {
 
 /* P7: opaque two-tone focus stays visible on light and navy surfaces. */
 :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 3px solid #315fce; outline-offset: 2px; box-shadow: 0 0 0 2px #fff;
+  outline: 3px solid var(--focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus-ring-halo);
 }
 @media (forced-colors: active) { :focus-visible { outline: 3px solid Highlight; } }
 .sync-recovery-notice { display: flex; align-items: center; gap: .75rem; padding: .875rem 1rem; border: 1px solid #c4a16c; border-radius: 6px; background: #fff2d5; color: #583806; text-align: left; }
