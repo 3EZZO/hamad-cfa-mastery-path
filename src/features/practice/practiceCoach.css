@@ -1276,3 +1276,7 @@ html:root[data-theme="dark"] .practice-exam-report tr.is-weak td:nth-child(3) { 
 .practice-mistake-review__bridge { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; margin-top: 14px; padding: 8px 14px; border: 1px solid var(--pc-line); border-radius: 12px; background: var(--pc-surface); color: var(--pc-ink); font: inherit; font-weight: 600; cursor: pointer; }
 .practice-mistake-review__bridge:hover { border-color: var(--pc-blue); color: var(--pc-blue); }
 p.practice-mistake-review__bridge.is-filed { cursor: default; color: var(--pc-teal); border-style: dashed; }
+/* Calculator from the hub (light surface, unlike the player header). */
+.practice-hero__actions .practice-calculator-toggle--hub { color: var(--pc-ink); border-color: var(--pc-line); background: var(--pc-surface); }
+.practice-hero__actions .practice-calculator-toggle--hub:hover { border-color: var(--pc-blue); color: var(--pc-blue); background: var(--pc-surface); }
+.practice-hero__actions .practice-calculator-toggle--hub.is-active { color: #102f4d; border-color: #72dfbf; background: #a8eed8; }

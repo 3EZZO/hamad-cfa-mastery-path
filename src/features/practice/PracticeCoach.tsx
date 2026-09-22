@@ -74,6 +74,7 @@ import { buildFormulaSheet, countFormulae } from "../../lib/formulaSheet";
 import { FormulaSheet } from "./FormulaSheet";
 import { buildExamReport, examRemainingMs, formatClock } from "../../lib/examDrill";
 import { setShellBusy } from "../../lib/shellBusy";
+import { intentAllowedFor, parsePracticeIntent, PRACTICE_INTENTS } from "../../lib/practiceIntents";
 import "./practiceCoach.css";
 
 export interface PracticeCompletionSummary {
@@ -96,6 +97,9 @@ interface PracticeCoachProps {
   onAddMistake?: (entry: ErrorEntry) => void;
   /** Question ids already in Mistake Review, so the bridge can show its state. */
   bridgedQuestionIds?: ReadonlySet<string>;
+  /** `#practice/<intent>` segment from the palette or a link; acted on once, then cleared. */
+  intent?: string;
+  onIntentHandled?: () => void;
 }
 
 type CoachView = "hub" | "run" | "results" | "formulas";
@@ -141,6 +145,8 @@ export function PracticeCoach({
   notify,
   onAddMistake,
   bridgedQuestionIds,
+  intent = "",
+  onIntentHandled,
 }: PracticeCoachProps) {
   const [banks, setBanks] = useState<PublishedPracticeBank[]>([]);
   const [states, setStates] = useState<Record<string, PracticeQuestionState>>({});
@@ -568,6 +574,31 @@ export function PracticeCoach({
     setView("hub");
   };
 
+  // One-shot intents: wait for the banks, run the action, then clear the
+  // segment so reload or back/forward does not repeat it.
+  const handledIntent = useRef("");
+  useEffect(() => {
+    const parsed = parsePracticeIntent(intent);
+    if (!parsed) { handledIntent.current = ""; return; }
+    if (handledIntent.current === intent || !assignmentLoaded) return;
+    handledIntent.current = intent;
+    const canRun = role === "student" || isRehearsal;
+    if (!intentAllowedFor(parsed, canRun)) {
+      onIntentHandled?.();
+      return;
+    }
+    const action = PRACTICE_INTENTS[parsed];
+    if (action.mode === null) {
+      setShowCalculator(true);
+    } else if (activeRun) {
+      setMessage(`Finish or leave the current ${modeLabel(activeRun.mode)} set before starting ${action.label.replace(/^Start /, "")}.`);
+    } else {
+      void begin(action.mode, action.count);
+    }
+    onIntentHandled?.();
+    // `begin`/`setMessage` are stable enough for a one-shot; re-running on their identity would repeat the action.
+  }, [intent, assignmentLoaded]);
+
   const resume = () => {
     if (!activeRun) return;
     if (!runQuestions(activeRun, runnerQuestionsById).length) {
@@ -606,6 +637,44 @@ export function PracticeCoach({
 
   const completedAnswers = lastCompletedRun?.answers ?? [];
   const resultCorrect = completedAnswers.filter(answer => answer.correct).length;
+  // The BA II Plus drawer serves the player and the hub; keystrokes are
+  // logged against an answer only while a question is on screen.
+  const inRun = view === "run" && Boolean(activeRun && currentQuestion);
+  const calculatorDrawer = showCalculator && (
+    <>
+      <div
+        className="practice-calculator-backdrop"
+        onClick={closeCalculator}
+        aria-hidden="true"
+      />
+      <div
+        ref={calculatorDialogRef}
+        tabIndex={-1}
+        className="practice-calculator-wrapper"
+        role="dialog"
+        aria-modal="true"
+        aria-label="BA II Plus Calculator"
+        onKeyDown={event => {
+          // Let Enter activate the Close button natively instead of
+          // being consumed as "=" by the calculator's window listener.
+          if (event.key === "Enter" && event.target === calculatorCloseRef.current) event.stopPropagation();
+        }}
+      >
+        <div className="practice-calculator-header">
+          <h3>Calculator</h3>
+          <button type="button" ref={calculatorCloseRef} onClick={closeCalculator} aria-label="Close calculator">
+            <X size={20} />
+          </button>
+        </div>
+        <BA2Plus
+          onLog={inRun ? (log) => setCalculatorLog(prev => [...prev, log]) : () => {}}
+          startTime={answerStartedAt.current}
+          tvmState={calculatorState}
+          onStateChange={setCalculatorState}
+        />
+      </div>
+    </>
+  );
   if ((role === "student" || isRehearsal) && view === "run" && activeRun && currentQuestion) {
     const progress = ((activeRun.currentIndex + (submitted ? 1 : 0)) / activeRun.questionIds.length) * 100;
     const correct = selectedOption === currentQuestion.correctOption;
@@ -716,41 +785,7 @@ export function PracticeCoach({
             </section>
           )}
         </main>
-          {showCalculator && (
-            <>
-              <div
-                className="practice-calculator-backdrop"
-                onClick={closeCalculator}
-                aria-hidden="true"
-              />
-              <div
-                ref={calculatorDialogRef}
-                tabIndex={-1}
-                className="practice-calculator-wrapper"
-                role="dialog"
-                aria-modal="true"
-                aria-label="BA II Plus Calculator"
-                onKeyDown={event => {
-                  // Let Enter activate the Close button natively instead of
-                  // being consumed as "=" by the calculator's window listener.
-                  if (event.key === "Enter" && event.target === calculatorCloseRef.current) event.stopPropagation();
-                }}
-              >
-                <div className="practice-calculator-header">
-                  <h3>Calculator</h3>
-                  <button type="button" ref={calculatorCloseRef} onClick={closeCalculator} aria-label="Close calculator">
-                    <X size={20} />
-                  </button>
-                </div>
-                <BA2Plus 
-                  onLog={(log) => setCalculatorLog(prev => [...prev, log])} 
-                  startTime={answerStartedAt.current} 
-                  tvmState={calculatorState}
-                  onStateChange={setCalculatorState}
-                />
-              </div>
-            </>
-          )}
+          {calculatorDrawer}
         </div>
         <footer className="practice-player__dock">
           {!submitted ? (
@@ -894,9 +929,19 @@ export function PracticeCoach({
           {role === "tutor" && !isRehearsal && assignmentLoaded && rehearsalBanks.length === 0 && (
             <small className="practice-rehearsal-unavailable">Assign and publish a practice bank first.</small>
           )}
+          <button
+            className={`practice-calculator-toggle practice-calculator-toggle--hub${showCalculator ? " is-active" : ""}`}
+            type="button"
+            aria-pressed={showCalculator}
+            onClick={() => setShowCalculator(value => !value)}
+          >
+            <Calculator size={17} aria-hidden="true" />
+            <span>BA II Plus</span>
+          </button>
           {isRehearsal ? <RehearsalStatus /> : <PracticeSync state={sync} />}
         </div>
       </section>
+      {calculatorDrawer}
 
       {(role === "student" || isRehearsal) && activeRun && (
         <button className="practice-resume" type="button" onClick={resume}>

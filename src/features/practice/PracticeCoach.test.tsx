@@ -316,6 +316,23 @@ describe("Practice Coach role views", () => {
     await act(async () => tree.unmount());
   });
 
+  it("acts on a #practice/<intent> segment once the banks are loaded, then clears it", async () => {
+    const onIntentHandled = vi.fn();
+    let tree!: ReactTestRenderer;
+    const mount = (intent: string) => (
+      <PracticeCoach uid="student-01" role="student" manualLog={null} onComplete={vi.fn()} notify={vi.fn()} intent={intent} onIntentHandled={onIntentHandled} />
+    );
+    await act(async () => { tree = create(mount("quick5")); await Promise.resolve(); await Promise.resolve(); });
+    expect(onIntentHandled).toHaveBeenCalledTimes(1);
+    expect(tree.root.findAllByProps({ "aria-label": "Quick 5 practice set" })).toHaveLength(1);
+    // Clearing the segment does not replay the action, and an unknown one is ignored.
+    await act(async () => tree.update(mount("")));
+    await act(async () => tree.update(mount("week-7")));
+    expect(onIntentHandled).toHaveBeenCalledTimes(1);
+    expect(tree.root.findAllByProps({ "aria-label": "Quick 5 practice set" })).toHaveLength(1);
+    await act(async () => tree.unmount());
+  });
+
   it("shows the tutor Hamad's read-only performance and missed answer", async () => {
     const tree = await render("tutor", "tutor-uid");
     const text = renderedText(tree);
@@ -570,6 +587,26 @@ describe("UI/UX behaviors", () => {
     expect(renderedText(tree!)).not.toContain("Discard this rehearsal?");
     expect(renderedText(tree!)).toContain("Exit rehearsal");
     expect(doc.activeElement).toBe(nodes.toggle);
+  });
+
+  it("opens the calculator drawer from the hub for any role and refuses run intents for the tutor", async () => {
+    const onIntentHandled = vi.fn();
+    const mount = (intent: string) => (
+      <PracticeCoach uid="tutor-uid" role="tutor" manualLog={null} onComplete={vi.fn()} notify={vi.fn()} intent={intent} onIntentHandled={onIntentHandled} />
+    );
+    await act(async () => {
+      tree = create(mount("quick5"), { createNodeMock: () => new ElementModel("DIV") });
+      await Promise.resolve(); await Promise.resolve();
+    });
+    expect(onIntentHandled).toHaveBeenCalledTimes(1);
+    expect(renderedText(tree!)).toContain("Hamad's practice evidence");
+    expect(hasCalc()).toBe(false);
+
+    await act(async () => tree!.update(mount("calculator")));
+    expect(onIntentHandled).toHaveBeenCalledTimes(2);
+    expect(hasCalc()).toBe(true);
+    await act(async () => button(tree!, "BA II Plus")!.props.onClick());
+    expect(hasCalc()).toBe(false);
   });
 
   it("closes via Escape at the dialog level without logging a calculator clear", async () => {
