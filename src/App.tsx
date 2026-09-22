@@ -112,6 +112,7 @@ import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
 import { useHashSegment } from "./hooks/useHashTab";
 import { parseWeekSegment, readSegment, weekSegment } from "./lib/hashRoute";
+import { setShellBusy } from "./lib/shellBusy";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
@@ -817,6 +818,12 @@ function App() {
   const dialog = useAppDialog(`${user?.uid ?? "signed-out"}:${role}:${activeTab}`);
   const { theme, toggle: toggleTheme } = useTheme();
   const isLiveShell = activeTab === "live" && capabilities.canUseLiveSession;
+  // Session Mode is the classroom: an app update must never reload it.
+  useEffect(() => {
+    if (!isLiveShell) return;
+    setShellBusy("session");
+    return () => setShellBusy(null);
+  }, [isLiveShell]);
   const visibleNav = NAV_ITEMS.filter(
     (item) => capabilities.canUseLiveSession || !NAV_GROUPS.some((group) => group.label === "Tutor" && group.ids.includes(item.id)),
   );
