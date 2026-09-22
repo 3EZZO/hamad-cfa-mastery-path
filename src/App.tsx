@@ -83,6 +83,7 @@ import {
 import { downloadProject202Calendar } from "./lib/calendarExport";
 import { isStateMeaningfullyEmpty } from "./lib/stateMerge";
 import { buildRiskIndicators } from "./lib/risk";
+import { addPracticeMistake, bridgedQuestionIds } from "./lib/practiceMistakeBridge";
 import { getTaskStatus, isTaskComplete } from "./lib/taskStatus";
 import {
   cascadeReschedule,
@@ -1092,6 +1093,8 @@ function App() {
                 ...current.practiceLogs,
               ],
             }))}
+            onAddMistake={(entry) => updateTracker((current) => addPracticeMistake(current, entry).tracker)}
+            bridgedQuestionIds={bridgedQuestionIds(tracker.errorEntries)}
             manualLog={(
               <PracticeLogView
                 tracker={tracker}
@@ -2491,7 +2494,7 @@ function ErrorVaultView({
             <div className="entry-list">
               {sorted.map((entry) => (
                 <article className={cx("error-entry", entry.resolved && "is-resolved")} key={entry.id}>
-                  <div className="error-entry-top"><div><span>{topicShort(entry.topic)} · {entry.category}</span><strong>{entry.summary}</strong></div><div className="entry-actions"><button className="icon-button" type="button" onClick={() => toggleResolved(entry.id)} aria-label={entry.resolved ? "Reopen error" : "Resolve error"}>{entry.resolved ? <Archive size={15} /> : <Check size={15} />}</button><button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete error"><Trash2 size={15} /></button></div></div>
+                  <div className="error-entry-top"><div><span>{topicShort(entry.topic)} · {entry.category}{entry.questionId && <em className="error-entry-origin">From practice</em>}</span><strong>{entry.summary}</strong></div><div className="entry-actions"><button className="icon-button" type="button" onClick={() => toggleResolved(entry.id)} aria-label={entry.resolved ? "Reopen error" : "Resolve error"}>{entry.resolved ? <Archive size={15} /> : <Check size={15} />}</button><button className="icon-button icon-button-danger" type="button" onClick={() => remove(entry.id)} aria-label="Delete error"><Trash2 size={15} /></button></div></div>
                   <div className="correction-rule"><ShieldCheck size={16} /><p><strong>Correction rule</strong>{entry.correction}</p></div>
                   <footer>{formatDate(entry.date)}{entry.revisitDate && ` · Retest ${formatDate(entry.revisitDate)}`} · {entry.resolved ? "Resolved" : "Open"}</footer>
                 </article>

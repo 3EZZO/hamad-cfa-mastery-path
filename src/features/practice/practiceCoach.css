@@ -1272,3 +1272,7 @@ html:root[data-theme="dark"] .practice-formula-sheet__search:focus-within { box-
 .practice-exam-report tr.is-weak td:nth-child(3) { color: #8f2b34; font-weight: 700; }
 html:root[data-theme="dark"] .practice-player__identity > .practice-exam-clock.is-urgent { color: #ffabb6; background: #492d3c; }
 html:root[data-theme="dark"] .practice-exam-report tr.is-weak td:nth-child(3) { color: #ffabb6; }
+/* Practice → Mistake Review bridge ---------------------------------------- */
+.practice-mistake-review__bridge { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; margin-top: 14px; padding: 8px 14px; border: 1px solid var(--pc-line); border-radius: 12px; background: var(--pc-surface); color: var(--pc-ink); font: inherit; font-weight: 600; cursor: pointer; }
+.practice-mistake-review__bridge:hover { border-color: var(--pc-blue); color: var(--pc-blue); }
+p.practice-mistake-review__bridge.is-filed { cursor: default; color: var(--pc-teal); border-style: dashed; }

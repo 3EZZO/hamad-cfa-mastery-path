@@ -105,6 +105,9 @@ export interface ErrorEntry {
   correction: string;
   revisitDate: string;
   resolved: boolean;
+  /** Set when the entry was bridged from a Practice Coach miss; used to dedupe and link back. */
+  questionId?: string;
+  bankId?: string;
 }
 
 export interface NoteEntry {
