@@ -33,6 +33,8 @@ export default tseslint.config(
       "react-hooks/exhaustive-deps": "warn",
       // `role` is also an ordinary prop on our own components (tutor/student).
       "jsx-a11y/aria-role": ["error", { ignoreNonDOM: true }],
+      // A scrollable region needs a tab stop so keyboard users can scroll it.
+      "jsx-a11y/no-noninteractive-tabindex": ["error", { roles: ["region"] }],
     },
   },
   {

@@ -69,7 +69,7 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
   let lastGroup: string | null = null;
 
   return (
-    <div className="command-palette-backdrop" onMouseDown={onClose}>
+    <div className="command-palette-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section
         ref={dialogRef}
         tabIndex={-1}
@@ -77,7 +77,6 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        onMouseDown={event => event.stopPropagation()}
       >
         <div className="command-palette__search">
           <Search size={18} aria-hidden="true" />
