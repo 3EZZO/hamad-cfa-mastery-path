@@ -61,3 +61,23 @@ if (!serviceWorker.includes('self.addEventListener("fetch"')) {
 console.log(
   `PWA artifact verified in ${outputDirectory}: manifest, service worker, branded icons, and install metadata are present.`,
 );
+
+// Precache manifest: present, versioned, covering every hashed asset, and the
+// worker must carry the same version instead of the source placeholder.
+const precache = JSON.parse(
+  await readFile(`${outputDirectory}/precache-manifest.json`, "utf8"),
+);
+if (!/^[0-9a-f]{16}$/.test(String(precache.version)) || !Array.isArray(precache.files)) {
+  throw new Error("precache-manifest.json is missing a version or file list.");
+}
+const { readdir } = await import("node:fs/promises");
+const assetFiles = (await readdir(`${outputDirectory}/assets`)).map((file) => `assets/${file}`);
+const missingAssets = assetFiles.filter((file) => !precache.files.includes(file));
+if (missingAssets.length) {
+  throw new Error(`precache-manifest.json does not list: ${missingAssets.join(", ")}`);
+}
+for (const file of precache.files) await access(`${outputDirectory}/${file}`);
+if (serviceWorker.includes("__BUILD_VERSION__") || !serviceWorker.includes(precache.version)) {
+  throw new Error("Built service worker is not stamped with the precache manifest version.");
+}
+console.log(`Precache manifest verified: ${precache.files.length} files, version ${precache.version} stamped into the worker.`);
