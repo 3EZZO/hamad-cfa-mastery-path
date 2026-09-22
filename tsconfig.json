@@ -17,10 +17,7 @@
     "jsx": "react-jsx"
   },
   "include": [
-    "app",
     "src",
-    "worker",
-    "vite.config.ts",
     "vitest.config.ts"
   ]
 }
