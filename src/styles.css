@@ -43,6 +43,13 @@
   --motion-emphasis: 400ms;
   --ease-entrance: cubic-bezier(0.175, 0.885, 0.32, 1.1);
   --ease-exit: cubic-bezier(0.895, 0.03, 0.685, 0.22);
+  /* Semantic aliases used by the feature sheets. Keep them pointing at the
+     palette tokens above; theme.css overrides the two literal ones for dark. */
+  --text-main: var(--ink);
+  --text-muted: var(--muted);
+  --line: var(--border);
+  --surface-3: #eef2f6;
+  --surface-floating: rgba(255, 255, 255, 0.92);
 }
 
 @media (prefers-reduced-motion: reduce) {
