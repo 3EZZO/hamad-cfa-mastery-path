@@ -1,4 +1,4 @@
-import { getSessionTaskId, getWeekSessions, PLAN } from "../data/plan";
+import { getSessionTaskId, getSessionTopic, getWeekSessions, PLAN } from "../data/plan";
 import { verifyTutorPlaybookPackageIntegrity } from "./tutorContent";
 
 export const TUTOR_SESSION_NUMBERS = [1, 2, 3, 4] as const;
@@ -20,6 +20,7 @@ export function getTutorSession(number: TutorSessionNumber) {
     playbookId,
     week,
     session,
+    topic: getSessionTopic(week),
     taskId: getSessionTaskId(week, session),
     // This S1 identifier predates the reschedule. Never rename persisted runs.
     runIdBase: number === 1 ? `${playbookId}-2026-09-05` : playbookId,

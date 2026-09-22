@@ -58,6 +58,7 @@ describe("applyLiveSessionCloseout", () => {
       date: "2026-09-05",
       title: "Quant Masterclass I",
       taskId: "w1-session-1",
+      topic: "Quantitative Methods",
     };
     const first = applyLiveSessionCloseout(options);
     const second = applyLiveSessionCloseout({ ...options, tracker: first });
@@ -109,17 +110,20 @@ describe("applyLiveSessionCloseout", () => {
       date: "2026-09-05",
       title: "Quant Masterclass I",
       taskId: "w1-session-1",
+      topic: "Quantitative Methods",
     });
 
     const cleaned = removeLiveSessionCloseoutArtifacts({
       tracker: applied,
       result,
       taskId: "w1-session-1",
+      topic: "Quantitative Methods",
     });
     const cleanedTwice = removeLiveSessionCloseoutArtifacts({
       tracker: cleaned,
       result,
       taskId: "w1-session-1",
+      topic: "Quantitative Methods",
     });
 
     expect(cleaned.taskCompletions["w1-session-1"]).toBeUndefined();
@@ -141,6 +145,7 @@ describe("applyLiveSessionCloseout", () => {
       date: "2026-09-05",
       title: "Quant Masterclass I",
       taskId: "w1-session-1",
+      topic: "Quantitative Methods",
     });
     const cleaned = removeLiveSessionCloseoutArtifacts({
       tracker: {
@@ -152,6 +157,7 @@ describe("applyLiveSessionCloseout", () => {
       },
       result,
       taskId: "w1-session-1",
+      topic: "Quantitative Methods",
     });
 
     expect(cleaned.topicMastery["Quantitative Methods"]).toBe(82);
@@ -159,18 +165,70 @@ describe("applyLiveSessionCloseout", () => {
 
   it("keeps Session 1 records and mastery when a Session 2 rehearsal is discarded", () => {
     const first = applyLiveSessionCloseout({ tracker: createDefaultState(), result,
-      sessionNumber: 1, week: 1, date: "2026-09-12", title: "Quant I", taskId: "w1-session-1" });
+      sessionNumber: 1, week: 1, date: "2026-09-12", title: "Quant I", taskId: "w1-session-1", topic: "Quantitative Methods" });
     const secondResult = { ...result, sessionId: "session-02-run", routeId: "s02-core-120" };
     const second = applyLiveSessionCloseout({ tracker: first, result: secondResult,
-      sessionNumber: 2, week: 2, date: "2026-09-19", title: "Quant II", taskId: "w2-session-1" });
+      sessionNumber: 2, week: 2, date: "2026-09-19", title: "Quant II", taskId: "w2-session-1", topic: "Quantitative Methods" });
     expect(second.sessionLogs.find(item => item.sessionNumber === 2)).toMatchObject({ date: "2026-09-19", week: 2 });
     expect(buildLiveSessionPrivateNote(secondResult, "2026-09-19", 2)?.title).toBe("Session 02 private closeout");
-    const cleaned = removeLiveSessionCloseoutArtifacts({ tracker: second, result: secondResult, taskId: "w2-session-1" });
+    const cleaned = removeLiveSessionCloseoutArtifacts({ tracker: second, result: secondResult, taskId: "w2-session-1", topic: "Quantitative Methods" });
     expect(cleaned.sessionLogs).toEqual(first.sessionLogs);
     expect(cleaned.practiceLogs).toEqual(first.practiceLogs);
     expect(cleaned.errorEntries).toEqual(first.errorEntries);
     expect(cleaned.taskCompletions["w1-session-1"]).toBe(true);
     expect(cleaned.taskCompletions["w2-session-1"]).toBeUndefined();
     expect(cleaned.topicMastery).toEqual(first.topicMastery);
+  });
+  it("files a later session under its own plan-week topic", () => {
+    const economics = { ...result, sessionId: "session-04-run" };
+    const applied = applyLiveSessionCloseout({
+      tracker: createDefaultState(),
+      result: economics,
+      sessionNumber: 4,
+      week: 5,
+      date: "2026-10-10",
+      title: "Economics II and Corporate Issuers",
+      taskId: "w5-session-1",
+      topic: "Economics",
+    });
+    expect(applied.practiceLogs[0]).toMatchObject({ topic: "Economics", attempted: 2 });
+    expect(applied.errorEntries[0]).toMatchObject({ topic: "Economics" });
+    expect(applied.topicMastery).toEqual({ ...createDefaultState().topicMastery, Economics: 78 });
+
+    const cleaned = removeLiveSessionCloseoutArtifacts({
+      tracker: applied,
+      result: economics,
+      taskId: "w5-session-1",
+      topic: "Economics",
+    });
+    expect(cleaned.topicMastery).not.toHaveProperty("Economics");
+    expect(cleaned.practiceLogs).toHaveLength(0);
+  });
+
+  it("records evidence for a mock-week session without inventing a mastery key", () => {
+    const mock = { ...result, sessionId: "session-18-run" };
+    const applied = applyLiveSessionCloseout({
+      tracker: createDefaultState(),
+      result: mock,
+      sessionNumber: 18,
+      week: 19,
+      date: "2027-01-16",
+      title: "Mock 1 checkpoint",
+      taskId: "w19-session-1",
+      topic: "Mixed Curriculum",
+    });
+    expect(applied.practiceLogs[0]).toMatchObject({ topic: "Mixed Curriculum" });
+    expect(applied.errorEntries[0]).toMatchObject({ topic: "Mixed Curriculum" });
+    expect(applied.topicMastery).toEqual(createDefaultState().topicMastery);
+    expect(applied.sessionLogs[0]).toMatchObject({ sessionNumber: 18, week: 19 });
+
+    const cleaned = removeLiveSessionCloseoutArtifacts({
+      tracker: applied,
+      result: mock,
+      taskId: "w19-session-1",
+      topic: "Mixed Curriculum",
+    });
+    expect(cleaned.sessionLogs).toHaveLength(0);
+    expect(cleaned.topicMastery).toEqual(createDefaultState().topicMastery);
   });
 });

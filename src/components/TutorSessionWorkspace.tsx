@@ -565,9 +565,9 @@ function SessionWorkspace({
         : undefined,
       startTime: "09:00",
       candidateName: "Hamad Al Sagheer",
-      topic: "Quantitative Methods",
+      topic: catalog.topic,
     }),
-    [runId, session.date, session.deliveryDates, session.number, session.title, sessionDate]
+    [catalog.topic, runId, session.date, session.deliveryDates, session.number, session.title, sessionDate]
   );
 
   const loadWorkspace = useCallback(async () => {
@@ -1292,6 +1292,7 @@ function SessionWorkspace({
           date: sessionDate,
           title: session.title,
           taskId: sessionTaskId,
+          topic: catalog.topic,
         })
       );
       const privateNote = buildLiveSessionPrivateNote(result, sessionDate, sessionNumber);
@@ -1359,6 +1360,7 @@ function SessionWorkspace({
           tracker: current,
           result,
           taskId: sessionTaskId,
+          topic: catalog.topic,
         })
       );
 

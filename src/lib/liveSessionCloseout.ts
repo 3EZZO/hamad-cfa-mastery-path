@@ -1,4 +1,5 @@
 import type { LiveSessionCloseoutResult, LiveSessionEvidence } from "../features/liveSession";
+import { TOPICS } from "../data/plan";
 import type { TrackerState } from "../types";
 
 const MASTERY_VALUE = {
@@ -35,12 +36,20 @@ export interface ApplyLiveSessionCloseoutOptions {
   date: string;
   title: string;
   taskId: string;
+  /** Curriculum topic of the session's plan week (see getSessionTopic). */
+  topic: string;
 }
 
 export interface RemoveLiveSessionCloseoutOptions {
   tracker: TrackerState;
   result: LiveSessionCloseoutResult;
   taskId: string;
+  topic: string;
+}
+
+/** Mastery is tracked per curriculum area; mock weeks file evidence only. */
+function isMasteryTopic(topic: string): boolean {
+  return (TOPICS as readonly string[]).includes(topic);
 }
 
 function uniqueLatestEvidence(evidence: LiveSessionEvidence[]): LiveSessionEvidence[] {
@@ -85,6 +94,7 @@ export function applyLiveSessionCloseout({
   date,
   title,
   taskId,
+  topic,
 }: ApplyLiveSessionCloseoutOptions): TrackerState {
   const latestEvidence = uniqueLatestEvidence(result.evidence);
   const answered = latestEvidence.filter((entry) => entry.verdict !== "parked");
@@ -116,7 +126,7 @@ export function applyLiveSessionCloseout({
     ? upsertById(tracker.practiceLogs, {
         id: `${baseId}-live-evidence`,
         date,
-        topic: "Quantitative Methods",
+        topic,
         attempted: answered.length,
         correct,
         source: `Session ${String(sessionNumber).padStart(2, "0")} live evidence`,
@@ -137,7 +147,7 @@ export function applyLiveSessionCloseout({
     return upsertById(items, {
       id: `${baseId}-error-${safeId(entry.targetId)}`,
       date,
-      topic: "Quantitative Methods",
+      topic,
       category: ERROR_CATEGORY[primaryCode] ?? "Concept gap",
       summary: `${entry.targetLabel}${entry.note ? ` — ${entry.note}` : ""}`,
       correction: correction || ERROR_REPAIR.D,
@@ -166,9 +176,10 @@ export function applyLiveSessionCloseout({
         note: "Approved through tutor-led Session Mode closeout.",
       },
     },
-    topicMastery: mastery
-      ? { ...tracker.topicMastery, "Quantitative Methods": mastery }
-      : tracker.topicMastery,
+    topicMastery:
+      mastery && isMasteryTopic(topic)
+        ? { ...tracker.topicMastery, [topic]: mastery }
+        : tracker.topicMastery,
     sessionLogs: upsertById(tracker.sessionLogs, sessionLog),
     practiceLogs: nextPracticeLogs,
     errorEntries: nextErrors,
@@ -186,6 +197,7 @@ export function removeLiveSessionCloseoutArtifacts({
   tracker,
   result,
   taskId,
+  topic,
 }: RemoveLiveSessionCloseoutOptions): TrackerState {
   const baseId = safeId(result.sessionId);
   const sessionLogId = `${baseId}-session-log`;
@@ -205,12 +217,13 @@ export function removeLiveSessionCloseoutArtifacts({
   // Do not erase a mastery value that Mohamed changed after the rehearsal.
   if (
     derivedMastery > 0 &&
-    topicMastery["Quantitative Methods"] === derivedMastery &&
+    isMasteryTopic(topic) &&
+    topicMastery[topic] === derivedMastery &&
     // Without a score ownership ledger, preserve mastery when another session
     // exists. Equal scores do not prove this rehearsal owns the shared value.
     !tracker.sessionLogs.some(item => item.id !== sessionLogId)
   ) {
-    delete topicMastery["Quantitative Methods"];
+    delete topicMastery[topic];
   }
 
   return {

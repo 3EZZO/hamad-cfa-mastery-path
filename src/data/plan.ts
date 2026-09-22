@@ -31,6 +31,21 @@ export function getWeekSessions(week: PlanWeek): PlanSession[] {
   );
 }
 
+/** Label for the mock-campaign weeks, whose topics list no single curriculum area. */
+export const MIXED_CURRICULUM_TOPIC = "Mixed Curriculum";
+
+/**
+ * The curriculum topic a week's sessions are filed under: the first entry of
+ * the week's topics that is a curriculum area. Mock weeks resolve to
+ * MIXED_CURRICULUM_TOPIC, which is not a mastery key.
+ */
+export function getSessionTopic(week: PlanWeek): string {
+  return (
+    week.topics.find((topic) => (TOPICS as readonly string[]).includes(topic)) ??
+    MIXED_CURRICULUM_TOPIC
+  );
+}
+
 export function getSessionTaskId(week: PlanWeek, session: PlanSession): string {
   const index = getWeekSessions(week).findIndex(
     (candidate) => candidate.number === session.number,
