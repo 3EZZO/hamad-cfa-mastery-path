@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useHashTab } from "./useHashTab";
+import { useHashSegment, useHashTab } from "./useHashTab";
 
 // A modeled window/document, not a rendered browser: back/forward, the
 // View Transitions API and reduced motion are simulated through stubs.
@@ -140,5 +140,82 @@ describe("useHashTab", () => {
     await mount();
     await act(async () => latest.navigate("dashboard"));
     expect(hash).toBe("");
+  });
+
+  it("selects the tab from a `#tab/segment` hash and ignores segment-only changes", async () => {
+    startViewTransition = vi.fn((callback: () => void) => { callback(); });
+    doc.startViewTransition = startViewTransition;
+    hash = "#practice/quick5";
+    await mount();
+    expect(latest.tab).toBe("practice");
+    await act(async () => fireHashChange("#practice/calculator"));
+    expect(latest.tab).toBe("practice");
+    expect(startViewTransition).not.toHaveBeenCalled();
+    await act(async () => fireHashChange("#mocks/anything"));
+    expect(latest.tab).toBe("mocks");
+    // Navigating to a tab clears any segment.
+    await act(async () => latest.navigate("practice"));
+    expect(hash).toBe("#practice");
+  });
+});
+
+describe("useHashSegment", () => {
+  let replaceState: ReturnType<typeof vi.fn>;
+  let latestSegment: { segment: string; set: (segment: string) => void };
+
+  function SegmentProbe({ tab, activeTab }: { tab: string; activeTab: string }) {
+    const [segment, set] = useHashSegment(tab, activeTab);
+    latestSegment = { segment, set };
+    return createElement("span", null, segment);
+  }
+
+  async function mountSegment(tab: string, activeTab: string) {
+    await act(async () => { tree = create(createElement(SegmentProbe, { tab, activeTab })); });
+  }
+
+  beforeEach(() => {
+    replaceState = vi.fn((_state: unknown, _title: string, url: string) => { hash = url; });
+    (window as unknown as { history: unknown }).history = { replaceState };
+  });
+
+  it("reads the segment on mount, follows hash changes and writes in place", async () => {
+    hash = "#weekly/week-7";
+    await mountSegment("weekly", "weekly");
+    expect(latestSegment.segment).toBe("week-7");
+
+    await act(async () => fireHashChange("#weekly/week-9"));
+    expect(latestSegment.segment).toBe("week-9");
+
+    await act(async () => latestSegment.set("week-3"));
+    expect(latestSegment.segment).toBe("week-3");
+    expect(replaceState).toHaveBeenCalledWith(null, "", "#weekly/week-3");
+    expect(hash).toBe("#weekly/week-3");
+    expect(listeners.hashchange).toHaveLength(1);
+  });
+
+  it("stays inert while another tab is active", async () => {
+    hash = "#weekly/week-7";
+    await mountSegment("roadmap", "weekly");
+    expect(latestSegment.segment).toBe("");
+    await act(async () => latestSegment.set("week-2"));
+    expect(latestSegment.segment).toBe("week-2");
+    expect(replaceState).not.toHaveBeenCalled();
+    expect(hash).toBe("#weekly/week-7");
+    expect(listeners.hashchange ?? []).toHaveLength(0);
+  });
+
+  it("re-reads when its tab becomes active and never writes a foreign hash", async () => {
+    hash = "#dashboard";
+    await mountSegment("weekly", "dashboard");
+    await act(async () => tree!.update(createElement(SegmentProbe, { tab: "weekly", activeTab: "weekly" })));
+    // The hash still names another tab (the shell writes it on navigation),
+    // so no segment is written over it.
+    await act(async () => latestSegment.set("week-4"));
+    expect(replaceState).not.toHaveBeenCalled();
+    expect(hash).toBe("#dashboard");
+
+    hash = "#weekly";
+    await act(async () => latestSegment.set("week-5"));
+    expect(hash).toBe("#weekly/week-5");
   });
 });

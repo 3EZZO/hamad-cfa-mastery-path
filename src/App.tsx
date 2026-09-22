@@ -107,6 +107,8 @@ import CalendarExportDialog from "./components/CalendarExportDialog";
 import { ThemeProvider, ThemeToggle, useTheme } from "./components/ThemeToggle";
 import { CommandPalette } from "./components/CommandPalette";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
+import { useHashSegment } from "./hooks/useHashTab";
+import { parseWeekSegment, readSegment, weekSegment } from "./lib/hashRoute";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
@@ -756,7 +758,20 @@ function App() {
   const [activeTab, setActiveTab] = useHashTab<TabId>(TAB_IDS, "dashboard", {
     title: (tab) => `${TAB_COPY[tab].title} · Hamad CFA Mastery`,
   });
-  const [selectedWeek, setSelectedWeek] = useState(initialWeek);
+  // This Week mirrors its week to `#weekly/week-N` so reload, back/forward
+  // and pasted links land on the same week; a deep link wins over the
+  // programme week only on first load.
+  const [weeklySegment, setWeeklySegment] = useHashSegment("weekly", activeTab);
+  const [selectedWeek, setSelectedWeek] = useState(
+    () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS) ?? initialWeek,
+  );
+  useEffect(() => {
+    const linked = parseWeekSegment(weeklySegment, TOTAL_WEEKS);
+    if (linked) setSelectedWeek(linked);
+  }, [weeklySegment]);
+  useEffect(() => {
+    if (activeTab === "weekly") setWeeklySegment(weekSegment(selectedWeek));
+  }, [activeTab, selectedWeek, setWeeklySegment]);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
@@ -1804,6 +1819,16 @@ function RoadmapView({
   onNavigate: (tab: TabId, week?: number) => void;
 }) {
   const [phase, setPhase] = useState("All phases");
+  // Only mounted while Study Plan is the active tab, so the segment is ours.
+  const [segment, setSegment] = useHashSegment("roadmap", "roadmap");
+  const focusWeek = parseWeekSegment(segment, TOTAL_WEEKS);
+  const openWeek = focusWeek ?? currentWeek;
+  const scrolledTo = useRef<number | null>(null);
+  const scrollToWeek = (node: HTMLDetailsElement | null, week: number) => {
+    if (!node || focusWeek !== week || scrolledTo.current === week) return;
+    scrolledTo.current = week;
+    if (typeof node.scrollIntoView === "function") node.scrollIntoView({ block: "start" });
+  };
   const visibleWeeks = phase === "All phases" ? PLAN : PLAN.filter((week) => week.phase === phase);
   const totalQuestions = PLAN.reduce((sum, week) => sum + week.questionTarget, 0);
   const plannedSessions = PLAN.flatMap(getWeekSessions);
@@ -1848,7 +1873,13 @@ function RoadmapView({
         {visibleWeeks.map((week) => {
           const progress = getWeekProgressForState(week, tracker);
           return (
-            <details className={cx("timeline-week", week.week === currentWeek && "is-current")} key={week.week} open={week.week === currentWeek}>
+            <details
+              className={cx("timeline-week", week.week === currentWeek && "is-current")}
+              key={week.week}
+              open={week.week === openWeek}
+              ref={(node) => scrollToWeek(node, week.week)}
+              onToggle={(event) => { if (event.currentTarget.open) setSegment(weekSegment(week.week)); }}
+            >
               <summary>
                 <span className="timeline-index">{String(week.week).padStart(2, "0")}</span>
                 <span className="timeline-summary-copy">
