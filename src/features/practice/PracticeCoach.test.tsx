@@ -42,7 +42,7 @@ const bank: PublishedPracticeBank = {
     correctOption: 1,
     explanation: "The geometric mean preserves the compounded wealth path.",
     working: [],
-    formulae: [],
+    formulae: ["Geometric mean = (Π(1 + r))^(1/n) − 1"],
     distractorExplanations: ["It does not compound.", "Correct.", "It answers a different question."],
     examTrap: "Do not substitute an arithmetic average for compounded growth.",
     tags: ["return-measures"],
@@ -195,6 +195,31 @@ describe("Practice Coach role views", () => {
   });
 
   afterEach(() => vi.unstubAllGlobals());
+
+  it("opens a searchable formula sheet built from the assigned banks and returns to the hub", async () => {
+    const tree = await render("student", "student-01");
+    expect(renderedText(tree)).toContain("Formula sheet");
+    expect(renderedText(tree)).toContain("1 formula");
+    await act(async () => button(tree, "Formula sheet")!.props.onClick());
+    let text = renderedText(tree);
+    expect(text).toContain("Geometric mean = (Π(1 + r))^(1/n) − 1");
+    expect(text).toContain("module-01");
+    expect(text).toContain("1 question");
+    expect(text).not.toContain("Quick 5");
+
+    const search = tree.root.findByProps({ "aria-label": "Search formulae" });
+    await act(async () => search.props.onChange({ target: { value: "harmonic" } }));
+    text = renderedText(tree);
+    expect(text).toContain("No formula matches that search.");
+    expect(text).toContain("0 of 1 shown");
+    await act(async () => search.props.onChange({ target: { value: "GEOMETRIC" } }));
+    expect(renderedText(tree)).toContain("Geometric mean");
+
+    await act(async () => button(tree, "Practice")!.props.onClick());
+    expect(renderedText(tree)).toContain("Quick 5");
+    expect(harness.saveState).not.toHaveBeenCalled();
+    await act(async () => tree.unmount());
+  });
 
   it("shows the tutor Hamad's read-only performance and missed answer", async () => {
     const tree = await render("tutor", "tutor-uid");
