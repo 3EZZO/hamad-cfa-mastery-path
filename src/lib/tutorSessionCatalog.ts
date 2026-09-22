@@ -1,8 +1,19 @@
 import { getSessionTaskId, getSessionTopic, getWeekSessions, PLAN } from "../data/plan";
 import { verifyTutorPlaybookPackageIntegrity } from "./tutorContent";
 
-export const TUTOR_SESSION_NUMBERS = [1, 2, 3, 4] as const;
-export type TutorSessionNumber = (typeof TUTOR_SESSION_NUMBERS)[number];
+/**
+ * Every checkpoint session in the study plan, in delivery order. Sessions
+ * without a published private playbook open on the one-time import screen;
+ * playbook content itself is authored outside the repository.
+ */
+export const TUTOR_SESSION_NUMBERS: readonly number[] = PLAN.flatMap(week =>
+  getWeekSessions(week).map(session => session.number)
+);
+export type TutorSessionNumber = number;
+
+export function isTutorSessionNumber(value: number): value is TutorSessionNumber {
+  return TUTOR_SESSION_NUMBERS.includes(value);
+}
 
 export function getTutorSession(number: TutorSessionNumber) {
   const week = PLAN.find(item =>
