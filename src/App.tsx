@@ -14,6 +14,7 @@ import {
   CircleCheckBig,
   Cloud,
   Command,
+  Calculator,
   Clock3,
   Copy,
   Download,
@@ -111,8 +112,9 @@ import { CommandPalette } from "./components/CommandPalette";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
 import { useHashSegment } from "./hooks/useHashTab";
-import { parseWeekSegment, readSegment, weekSegment } from "./lib/hashRoute";
+import { parseWeekSegment, readSegment, weekSegment, writeSegment } from "./lib/hashRoute";
 import { setShellBusy } from "./lib/shellBusy";
+import { PRACTICE_INTENTS, type PracticeIntent } from "./lib/practiceIntents";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
@@ -776,6 +778,9 @@ function App() {
   useEffect(() => {
     if (activeTab === "weekly") setWeeklySegment(weekSegment(selectedWeek));
   }, [activeTab, selectedWeek, setWeeklySegment]);
+  // Practice intents travel as `#practice/<intent>`; the coach clears the
+  // segment once it has acted, so the URL never replays an action.
+  const [practiceSegment, setPracticeSegment] = useHashSegment("practice", activeTab);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
@@ -908,6 +913,27 @@ function App() {
     notify("JSON backup downloaded.");
   };
 
+  const openPractice = (intent: PracticeIntent) => {
+    navigate("practice");
+    // The hook only writes while Practice is active; write the hash directly
+    // so the segment is already there when the coach mounts or re-reads it.
+    writeSegment("practice", intent);
+    setPracticeSegment(intent);
+  };
+  const practiceCommands: PaletteCommand[] = !isLiveShell
+    ? (Object.keys(PRACTICE_INTENTS) as PracticeIntent[])
+        .filter((intent) => PRACTICE_INTENTS[intent].mode === null || role === "student")
+        .map((intent) => ({
+          id: `practice-${intent}`,
+          label: PRACTICE_INTENTS[intent].label,
+          group: "Actions",
+          hint: PRACTICE_INTENTS[intent].hint,
+          keywords: ["practice", intent, PRACTICE_INTENTS[intent].mode ?? "calculator"],
+          icon: intent === "calculator" ? Calculator : intent === "repair" ? RotateCcw : intent === "exam" ? Clock3 : Sparkles,
+          run: () => openPractice(intent),
+        }))
+    : [];
+
   const commands: PaletteCommand[] = [
     ...visibleNav.map<PaletteCommand>((item, index) => ({
       id: `go-${item.id}`,
@@ -945,6 +971,7 @@ function App() {
       icon: CalendarPlus,
       run: () => setCalendarDialogOpen(true),
     },
+    ...practiceCommands,
     ...(capabilities.canUseLiveSession && !isLiveShell
       ? [{ id: "live", label: "Open Session Mode", group: "Actions", hint: "Private tutor workspace", keywords: ["teach", "classroom"], icon: PlayCircle, run: () => navigate("live") } satisfies PaletteCommand]
       : []),
@@ -1103,6 +1130,8 @@ function App() {
             }))}
             onAddMistake={(entry) => updateTracker((current) => addPracticeMistake(current, entry).tracker)}
             bridgedQuestionIds={bridgedQuestionIds(tracker.errorEntries)}
+            intent={practiceSegment}
+            onIntentHandled={() => setPracticeSegment("")}
             manualLog={(
               <PracticeLogView
                 tracker={tracker}
