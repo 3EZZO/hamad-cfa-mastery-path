@@ -73,6 +73,13 @@ describe("theme tokens", () => {
     expect(dark.has("--line")).toBe(false);
   });
 
+  it("declares the light tracker tokens in one :root block", () => {
+    const blocks = stripComments(sources["./styles.css"]).match(/^:root\s*\{/gm) ?? [];
+    expect(blocks).toHaveLength(1);
+    // The values the second block used to override are now the only ones.
+    expect(sources["./styles.css"]).toMatch(/:root\s*\{[^}]*--paper:\s*#eef2f6;[^}]*--surface-2:\s*#f6f8fb;[^}]*--border:\s*#d5dee8;/);
+  });
+
   it("only overrides tracker tokens in dark mode that the light root declares", () => {
     const lightRoot = new Set(
       Array.from(stripComments(sources["./styles.css"]).matchAll(/:root\s*\{([^}]*)\}/g))

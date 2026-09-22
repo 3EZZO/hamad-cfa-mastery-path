@@ -12,20 +12,26 @@
   --ink-2: #294960;
   --forest: #315fce;
   --forest-soft: #e5edf9;
-  --paper: #f3f6fa;
+  --paper: #eef2f6;
   --surface: #ffffff;
-  --surface-2: #f7f9fc;
+  --surface-2: #f6f8fb;
   --gold: #315fce;
   --gold-bright: #8db0f5;
   --gold-pale: #e9effc;
   --muted: #5b6d80;
-  --border: #dce4ed;
+  --border: #d5dee8;
   --green: #066570;
   --green-pale: #e1f2ef;
   --danger: #b1444d;
   --danger-pale: #fbe9eb;
-  --shadow: 0 20px 55px rgba(19, 44, 68, 0.08);
-  --shadow-soft: 0 8px 24px rgba(19, 44, 68, 0.06);
+  --shadow: 0 12px 32px rgba(19, 44, 68, 0.07);
+  --shadow-soft: 0 1px 2px rgba(19, 44, 68, 0.045);
+  --teal: #087e83;
+  --ink-soft: #294960;
+  /* Keyboard focus ring: one colour app-wide; the halo separates it from
+     filled controls. theme.css overrides both for dark mode. */
+  --focus-ring: #315fce;
+  --focus-ring-halo: #fff;
   --font-financial: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
   --measure-question: 52ch;
   --measure-response: 62ch;
@@ -3773,22 +3779,6 @@ body {
   gap: 10px;
 }
 
-.checkbox-field {
-  display: flex !important;
-  min-height: 42px;
-  align-items: center;
-  flex-direction: row !important;
-  gap: 8px !important;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #ffffff;
-}
-
-.checkbox-field input {
-  width: auto !important;
-}
-
 .topic-selector {
   margin: 14px 0;
   padding: 12px;
@@ -4369,19 +4359,8 @@ body {
 }
 
 /* Mastery Path workspace: cool paper, navy structure, blue actions, teal evidence. */
-:root {
-  --teal: #087e83;
-  --ink-soft: #294960;
-  --paper: #eef2f6;
-  --surface-2: #f6f8fb;
-  --border: #d5dee8;
-  --shadow-soft: 0 1px 2px rgba(19, 44, 68, 0.045);
-  --shadow: 0 12px 32px rgba(19, 44, 68, 0.07);
-  /* Keyboard focus ring: one colour app-wide; the halo separates it from
-     filled controls. theme.css overrides both for dark mode. */
-  --focus-ring: #315fce;
-  --focus-ring-halo: #fff;
-}
+/* The student-first token values live in the single :root block at the top
+   of this sheet; this section only restyles components. */
 
 body {
   background: var(--paper);
