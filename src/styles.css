@@ -5785,3 +5785,92 @@ html:root[data-theme="dark"] .command-palette kbd { background: var(--surface-2)
 @media (prefers-reduced-motion: reduce) {
   .command-palette { transition: none; }
 }
+
+/* Standalone (installed PWA) and touch polish ----------------------------- */
+
+/* Dynamic viewport units: the installed app and mobile browsers change the
+   visible height as toolbars show and hide; 100vh would leave a gap or clip.
+   The 100vh declarations above stay as the fallback. */
+@supports (height: 100dvh) {
+  body,
+  .app-shell {
+    min-height: 100dvh;
+  }
+  .calendar-dialog {
+    max-height: calc(100dvh - 44px);
+  }
+  .command-palette {
+    max-height: min(70dvh, 560px);
+  }
+  .mobile-more-sheet {
+    max-height: min(72dvh, 620px);
+  }
+}
+
+/* Safe areas: the viewport meta opts into `viewport-fit=cover`, so the
+   sticky top bar and side gutters must keep clear of the status bar, notch
+   and home indicator. env() resolves to 0 in an ordinary browser tab. */
+@media (max-width: 1023px) {
+  .topbar {
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
+  .app-shell {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .mobile-nav {
+    padding-left: calc(7px + env(safe-area-inset-left));
+    padding-right: calc(7px + env(safe-area-inset-right));
+  }
+  /* Keep toasts above the fixed bottom navigation. */
+  .toast {
+    right: 12px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 24px);
+  }
+}
+
+/* Scrollable overlays must not hand their scroll to the page behind them. */
+.mobile-more-sheet,
+.calendar-dialog,
+.command-palette__results,
+.error-recovery__detail code {
+  overscroll-behavior: contain;
+}
+
+/* Installed app: no pull-to-refresh or rubber-band bounce on the shell, which
+   could otherwise reload mid-practice. Inner panes still scroll normally. */
+@media (display-mode: standalone) {
+  html {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Controls: no double-tap-to-zoom delay and no grey tap flash; the existing
+   :active and :focus-visible styles provide the feedback. */
+button,
+summary,
+a,
+select,
+input[type="range"],
+input[type="checkbox"],
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch targets: 44px minimum where the primary pointer is a finger. */
+@media (pointer: coarse) {
+  .button,
+  .text-button,
+  .mobile-nav-button {
+    min-height: 44px;
+  }
+  .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  .mobile-nav-button {
+    min-height: 52px;
+  }
+}
