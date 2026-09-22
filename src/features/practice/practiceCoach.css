@@ -200,7 +200,7 @@
 .practice-action.is-primary > span { color: #fff; background: rgba(255,255,255,.14); }
 
 .practice-modules { overflow: hidden; border: 1px solid var(--pc-line); border-radius: 18px; background: var(--pc-surface); }
-.practice-modules__heading { display: flex; align-items: center; justify-content: space-between; min-height: 72px; padding: 14px 17px; border: 0 !important; text-align: left; }
+.practice-modules .practice-modules__heading { display: flex; align-items: center; justify-content: space-between; min-height: 72px; padding: 14px 17px; border: 0; text-align: left; }
 .practice-modules__heading div { display: grid; gap: 3px; }
 .practice-modules__heading span { color: var(--pc-teal); font-size: .72rem; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
 .practice-modules > div { border-top: 1px solid var(--pc-line); }
