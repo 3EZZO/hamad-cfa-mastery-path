@@ -65,6 +65,13 @@ export interface PracticeLog {
   confidence: number;
 }
 
+/** Per-topic result inside one mock, as the tutor tallies it from the debrief. */
+export interface MockScoreSection {
+  topic: string;
+  attempted: number;
+  correct: number;
+}
+
 export interface MockScore {
   id: string;
   date: string;
@@ -72,6 +79,8 @@ export interface MockScore {
   score: number;
   note: string;
   milestoneWeek?: number | null;
+  /** Optional section breakdown; absent for mocks logged with a headline score only. */
+  sections?: MockScoreSection[];
 }
 
 export interface SessionCompletionRequest {

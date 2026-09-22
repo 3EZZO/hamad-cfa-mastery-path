@@ -3,6 +3,7 @@ import type { TrackerState } from "../types";
 import { differenceInCalendarDays, getProgramWeek, parseDateOnly } from "./dates";
 import { effectiveSessionDate, getEffectiveSessions } from "./schedule";
 import { isTaskComplete } from "./taskStatus";
+import { weakMockSections } from "./mockSections";
 
 export type RiskTone = "green" | "amber" | "red";
 
@@ -244,6 +245,20 @@ export function buildRiskIndicators(
         title: `${latestMock.label} is ${gap} points below its internal target`,
         detail: `Recorded ${latestMock.score}% against the ${target}% coaching target.`,
         action: "Complete the debrief and targeted repair before the next full mock.",
+      });
+    }
+
+    const weakSections = weakMockSections(latestMock, target);
+    if (weakSections.length) {
+      const worst = weakSections[0]!;
+      indicators.push({
+        id: "mock-weak-sections",
+        tone: weakSections.length >= 3 || worst.accuracy < 50 ? "red" : "amber",
+        title: `${weakSections.length} ${plural(weakSections.length, "section")} of ${latestMock.label} below the target band`,
+        detail: weakSections
+          .map((section) => `${section.topic} ${section.correct}/${section.attempted} (${section.accuracy}%)`)
+          .join("; ") + ".",
+        action: `Repair ${worst.topic} first: rebuild the missed items, then retest that section before the next mock.`,
       });
     }
 

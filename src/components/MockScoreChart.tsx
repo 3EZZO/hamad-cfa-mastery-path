@@ -12,6 +12,45 @@ export interface MockChartPoint {
   name: string;
   score: number;
   target: number;
+  /** Pre-formatted section chips, weakest first; empty when not recorded. */
+  sections?: string[];
+}
+
+const tooltipStyle = {
+  borderRadius: 12,
+  border: "1px solid var(--border, #d9ddd7)",
+  backgroundColor: "var(--surface, #fff)",
+  color: "var(--ink, #132c44)",
+  fontSize: 12,
+  padding: "8px 10px",
+} as const;
+
+/** Score, target and, when the tutor tallied them, the section results. */
+function MockTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: MockChartPoint }>;
+  label?: string;
+}) {
+  const point = payload?.[0]?.payload;
+  if (!active || !point) return null;
+  return (
+    <div style={tooltipStyle} role="presentation">
+      <strong style={{ display: "block", marginBottom: 4 }}>{label}</strong>
+      <div>Actual score: {point.score}%</div>
+      <div>Internal target: {point.target}%</div>
+      {point.sections?.length ? (
+        <ul style={{ margin: "6px 0 0", paddingLeft: 14, opacity: 0.9 }}>
+          {point.sections.map((section) => (
+            <li key={section}>{section}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
 }
 
 export default function MockScoreChart({ data }: { data: MockChartPoint[] }) {
@@ -36,15 +75,7 @@ export default function MockScoreChart({ data }: { data: MockChartPoint[] }) {
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip
-          contentStyle={{
-            borderRadius: 12,
-            border: "1px solid var(--border, #d9ddd7)",
-            backgroundColor: "var(--surface, #fff)",
-            color: "var(--ink, #132c44)",
-            fontSize: 12,
-          }}
-        />
+        <Tooltip content={<MockTooltip />} />
         <Line
           type="monotone"
           dataKey="target"
