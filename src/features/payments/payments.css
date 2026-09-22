@@ -183,7 +183,7 @@
 
 .text-teal { color: #00b49f; }
 .text-gold { color: #eab355; }
-.alert-text { color: #ef4444 !important; font-weight: 600; }
+.metric-data small.alert-text { color: #ef4444; font-weight: 600; }
 
 /* Progress Ring */
 .progress-ring-container {

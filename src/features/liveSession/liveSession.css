@@ -5826,7 +5826,9 @@ html:root[data-theme="dark"] .live-session .ls-closeout__warning { color: #ffabb
   }
 }
 
-/* Analytical Calculation Field */
+/* Analytical Calculation Field. These keep !important on purpose: the same
+   classes are styled by three sheets (tracker, practice, session) and the
+   monospace grid must win everywhere a formula is shown. */
 .ls-formula-stack,
 .ls-formula-desk,
 .ls-formula-line code,
