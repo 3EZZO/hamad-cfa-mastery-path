@@ -2,7 +2,14 @@
 // one and takes over only after the "Update ready" toast reloads the page,
 // so an open tab never has its chunks swapped out from under it.
 // Tutor playbooks and progress remain in their separate data stores.
-const VERSION = "hamad-mastery-pwa-v13";
+//
+// The build stamps BUILD_VERSION (scripts/precacheManifest.mjs) and writes
+// precache-manifest.json listing every shell file, hashed chunk, font and
+// icon. The cache name follows the version, so nothing here is edited by
+// hand between releases; a source checkout keeps the placeholder.
+const BUILD_VERSION = "__BUILD_VERSION__";
+const VERSION = `hamad-mastery-pwa-${BUILD_VERSION.startsWith("__") ? "dev" : BUILD_VERSION}`;
+const PRECACHE_MANIFEST = "precache-manifest.json";
 const APP_SCOPE = new URL(self.registration.scope);
 const APP_BASE = APP_SCOPE.pathname.endsWith("/")
   ? APP_SCOPE.pathname
@@ -19,8 +26,31 @@ const APP_SHELL = [
   `${APP_BASE}icons/project-202-apple-touch.png`,
 ];
 
+async function precacheFromManifest(cache) {
+  const response = await fetch(`${APP_BASE}${PRECACHE_MANIFEST}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`manifest ${response.status}`);
+  const manifest = await response.json();
+  if (!manifest || !Array.isArray(manifest.files) || !manifest.files.length) {
+    throw new Error("manifest has no files");
+  }
+  const urls = manifest.files.map((file) => `${APP_BASE}${file}`);
+  // Every listed file is part of this release; a single failure fails the
+  // install so the old worker keeps serving until the next attempt.
+  await cache.addAll([APP_BASE, ...urls]);
+  await cache.put(`${APP_BASE}${PRECACHE_MANIFEST}`, new Response(JSON.stringify(manifest), {
+    headers: { "content-type": "application/json" },
+  }));
+}
+
 async function installAppShell() {
   const cache = await caches.open(VERSION);
+  try {
+    await precacheFromManifest(cache);
+    return;
+  } catch {
+    // No manifest (older deploy or preview server): fall back to the shell
+    // list plus whatever index.html references directly.
+  }
   await cache.addAll(APP_SHELL);
 
   const indexResponse =
