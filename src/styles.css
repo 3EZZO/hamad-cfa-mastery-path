@@ -5899,3 +5899,13 @@ input[type="checkbox"],
 .mock-entry__sections { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
 .mock-entry__sections li { padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 0.78rem; font-weight: 600; }
 .mock-entry__sections li.is-weak { color: var(--danger); background: var(--danger-pale); }
+/* Update toast ------------------------------------------------------------ */
+.update-toast { left: 16px; right: auto; gap: 10px; }
+.update-toast__reload { min-height: 32px; padding: 4px 12px; border: 0; border-radius: 8px; background: #fff; color: var(--forest); font: inherit; font-weight: 800; cursor: pointer; }
+.update-toast__reload:disabled, .update-toast__later:disabled { opacity: 0.6; cursor: default; }
+.update-toast__later { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+.update-toast__later:hover { background: rgba(255, 255, 255, 0.16); }
+.update-toast__spin { animation: update-toast-spin 1s linear infinite; }
+@keyframes update-toast-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .update-toast__spin { animation: none; } }
+@media (max-width: 1023px) { .update-toast { left: 12px; right: auto; } }

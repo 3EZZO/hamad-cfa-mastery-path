@@ -73,6 +73,7 @@ import { useDialogFocus } from "../liveSession/useDialogFocus";
 import { buildFormulaSheet, countFormulae } from "../../lib/formulaSheet";
 import { FormulaSheet } from "./FormulaSheet";
 import { buildExamReport, examRemainingMs, formatClock } from "../../lib/examDrill";
+import { setShellBusy } from "../../lib/shellBusy";
 import "./practiceCoach.css";
 
 export interface PracticeCompletionSummary {
@@ -156,6 +157,12 @@ export function PracticeCoach({
   const [activeRun, setActiveRun] = useState<PracticeRun | null>(null);
   const [lastCompletedRun, setLastCompletedRun] = useState<PracticeRun | null>(null);
   const [view, setView] = useState<CoachView>("hub");
+  // A question on screen defers the app-update toast until the set ends.
+  useEffect(() => {
+    if (view !== "run") return;
+    setShellBusy("practice");
+    return () => setShellBusy(null);
+  }, [view]);
   const [sync, setSync] = useState<CoachSync>("loading");
   const [message, setMessage] = useState("");
   const [selectedOption, setSelectedOption] = useState<0 | 1 | 2 | null>(null);

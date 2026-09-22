@@ -1,6 +1,8 @@
-// Add isolated Session 2 workspaces and the full private teaching library.
+// Updates wait for the app to ask: a new worker installs alongside the old
+// one and takes over only after the "Update ready" toast reloads the page,
+// so an open tab never has its chunks swapped out from under it.
 // Tutor playbooks and progress remain in their separate data stores.
-const VERSION = "hamad-mastery-pwa-v12";
+const VERSION = "hamad-mastery-pwa-v13";
 const APP_SCOPE = new URL(self.registration.scope);
 const APP_BASE = APP_SCOPE.pathname.endsWith("/")
   ? APP_SCOPE.pathname
@@ -39,7 +41,11 @@ async function installAppShell() {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(installAppShell());
-  self.skipWaiting();
+  // The page decides when the new worker takes over (see "message").
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
