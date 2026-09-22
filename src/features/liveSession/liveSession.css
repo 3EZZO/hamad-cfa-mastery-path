@@ -2647,7 +2647,7 @@
 .ls-question-options {
   display: grid;
   gap: 8px;
-  padding: 0 !important;
+  padding: 0;
   list-style: none;
 }
 .ls-question-options li {
