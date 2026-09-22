@@ -509,7 +509,6 @@ export function BA2Plus({
       else if (key === "P") handleTVM("PV");
       else if (key === "M") handleTVM("PMT");
       else if (key === "F") handleTVM("FV");
-      else if (key === "ENTER") handleEnter();
       else if (key === "C") handleCPTMode();
     };
     window.addEventListener("keydown", onKeyDown);

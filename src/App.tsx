@@ -80,6 +80,7 @@ function WorkspaceActions({
       </summary>
       <div
         className="workspace-actions-panel"
+        role="presentation"
         onClick={event => {
           if ((event.target as HTMLElement).closest("button")) {
             disclosure.current?.removeAttribute("open");
@@ -634,6 +635,7 @@ function App() {
           <small>{daysUntilExam()} days to prepare</small>
         </div>
 
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrow-key delegation for the buttons inside */}
         <nav className="sidebar-nav" aria-label="Project sections" onKeyDown={sidebarKeyDown}>
           {sidebarGroups.map((group) => (
             <div className="nav-group" key={group.label}>
@@ -744,6 +746,7 @@ function App() {
         </header>
 
         <SyncRecoveryNotice state={syncStatus} message={syncError} onRetry={retrySync} />
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrow-key delegation for the buttons inside */}
         <nav className="mobile-nav" aria-label="Primary project sections" onKeyDown={mobileNavKeyDown}>
           {MOBILE_PRIMARY_IDS.map((id) => {
             const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
@@ -785,7 +788,7 @@ function App() {
       </main>
 
       {mobileMoreOpen && (
-        <div className="mobile-more-backdrop" onClick={() => setMobileMoreOpen(false)}>
+        <div className="mobile-more-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setMobileMoreOpen(false); }}>
           <section
             className="mobile-more-sheet"
             ref={mobileDialogRef}
@@ -794,7 +797,6 @@ function App() {
             role="dialog"
             aria-modal="true"
             aria-label="More tracker sections"
-            onClick={(event) => event.stopPropagation()}
           >
             <header>
               <div><span>HAMAD CFA MASTERY</span><strong>More tools</strong></div>

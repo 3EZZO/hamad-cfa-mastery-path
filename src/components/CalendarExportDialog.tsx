@@ -57,14 +57,13 @@ export default function CalendarExportDialog({
   };
 
   return (
-    <div className="calendar-dialog-backdrop" onMouseDown={onClose}>
+    <div className="calendar-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section
         ref={dialogRef}
         tabIndex={-1}
         aria-labelledby="calendar-export-title"
         aria-modal="true"
         className="calendar-dialog"
-        onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
         <header className="calendar-dialog-header">

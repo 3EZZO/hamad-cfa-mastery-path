@@ -15,7 +15,10 @@ class ElementModel {
   contains(node: unknown): boolean { return node === this || this.children.some(child => child.contains(node)); }
   hasAttribute(name: string) { return name in this.attrs; }
   matches() { return this.hasAttribute("disabled"); }
-  closest() { for (let node: ElementModel | null = this; node; node = node.parentElement) { if (node.hasAttribute("hidden") || node.hasAttribute("inert") || node.attrs["aria-hidden"] === "true") return node; } return null; }
+  closest(): ElementModel | null {
+    if (this.hasAttribute("hidden") || this.hasAttribute("inert") || this.attrs["aria-hidden"] === "true") return this;
+    return this.parentElement ? this.parentElement.closest() : null;
+  }
   querySelector() { return this.children.find(child => child.tagName === "SUMMARY") ?? null; }
   querySelectorAll(): ElementModel[] { return this.children.flatMap(child => [...(["BUTTON", "INPUT", "SUMMARY"].includes(child.tagName) ? [child] : []), ...child.querySelectorAll()]); }
   focus() { doc.activeElement = this; }

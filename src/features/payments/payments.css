@@ -495,7 +495,7 @@
   margin-bottom: 32px;
 }
 
-.r-mc-left label {
+.r-mc-left .r-caption {
   color: #00b49f;
   font-weight: 800;
   font-size: 12px;
@@ -561,7 +561,7 @@
   margin-bottom: 32px;
 }
 
-.r-party label {
+.r-party .r-caption {
   color: #a9bacd;
   font-size: 11px;
   font-weight: 800;

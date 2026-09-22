@@ -657,15 +657,17 @@ describe("UI/UX behaviors", () => {
   it("lets Enter activate the Close button natively", async () => {
     await renderStudent();
     await openCalculator();
+    // The guard lives on the Close button itself: Enter there never reaches
+    // the calculator's window listener; Enter anywhere else in the drawer does.
     const dialog = tree!.root.find(node => typeof node.type === "string" && node.props.role === "dialog");
-
-    const onClose = { key: "Enter", target: nodes.close, stopPropagation: vi.fn() };
-    dialog.props.onKeyDown(onClose);
+    expect(dialog.props.onKeyDown).toBeUndefined();
+    const close = closeButton();
+    const onClose = { key: "Enter", stopPropagation: vi.fn() };
+    close.props.onKeyDown(onClose);
     expect(onClose.stopPropagation).toHaveBeenCalledTimes(1);
-
-    const elsewhere = { key: "Enter", target: nodes.dialog, stopPropagation: vi.fn() };
-    dialog.props.onKeyDown(elsewhere);
-    expect(elsewhere.stopPropagation).not.toHaveBeenCalled();
+    const otherKey = { key: "7", stopPropagation: vi.fn() };
+    close.props.onKeyDown(otherKey);
+    expect(otherKey.stopPropagation).not.toHaveBeenCalled();
   });
 
   it("updates saved timestamp only on explicit save", async () => {

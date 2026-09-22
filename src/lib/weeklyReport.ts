@@ -170,11 +170,10 @@ export function printWeeklyReport(report: WeeklyReport): void {
 
   let cleanedUp = false;
   let printStarted = false;
-  let fallbackTimer: number | undefined;
   const cleanup = () => {
     if (cleanedUp) return;
     cleanedUp = true;
-    if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
+    window.clearTimeout(fallbackTimer);
     frame.remove();
   };
   const startPrint = () => {
@@ -189,7 +188,7 @@ export function printWeeklyReport(report: WeeklyReport): void {
   };
 
   reportWindow.addEventListener("afterprint", cleanup, { once: true });
-  fallbackTimer = window.setTimeout(cleanup, 60_000);
+  const fallbackTimer = window.setTimeout(cleanup, 60_000);
   reportDocument.open();
   reportDocument.write(createWeeklyReportHtml(report));
   reportDocument.close();

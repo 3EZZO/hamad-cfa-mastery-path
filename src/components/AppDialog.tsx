@@ -61,8 +61,8 @@ function DecisionDialog({ request, onFinish }: { request: Request; onFinish: (va
   const inputRef = useRef<HTMLInputElement>(null);
   const prompt = request.kind === "prompt";
   useDialogFocus(true, dialogRef, prompt ? inputRef : cancelRef, () => onFinish(null));
-  return <div className="calendar-dialog-backdrop app-decision-backdrop" onMouseDown={() => onFinish(null)}>
-    <section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="app-decision-title" aria-describedby="app-decision-message" className="calendar-dialog app-decision-dialog" onMouseDown={event => event.stopPropagation()}>
+  return <div className="calendar-dialog-backdrop app-decision-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onFinish(null); }}>
+    <section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="app-decision-title" aria-describedby="app-decision-message" className="calendar-dialog app-decision-dialog">
       <header className="calendar-dialog-header">
         <span className="calendar-dialog-mark"><CircleAlert size={22} /></span>
         <h2 id="app-decision-title">{prompt ? "Your confirmation" : "Confirm this action"}</h2>

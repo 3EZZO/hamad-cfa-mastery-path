@@ -275,7 +275,7 @@ export function PaymentsHub() {
   const expectedTotal = config.monthlyAmount; // Just display the monthly amount instead of total
   
   const today = new Date();
-  let nextBillingDate = new Date(today.getFullYear(), today.getMonth(), config.billingDayOfMonth);
+  const nextBillingDate = new Date(today.getFullYear(), today.getMonth(), config.billingDayOfMonth);
   if (nextBillingDate <= today) {
     nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
   }
@@ -285,7 +285,7 @@ export function PaymentsHub() {
 
   // Generate Chart Data
   const chartData = [];
-  let currentM = new Date(startObj);
+  const currentM = new Date(startObj);
   while (currentM <= endObj || chartData.length < monthsDiff) {
     // Find payments in this month
     const mStr = currentM.toISOString().slice(0, 7); // YYYY-MM
@@ -557,7 +557,7 @@ function ReceiptPrintView({ tutorName, config, payment, verification, onClose }:
 
         <div className="r-main-card" style={{ position: 'relative', zIndex: 1 }}>
           <div className="r-mc-left">
-            <label>AMOUNT PAID</label>
+            <span className="r-caption">AMOUNT PAID</span>
             <div className="r-amount" style={{fontSize: '32px'}}>{formatDualCurrency(payment.amount, verification.currency)}</div>
           </div>
           <div className="r-mc-right">
@@ -583,7 +583,7 @@ function ReceiptPrintView({ tutorName, config, payment, verification, onClose }:
         <div className="r-footer-details" style={{ position: 'relative', zIndex: 1 }}>
           <div className="r-party" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div>
-              <label>TUTOR</label>
+              <span className="r-caption">TUTOR</span>
               <strong>{tutorName}, CFA</strong>
             </div>
             <div style={{ width: '48px', height: '48px', color: '#eab355', flexShrink: 0 }}>
@@ -596,7 +596,7 @@ function ReceiptPrintView({ tutorName, config, payment, verification, onClose }:
             </div>
           </div>
           <div className="r-party">
-            <label>CANDIDATE</label>
+            <span className="r-caption">CANDIDATE</span>
             <strong>{verification.studentName}</strong>
           </div>
         </div>

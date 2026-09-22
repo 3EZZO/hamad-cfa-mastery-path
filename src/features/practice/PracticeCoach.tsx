@@ -644,8 +644,8 @@ export function PracticeCoach({
     <>
       <div
         className="practice-calculator-backdrop"
+        role="presentation"
         onClick={closeCalculator}
-        aria-hidden="true"
       />
       <div
         ref={calculatorDialogRef}
@@ -654,15 +654,18 @@ export function PracticeCoach({
         role="dialog"
         aria-modal="true"
         aria-label="BA II Plus Calculator"
-        onKeyDown={event => {
-          // Let Enter activate the Close button natively instead of
-          // being consumed as "=" by the calculator's window listener.
-          if (event.key === "Enter" && event.target === calculatorCloseRef.current) event.stopPropagation();
-        }}
       >
         <div className="practice-calculator-header">
           <h3>Calculator</h3>
-          <button type="button" ref={calculatorCloseRef} onClick={closeCalculator} aria-label="Close calculator">
+          <button
+            type="button"
+            ref={calculatorCloseRef}
+            onClick={closeCalculator}
+            aria-label="Close calculator"
+            // Let Enter activate this button natively instead of being
+            // consumed as "=" by the calculator's window listener.
+            onKeyDown={event => { if (event.key === "Enter") event.stopPropagation(); }}
+          >
             <X size={20} />
           </button>
         </div>

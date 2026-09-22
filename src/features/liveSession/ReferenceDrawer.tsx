@@ -69,7 +69,7 @@ export function ReferenceDrawer({
   if (!open) return null;
 
   return (
-    <div className="ls-drawer-backdrop" onMouseDown={onClose}>
+    <div className="ls-drawer-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <aside
         ref={dialogRef}
         className="ls-reference-drawer"
@@ -77,7 +77,6 @@ export function ReferenceDrawer({
         aria-modal="true"
         aria-labelledby="ls-reference-title"
         tabIndex={-1}
-        onMouseDown={event => event.stopPropagation()}
       >
         <header>
           <div>
