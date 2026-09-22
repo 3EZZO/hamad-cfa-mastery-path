@@ -1,6 +1,6 @@
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { AppDialogProvider, useAppDialog } from "./AppDialog";
 
 vi.mock("../features/liveSession/useDialogFocus", () => ({ useDialogFocus: vi.fn() }));
@@ -49,15 +49,20 @@ describe("P3 styled decisions", () => {
     await act(async () => tree.update(<AppDialogProvider><Consumer scope="two" /></AppDialogProvider>));
     expect(await result).toBeNull(); expect(previous.active()).toBe(false);
   });
+  // The shell and the views it was split into (P3.9); the contract spans all of them.
+  const appSource = () =>
+    ["../App.tsx", "../auth/screens.tsx", "../views/shared.tsx", ...readdirSync(new URL("../views", import.meta.url)).filter(file => file.endsWith("View.tsx")).map(file => `../views/${file}`)]
+      .map(file => readFileSync(new URL(file, import.meta.url), "utf8"))
+      .join("\n");
   it("preserves reset safeguards and replaces all native decision calls", () => {
-    const app = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
+    const app = appSource();
     expect(app).not.toMatch(/window\.(?:confirm|prompt)\(/);
     expect(app.match(/await dialog\.(?:confirm|prompt)\(/g)).toHaveLength(11);
     expect(app).toContain('confirmation !== "RESET HAMAD MASTERY"');
     expect(app.indexOf("downloadBackup(tracker);", app.indexOf("const resetSharedProgress"))).toBeLessThan(app.indexOf("await replaceTrackerAuthoritatively(createDefaultState())"));
   });
   it("applies approved rescheduling to current overrides, not a pre-dialog snapshot", () => {
-    const app = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
+    const app = appSource();
     const handler = app.slice(app.indexOf("const submitReschedule"), app.indexOf("const restoreSchedule"));
     const approved = handler.slice(handler.indexOf("await dialog.confirm(summary)"));
     expect(approved).toMatch(/updateTracker\(\(current\) => \(\{[\s\S]*sessionOverrides: cascadeReschedule\(\s*current\.sessionOverrides,/);
