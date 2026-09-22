@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getPlanTasks, getWeekSessions, PLAN, TOPICS } from "./plan";
+import { getPlanTasks, getSessionTopic, getWeekSessions, MIXED_CURRICULUM_TOPIC, PLAN, TOPICS } from "./plan";
 import { EXAM_DATE, getWeekDates, PROGRAM_START } from "../lib/dates";
 import program from "./program.json";
 import { READING_CATALOG } from "./readings";
@@ -137,5 +137,23 @@ describe("canonical 25-week official 2027 plan", () => {
     expect(PLAN.at(-1)?.independentStudy.join(" ")).not.toContain(
       "next checkpoint",
     );
+  });
+
+  it("files every session week under its first curriculum topic, or the mixed label for mock weeks", () => {
+    const byWeek = (week: number) => getSessionTopic(PLAN.find((item) => item.week === week)!);
+    expect(byWeek(2)).toBe("Quantitative Methods");
+    // Two-topic weeks take the first listed area.
+    expect(byWeek(4)).toBe("Quantitative Methods");
+    expect(byWeek(5)).toBe("Economics");
+    expect(byWeek(17)).toBe("Portfolio Management");
+    expect(byWeek(18)).toBe("Ethical and Professional Standards");
+    expect(byWeek(19)).toBe(MIXED_CURRICULUM_TOPIC);
+    expect(byWeek(24)).toBe(MIXED_CURRICULUM_TOPIC);
+    // Every session week resolves to a curriculum area or the mixed label; never something else.
+    for (const week of PLAN.filter((item) => getWeekSessions(item).length)) {
+      const topic = getSessionTopic(week);
+      expect([...TOPICS, MIXED_CURRICULUM_TOPIC]).toContain(topic);
+      if (topic === MIXED_CURRICULUM_TOPIC) expect(week.topics).toEqual([MIXED_CURRICULUM_TOPIC]);
+    }
   });
 });

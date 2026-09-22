@@ -62,4 +62,10 @@ describe("session catalog and import boundary", () => {
     s2.chunks[0]!.stages[0]!.cards[0]!.answer = "Tampered";
     await expect(validateSessionImport(s2, 2)).rejects.toThrow();
   });
+
+  it("exposes each session's plan-week topic for closeout records", () => {
+    expect(getTutorSession(1).topic).toBe("Quantitative Methods");
+    expect(getTutorSession(3).topic).toBe("Quantitative Methods");
+    expect(getTutorSession(4).topic).toBe("Economics");
+  });
 });
