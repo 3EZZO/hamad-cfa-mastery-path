@@ -67,6 +67,8 @@ import type {
   PublishedPracticeBank,
 } from "../../lib/practiceContent";
 import type { ProjectRole } from "../../lib/permissions";
+import type { ErrorEntry } from "../../types";
+import { buildPracticeMistake } from "../../lib/practiceMistakeBridge";
 import { useDialogFocus } from "../liveSession/useDialogFocus";
 import { buildFormulaSheet, countFormulae } from "../../lib/formulaSheet";
 import { FormulaSheet } from "./FormulaSheet";
@@ -89,6 +91,10 @@ interface PracticeCoachProps {
   manualLog: ReactNode;
   onComplete: (summary: PracticeCompletionSummary) => void;
   notify: (message: string, tone?: "success" | "warning") => void;
+  /** Files a Practice Coach miss in Mistake Review; the parent dedupes by question. */
+  onAddMistake?: (entry: ErrorEntry) => void;
+  /** Question ids already in Mistake Review, so the bridge can show its state. */
+  bridgedQuestionIds?: ReadonlySet<string>;
 }
 
 type CoachView = "hub" | "run" | "results" | "formulas";
@@ -132,6 +138,8 @@ export function PracticeCoach({
   manualLog,
   onComplete,
   notify,
+  onAddMistake,
+  bridgedQuestionIds,
 }: PracticeCoachProps) {
   const [banks, setBanks] = useState<PublishedPracticeBank[]>([]);
   const [states, setStates] = useState<Record<string, PracticeQuestionState>>({});
@@ -192,6 +200,25 @@ export function PracticeCoach({
     runnerBanks.forEach(bank => bank.questions.forEach(question => result.set(question.id, bank.topic)));
     return result;
   }, [runnerBanks]);
+  // Rehearsal never writes to Hamad's record, so the bridge is off there.
+  const bridgeMiss = !isRehearsal && onAddMistake
+    ? (question: PracticeQuestion, selectedOption: 0 | 1 | 2): boolean => {
+        if (bridgedQuestionIds?.has(question.id)) return false;
+        const entry = buildPracticeMistake({
+          question,
+          topic: runnerTopicByQuestion.get(question.id) ?? "",
+          bankId: runnerBankByQuestion.get(question.id) ?? "unknown",
+          selectedOption,
+          date: today(),
+        });
+        if (!entry) {
+          notify("This bank's topic is not a curriculum area, so the miss cannot be filed.", "warning");
+          return false;
+        }
+        onAddMistake(entry);
+        return true;
+      }
+    : null;
   const modules = useMemo(
     () => [...new Set(runnerQuestions.map(question => question.moduleId))],
     [runnerQuestions]
@@ -876,7 +903,12 @@ export function PracticeCoach({
 
       {banks.length ? (
         <>
-          <PracticePerformance context={isRehearsal ? "rehearsal" : role} insights={displayedInsights} />
+          <PracticePerformance
+            context={isRehearsal ? "rehearsal" : role}
+            insights={displayedInsights}
+            bridged={isRehearsal ? undefined : bridgedQuestionIds}
+            onBridgeMiss={bridgeMiss ? miss => { if (bridgeMiss(miss.question, miss.selectedOption)) notify("Added to Mistake Review with a retest in three days."); } : undefined}
+          />
 
           {role === "tutor" && !isRehearsal && <PracticeLibrary questions={questions} />}
 
@@ -979,9 +1011,13 @@ function formatPracticeDate(value: string): string {
 function PracticePerformance({
   context,
   insights,
+  bridged,
+  onBridgeMiss,
 }: {
   context: PerformanceContext;
   insights: PracticeInsights;
+  bridged?: ReadonlySet<string>;
+  onBridgeMiss?: (miss: PracticeInsights["missedQuestions"][number]) => void;
 }) {
   const [showAllMisses, setShowAllMisses] = useState(false);
   const visibleMisses = showAllMisses
@@ -1110,6 +1146,11 @@ function PracticePerformance({
                   {miss.question.formulae.length > 0 && <div className="practice-formulae" style={{ marginTop: '16px' }}>{miss.question.formulae.map(formula => <code className="financial-expression" key={formula}>{formula}</code>)}</div>}
                   {miss.question.working.length > 0 && <ol className="practice-working financial-working">{miss.question.working.map(step => <li key={step}>{step}</li>)}</ol>}
                   <aside><ShieldCheck size={17} /><p><strong>Exam trap</strong>{miss.question.examTrap}</p></aside>
+                  {onBridgeMiss && (
+                    bridged?.has(miss.question.id)
+                      ? <p className="practice-mistake-review__bridge is-filed"><BookX size={15} aria-hidden="true" /> In Mistake Review</p>
+                      : <button type="button" className="practice-mistake-review__bridge" onClick={() => onBridgeMiss(miss)}><BookX size={15} aria-hidden="true" /> Add to Mistake Review</button>
+                  )}
                 </div>
               </details>
             )})}

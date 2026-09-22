@@ -270,6 +270,52 @@ describe("Practice Coach role views", () => {
     await act(async () => tree.unmount());
   });
 
+  it("bridges a recorded miss into Mistake Review once, then shows it as filed", async () => {
+    const onAddMistake = vi.fn();
+    let tree!: ReactTestRenderer;
+    const mount = (bridged: Set<string>) => (
+      <PracticeCoach uid="student-uid" role="student" manualLog={null} onComplete={vi.fn()} notify={vi.fn()} onAddMistake={onAddMistake} bridgedQuestionIds={bridged} />
+    );
+    await act(async () => { tree = create(mount(new Set())); await Promise.resolve(); await Promise.resolve(); });
+    await act(async () => button(tree, "Add to Mistake Review")!.props.onClick());
+    expect(onAddMistake).toHaveBeenCalledTimes(1);
+    expect(onAddMistake.mock.calls[0]![0]).toMatchObject({
+      id: "practice-miss-question-01",
+      questionId: "question-01",
+      bankId: bank.storageId,
+      topic: "Quantitative Methods",
+      category: "Concept gap",
+      summary: "Which return measure preserves compounded wealth?",
+      resolved: false,
+    });
+    expect(onAddMistake.mock.calls[0]![0].correction).toContain("Correct: Geometric mean. Chose: Arithmetic mean.");
+
+    await act(async () => tree.update(mount(new Set(["question-01"]))));
+    expect(button(tree, "Add to Mistake Review")).toBeUndefined();
+    expect(renderedText(tree)).toContain("In Mistake Review");
+    await act(async () => tree.unmount());
+  });
+
+  it("never offers the bridge inside a tutor rehearsal", async () => {
+    const onAddMistake = vi.fn();
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(<PracticeCoach uid="tutor-uid" role="tutor" manualLog={null} onComplete={vi.fn()} notify={vi.fn()} onAddMistake={onAddMistake} bridgedQuestionIds={new Set()} />);
+      await Promise.resolve(); await Promise.resolve();
+    });
+    expect(button(tree, "Add to Mistake Review")).toBeDefined();
+    await act(async () => button(tree, "Rehearse as student")!.props.onClick());
+    await act(async () => button(tree, "Quick 5")!.props.onClick());
+    const wrong = tree.root.findAllByProps({ role: "radio" })[0];
+    await act(async () => wrong.props.onClick());
+    await act(async () => button(tree, "Submit answer")!.props.onClick());
+    await act(async () => button(tree, "View results")!.props.onClick());
+    await act(async () => button(tree, "Return to Practice")!.props.onClick());
+    expect(button(tree, "Add to Mistake Review")).toBeUndefined();
+    expect(onAddMistake).not.toHaveBeenCalled();
+    await act(async () => tree.unmount());
+  });
+
   it("shows the tutor Hamad's read-only performance and missed answer", async () => {
     const tree = await render("tutor", "tutor-uid");
     const text = renderedText(tree);

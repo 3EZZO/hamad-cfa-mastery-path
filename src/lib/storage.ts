@@ -278,6 +278,8 @@ function normalizeErrorEntries(value: unknown): ErrorEntry[] {
     ) {
       return null;
     }
+    const questionId = recordId(raw.questionId);
+    const bankId = recordId(raw.bankId);
     return {
       id,
       date: raw.date,
@@ -290,6 +292,8 @@ function normalizeErrorEntries(value: unknown): ErrorEntry[] {
       correction: clippedText(raw.correction, 400),
       revisitDate: isValidDateOnly(raw.revisitDate) ? raw.revisitDate : "",
       resolved: raw.resolved === true,
+      ...(questionId ? { questionId } : {}),
+      ...(bankId ? { bankId } : {}),
     };
   });
 }
