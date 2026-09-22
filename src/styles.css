@@ -5887,3 +5887,15 @@ input[type="checkbox"],
 }
 /* Practice → Mistake Review bridge ---------------------------------------- */
 .error-entry-origin { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--forest-soft); color: var(--forest); font-size: 0.72rem; font-style: normal; font-weight: 700; letter-spacing: 0.02em; vertical-align: middle; }
+/* Mock section breakdown -------------------------------------------------- */
+.mock-sections { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.mock-sections summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
+.mock-sections summary small { color: var(--muted); font-weight: 500; }
+.mock-sections__grid { display: grid; gap: 6px; padding: 0 12px 12px; }
+.mock-sections__row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 12px 84px; align-items: center; gap: 6px; font-size: 0.9rem; }
+.mock-sections__row > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mock-sections__row > span[aria-hidden] { text-align: center; color: var(--muted); }
+.mock-sections__row input { min-height: 36px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+.mock-entry__sections { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.mock-entry__sections li { padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 0.78rem; font-weight: 600; }
+.mock-entry__sections li.is-weak { color: var(--danger); background: var(--danger-pale); }

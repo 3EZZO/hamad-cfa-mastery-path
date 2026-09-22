@@ -3,6 +3,7 @@ import type {
   DiagnosticEntry,
   ErrorEntry,
   MockScore,
+  MockScoreSection,
   NoteEntry,
   PracticeLog,
   PrivateTutorNote,
@@ -195,6 +196,7 @@ function normalizeMockScores(value: unknown): MockScore[] {
   return normalizedRecords(value, 100, (raw) => {
     const id = recordId(raw.id);
     if (!id || !isValidDateOnly(raw.date)) return null;
+    const sections = normalizeMockSections(raw.sections);
     return {
       id,
       date: raw.date,
@@ -202,8 +204,33 @@ function normalizeMockScores(value: unknown): MockScore[] {
       score: boundedNumber(raw.score, 0, 100, 0),
       note: clippedText(raw.note, 500),
       milestoneWeek: normalizeMockMilestoneWeek(raw.milestoneWeek, raw.label),
+      ...(sections.length ? { sections } : {}),
     };
   });
+}
+
+/**
+ * One entry per curriculum topic at most; counts are whole numbers and a
+ * section can never have more correct than attempted. Anything else is
+ * dropped rather than repaired, so a mock without a usable breakdown simply
+ * carries its headline score.
+ */
+function normalizeMockSections(value: unknown): MockScoreSection[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const sections: MockScoreSection[] = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object") continue;
+    const item = raw as Record<string, unknown>;
+    const topic = typeof item.topic === "string" ? item.topic : "";
+    if (!(TOPICS as readonly string[]).includes(topic) || seen.has(topic)) continue;
+    const attempted = Math.round(boundedNumber(item.attempted, 0, 500, 0));
+    const correct = Math.round(boundedNumber(item.correct, 0, 500, 0));
+    if (attempted <= 0 || correct > attempted) continue;
+    seen.add(topic);
+    sections.push({ topic, attempted, correct });
+  }
+  return sections;
 }
 
 function normalizeMockMilestoneWeek(
