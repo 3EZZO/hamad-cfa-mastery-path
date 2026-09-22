@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
+import { useHashSegment } from "../hooks/useHashTab";
+import { parseSessionSegment, sessionSegment } from "../lib/hashRoute";
 import {
   adaptTutorPlaybookPackage,
   isPreSessionRehearsal,
@@ -418,9 +420,29 @@ function PrivateSetup({
   );
 }
 
+function sessionFromSegment(segment: string): TutorSessionNumber | null {
+  const number = parseSessionSegment(segment);
+  return number !== null && (TUTOR_SESSION_NUMBERS as readonly number[]).includes(number)
+    ? (number as TutorSessionNumber)
+    : null;
+}
+
 export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps) {
-  const [selected, setSelected] = useState<TutorSessionNumber>(1);
-  const [visited, setVisited] = useState<TutorSessionNumber[]>([1]);
+  // Session Mode is only mounted while it is the active tab, so the
+  // `#live/session-NN` segment belongs to this switcher.
+  const [segment, setSegment] = useHashSegment("live", "live");
+  const [selected, setSelected] = useState<TutorSessionNumber>(() => sessionFromSegment(segment) ?? 1);
+  const [visited, setVisited] = useState<TutorSessionNumber[]>(() => [sessionFromSegment(segment) ?? 1]);
+  const selectSession = (number: TutorSessionNumber) => {
+    setVisited(current => current.includes(number) ? current : [...current, number]);
+    setSelected(number);
+    setSegment(sessionSegment(number));
+  };
+  useEffect(() => {
+    const linked = sessionFromSegment(segment);
+    if (linked !== null && linked !== selected) selectSession(linked);
+    // Follows back/forward or pasted links only; `selected` is read, not tracked.
+  }, [segment]);
   return (
     <div className="ls-session-hub">
       <nav className="ls-session-switcher" aria-label="Choose tutoring session">
@@ -431,10 +453,7 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
           const dates = entry.session.deliveryDates ?? [date];
           return (
             <button key={number} type="button" aria-pressed={selected === number}
-              onClick={() => {
-                setVisited(current => current.includes(number) ? current : [...current, number]);
-                setSelected(number);
-              }}>
+              onClick={() => selectSession(number)}>
               {entry.label}
               <small>{dates.map(value => compactSessionDate(value)).join(" + ")}</small>
             </button>
