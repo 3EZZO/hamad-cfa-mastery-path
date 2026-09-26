@@ -3,6 +3,7 @@ import { useState } from "react";
 import { saveMockAnswerKey, setMockTestPublished, type MockTestPackage } from "../../lib/cloudMockTests";
 import { getCloudErrorMessage } from "../../lib/cloud";
 import { optionLetter, type MockOption, type MockReviewItem, type MockTestMeta } from "../../lib/mockTestContent";
+import "./moduleMock.css";
 
 /**
  * Tutor-only answer key review. The tutor checks every question, answer,
@@ -94,8 +95,16 @@ export function MockAnswerKeyReview({
               <div className="mock-table-wrap">
                 <table className="mock-table">
                   {question.table.caption && <caption>{question.table.caption}</caption>}
-                  <thead><tr>{question.table.headers.map((header, column) => <th key={column}>{header}</th>)}</tr></thead>
-                  <tbody>{question.table.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.cells.map((cell, column) => <td key={column}>{cell}</td>)}</tr>)}</tbody>
+                  <thead><tr>{question.table.headers.map((header, column) => <th key={column} scope="col">{header}</th>)}</tr></thead>
+                  <tbody>
+                    {question.table.rows.map((row, rowIndex) => (
+                      <tr key={rowIndex}>
+                        {row.cells.map((cell, column) => column === 0
+                          ? <th key={column} scope="row">{cell}</th>
+                          : <td key={column}>{cell}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
               </div>
             )}

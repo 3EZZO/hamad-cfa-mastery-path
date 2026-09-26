@@ -203,7 +203,6 @@
 .mock-start__rules li { padding: 10px 12px; border: 1px solid #ffffff1f; border-radius: 12px; background: #ffffff0d; color: #d2e2f2; line-height: 1.45; }
 .mock-start__rules strong { color: #fff; }
 .mock-start__ack { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 18px; font-weight: 700; line-height: 1.4; cursor: pointer; }
-.mock-start__ack input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--mk-gold); }
 .mock-start__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .mock-start .mock-button--ghost { color: #eef6ff; border-color: #ffffff38; background: transparent; }
 
@@ -343,6 +342,7 @@
 .mock-table th,
 .mock-table td { padding: 8px 10px; border: 1px solid var(--mk-line); text-align: left; vertical-align: top; }
 .mock-table thead th { background: var(--mk-soft); font-weight: 800; }
+.mock-table tbody th { font-weight: 650; }
 .mock-table td { font-family: var(--font-financial, monospace); font-variant-numeric: tabular-nums; }
 .mock-options { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
 .mock-option {
@@ -518,6 +518,19 @@
 .mock-keyreview__options legend { padding: 0 6px; font-weight: 800; }
 .mock-keyreview__options label { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
 .mock-keyreview__options label.is-key { background: var(--mk-right-bg); }
+/* The app's global form rule makes every input full-width and 42px tall;
+   radio buttons and checkboxes here must keep their natural size. */
+.mock-keyreview__options input[type="radio"],
+.mock-start__ack input[type="checkbox"] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 3px 0 0;
+  padding: 0;
+  accent-color: var(--mk-teal);
+}
+.mock-start__ack input[type="checkbox"] { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--mk-gold); }
 .mock-keyreview__field { display: grid; gap: 6px; margin-bottom: 8px; font-weight: 800; }
 .mock-keyreview__field textarea { width: 100%; padding: 10px; border: 1px solid var(--mk-line); border-radius: 10px; color: var(--mk-ink); background: var(--mk-soft); font: inherit; font-weight: 400; line-height: 1.5; resize: vertical; }
 .mock-keyreview__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
