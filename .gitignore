@@ -18,3 +18,9 @@ output/json/
 Thumbs.db
 __pycache__/
 *.py[cod]
+
+# Module mock tests: question banks, answer keys and source screenshots are
+# private and reach Firestore only through the tutor upload.
+*.mock.json
+answer-key.md
+mock-test-questions/

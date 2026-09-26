@@ -1,6 +1,6 @@
 // Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
 import { FileText, Flag, Plus, ShieldCheck, Trash2, TrendingUp } from "lucide-react";
-import { type FormEvent, Suspense, useState } from "react";
+import { type FormEvent, type ReactNode, Suspense, useState } from "react";
 import { PLAN, TOPICS } from "../data/plan";
 import program from "../data/program.json";
 import { formatDate, todayDateOnly } from "../lib/dates";
@@ -16,11 +16,14 @@ export function MockView({
   updateTracker,
   notify,
   canManage,
+  moduleMockScores,
 }: {
   tracker: TrackerState;
   updateTracker: UpdateTracker;
   notify: Notify;
   canManage: boolean;
+  /** Module mock test scores, shown above the full-mock trend. */
+  moduleMockScores?: ReactNode;
 }) {
   const dialog = useAppDialog();
   const [form, setForm] = useState({
@@ -76,6 +79,7 @@ export function MockView({
 
   return (
     <div className="view-stack">
+      {moduleMockScores}
       <div className="disclaimer-card"><ShieldCheck size={19} /><p><strong>Internal evidence, not an official pass mark.</strong> {program.readinessDisclaimer}</p></div>
       <section className="mock-grid">
         <article className="panel chart-panel">

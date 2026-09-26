@@ -30,6 +30,21 @@ export const loadReceiptVerificationScreen = () =>
 
 export const loadMockScoreChart = () => import("./components/MockScoreChart");
 
+export const loadModuleMockTests = () =>
+  import("./features/mockTests/ModuleMockTests").then((module) => ({
+    default: module.ModuleMockTests,
+  }));
+
+export const loadMockTestAdmin = () =>
+  import("./features/mockTests/MockTestAdmin").then((module) => ({
+    default: module.MockTestAdmin,
+  }));
+
+export const loadModuleMockScores = () =>
+  import("./features/mockTests/ModuleMockScores").then((module) => ({
+    default: module.ModuleMockScores,
+  }));
+
 export const loadTutorSessionWorkspace = () =>
   import("./components/TutorSessionWorkspace");
 
@@ -38,6 +53,9 @@ export const PracticeBankAdmin = lazy(loadPracticeBankAdmin);
 export const PaymentsHub = lazy(loadPaymentsHub);
 export const ReceiptVerificationScreen = lazy(loadReceiptVerificationScreen);
 export const MockScoreChart = lazy(loadMockScoreChart);
+export const ModuleMockTests = lazy(loadModuleMockTests);
+export const MockTestAdmin = lazy(loadMockTestAdmin);
+export const ModuleMockScores = lazy(loadModuleMockScores);
 export const TutorSessionWorkspace = lazy(loadTutorSessionWorkspace);
 
 type IdleScheduler = Pick<typeof globalThis, "setTimeout"> & {

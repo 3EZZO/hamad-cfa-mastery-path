@@ -1,5 +1,5 @@
 // Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
-import { Archive, Banknote, CalendarDays, Gauge, GraduationCap, LayoutDashboard, ListChecks, NotebookPen, PlayCircle, TimerReset, TrendingUp, UserCog } from "lucide-react";
+import { Archive, Banknote, CalendarDays, ClipboardCheck, Gauge, GraduationCap, LayoutDashboard, ListChecks, NotebookPen, PlayCircle, TimerReset, TrendingUp, UserCog } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TOTAL_WEEKS } from "../lib/dates";
 
@@ -11,6 +11,7 @@ export type TabId =
   | "practice"
   | "mastery"
   | "mocks"
+  | "moduleMocks"
   | "errors"
   | "notes"
   | "live"
@@ -39,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "sessions", label: "Session Notes", mobileLabel: "Sessions", icon: GraduationCap, hint: "Lesson outcomes & homework" },
   { id: "practice", label: "Practice", mobileLabel: "Practice", icon: TimerReset },
   { id: "mastery", label: "Topic Progress", mobileLabel: "Topics", icon: Gauge, hint: "Mastery by subject" },
+  { id: "moduleMocks", label: "Module Tests", mobileLabel: "Tests", icon: ClipboardCheck, hint: "Compulsory timed assessments" },
   { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
   { id: "errors", label: "Mistake Review", mobileLabel: "Mistakes", icon: Archive, hint: "Corrections & retests" },
   { id: "notes", label: "Notes & Data", mobileLabel: "Notes", icon: NotebookPen, hint: "General notes & backups" },
@@ -54,7 +56,7 @@ export const TAB_IDS: readonly TabId[] = NAV_ITEMS.map((item) => item.id);
 export const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
   { label: "Focus", ids: ["dashboard", "weekly"] },
   { label: "Plan", ids: ["roadmap", "sessions"] },
-  { label: "Evidence", ids: ["practice", "mastery", "mocks", "errors"] },
+  { label: "Evidence", ids: ["practice", "moduleMocks", "mastery", "mocks", "errors"] },
   { label: "Records", ids: ["notes"] },
   { label: "Tutor", ids: ["live", "coach", "payments"] },
 ];
@@ -69,6 +71,7 @@ export const MOBILE_PRIMARY_IDS: TabId[] = [
 
 
 export const MOBILE_MORE_IDS: TabId[] = [
+  "moduleMocks",
   "sessions",
   "mastery",
   "mocks",
@@ -110,6 +113,11 @@ export const TAB_COPY: Record<TabId, { eyebrow: string; title: string; descripti
     eyebrow: "Honest topic evidence",
     title: "Topic Progress",
     description: "Review each subject's practice results and tutor-assessed mastery.",
+  },
+  moduleMocks: {
+    eyebrow: "One attempt · 12 minutes · full screen",
+    title: "Module Tests",
+    description: "A compulsory eight-question mock for each module, taken under exam conditions.",
   },
   mocks: {
     eyebrow: "Performance under conditions",

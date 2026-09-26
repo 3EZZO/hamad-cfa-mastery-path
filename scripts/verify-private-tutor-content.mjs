@@ -6,12 +6,17 @@ const forbiddenFilePatterns = [
   /Hamad_CFA_Level_I_Session_\d+_.*Tutor_Playbook\.pdf$/i,
   /session[-_]?\d+.*playbook.*\.json$/i,
   /tutor[-_]?bible.*\.(?:pdf|json)$/i,
+  // Module mock test uploads and their answer keys are tutor-only.
+  /\.mock\.json$/i,
+  /answer[-_]?key.*\.(?:md|json|pdf)$/i,
 ];
 const forbiddenContentMarkers = [
   "Today is not a review of your old score",
   "C - 9.00%",
   "Fifty-six original proofs - questions first, answers later",
   "Minimum acceptable answer and pressure follow-up",
+  // Pretty-printed mock test uploads carry source references next to answers.
+  '"sourceFiles": [',
 ];
 
 async function filesBelow(directory) {
