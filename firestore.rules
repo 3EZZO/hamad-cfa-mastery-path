@@ -257,6 +257,277 @@ service cloud.firestore {
       allow list, delete: if false;
     }
 
+    // ---- Module mock tests -------------------------------------------------
+    // One compulsory, single-attempt, 12-minute, 8-question test per module.
+    // The student never reads the answer key or the review before the attempt
+    // is locked; the server clock (request.time) is the only timer that counts.
+
+    function mockDoc(collectionName, docId) {
+      return /databases/$(database)/documents/programs/project-202/$(collectionName)/$(docId);
+    }
+
+    function mockTestIsDraftAfter(moduleId) {
+      return getAfter(mockDoc('mockTests', moduleId)).data.status == 'draft';
+    }
+
+    function mockTestIsPublished(moduleId) {
+      return exists(mockDoc('mockTests', moduleId))
+        && get(mockDoc('mockTests', moduleId)).data.status == 'published';
+    }
+
+    function mockOwnsId(docId) {
+      return docId.split('_')[0] == request.auth.uid;
+    }
+
+    function mockAttemptLocked(attemptId) {
+      return exists(mockDoc('mockAttempts', attemptId))
+        && get(mockDoc('mockAttempts', attemptId)).data.status in ['submitted', 'forfeited'];
+    }
+
+    function mockDeadlineOpen(attempt) {
+      // 12 minutes plus 15 seconds of network grace.
+      return request.time <= attempt.startedAt + duration.value(735, 's');
+    }
+
+    function mockValidAnswer(value) {
+      return value == null || value in [0, 1, 2];
+    }
+
+    function mockValidAnswers(list) {
+      return list is list && list.size() == 8
+        && mockValidAnswer(list[0]) && mockValidAnswer(list[1])
+        && mockValidAnswer(list[2]) && mockValidAnswer(list[3])
+        && mockValidAnswer(list[4]) && mockValidAnswer(list[5])
+        && mockValidAnswer(list[6]) && mockValidAnswer(list[7]);
+    }
+
+    function mockValidFlags(list) {
+      return list is list && list.size() == 8
+        && list[0] is bool && list[1] is bool && list[2] is bool && list[3] is bool
+        && list[4] is bool && list[5] is bool && list[6] is bool && list[7] is bool;
+    }
+
+    function mockAppendOnly(next, previous, max) {
+      return next is list && next.size() >= previous.size() && next.size() <= max
+        // The Rules engine rejects slicing an empty list, so skip the check then.
+        && (previous.size() == 0 || next[0:previous.size()] == previous);
+    }
+
+    function validMockTestMeta(moduleId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'schemaVersion', 'moduleId', 'title', 'version', 'status', 'questionCount',
+          'durationSeconds', 'updatedBy', 'updatedAtClient', 'publishedAtClient'
+        ])
+        && data.schemaVersion == 1
+        && data.moduleId == moduleId
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.version is string && data.version.size() > 0 && data.version.size() <= 60
+        && data.status in ['draft', 'published']
+        && data.questionCount == 8
+        && data.durationSeconds == 720
+        && data.updatedBy == request.auth.uid
+        && data.updatedAtClient is string && data.updatedAtClient.size() <= 40
+        && (data.publishedAtClient == null
+          || (data.publishedAtClient is string && data.publishedAtClient.size() <= 40));
+    }
+
+    function validMockContent(moduleId, listField) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['moduleId', 'version', listField])
+        && data.moduleId == moduleId
+        && data.version == getAfter(mockDoc('mockTests', moduleId)).data.version
+        && data[listField] is list && data[listField].size() == 8;
+    }
+
+    function validNewMockAttempt(attemptId) {
+      let data = request.resource.data;
+      let counter = mockDoc('mockAttemptCounters', attemptId);
+      return data.keys().hasOnly([
+          'uid', 'moduleId', 'testVersion', 'attemptNumber', 'status', 'startedAt',
+          'lastSeenAt', 'answers', 'flags', 'incidents', 'keystrokes', 'submittedAt',
+          'finishReason', 'score', 'correct', 'reviewReleased'
+        ])
+        && data.uid == request.auth.uid
+        && data.moduleId is string
+        && attemptId == request.auth.uid + '_' + data.moduleId
+        && mockTestIsPublished(data.moduleId)
+        && data.testVersion == get(mockDoc('mockTests', data.moduleId)).data.version
+        && data.attemptNumber == (exists(counter) ? get(counter).data.next : 1)
+        && data.status == 'active'
+        && data.startedAt == request.time
+        && data.lastSeenAt == request.time
+        && data.answers == [null, null, null, null, null, null, null, null]
+        && data.flags == [false, false, false, false, false, false, false, false]
+        && data.incidents == []
+        && data.keystrokes == []
+        && data.submittedAt == null
+        && data.finishReason == null
+        && data.score == null
+        && data.correct == null
+        && data.reviewReleased == false;
+    }
+
+    function mockWorkIsValid(data, previous) {
+      return mockValidAnswers(data.answers)
+        && mockValidFlags(data.flags)
+        && mockAppendOnly(data.incidents, previous.incidents, 100)
+        && mockAppendOnly(data.keystrokes, previous.keystrokes, 600);
+    }
+
+    // Autosave while the clock is running: the attempt stays active.
+    function mockStudentSave() {
+      let data = request.resource.data;
+      let previous = resource.data;
+      return previous.status == 'active'
+        && mockDeadlineOpen(previous)
+        && data.diff(previous).affectedKeys()
+          .hasOnly(['answers', 'flags', 'incidents', 'keystrokes', 'lastSeenAt'])
+        && data.lastSeenAt == request.time
+        && mockWorkIsValid(data, previous);
+    }
+
+    // Submit, time-out submit, or Leave Test (forfeit) before the deadline.
+    function mockStudentFinishInTime() {
+      let data = request.resource.data;
+      let previous = resource.data;
+      return previous.status == 'active'
+        && mockDeadlineOpen(previous)
+        && data.diff(previous).affectedKeys().hasOnly([
+          'answers', 'flags', 'incidents', 'keystrokes', 'lastSeenAt',
+          'status', 'submittedAt', 'finishReason'
+        ])
+        && ((data.status == 'submitted' && data.finishReason in ['submit', 'timeout'])
+          || (data.status == 'forfeited' && data.finishReason == 'leave'))
+        && data.submittedAt == request.time
+        && data.lastSeenAt == request.time
+        && mockWorkIsValid(data, previous);
+    }
+
+    // After the deadline the saved answers are final: only the lock is written.
+    function mockStudentFinishLate() {
+      let data = request.resource.data;
+      let previous = resource.data;
+      return previous.status == 'active'
+        && !mockDeadlineOpen(previous)
+        && data.diff(previous).affectedKeys()
+          .hasOnly(['status', 'submittedAt', 'finishReason', 'lastSeenAt'])
+        && data.status == 'submitted'
+        && data.finishReason == 'expired'
+        && data.submittedAt == request.time
+        && data.lastSeenAt == request.time;
+    }
+
+    function mockCorrectAt(data, key, index) {
+      return data.correct[index] == (data.answers[index] == key.correct[index]);
+    }
+
+    function mockPoint(value) {
+      return value ? 1 : 0;
+    }
+
+    // Once locked, the stored score must equal the key applied to the frozen answers.
+    function mockStudentGrade() {
+      let data = request.resource.data;
+      let previous = resource.data;
+      let key = get(mockDoc('mockTestKeys', previous.moduleId)).data;
+      return previous.status in ['submitted', 'forfeited']
+        && previous.score == null
+        && data.diff(previous).affectedKeys().hasOnly(['score', 'correct'])
+        && key.version == previous.testVersion
+        && data.correct is list && data.correct.size() == 8
+        && mockCorrectAt(data, key, 0) && mockCorrectAt(data, key, 1)
+        && mockCorrectAt(data, key, 2) && mockCorrectAt(data, key, 3)
+        && mockCorrectAt(data, key, 4) && mockCorrectAt(data, key, 5)
+        && mockCorrectAt(data, key, 6) && mockCorrectAt(data, key, 7)
+        && data.score == mockPoint(data.correct[0]) + mockPoint(data.correct[1])
+          + mockPoint(data.correct[2]) + mockPoint(data.correct[3])
+          + mockPoint(data.correct[4]) + mockPoint(data.correct[5])
+          + mockPoint(data.correct[6]) + mockPoint(data.correct[7]);
+    }
+
+    match /programs/project-202/mockTests/{moduleId} {
+      allow get: if activeProject202Role('tutor')
+        || (activeProject202Member()
+          && (resource == null || resource.data.status == 'published'));
+      allow list: if activeProject202Role('tutor');
+      allow create, update: if activeProject202Role('tutor') && validMockTestMeta(moduleId);
+      allow delete: if false;
+    }
+
+    match /programs/project-202/mockTestQuestions/{moduleId} {
+      allow get: if activeProject202Role('tutor')
+        || (activeProject202Member()
+          && mockTestIsPublished(moduleId)
+          && exists(mockDoc('mockAttempts', request.auth.uid + '_' + moduleId)));
+      allow list, delete: if false;
+      allow create, update: if activeProject202Role('tutor')
+        && mockTestIsDraftAfter(moduleId)
+        && validMockContent(moduleId, 'questions');
+    }
+
+    match /programs/project-202/mockTestKeys/{moduleId} {
+      allow get: if activeProject202Role('tutor')
+        || (activeProject202Member()
+          && mockAttemptLocked(request.auth.uid + '_' + moduleId));
+      allow list, delete: if false;
+      allow create, update: if activeProject202Role('tutor')
+        && mockTestIsDraftAfter(moduleId)
+        && validMockContent(moduleId, 'correct');
+    }
+
+    match /programs/project-202/mockTestReviews/{moduleId} {
+      allow get: if activeProject202Role('tutor')
+        || (activeProject202Member()
+          && mockAttemptLocked(request.auth.uid + '_' + moduleId)
+          && get(mockDoc('mockAttempts', request.auth.uid + '_' + moduleId)).data.reviewReleased == true);
+      allow list, delete: if false;
+      allow create, update: if activeProject202Role('tutor')
+        && mockTestIsDraftAfter(moduleId)
+        && validMockContent(moduleId, 'items');
+    }
+
+    match /programs/project-202/mockAttempts/{attemptId} {
+      allow get: if activeProject202Role('tutor')
+        || (activeProject202Member() && mockOwnsId(attemptId));
+      allow list: if activeProject202Role('tutor');
+      allow create: if activeProject202Role('student') && validNewMockAttempt(attemptId);
+      allow update: if (activeProject202Role('student')
+          && resource.data.uid == request.auth.uid
+          && (mockStudentSave() || mockStudentFinishInTime()
+            || mockStudentFinishLate() || mockStudentGrade()))
+        || (activeProject202Role('tutor')
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['reviewReleased', 'score', 'correct'])
+          && request.resource.data.reviewReleased is bool);
+      // A reset must archive the attempt in the same batch.
+      allow delete: if activeProject202Role('tutor')
+        && existsAfter(mockDoc('mockAttemptHistory',
+          attemptId + '_' + string(resource.data.attemptNumber)));
+    }
+
+    match /programs/project-202/mockAttemptHistory/{historyId} {
+      allow get: if activeProject202Role('tutor')
+        || (activeProject202Member() && mockOwnsId(historyId));
+      allow list: if activeProject202Role('tutor');
+      allow create: if activeProject202Role('tutor')
+        && historyId == request.resource.data.id + '_' + string(request.resource.data.attemptNumber)
+        && request.resource.data.archivedBy == request.auth.uid
+        && request.resource.data.archivedAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /programs/project-202/mockAttemptCounters/{attemptId} {
+      allow get: if activeProject202Role('tutor')
+        || (activeProject202Member() && mockOwnsId(attemptId));
+      allow list, delete: if false;
+      allow create, update: if activeProject202Role('tutor')
+        && request.resource.data.keys().hasOnly(['next'])
+        && request.resource.data.next is int
+        && request.resource.data.next >= 2
+        && request.resource.data.next <= 100;
+    }
+
     function validPracticeBank(storageId) {
       let data = request.resource.data;
       return data.keys().hasOnly([

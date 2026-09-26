@@ -16,13 +16,13 @@ import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
 import { useHashSegment } from "./hooks/useHashTab";
 import { parseWeekSegment, readSegment, weekSegment, writeSegment } from "./lib/hashRoute";
-import { setShellBusy } from "./lib/shellBusy";
+import { setShellBusy, useShellBusy } from "./lib/shellBusy";
 import { PRACTICE_INTENTS, type PracticeIntent } from "./lib/practiceIntents";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
-import { PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
+import { ModuleMockScores, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
 import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import { MOBILE_MORE_IDS, MOBILE_PRIMARY_IDS, NAV_GROUPS, NAV_ITEMS, TAB_COPY, TAB_IDS } from "./lib/navigation";
@@ -165,6 +165,8 @@ function App() {
   const dialog = useAppDialog(`${user?.uid ?? "signed-out"}:${role}:${activeTab}`);
   const { theme, toggle: toggleTheme } = useTheme();
   const isLiveShell = activeTab === "live" && capabilities.canUseLiveSession;
+  // A module mock test covers the whole app; its shortcuts must not reach the shell.
+  const mockTestRunning = useShellBusy() === "mock";
   // Session Mode is the classroom: an app update must never reload it.
   useEffect(() => {
     if (!isLiveShell) return;
@@ -179,7 +181,7 @@ function App() {
     tabs: isLiveShell ? [] : visibleNav.map((item) => () => setActiveTab(item.id)),
     paletteOpen,
     helpKey: !isLiveShell,
-    enabled: Boolean(user && trackerReady),
+    enabled: Boolean(user && trackerReady) && !mockTestRunning,
   });
   const shellReady = Boolean(user && trackerReady);
   useEffect(() => {
@@ -493,6 +495,8 @@ function App() {
             canEdit={capabilities.canEditMastery}
           />
         );
+      case "moduleMocks":
+        return <ModuleMockTests uid={user.uid} role={role!} notify={notify} />;
       case "mocks":
         return (
           <MockView
@@ -500,6 +504,7 @@ function App() {
             updateTracker={updateTracker}
             notify={notify}
             canManage={capabilities.canManageMocks}
+            moduleMockScores={<ModuleMockScores uid={user.uid} role={role!} />}
           />
         );
       case "errors":

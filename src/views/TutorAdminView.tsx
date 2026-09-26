@@ -10,7 +10,7 @@ import { getTaskStatus } from "../lib/taskStatus";
 import { cascadeReschedule, getEffectiveSessions, restoreCanonicalSession } from "../lib/schedule";
 import type { TrackerSyncStatus } from "../hooks/useTrackerSync";
 import { useAppDialog } from "../components/AppDialog";
-import { PracticeBankAdmin } from "../lazyViews";
+import { MockTestAdmin, PracticeBankAdmin } from "../lazyViews";
 import type { TrackerState } from "../types";
 import { CHECKPOINT_TIME, EmptyState, PLANNED_SESSIONS, cx } from "./shared";
 import type { Notify, UpdateTracker } from "./shared";
@@ -175,6 +175,7 @@ export function TutorAdminView({
   return (
     <div className="view-stack tutor-console">
       <PracticeBankAdmin notify={notify} />
+      <MockTestAdmin notify={notify} />
       <section className="panel approval-queue">
         <div className="panel-heading"><div><p className="eyebrow">Tutor approval</p><h3>Session completion queue</h3></div><CircleCheckBig size={21} /></div>
         {pendingSessionRequests.length ? <div className="entry-list">{pendingSessionRequests.map(({ task, request }) => <article className="approval-entry" key={task.id}><div><strong>{task.label}</strong><span>Requested {request ? new Date(request.requestedAt).toLocaleString() : ""}</span></div><div className="inline-actions"><button className="button button-primary" type="button" onClick={() => reviewSessionRequest(task.id, "approved")}><Check size={16} /> Approve</button><button className="button button-secondary" type="button" onClick={() => reviewSessionRequest(task.id, "returned")}><RotateCcw size={16} /> Return</button></div></article>)}</div> : <EmptyState icon={CircleCheckBig} title="No approvals waiting">Hamad's session-completion requests will appear here.</EmptyState>}

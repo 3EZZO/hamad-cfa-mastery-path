@@ -115,3 +115,79 @@ describe("private tutor Firestore rule boundary", () => {
     expect(receipts).toContain(".hasOnly(['status', 'revokedAtClient'])");
   });
 });
+
+describe("module mock test Firestore rule boundary", () => {
+  const mock = () => blockBetween("// ---- Module mock tests", "function validPracticeBank(storageId)");
+  const match = (path: string) => {
+    const block = mock();
+    const start = block.indexOf(`match /programs/project-202/${path}`);
+    expect(start).toBeGreaterThanOrEqual(0);
+    const next = block.indexOf("match /programs/project-202/", start + 1);
+    return block.slice(start, next < 0 ? undefined : next);
+  };
+
+  it("lets only the student create one attempt, stamped with the server clock", () => {
+    const attempts = match("mockAttempts/{attemptId}");
+    expect(attempts).toContain("allow create: if activeProject202Role('student') && validNewMockAttempt(attemptId)");
+    expect(mock()).toContain("attemptId == request.auth.uid + '_' + data.moduleId");
+    expect(mock()).toContain("data.startedAt == request.time");
+    expect(mock()).toContain("mockTestIsPublished(data.moduleId)");
+    expect(mock()).toContain("data.attemptNumber == (exists(counter) ? get(counter).data.next : 1)");
+  });
+
+  it("enforces the 12-minute deadline and freezes answers once it passes", () => {
+    expect(mock()).toContain("request.time <= attempt.startedAt + duration.value(735, 's')");
+    const late = blockBetween("function mockStudentFinishLate()", "function mockCorrectAt(");
+    expect(late).toContain("!mockDeadlineOpen(previous)");
+    expect(late).toContain(".hasOnly(['status', 'submittedAt', 'finishReason', 'lastSeenAt'])");
+    expect(late).toContain("data.finishReason == 'expired'");
+  });
+
+  it("keeps incident and keystroke logs append-only", () => {
+    expect(mock()).toContain("(previous.size() == 0 || next[0:previous.size()] == previous)");
+    expect(mock()).toContain("mockAppendOnly(data.incidents, previous.incidents, 100)");
+  });
+
+  it("accepts a score only when it equals the key applied to the frozen answers", () => {
+    const grade = blockBetween("function mockStudentGrade()", "match /programs/project-202/mockTests/{moduleId}");
+    expect(grade).toContain("previous.status in ['submitted', 'forfeited']");
+    expect(grade).toContain("previous.score == null");
+    expect(grade).toContain(".hasOnly(['score', 'correct'])");
+    expect(grade).toContain("mockCorrectAt(data, key, 7)");
+    expect(mock()).toContain("data.correct[index] == (data.answers[index] == key.correct[index])");
+  });
+
+  it("never serves the answer key or review before the attempt is locked", () => {
+    const keys = match("mockTestKeys/{moduleId}");
+    expect(keys).toContain("mockAttemptLocked(request.auth.uid + '_' + moduleId)");
+    expect(keys).toContain("allow list, delete: if false");
+    const reviews = match("mockTestReviews/{moduleId}");
+    expect(reviews).toContain("mockAttemptLocked(request.auth.uid + '_' + moduleId)");
+    expect(reviews).toContain(".data.reviewReleased == true");
+    const questions = match("mockTestQuestions/{moduleId}");
+    expect(questions).toContain("exists(mockDoc('mockAttempts', request.auth.uid + '_' + moduleId))");
+    expect(mock()).toContain("get(mockDoc('mockAttempts', attemptId)).data.status in ['submitted', 'forfeited']");
+  });
+
+  it("hides drafts and lets only the tutor author, publish, release and reset", () => {
+    const tests = match("mockTests/{moduleId}");
+    expect(tests).toContain("resource == null || resource.data.status == 'published'");
+    expect(tests).toContain("allow create, update: if activeProject202Role('tutor') && validMockTestMeta(moduleId)");
+    for (const path of ["mockTestQuestions/{moduleId}", "mockTestKeys/{moduleId}", "mockTestReviews/{moduleId}"]) {
+      const block = match(path);
+      expect(block).toContain("allow create, update: if activeProject202Role('tutor')");
+      expect(block).toContain("mockTestIsDraftAfter(moduleId)");
+      expect(block).not.toContain("activeProject202Role('student')");
+    }
+    const attempts = match("mockAttempts/{attemptId}");
+    expect(attempts).toContain(".hasOnly(['reviewReleased', 'score', 'correct'])");
+    expect(attempts).toContain("allow delete: if activeProject202Role('tutor')");
+    expect(attempts).toContain("existsAfter(mockDoc('mockAttemptHistory'");
+    const history = match("mockAttemptHistory/{historyId}");
+    expect(history).toContain("allow update, delete: if false");
+    expect(history).not.toContain("activeProject202Role('student')");
+    const counters = match("mockAttemptCounters/{attemptId}");
+    expect(counters).toContain("allow create, update: if activeProject202Role('tutor')");
+    expect(counters).not.toContain("activeProject202Role('student')");
+  });
+});
