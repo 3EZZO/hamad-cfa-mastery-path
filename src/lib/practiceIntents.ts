@@ -4,6 +4,7 @@
  */
 export const PRACTICE_INTENTS = {
   quick5: { label: "Start Quick 5", hint: "Five adaptive questions", mode: "quick", count: 5 },
+  review: { label: "Review due questions", hint: "Spaced review, most overdue first", mode: "quick", count: 10 },
   repair: { label: "Start Repair Queue", hint: "Revisit mistakes and uncertainty", mode: "repair", count: 10 },
   exam: { label: "Start Exam Drill", hint: "Twenty timed questions", mode: "exam", count: 20 },
   calculator: { label: "Open BA II Plus", hint: "Calculator drawer", mode: null, count: 0 },

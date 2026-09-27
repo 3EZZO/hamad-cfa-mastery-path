@@ -16,6 +16,11 @@ describe("practice intents", () => {
     expect(parsePracticeIntent("__proto__")).toBeNull();
   });
 
+  it("runs due review as an ordinary quick set (no new run mode)", () => {
+    expect(PRACTICE_INTENTS.review).toMatchObject({ mode: "quick", count: 10 });
+    expect(intentAllowedFor("review", false)).toBe(false);
+  });
+
   it("limits run-starting intents to accounts that can practise", () => {
     expect(intentAllowedFor("quick5", false)).toBe(false);
     expect(intentAllowedFor("quick5", true)).toBe(true);

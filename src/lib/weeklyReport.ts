@@ -1,6 +1,7 @@
 import { getPlanTasks, getWeekSessions, PLAN, TOPICS } from "../data/plan";
 import type { PlanWeek, TrackerState } from "../types";
 import { formatDate } from "./dates";
+import { isRetestDue } from "./retests";
 import { buildRiskIndicators, type RiskIndicator } from "./risk";
 import { isTaskComplete } from "./taskStatus";
 
@@ -86,9 +87,7 @@ export function buildWeeklyReport(
       mastery: tracker.topicMastery[topic] ?? 0,
     })),
     openMistakes: openErrors.length,
-    dueRetests: openErrors.filter(
-      (entry) => entry.revisitDate && entry.revisitDate <= today,
-    ).length,
+    dueRetests: openErrors.filter((entry) => isRetestDue(entry, today)).length,
     mockSummary: mocks.length
       ? mocks.map((entry) => `${entry.label}: ${entry.score}%`).join("; ")
       : "No full mock recorded this week",
