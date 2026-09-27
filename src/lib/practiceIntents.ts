@@ -4,6 +4,7 @@
  */
 export const PRACTICE_INTENTS = {
   quick5: { label: "Start Quick 5", hint: "Five adaptive questions", mode: "quick", count: 5 },
+  review: { label: "Review due questions", hint: "Spaced review, most overdue first", mode: "quick", count: 10 },
   repair: { label: "Start Repair Queue", hint: "Revisit mistakes and uncertainty", mode: "repair", count: 10 },
   exam: { label: "Start Exam Drill", hint: "Twenty timed questions", mode: "exam", count: 20 },
   calculator: { label: "Open BA II Plus", hint: "Calculator drawer", mode: null, count: 0 },
@@ -15,6 +16,17 @@ export function parsePracticeIntent(segment: string): PracticeIntent | null {
   return Object.prototype.hasOwnProperty.call(PRACTICE_INTENTS, segment)
     ? (segment as PracticeIntent)
     : null;
+}
+
+const MODULE_SEGMENT = /^module-([a-z0-9][a-z0-9-]*)$/i;
+
+/** `#practice/module-<moduleId>`: a focused module set, e.g. from a Progress heatmap cell. */
+export function practiceModuleSegment(moduleId: string): string {
+  return `module-${moduleId}`;
+}
+
+export function parsePracticeModuleSegment(segment: string): string | null {
+  return MODULE_SEGMENT.exec(segment)?.[1] ?? null;
 }
 
 /** Intents that start a run are for the student (or a rehearsal); the calculator is for anyone. */

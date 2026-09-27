@@ -21,11 +21,11 @@ export function getShellBusy(): ShellBusyReason | null {
   return reason;
 }
 
-function subscribe(listener: () => void): () => void {
+export function subscribeShellBusy(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
 export function useShellBusy(): ShellBusyReason | null {
-  return useSyncExternalStore(subscribe, getShellBusy, () => null);
+  return useSyncExternalStore(subscribeShellBusy, getShellBusy, () => null);
 }

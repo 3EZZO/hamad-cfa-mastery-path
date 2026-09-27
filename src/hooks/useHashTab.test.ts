@@ -159,6 +159,57 @@ describe("useHashTab", () => {
   });
 });
 
+describe("useHashTab legacy links", () => {
+  it("rewrites a retired tab's link to the view that now hosts it", async () => {
+    hash = "#errors";
+    await mount();
+    expect(latest.tab).toBe("practice");
+    expect(hash).toBe("#practice/mistakes");
+  });
+
+  it("follows a retired link from back/forward too", async () => {
+    await mount();
+    await act(async () => fireHashChange("#errors"));
+    expect(latest.tab).toBe("practice");
+    expect(hash).toBe("#practice/mistakes");
+  });
+
+  it("never redirects a tab that still exists, and falls back when the new home is unknown", async () => {
+    hash = "#mocks";
+    await mount();
+    expect(latest.tab).toBe("mocks");
+    expect(hash).toBe("#mocks");
+    await act(async () => tree!.unmount());
+
+    hash = "#mastery"; // its new home, progress, is not a tab here
+    await mount();
+    expect(latest.tab).toBe("dashboard");
+    expect(hash).toBe("#mastery");
+  });
+});
+
+describe("useHashTab when the allowed tabs change", () => {
+  let setAllowed: (next: readonly string[]) => void = () => undefined;
+  let current = "";
+  function LayoutProbe({ allowed }: { allowed: readonly string[] }) {
+    const [tab] = useHashTab<string>(allowed, "dashboard");
+    current = tab;
+    return createElement("span", null, tab);
+  }
+
+  it("moves a tab the new layout no longer offers to its new home", async () => {
+    hash = "#errors";
+    let allowed: readonly string[] = ["dashboard", "practice", "errors"];
+    setAllowed = (next) => { allowed = next; };
+    await act(async () => { tree = create(createElement(LayoutProbe, { allowed })); });
+    expect(current).toBe("errors");
+    setAllowed(["dashboard", "practice"]);
+    await act(async () => tree!.update(createElement(LayoutProbe, { allowed })));
+    expect(current).toBe("practice");
+    expect(hash).toBe("#practice/mistakes");
+  });
+});
+
 describe("useHashSegment", () => {
   let replaceState: ReturnType<typeof vi.fn>;
   let latestSegment: { segment: string; set: (segment: string) => void };
@@ -191,6 +242,21 @@ describe("useHashSegment", () => {
     expect(replaceState).toHaveBeenCalledWith(null, "", "#weekly/week-3");
     expect(hash).toBe("#weekly/week-3");
     expect(listeners.hashchange).toHaveLength(1);
+  });
+
+  it("sees the linked segment on the very render that activates the tab", async () => {
+    const seen: string[] = [];
+    function Recorder({ activeTab }: { activeTab: string }) {
+      const [segment] = useHashSegment("roadmap", activeTab);
+      seen.push(`${activeTab}:${segment}`);
+      return null;
+    }
+    hash = "#dashboard";
+    await act(async () => { tree = create(createElement(Recorder, { activeTab: "dashboard" })); });
+    hash = "#roadmap/week-18";
+    await act(async () => tree!.update(createElement(Recorder, { activeTab: "roadmap" })));
+    expect(seen.filter((entry) => entry.startsWith("roadmap:"))).not.toContain("roadmap:");
+    expect(seen.at(-1)).toBe("roadmap:week-18");
   });
 
   it("stays inert while another tab is active", async () => {

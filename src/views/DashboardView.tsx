@@ -1,14 +1,51 @@
 // Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
-import { Archive, BookOpenCheck, CalendarClock, Check, ChevronDown, ChevronRight, CircleCheckBig, Gauge, GraduationCap, ListChecks, PlayCircle, ShieldCheck, Sparkles, TimerReset, TrendingUp } from "lucide-react";
+import { Archive, BookOpenCheck, CalendarClock, Check, ChevronDown, ChevronRight, CircleCheckBig, ClipboardCheck, Gauge, GraduationCap, ListChecks, PlayCircle, RotateCcw, ShieldCheck, Sparkles, TimerReset, TrendingUp } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { getOverallProgressForState, getPlanTasks, getRequiredTasks, getWeekProgressForState, PLAN, TOPICS } from "../data/plan";
 import program from "../data/program.json";
 import { daysUntilExam, formatDate, todayDateOnly, TOTAL_WEEKS } from "../lib/dates";
 import { buildRiskIndicators } from "../lib/risk";
 import { getTaskStatus, isTaskComplete } from "../lib/taskStatus";
+import type { PracticeIntent } from "../lib/practiceIntents";
+import { buildTodayQueue, todayQueueMinutes, type TodayItem } from "../lib/todayQueue";
+import { useTodaySources } from "../hooks/useTodaySources";
 import { PlanRouteGraphic } from "../components/PlanRouteGraphic";
-import type { TrackerState } from "../types";
+import type { PlanTask, TrackerState } from "../types";
 import type { TabId } from "../lib/navigation";
 import { EmptyState, EvidenceRow, MetricCard, ProgressBar, TaskChecklist, average, clamp, cx, humanizeTaskDetail, sortByDateDesc } from "./shared";
+
+const TODAY_ICONS: Record<TodayItem["kind"], LucideIcon> = {
+  overdue: CalendarClock,
+  moduleTest: ClipboardCheck,
+  retest: Archive,
+  review: RotateCcw,
+  task: ListChecks,
+};
+
+function taskActionLabel(task: PlanTask, tracker: TrackerState, role: "tutor" | "student"): string {
+  if (task.kind !== "session") return "Mark complete";
+  if (role === "tutor") return "Open Session Mode";
+  const status = getTaskStatus(task, tracker);
+  return status === "requested"
+    ? "Withdraw request"
+    : status === "returned"
+      ? "Request approval again"
+      : "Request tutor approval";
+}
+
+function leadHeading(item: TodayItem): string {
+  if (item.kind === "overdue") return "Catch up first";
+  if (item.kind !== "task" || !item.task) return item.title;
+  return item.task.kind === "session" ? item.task.label : item.task.kind === "evidence" ? "Check your progress" : "Your next study task";
+}
+
+function leadText(item: TodayItem): string {
+  if (item.kind === "overdue") return `${item.title} — ${item.detail}`;
+  if (item.kind === "task" && item.task) {
+    return item.task.kind === "session" ? humanizeTaskDetail(item.task.detail) : item.task.label;
+  }
+  return item.detail;
+}
 
 export function DashboardView({
   tracker,
@@ -16,6 +53,9 @@ export function DashboardView({
   rawProgramWeek,
   onToggleTask,
   onNavigate,
+  onOpenPractice,
+  onOpenModuleTest,
+  studentUid = null,
   role,
   loading,
 }: {
@@ -24,6 +64,12 @@ export function DashboardView({
   rawProgramWeek: number;
   onToggleTask: (id: string) => void;
   onNavigate: (tab: TabId, week?: number) => void;
+  /** Student only: starts a practice intent (e.g. due review). */
+  onOpenPractice?: (intent: PracticeIntent) => void;
+  /** Student only: opens a module test's start screen. */
+  onOpenModuleTest?: (moduleId: string) => void;
+  /** Set for the student; enables the device/cloud parts of Today. */
+  studentUid?: string | null;
   role: "tutor" | "student";
   loading?: boolean;
 }) {
@@ -63,24 +109,65 @@ export function DashboardView({
   const incompleteTasks = getPlanTasks(week, tracker.sessionOverrides).filter(
     (task) => !isTaskComplete(task, tracker),
   );
-  const nextTask = incompleteTasks[0];
   const nextTasks = incompleteTasks.slice(0, 4);
-  const nextTaskStatus = nextTask ? getTaskStatus(nextTask, tracker) : null;
-  const nextTaskAction = nextTask?.kind === "session"
-    ? role === "tutor"
-      ? "Open Session Mode"
-      : nextTaskStatus === "requested"
-        ? "Withdraw request"
-        : nextTaskStatus === "returned"
-          ? "Request approval again"
-          : "Request tutor approval"
-    : "Mark complete";
   const programState =
     rawProgramWeek === 0
       ? "Pre-launch"
       : rawProgramWeek > TOTAL_WEEKS
         ? "Mission complete"
         : `Week ${rawProgramWeek} live`;
+  const sources = useTodaySources(role === "student" ? studentUid : null);
+  const todayItems = buildTodayQueue({
+    tracker,
+    week: rawProgramWeek > TOTAL_WEEKS ? rawProgramWeek : currentWeek,
+    today: now,
+    dueReviews: sources.dueReviews,
+    pendingModuleTests: sources.pendingModuleTests,
+  });
+  const [lead, ...laterItems] = todayItems;
+  const todayTotal = todayQueueMinutes(todayItems);
+  const todaySummary = [
+    todayTotal.minutes ? `About ${todayTotal.minutes} min of timed work` : "",
+    todayTotal.untimed ? `${todayTotal.untimed} plan ${todayTotal.untimed === 1 ? "task" : "tasks"}` : "",
+  ].filter(Boolean).join(" · ");
+  const isStudent = role === "student";
+  const progress = sources.moduleTestProgress;
+  const pendingTests = sources.pendingModuleTests ?? [];
+  const nextTestDeadline = pendingTests.map((test) => test.deadline).filter((value): value is string => Boolean(value)).sort()[0];
+  const testInProgress = pendingTests.some((test) => test.inProgress);
+  const testStrip = progress && progress.published
+    ? [
+      `Module tests: ${progress.completed} of ${progress.published} done`,
+      testInProgress ? "one in progress" : "",
+      nextTestDeadline ? `next due ${formatDate(nextTestDeadline.slice(0, 10), { weekday: "short", day: "numeric", month: "short" })}` : "",
+    ].filter(Boolean).join(" · ")
+    : "";
+  const leadResumes = lead?.action.type === "moduleTest"
+    && pendingTests.some((test) => test.inProgress && lead.action.type === "moduleTest" && test.moduleId === lead.action.moduleId);
+  const openItem = (item: TodayItem) => {
+    const action = item.action;
+    if (action.type === "week") onNavigate("weekly", action.week);
+    else if (action.type === "mistakes") onNavigate("errors");
+    else if (action.type === "practice") {
+      if (isStudent && onOpenPractice) onOpenPractice(action.intent);
+      else onNavigate("practice");
+    } else if (isStudent && onOpenModuleTest) onOpenModuleTest(action.moduleId);
+    else onNavigate("moduleMocks");
+  };
+  const leadActionLabel = !lead
+    ? ""
+    : lead.task
+      ? taskActionLabel(lead.task, tracker, role)
+      : lead.kind === "moduleTest"
+        ? isStudent ? leadResumes ? "Resume the test" : "Open the test" : "View module tests"
+        : lead.kind === "review"
+          ? isStudent ? "Start review" : "Open Practice"
+          : "Open Mistake Review";
+  const runLead = () => {
+    if (!lead) return;
+    if (lead.task) onToggleTask(lead.task.id);
+    else openItem(lead);
+  };
 
   return (
     <div className="view-stack home-view">
@@ -91,29 +178,47 @@ export function DashboardView({
         </div>
         <div className="today-focus">
           <div className="today-focus-copy">
-            <p className="hero-kicker">YOUR NEXT STEP · WEEK {String(currentWeek).padStart(2, "0")}</p>
-            {nextTask ? (
+            <p className="hero-kicker">TODAY · WEEK {String(currentWeek).padStart(2, "0")}</p>
+            {testStrip && <p className="today-test-strip"><ClipboardCheck size={15} aria-hidden="true" /> {testStrip}</p>}
+            {lead ? (
               <>
-                <h1>{nextTask.kind === "session" ? nextTask.label : nextTask.kind === "evidence" ? "Check your progress" : "Your next study task"}</h1>
-                <p className={nextTask.kind === "session" ? undefined : "hero-task-instruction"}>{nextTask.kind === "session" ? humanizeTaskDetail(nextTask.detail) : nextTask.label}</p>
+                <h1>{leadHeading(lead)}</h1>
+                <p className={lead.kind === "task" && lead.task?.kind !== "session" ? "hero-task-instruction" : undefined}>{leadText(lead)}</p>
                 <div className="hero-actions">
-                  <button className="button button-accent" type="button" onClick={() => onToggleTask(nextTask.id)}>
-                    {nextTask.kind === "session" && role === "tutor" ? <PlayCircle size={17} /> : <Check size={17} />} {nextTaskAction}
+                  <button className="button button-accent" type="button" onClick={runLead}>
+                    {lead.task?.kind === "session" && role === "tutor" ? <PlayCircle size={17} /> : lead.task ? <Check size={17} /> : <ChevronRight size={17} />} {leadActionLabel}
                   </button>
-                  <button className="button button-dark-ghost" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
+                  <button className="button button-dark-ghost" type="button" onClick={() => onNavigate("weekly", lead.action.type === "week" ? lead.action.week : currentWeek)}>
                     View this week <ChevronRight size={17} />
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <h1>This week is complete.</h1>
+                <h1>{rawProgramWeek > TOTAL_WEEKS ? "The plan is complete." : "Nothing else is due today."}</h1>
                 <p>Review the evidence, then move forward only with your tutor's direction.</p>
                 <button className="button button-accent" type="button" onClick={() => onNavigate("weekly", currentWeek)}>
                   Review the week <ChevronRight size={17} />
                 </button>
               </>
             )}
+            {laterItems.length > 0 && (
+              <ol className="today-queue" aria-label="Also today">
+                {laterItems.map((item) => {
+                  const Icon = item.task?.kind === "session" ? GraduationCap : TODAY_ICONS[item.kind];
+                  return (
+                    <li key={item.id}>
+                      <button type="button" onClick={() => openItem(item)}>
+                        <Icon size={17} aria-hidden="true" />
+                        <span className="today-queue-copy"><strong>{item.title}</strong><small>{item.kind === "task" && item.task ? humanizeTaskDetail(item.detail) : item.detail}</small></span>
+                        {item.minutes != null && <span className="today-queue-minutes">{item.minutes} min</span>}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+            {todaySummary && <p className="today-queue-total">{todaySummary}</p>}
           </div>
           <aside className="week-snapshot">
             <div className="week-snapshot-header">

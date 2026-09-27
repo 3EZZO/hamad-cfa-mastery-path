@@ -1,7 +1,7 @@
 import { CalendarPlus, ChevronDown, ChevronRight, CircleAlert, CircleCheckBig, Command, Calculator, Clock3, Download, LogOut, Menu, Moon, MoreHorizontal, PlayCircle, RotateCcw, ShieldCheck, Sparkles, Sun, Target, Upload, X } from "lucide-react";
 import { type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { getPlanTasks, PLAN } from "./data/plan";
-import { daysUntilExam, getProgramWeek, TOTAL_WEEKS } from "./lib/dates";
+import { daysUntilExam, getProgramWeek, TOTAL_WEEKS, todayDateOnly } from "./lib/dates";
 import { downloadBackup, readBackup } from "./lib/storage";
 import { downloadProject202Calendar } from "./lib/calendarExport";
 import { addPracticeMistake, bridgedQuestionIds } from "./lib/practiceMistakeBridge";
@@ -15,9 +15,10 @@ import { CommandPalette } from "./components/CommandPalette";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
 import { useHashSegment } from "./hooks/useHashTab";
+import { useWeekMirror } from "./hooks/useWeekMirror";
 import { buildHash, parseWeekSegment, readSegment, weekSegment, writeSegment } from "./lib/hashRoute";
 import { setShellBusy, useShellBusy } from "./lib/shellBusy";
-import { PRACTICE_INTENTS, type PracticeIntent } from "./lib/practiceIntents";
+import { PRACTICE_INTENTS, practiceModuleSegment, type PracticeIntent } from "./lib/practiceIntents";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
@@ -25,7 +26,8 @@ import { useDialogFocus } from "./features/liveSession/useDialogFocus";
 import { MockReminderHost, ModuleMockScores, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
 import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
-import { MOBILE_MORE_IDS, MOBILE_PRIMARY_IDS, NAV_GROUPS, NAV_ITEMS, TAB_COPY, TAB_IDS } from "./lib/navigation";
+import { TAB_COPY, TUTOR_TAB_IDS, navConfig, navItem, navigationTarget, shortcutTabs, visibleNavItems } from "./lib/navigation";
+import { setNavLayout, useNavLayout } from "./lib/navLayout";
 import type { TabId } from "./lib/navigation";
 import { EmptyState, PageHeading, cx, makeId, syncPresentation } from "./views/shared";
 import type { Notify } from "./views/shared";
@@ -37,6 +39,10 @@ import { SessionLogView } from "./views/SessionLogView";
 import { PracticeLogView } from "./views/PracticeLogView";
 import { MasteryView } from "./views/MasteryView";
 import { MockView } from "./views/MockView";
+import { ProgressView, parseProgressSection } from "./views/ProgressView";
+import { PracticeHubView, practiceSectionFor } from "./views/PracticeHubView";
+import { PlanView, parsePlanSegment, planSegment } from "./views/PlanView";
+import { isRetestDue } from "./lib/retests";
 import { ErrorVaultView } from "./views/ErrorVaultView";
 import { TutorAdminView } from "./views/TutorAdminView";
 import { NotesView } from "./views/NotesView";
@@ -103,23 +109,49 @@ function WorkspaceActions({
 function App() {
   const rawProgramWeek = getProgramWeek();
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
-  const [activeTab, setActiveTab] = useHashTab<TabId>(TAB_IDS, "dashboard", {
+  const navLayout = useNavLayout();
+  const nav = navConfig(navLayout);
+  const [activeTab, setActiveTab] = useHashTab<TabId>(nav.tabs, nav.home, {
     title: (tab) => `${TAB_COPY[tab].title} · Hamad CFA Mastery`,
   });
   // This Week mirrors its week to `#weekly/week-N` so reload, back/forward
   // and pasted links land on the same week; a deep link wins over the
   // programme week only on first load.
   const [weeklySegment, setWeeklySegment] = useHashSegment("weekly", activeTab);
+  // Plan › This week does the same through `#plan/week-N` (see PlanView).
+  const [planSegmentValue, setPlanSegment] = useHashSegment("plan", activeTab);
+  const planRoute = parsePlanSegment(planSegmentValue);
   const [selectedWeek, setSelectedWeek] = useState(
-    () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS) ?? initialWeek,
+    () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS)
+      ?? (parsePlanSegment(readSegment("plan")).section === "week" ? parsePlanSegment(readSegment("plan")).week : null)
+      ?? initialWeek,
   );
   useEffect(() => {
     const linked = parseWeekSegment(weeklySegment, TOTAL_WEEKS);
     if (linked) setSelectedWeek(linked);
   }, [weeklySegment]);
   useEffect(() => {
-    if (activeTab === "weekly") setWeeklySegment(weekSegment(selectedWeek));
-  }, [activeTab, selectedWeek, setWeeklySegment]);
+    if (planRoute.section === "week" && planRoute.week) setSelectedWeek(planRoute.week);
+  }, [planRoute.section, planRoute.week]);
+  useWeekMirror({
+    active: activeTab === "weekly",
+    readLinkedWeek: () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS),
+    writeWeek: (week) => setWeeklySegment(weekSegment(week)),
+    selectedWeek,
+    setSelectedWeek,
+  });
+  useWeekMirror({
+    active: activeTab === "plan",
+    readLinkedWeek: () => {
+      const route = parsePlanSegment(readSegment("plan"));
+      return route.section === "week" ? route.week : undefined;
+    },
+    writeWeek: (week) => setPlanSegment(planSegment("week", week)),
+    selectedWeek,
+    setSelectedWeek,
+  });
+  // The Study Plan tab opens and scrolls to `#roadmap/week-N`.
+  const [roadmapSegment, setRoadmapSegment] = useHashSegment("roadmap", activeTab);
   // Practice intents travel as `#practice/<intent>`; the coach clears the
   // segment once it has acted, so the URL never replays an action.
   const [practiceSegment, setPracticeSegment] = useHashSegment("practice", activeTab);
@@ -130,6 +162,8 @@ function App() {
   const openModuleMock = useCallback((moduleId: string) => {
     window.location.hash = buildHash("moduleMocks", moduleId);
   }, []);
+  // `#progress/<section>`: Topics (heatmap), Module tests or Mocks.
+  const [progressSegment, setProgressSegment] = useHashSegment("progress", activeTab);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
@@ -180,12 +214,11 @@ function App() {
     setShellBusy("session");
     return () => setShellBusy(null);
   }, [isLiveShell]);
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => capabilities.canUseLiveSession || !NAV_GROUPS.some((group) => group.label === "Tutor" && group.ids.includes(item.id)),
-  );
+  const visibleNav = visibleNavItems(nav, capabilities.canUseLiveSession);
+  const shortcutIds = shortcutTabs(nav, visibleNav.map((item) => item.id));
   useGlobalShortcuts({
     onTogglePalette: () => setPaletteOpen((open) => !open),
-    tabs: isLiveShell ? [] : visibleNav.map((item) => () => setActiveTab(item.id)),
+    tabs: isLiveShell ? [] : shortcutIds.map((id) => () => setActiveTab(id)),
     paletteOpen,
     helpKey: !isLiveShell,
     enabled: Boolean(user && trackerReady) && !mockTestRunning,
@@ -256,9 +289,19 @@ function App() {
 
   const navigate = (tab: TabId, week?: number) => {
     if (week) setSelectedWeek(week);
-    setActiveTab(tab);
     setMobileMoreOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    const target = navigationTarget(nav, tab, week);
+    if (!target) return;
+    setActiveTab(target.tab);
+    if (target.segment === null) return;
+    // A screen that now lives inside a destination (views still ask for
+    // "weekly", "errors", …): open it at that section. The tab switch writes
+    // the hash synchronously, so the segment is written after it.
+    writeSegment(target.tab, target.segment);
+    if (target.tab === "plan") setPlanSegment(target.segment);
+    else if (target.tab === "practice") setPracticeSegment(target.segment);
+    else if (target.tab === "progress") setProgressSegment(target.segment);
   };
 
   const handleExport = () => {
@@ -272,6 +315,12 @@ function App() {
     // so the segment is already there when the coach mounts or re-reads it.
     writeSegment("practice", intent);
     setPracticeSegment(intent);
+  };
+  const openPracticeModule = (moduleId: string) => {
+    const segment = practiceModuleSegment(moduleId);
+    navigate("practice");
+    writeSegment("practice", segment);
+    setPracticeSegment(segment);
   };
   const practiceCommands: PaletteCommand[] = !isLiveShell
     ? (Object.keys(PRACTICE_INTENTS) as PracticeIntent[])
@@ -288,16 +337,25 @@ function App() {
     : [];
 
   const commands: PaletteCommand[] = [
-    ...visibleNav.map<PaletteCommand>((item, index) => ({
+    ...visibleNav.map<PaletteCommand>((item) => ({
       id: `go-${item.id}`,
       label: item.label,
       group: "Go to",
       hint: item.hint ?? TAB_COPY[item.id].description,
-      keywords: [item.mobileLabel],
-      shortcut: index < 9 ? `Alt+${index + 1}` : undefined,
+      keywords: [item.mobileLabel, ...(item.keywords ?? [])],
+      shortcut: shortcutIds.includes(item.id) ? `Alt+${shortcutIds.indexOf(item.id) + 1}` : undefined,
       icon: item.icon,
       run: () => navigate(item.id),
     })),
+    {
+      id: "nav-layout",
+      label: navLayout === "classic" ? "Use the new navigation" : "Use classic navigation",
+      group: "Actions",
+      hint: navLayout === "classic" ? "Tests · Today · Plan · Practice · Progress" : "The earlier tab list, on this device only",
+      keywords: ["navigation", "layout", "classic", "tabs", "menu"],
+      icon: Menu,
+      run: () => setNavLayout(navLayout === "classic" ? "destinations" : "classic"),
+    },
     {
       id: "theme",
       label: theme === "dark" ? "Switch to light theme" : "Switch to dark theme",
@@ -435,6 +493,9 @@ function App() {
             rawProgramWeek={rawProgramWeek}
             onToggleTask={toggleTask}
             onNavigate={navigate}
+            onOpenPractice={openPractice}
+            onOpenModuleTest={openModuleMock}
+            studentUid={role === "student" ? user.uid : null}
             role={role!}
             loading={syncStatus === "loading"}
           />
@@ -444,7 +505,48 @@ function App() {
           <RoadmapView
             tracker={tracker}
             currentWeek={initialWeek}
-            onNavigate={navigate}
+            focusWeek={parseWeekSegment(roadmapSegment, TOTAL_WEEKS)}
+            onFocusWeek={(week) => setRoadmapSegment(weekSegment(week))}
+            onOpenWeek={(week) => navigate("weekly", week)}
+          />
+        );
+      case "plan":
+        return (
+          <PlanView
+            section={planRoute.section}
+            onSection={(section) => setPlanSegment(planSegment(section, section === "week" ? selectedWeek : null))}
+            week={(
+              <WeeklyView
+                tracker={tracker}
+                selectedWeek={selectedWeek}
+                setSelectedWeek={setSelectedWeek}
+                onToggleTask={toggleTask}
+                notify={notify}
+                role={role!}
+              />
+            )}
+            roadmap={(
+              <RoadmapView
+                tracker={tracker}
+                currentWeek={initialWeek}
+                focusWeek={planRoute.section === "roadmap" ? planRoute.week : null}
+                onFocusWeek={(week) => setPlanSegment(planSegment("roadmap", week))}
+                onOpenWeek={(week) => {
+                  setSelectedWeek(week);
+                  setPlanSegment(planSegment("week", week));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            )}
+            sessions={(
+              <SessionLogView
+                tracker={tracker}
+                currentWeek={initialWeek}
+                updateTracker={updateTracker}
+                notify={notify}
+                canManage={capabilities.canManageTutorSessions}
+              />
+            )}
           />
         );
       case "weekly":
@@ -470,28 +572,57 @@ function App() {
         );
       case "practice":
         return (
-          <PracticeCoach
-            uid={user.uid}
-            role={role!}
-            notify={notify}
-            onComplete={(summary) => updateTracker((current) => ({
-              ...current,
-              practiceLogs: [
-                { id: makeId("practice"), ...summary },
-                ...current.practiceLogs,
-              ],
-            }))}
-            onAddMistake={(entry) => updateTracker((current) => addPracticeMistake(current, entry).tracker)}
-            bridgedQuestionIds={bridgedQuestionIds(tracker.errorEntries)}
-            intent={practiceSegment}
-            onIntentHandled={() => setPracticeSegment("")}
-            manualLog={(
-              <PracticeLogView
+          <PracticeHubView
+            segment={practiceSegment}
+            onSegment={setPracticeSegment}
+            dueRetests={tracker.errorEntries.filter((entry) => isRetestDue(entry, todayDateOnly())).length}
+            practise={(
+              <PracticeCoach
+                uid={user.uid}
+                role={role!}
+                notify={notify}
+                onComplete={(summary) => updateTracker((current) => ({
+                  ...current,
+                  practiceLogs: [
+                    { id: makeId("practice"), ...summary },
+                    ...current.practiceLogs,
+                  ],
+                }))}
+                onAddMistake={(entry) => updateTracker((current) => addPracticeMistake(current, entry).tracker)}
+                bridgedQuestionIds={bridgedQuestionIds(tracker.errorEntries)}
+                intent={practiceSegment}
+                onIntentHandled={() => setPracticeSegment("")}
+                manualLog={(
+                  <PracticeLogView
+                    tracker={tracker}
+                    updateTracker={updateTracker}
+                    notify={notify}
+                  />
+                )}
+              />
+            )}
+            mistakes={(
+              <ErrorVaultView
                 tracker={tracker}
                 updateTracker={updateTracker}
                 notify={notify}
               />
             )}
+          />
+        );
+      case "progress":
+        return (
+          <ProgressView
+            section={parseProgressSection(progressSegment)}
+            onSection={setProgressSegment}
+            tracker={tracker}
+            updateTracker={updateTracker}
+            notify={notify}
+            role={role!}
+            uid={user.uid}
+            canEditMastery={capabilities.canEditMastery}
+            canManageMocks={capabilities.canManageMocks}
+            onPracticeModule={openPracticeModule}
           />
         );
       case "mastery":
@@ -510,6 +641,9 @@ function App() {
             notify={notify}
             openModuleId={moduleMocksSegment}
             onOpenHandled={clearModuleMocksSegment}
+            onOpenMistakes={() => navigate("errors")}
+            onOpenRepair={() => openPractice("repair")}
+            onOpenReminders={() => navigate("coach")}
           />
         );
       case "mocks":
@@ -629,15 +763,15 @@ function App() {
     );
   }
 
-  const sidebarGroups = NAV_GROUPS.filter(
+  const sidebarGroups = nav.groups.filter(
     (group) => group.label !== "Tutor" || capabilities.canUseLiveSession,
   );
   const sidebarIds = sidebarGroups.flatMap((group) => group.ids);
   // The "More" button stands in for sections that live behind the sheet.
-  const mobileTabbable: TabId | "more" = MOBILE_PRIMARY_IDS.includes(activeTab) ? activeTab : "more";
+  const mobileTabbable: TabId | "more" = nav.mobilePrimary.includes(activeTab) ? activeTab : "more";
 
   return (
-    <div className={cx("app-shell", activeTab === "practice" && "sidebar-collapsed")}>
+    <div className={cx("app-shell", activeTab === "practice" && practiceSectionFor(practiceSegment) === "practise" && "sidebar-collapsed")}>
       <a className="skip-link" href="#tracker-content">Skip to content</a>
       <aside className="sidebar">
         <div className="brand-lockup">
@@ -661,7 +795,7 @@ function App() {
             <div className="nav-group" key={group.label}>
               <span className="nav-group-label">{group.label}</span>
               {group.ids.map((id) => {
-                const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
+                const item = navItem(id);
                 const Icon = item.icon;
                 return (
                   <button
@@ -745,6 +879,10 @@ function App() {
               <Upload size={16} />
               <span>Import backup<small>Restore shared tracker data</small></span>
             </button>}
+            <button type="button" onClick={() => setNavLayout(navLayout === "classic" ? "destinations" : "classic")}>
+              <Menu size={16} />
+              <span>{navLayout === "classic" ? "Use the new navigation" : "Use classic navigation"}<small>{navLayout === "classic" ? "Tests · Today · Plan · Practice · Progress" : "The earlier tab list, on this device only"}</small></span>
+            </button>
             <button
               className="workspace-signout"
               type="button"
@@ -768,8 +906,8 @@ function App() {
         <SyncRecoveryNotice state={syncStatus} message={syncError} onRetry={retrySync} />
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrow-key delegation for the buttons inside */}
         <nav className="mobile-nav" aria-label="Primary project sections" onKeyDown={mobileNavKeyDown}>
-          {MOBILE_PRIMARY_IDS.map((id) => {
-            const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
+          {nav.mobilePrimary.map((id) => {
+            const item = navItem(id);
             const Icon = item.icon;
             return (
               <button
@@ -788,7 +926,7 @@ function App() {
           <button
             className={cx(
               "mobile-nav-button",
-              (mobileMoreOpen || MOBILE_MORE_IDS.includes(activeTab)) && "is-active",
+              (mobileMoreOpen || nav.mobileMore.includes(activeTab)) && "is-active",
             )}
             type="button"
             tabIndex={mobileTabbable === "more" ? 0 : -1}
@@ -802,7 +940,8 @@ function App() {
         </nav>
 
         <div className="page-shell" id="tracker-content" tabIndex={-1}>
-          {activeTab !== "dashboard" && activeTab !== "weekly" && <PageHeading tab={activeTab} />}
+          {/* Home, This Week and Module Tests open with their own hero heading. */}
+          {activeTab !== "dashboard" && activeTab !== "weekly" && activeTab !== "moduleMocks" && <PageHeading tab={activeTab} />}
           <Suspense fallback={<ViewSkeleton label={`Loading ${TAB_COPY[activeTab].title}`} />}>{renderView()}</Suspense>
         </div>
       </main>
@@ -823,12 +962,10 @@ function App() {
               <button ref={mobileCloseRef} className="icon-button" type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close menu"><X size={19} /></button>
             </header>
             <div className="mobile-more-grid">
-              {MOBILE_MORE_IDS.filter(
-                (id) =>
-                  (id !== "live" && id !== "coach" && id !== "payments") ||
-                  capabilities.canUseLiveSession,
+              {nav.mobileMore.filter(
+                (id) => !TUTOR_TAB_IDS.includes(id) || capabilities.canUseLiveSession,
               ).map((id) => {
-                const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
+                const item = navItem(id);
                 const Icon = item.icon;
                 return (
                   <button
