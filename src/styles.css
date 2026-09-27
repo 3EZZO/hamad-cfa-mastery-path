@@ -5947,3 +5947,5 @@ html:root[data-theme="dark"] .heatmap-cell.is-stale, html:root[data-theme="dark"
   .heatmap-summary { justify-items: start; text-align: left; }
   .heatmap-cells { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
 }
+/* Keep a linked Full plan week clear of the sticky top bar. */
+.timeline .timeline-week { scroll-margin-top: 96px; }

@@ -222,6 +222,21 @@ describe("useHashSegment", () => {
     expect(listeners.hashchange).toHaveLength(1);
   });
 
+  it("sees the linked segment on the very render that activates the tab", async () => {
+    const seen: string[] = [];
+    function Recorder({ activeTab }: { activeTab: string }) {
+      const [segment] = useHashSegment("roadmap", activeTab);
+      seen.push(`${activeTab}:${segment}`);
+      return null;
+    }
+    hash = "#dashboard";
+    await act(async () => { tree = create(createElement(Recorder, { activeTab: "dashboard" })); });
+    hash = "#roadmap/week-18";
+    await act(async () => tree!.update(createElement(Recorder, { activeTab: "roadmap" })));
+    expect(seen.filter((entry) => entry.startsWith("roadmap:"))).not.toContain("roadmap:");
+    expect(seen.at(-1)).toBe("roadmap:week-18");
+  });
+
   it("stays inert while another tab is active", async () => {
     hash = "#weekly/week-7";
     await mountSegment("roadmap", "weekly");
