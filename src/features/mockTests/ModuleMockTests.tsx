@@ -61,7 +61,20 @@ function moduleLabel(module: MockModule): string {
   return `Module ${module.number} · ${module.title}`;
 }
 
-export function ModuleMockTests({ uid, role, notify }: { uid: string; role: ProjectRole; notify: Notify }) {
+export function ModuleMockTests({
+  uid,
+  role,
+  notify,
+  openModuleId = "",
+  onOpenHandled,
+}: {
+  uid: string;
+  role: ProjectRole;
+  notify: Notify;
+  /** From `#moduleMocks/<moduleId>` (e.g. a tutor reminder): open that module's start screen. */
+  openModuleId?: string;
+  onOpenHandled?: () => void;
+}) {
   const isTutor = role === "tutor";
   const [modules, setModules] = useState<ModuleState[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,6 +119,20 @@ export function ModuleMockTests({ uid, role, notify }: { uid: string; role: Proj
     setShellBusy("mock");
     return () => setShellBusy(null);
   }, [running]);
+
+  // A deep link opens the start screen of a module not yet started; anything
+  // else (in progress, completed, unknown) lands on the hub, which shows it.
+  useEffect(() => {
+    if (!openModuleId || loading || running) return;
+    const entry = modules.find(item => item.module.id === openModuleId);
+    if (!isTutor && entry?.meta && mockAttemptView(entry.attempt, Date.now()) === "not-started") {
+      setError("");
+      setScreen({ kind: "start", moduleId: entry.module.id });
+    } else {
+      setScreen({ kind: "hub" });
+    }
+    onOpenHandled?.();
+  }, [openModuleId, loading, running, modules, isTutor, onOpenHandled]);
 
   const current = useMemo(
     () => ("moduleId" in screen ? modules.find(entry => entry.module.id === screen.moduleId) : undefined),

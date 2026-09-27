@@ -528,6 +528,77 @@ service cloud.firestore {
         && request.resource.data.next <= 100;
     }
 
+    // Tutor reminders about the module mock tests. The tutor writes the
+    // content; the student may only stamp when they saw and acknowledged it.
+    function validMockReminderContent(data) {
+      return data.studentUid is string
+        && data.studentUid.size() > 0
+        && data.studentUid.size() <= 128
+        && data.message is string
+        && data.message.size() > 0
+        && data.message.size() <= 1000
+        && (data.deadline == null
+          || (data.deadline is string && data.deadline.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
+        && data.moduleIds is list
+        && data.moduleIds.size() >= 1
+        && data.moduleIds.size() <= 20;
+    }
+
+    function mockReminderTutorCancel() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt'])
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.cancelledAt == request.time;
+    }
+
+    function mockReminderTutorEdit() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['message', 'deadline', 'moduleIds', 'editedAt', 'seenAt', 'acknowledgedAt'])
+        && validMockReminderContent(request.resource.data)
+        && request.resource.data.editedAt == request.time
+        && request.resource.data.seenAt == null
+        && request.resource.data.acknowledgedAt == null;
+    }
+
+    function mockReminderStudentStamp() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.diff(before).affectedKeys().hasOnly(['seenAt', 'acknowledgedAt'])
+        && (after.seenAt == before.seenAt
+          || (before.seenAt == null && after.seenAt == request.time))
+        && (after.acknowledgedAt == before.acknowledgedAt
+          || after.acknowledgedAt == request.time);
+    }
+
+    match /programs/project-202/mockReminders/{reminderId} {
+      allow get, list: if activeProject202Role('tutor')
+        || (activeProject202Role('student') && resource.data.studentUid == request.auth.uid);
+      allow create: if activeProject202Role('tutor')
+        && request.resource.data.keys().hasOnly([
+          'studentUid', 'message', 'deadline', 'moduleIds', 'status', 'createdAt',
+          'createdBy', 'editedAt', 'cancelledAt', 'seenAt', 'acknowledgedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'studentUid', 'message', 'deadline', 'moduleIds', 'status', 'createdAt',
+          'createdBy', 'editedAt', 'cancelledAt', 'seenAt', 'acknowledgedAt'
+        ])
+        && validMockReminderContent(request.resource.data)
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.editedAt == null
+        && request.resource.data.cancelledAt == null
+        && request.resource.data.seenAt == null
+        && request.resource.data.acknowledgedAt == null;
+      allow update: if resource.data.status == 'active'
+        && ((activeProject202Role('tutor')
+            && (mockReminderTutorCancel() || mockReminderTutorEdit()))
+          || (activeProject202Role('student')
+            && resource.data.studentUid == request.auth.uid
+            && mockReminderStudentStamp()));
+      // Kept as the tutor's history; a cancelled reminder simply stops showing.
+      allow delete: if false;
+    }
+
     function validPracticeBank(storageId) {
       let data = request.resource.data;
       return data.keys().hasOnly([

@@ -1,5 +1,5 @@
 import { CalendarPlus, ChevronDown, ChevronRight, CircleAlert, CircleCheckBig, Command, Calculator, Clock3, Download, LogOut, Menu, Moon, MoreHorizontal, PlayCircle, RotateCcw, ShieldCheck, Sparkles, Sun, Target, Upload, X } from "lucide-react";
-import { type ReactNode, Suspense, useEffect, useRef, useState } from "react";
+import { type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { getPlanTasks, PLAN } from "./data/plan";
 import { daysUntilExam, getProgramWeek, TOTAL_WEEKS } from "./lib/dates";
 import { downloadBackup, readBackup } from "./lib/storage";
@@ -15,14 +15,14 @@ import { CommandPalette } from "./components/CommandPalette";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
 import { useHashSegment } from "./hooks/useHashTab";
-import { parseWeekSegment, readSegment, weekSegment, writeSegment } from "./lib/hashRoute";
+import { buildHash, parseWeekSegment, readSegment, weekSegment, writeSegment } from "./lib/hashRoute";
 import { setShellBusy, useShellBusy } from "./lib/shellBusy";
 import { PRACTICE_INTENTS, type PracticeIntent } from "./lib/practiceIntents";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
-import { ModuleMockScores, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
+import { MockReminderHost, ModuleMockScores, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
 import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import { MOBILE_MORE_IDS, MOBILE_PRIMARY_IDS, NAV_GROUPS, NAV_ITEMS, TAB_COPY, TAB_IDS } from "./lib/navigation";
@@ -123,6 +123,13 @@ function App() {
   // Practice intents travel as `#practice/<intent>`; the coach clears the
   // segment once it has acted, so the URL never replays an action.
   const [practiceSegment, setPracticeSegment] = useHashSegment("practice", activeTab);
+  // `#moduleMocks/<moduleId>` opens that module's start screen (tutor reminders
+  // link there); the view clears the segment once it has acted.
+  const [moduleMocksSegment, setModuleMocksSegment] = useHashSegment("moduleMocks", activeTab);
+  const clearModuleMocksSegment = useCallback(() => setModuleMocksSegment(""), [setModuleMocksSegment]);
+  const openModuleMock = useCallback((moduleId: string) => {
+    window.location.hash = buildHash("moduleMocks", moduleId);
+  }, []);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
@@ -496,7 +503,15 @@ function App() {
           />
         );
       case "moduleMocks":
-        return <ModuleMockTests uid={user.uid} role={role!} notify={notify} />;
+        return (
+          <ModuleMockTests
+            uid={user.uid}
+            role={role!}
+            notify={notify}
+            openModuleId={moduleMocksSegment}
+            onOpenHandled={clearModuleMocksSegment}
+          />
+        );
       case "mocks":
         return (
           <MockView
@@ -840,6 +855,12 @@ function App() {
         onExport={handleCalendarExport}
       />
       {palette}
+
+      {user && role === "student" && trackerReady && (
+        <Suspense fallback={null}>
+          <MockReminderHost uid={user.uid} onOpenModule={openModuleMock} />
+        </Suspense>
+      )}
 
       {toast && (
         <div className={cx("toast", toast.tone === "warning" && "toast-warning")} role="status">

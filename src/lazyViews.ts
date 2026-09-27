@@ -45,6 +45,8 @@ export const loadModuleMockScores = () =>
     default: module.ModuleMockScores,
   }));
 
+export const loadMockReminderHost = () => import("./features/mockTests/MockReminderHost");
+
 export const loadTutorSessionWorkspace = () =>
   import("./components/TutorSessionWorkspace");
 
@@ -56,6 +58,7 @@ export const MockScoreChart = lazy(loadMockScoreChart);
 export const ModuleMockTests = lazy(loadModuleMockTests);
 export const MockTestAdmin = lazy(loadMockTestAdmin);
 export const ModuleMockScores = lazy(loadModuleMockScores);
+export const MockReminderHost = lazy(loadMockReminderHost);
 export const TutorSessionWorkspace = lazy(loadTutorSessionWorkspace);
 
 type IdleScheduler = Pick<typeof globalThis, "setTimeout"> & {

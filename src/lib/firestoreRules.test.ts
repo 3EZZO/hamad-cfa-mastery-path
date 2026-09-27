@@ -190,4 +190,17 @@ describe("module mock test Firestore rule boundary", () => {
     expect(counters).toContain("allow create, update: if activeProject202Role('tutor')");
     expect(counters).not.toContain("activeProject202Role('student')");
   });
+
+  it("lets the tutor own reminders while the student only stamps seen and acknowledged", () => {
+    const reminders = blockBetween(
+      "match /programs/project-202/mockReminders/{reminderId}",
+      "function validPracticeBank(storageId)"
+    );
+    expect(reminders).toContain("resource.data.studentUid == request.auth.uid");
+    expect(reminders).toContain("allow create: if activeProject202Role('tutor')");
+    expect(reminders).toContain("allow delete: if false");
+    const student = blockBetween("function mockReminderStudentStamp()", "match /programs/project-202/mockReminders/{reminderId}");
+    expect(student).toContain(".hasOnly(['seenAt', 'acknowledgedAt'])");
+    expect(student).toContain("after.acknowledgedAt == request.time");
+  });
 });
