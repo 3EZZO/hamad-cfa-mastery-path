@@ -138,6 +138,38 @@ add("tutor cannot change a published key", "DENY", { method: "update", docPath: 
 add("tutor edits a draft key", "ALLOW", { method: "update", docPath: `mockTestKeys/${MODULE}`, uid: TUTOR, role: "tutor", resource: key, next: { ...key, correct: [1, 1, 1, 1, 1, 1, 1, 1] }, docs: { [`mockTests/${MODULE}`]: { status: "draft", version: "v1" } } });
 add("student cannot write a key", "DENY", { method: "update", docPath: `mockTestKeys/${MODULE}`, resource: key, next: key, docs: { [`mockTests/${MODULE}`]: { status: "draft", version: "v1" } } });
 
+// Tutor reminders.
+const REMINDER = "mockReminders/r1";
+const reminder = {
+  studentUid: STUDENT, message: "Please complete your module mock tests.", deadline: "2026-10-01",
+  moduleIds: [MODULE], status: "active", createdAt: IN_TIME, createdBy: TUTOR,
+  editedAt: null, cancelledAt: null, seenAt: null, acknowledgedAt: null,
+};
+const tutor = { uid: TUTOR, role: "tutor" };
+add("tutor sends a reminder", "ALLOW", { method: "create", docPath: REMINDER, ...tutor, next: reminder });
+add("tutor cannot backdate a reminder", "DENY", { method: "create", docPath: REMINDER, ...tutor, next: { ...reminder, createdAt: START } });
+add("tutor cannot send a reminder already acknowledged", "DENY", { method: "create", docPath: REMINDER, ...tutor, next: { ...reminder, acknowledgedAt: IN_TIME } });
+add("tutor cannot send an empty message", "DENY", { method: "create", docPath: REMINDER, ...tutor, next: { ...reminder, message: "" } });
+add("tutor cannot send a malformed deadline", "DENY", { method: "create", docPath: REMINDER, ...tutor, next: { ...reminder, deadline: "1 October" } });
+add("tutor cannot add unknown fields", "DENY", { method: "create", docPath: REMINDER, ...tutor, next: { ...reminder, priority: "high" } });
+add("student cannot send a reminder", "DENY", { method: "create", docPath: REMINDER, next: { ...reminder, createdBy: STUDENT } });
+add("student reads their own reminder", "ALLOW", { method: "get", docPath: REMINDER, resource: reminder });
+add("student cannot read another student's reminder", "DENY", { method: "get", docPath: REMINDER, resource: { ...reminder, studentUid: "other" } });
+add("student marks the reminder seen", "ALLOW", { method: "update", docPath: REMINDER, resource: reminder, next: { ...reminder, seenAt: IN_TIME } });
+add("student cannot backdate seen", "DENY", { method: "update", docPath: REMINDER, resource: reminder, next: { ...reminder, seenAt: START } });
+add("student cannot move an existing seen time", "DENY", { method: "update", docPath: REMINDER, time: GRACE, resource: { ...reminder, seenAt: IN_TIME }, next: { ...reminder, seenAt: GRACE } });
+add("student acknowledges the reminder", "ALLOW", { method: "update", docPath: REMINDER, resource: { ...reminder, seenAt: IN_TIME }, next: { ...reminder, seenAt: IN_TIME, acknowledgedAt: IN_TIME } });
+add("student acknowledges again the next day", "ALLOW", { method: "update", docPath: REMINDER, time: GRACE, resource: { ...reminder, acknowledgedAt: IN_TIME }, next: { ...reminder, acknowledgedAt: GRACE } });
+add("student cannot change the message", "DENY", { method: "update", docPath: REMINDER, resource: reminder, next: { ...reminder, message: "No rush." } });
+add("student cannot cancel the reminder", "DENY", { method: "update", docPath: REMINDER, resource: reminder, next: { ...reminder, status: "cancelled", cancelledAt: IN_TIME } });
+add("student cannot move the deadline", "DENY", { method: "update", docPath: REMINDER, resource: reminder, next: { ...reminder, deadline: "2026-12-31" } });
+add("student cannot stamp another student's reminder", "DENY", { method: "update", docPath: REMINDER, resource: { ...reminder, studentUid: "other" }, next: { ...reminder, studentUid: "other", seenAt: IN_TIME } });
+add("tutor cancels an active reminder", "ALLOW", { method: "update", docPath: REMINDER, ...tutor, resource: reminder, next: { ...reminder, status: "cancelled", cancelledAt: IN_TIME } });
+add("tutor edits an active reminder and resets its stamps", "ALLOW", { method: "update", docPath: REMINDER, ...tutor, resource: { ...reminder, seenAt: START, acknowledgedAt: START }, next: { ...reminder, message: "Updated.", editedAt: IN_TIME } });
+add("tutor cannot fake the student's acknowledgement", "DENY", { method: "update", docPath: REMINDER, ...tutor, resource: reminder, next: { ...reminder, acknowledgedAt: IN_TIME } });
+add("tutor cannot reactivate a cancelled reminder", "DENY", { method: "update", docPath: REMINDER, ...tutor, resource: { ...reminder, status: "cancelled", cancelledAt: START }, next: { ...reminder, cancelledAt: START } });
+add("nobody deletes a reminder", "DENY", { method: "delete", docPath: REMINDER, ...tutor, resource: reminder });
+
 let failed = 0;
 for (let offset = 0; offset < cases.length; offset += 10) {
   const batch = cases.slice(offset, offset + 10);

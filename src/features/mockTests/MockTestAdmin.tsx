@@ -30,6 +30,7 @@ import {
   type MockTestMeta,
 } from "../../lib/mockTestContent";
 import { MockAnswerKeyReview } from "./MockAnswerKeyReview";
+import { MockReminderAdmin } from "./MockReminderAdmin";
 import "./moduleMock.css";
 
 type Notify = (message: string, tone?: "success" | "warning") => void;
@@ -223,6 +224,8 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
           );
         })}
       </div>
+
+      <MockReminderAdmin students={students} metas={metas} attempts={attempts} notify={notify} />
 
       <h4 className="mock-admin__subhead">Student results</h4>
       {students.length === 0 ? <p>No active student accounts.</p> : (
