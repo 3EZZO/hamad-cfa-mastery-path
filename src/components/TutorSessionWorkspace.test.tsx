@@ -126,8 +126,12 @@ describe("Session Mode workspace isolation", () => {
   it("keeps the S1 workspace and caches when S2 opens, and binds each descriptor to its own package", async () => {
     await mount();
     const firstId = consoleFor(1).props.session.id;
+    // Only the session on screen carries the tutor brief (one set of reads).
+    expect(consoleFor(1).props.brief).toBeTruthy();
     await choose(2);
     expect(consoleFor(1).props.active).toBe(false);
+    expect(consoleFor(1).props.brief).toBeNull();
+    expect(consoleFor(2).props.brief).toBeTruthy();
     expect(consoleFor(2).props.active).toBe(true);
     expect(consoleFor(2).props.playbook.id).toBe(getTutorSession(2).playbookId);
     expect(consoleFor(2).props.session).toMatchObject({

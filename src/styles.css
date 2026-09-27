@@ -5947,5 +5947,25 @@ html:root[data-theme="dark"] .heatmap-cell.is-stale, html:root[data-theme="dark"
   .heatmap-summary { justify-items: start; text-align: left; }
   .heatmap-cells { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
 }
+/* Tutor pre-session brief --------------------------------------------------- */
+.tutor-brief { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink); }
+.tutor-brief > summary { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 10px 16px; cursor: pointer; list-style: none; }
+.tutor-brief > summary::-webkit-details-marker { display: none; }
+.tutor-brief > summary > span { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.tutor-brief > summary small { color: var(--muted); font-size: 0.8rem; }
+.tutor-brief > summary > svg:last-child { color: var(--muted); transition: transform var(--motion-micro) ease; }
+.tutor-brief[open] > summary > svg:last-child { transform: rotate(180deg); }
+.tutor-brief__body { display: grid; gap: 14px; padding: 0 16px 16px; }
+.tutor-brief__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0; }
+.tutor-brief__stats > div { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.tutor-brief__stats dt { color: var(--muted); font-size: 0.76rem; font-weight: 600; }
+.tutor-brief__stats dd { display: grid; margin: 3px 0 0; color: var(--ink); font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tutor-brief__stats dd small { color: var(--muted); font-size: 0.74rem; font-weight: 500; }
+.tutor-brief h4 { margin: 0 0 6px; color: var(--ink-2); font-size: 0.82rem; letter-spacing: 0.02em; }
+.tutor-brief__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tutor-brief__list li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.tutor-brief__list strong { color: var(--ink); font-size: 0.86rem; font-weight: 600; }
+.tutor-brief__list span { color: var(--muted); font-size: 0.78rem; }
+@media (prefers-reduced-motion: reduce) { .tutor-brief > summary > svg:last-child { transition: none; } }
 /* Keep a linked Full plan week clear of the sticky top bar. */
 .timeline .timeline-week { scroll-margin-top: 96px; }
