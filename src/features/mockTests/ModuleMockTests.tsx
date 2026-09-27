@@ -1,4 +1,4 @@
-import { CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, ShieldAlert, Target, Timer } from "lucide-react";
+import { Archive, BellRing, CalendarClock, CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, RotateCcw, ShieldAlert, Target, Timer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MOCK_MODULES, type MockModule } from "../../data/mockModules";
 import {
@@ -8,6 +8,7 @@ import {
   getMockQuestions,
   getMockTestMeta,
   gradeMockAttempt,
+  listMockAttempts,
   loadMockTestPackage,
   resumeMockAttempt,
   saveMockWork,
@@ -15,7 +16,10 @@ import {
   type MockTestPackage,
   type MockWork,
 } from "../../lib/cloudMockTests";
-import { getCloudErrorMessage } from "../../lib/cloud";
+import { getCloudErrorMessage, listActiveStudentMembers } from "../../lib/cloud";
+import { listMockReminders, loadMyReminderDeadlines } from "../../lib/cloudMockReminders";
+import { deadlineCountdown, formatReminderDate } from "../../lib/mockReminders";
+import { buildTestBoard, deadlinesByModule, summarizeTestBoard, WEAK_SCORE, type BoardRow } from "../../lib/testBoard";
 import {
   MOCK_QUESTION_COUNT,
   appendIncident,
@@ -45,6 +49,12 @@ interface ModuleState {
   error: string;
 }
 
+/** What the tutor sees of the student's test record (read-only). */
+interface TutorView {
+  attempts: Map<string, MockAttempt>;
+  deadlines: Map<string, string>;
+}
+
 type Screen =
   | { kind: "hub" }
   | { kind: "start"; moduleId: string }
@@ -67,6 +77,9 @@ export function ModuleMockTests({
   notify,
   openModuleId = "",
   onOpenHandled,
+  onOpenMistakes,
+  onOpenRepair,
+  onOpenReminders,
 }: {
   uid: string;
   role: ProjectRole;
@@ -74,6 +87,12 @@ export function ModuleMockTests({
   /** From `#moduleMocks/<moduleId>` (e.g. a tutor reminder): open that module's start screen. */
   openModuleId?: string;
   onOpenHandled?: () => void;
+  /** Student: open Mistake Review after a weak result. */
+  onOpenMistakes?: () => void;
+  /** Student: start the repair queue after a weak result. */
+  onOpenRepair?: () => void;
+  /** Tutor: go to the reminder tools in Tutor Admin. */
+  onOpenReminders?: () => void;
 }) {
   const isTutor = role === "tutor";
   const [modules, setModules] = useState<ModuleState[]>([]);
@@ -81,6 +100,8 @@ export function ModuleMockTests({
   const [screen, setScreen] = useState<Screen>({ kind: "hub" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [deadlines, setDeadlines] = useState<Map<string, string>>(new Map());
+  const [tutorView, setTutorView] = useState<TutorView | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -109,6 +130,25 @@ export function ModuleMockTests({
     }));
     setModules(next);
     setLoading(false);
+    // Deadlines (and, for the tutor, the student's attempts) only order and
+    // label the board; failures leave it in plain module order.
+    if (isTutor) {
+      try {
+        const [students, attempts, reminders] = await Promise.all([listActiveStudentMembers(), listMockAttempts(), listMockReminders()]);
+        const studentUid = students[0]?.uid ?? null;
+        const mine = attempts.filter(attempt => !studentUid || attempt.uid === studentUid);
+        const byModule = new Map<string, MockAttempt>();
+        for (const attempt of mine) {
+          const current = byModule.get(attempt.moduleId);
+          if (!current || attempt.attemptNumber > current.attemptNumber) byModule.set(attempt.moduleId, attempt);
+        }
+        setTutorView({ attempts: byModule, deadlines: deadlinesByModule(reminders, studentUid) });
+      } catch {
+        setTutorView(null);
+      }
+    } else {
+      setDeadlines(await loadMyReminderDeadlines(uid).catch(() => new Map<string, string>()));
+    }
   }, [isTutor, uid]);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -295,13 +335,26 @@ export function ModuleMockTests({
   }
 
   const inProgress = modules.find(entry => entry.attempt?.status === "active");
+  const now = Date.now();
+  const boardDeadlines = isTutor ? tutorView?.deadlines ?? new Map<string, string>() : deadlines;
+  const board = buildTestBoard(modules.map(entry => ({
+    moduleId: entry.module.id,
+    number: entry.module.number,
+    published: entry.meta?.status === "published",
+    attempt: isTutor ? tutorView?.attempts.get(entry.module.id) ?? null : entry.attempt,
+    deadline: boardDeadlines.get(entry.module.id) ?? null,
+  })), now);
+  const rowFor = new Map(board.map(row => [row.moduleId, row]));
+  const ordered = board.flatMap(row => modules.filter(entry => entry.module.id === row.moduleId));
+  const summary = summarizeTestBoard(board);
+  const awaitingRelease = isTutor ? board.filter(row => row.status === "done" && row.attempt && !row.attempt.reviewReleased).length : 0;
 
   return (
     <section className="mock-hub" aria-labelledby="mock-hub-title">
       <header className="mock-hub__hero">
         <div>
           <p className="mock-hub__eyebrow">Assessment · not practice</p>
-          <h2 id="mock-hub-title">Module Mock Tests</h2>
+          <h2 id="mock-hub-title">Module Tests</h2>
           <p>
             Every published module has one compulsory mock test: {MOCK_QUESTION_COUNT} questions, 12 minutes,
             one attempt, full screen. Your result goes straight to your tutor.
@@ -320,6 +373,18 @@ export function ModuleMockTests({
           <strong> Tutor Admin</strong>. Rehearse runs the real exam screen locally and saves nothing.
         </p>
       )}
+      {!loading && summary.published > 0 && (
+        <div className="mock-hub__summary" role="status">
+          <strong>{isTutor ? "Hamad: " : ""}{summary.done} of {summary.published} done</strong>
+          {summary.inProgress > 0 && <span className="is-live">{summary.inProgress} in progress</span>}
+          {summary.overdue > 0 && <span className="is-overdue">{summary.overdue} overdue</span>}
+          {summary.nextDeadline && <span><CalendarClock size={14} aria-hidden="true" />Next due {formatReminderDate(summary.nextDeadline)} · {deadlineCountdown(summary.nextDeadline, now)}</span>}
+          {awaitingRelease > 0 && <span>{awaitingRelease} {awaitingRelease === 1 ? "review" : "reviews"} not released</span>}
+          {isTutor && onOpenReminders && (
+            <button type="button" className="mock-button mock-button--ghost" onClick={onOpenReminders}><BellRing size={16} />Send a reminder</button>
+          )}
+        </div>
+      )}
       {error && <p className="mock-hub__error" role="alert"><CircleAlert size={16} />{error}</p>}
       {inProgress && !isTutor && (
         <div className="mock-hub__resume" role="alert">
@@ -335,10 +400,14 @@ export function ModuleMockTests({
         <p className="mock-hub__loading" aria-busy="true">Loading module tests…</p>
       ) : (
         <ol className="mock-hub__list">
-          {modules.map(entry => (
+          {ordered.map(entry => (
             <ModuleCard
               key={entry.module.id}
               entry={entry}
+              row={rowFor.get(entry.module.id)}
+              nowMs={now}
+              onOpenMistakes={onOpenMistakes}
+              onOpenRepair={onOpenRepair}
               isTutor={isTutor}
               busy={busy}
               onOpen={() => { setError(""); setScreen({ kind: "start", moduleId: entry.module.id }); }}
@@ -355,6 +424,10 @@ export function ModuleMockTests({
 
 function ModuleCard({
   entry,
+  row,
+  nowMs,
+  onOpenMistakes,
+  onOpenRepair,
   isTutor,
   busy,
   onOpen,
@@ -363,6 +436,10 @@ function ModuleCard({
   onRehearse,
 }: {
   entry: ModuleState;
+  row?: BoardRow;
+  nowMs: number;
+  onOpenMistakes?: () => void;
+  onOpenRepair?: () => void;
   isTutor: boolean;
   busy: boolean;
   onOpen: () => void;
@@ -374,7 +451,19 @@ function ModuleCard({
   const view = mockAttemptView(attempt, Date.now());
   let status: { label: string; tone: string };
   if (isTutor) {
-    status = meta ? { label: meta.status === "published" ? "Published" : "Draft", tone: meta.status === "published" ? "done" : "draft" } : { label: "No test uploaded", tone: "none" };
+    status = !meta
+      ? { label: "No test uploaded", tone: "none" }
+      : meta.status !== "published"
+        ? { label: "Draft", tone: "draft" }
+        : row?.status === "done"
+          ? { label: `Hamad: ${row.score}/${MOCK_QUESTION_COUNT}`, tone: "done" }
+          : row?.status === "grading"
+            ? { label: "Hamad: submitted · awaiting grading", tone: "live" }
+            : row?.status === "forfeited"
+              ? { label: "Hamad: forfeited", tone: "forfeit" }
+              : row?.status === "in-progress"
+                ? { label: "Hamad: in progress", tone: "live" }
+                : { label: "Published · not taken yet", tone: "todo" };
   } else if (!meta) {
     status = { label: "No test yet", tone: "none" };
   } else if (view === "completed") {
@@ -397,6 +486,21 @@ function ModuleCard({
           {status.tone === "done" ? <CircleCheckBig size={14} /> : status.tone === "forfeit" ? <Flag size={14} /> : null}
           {status.label}
         </span>
+        {row?.deadline && (row.status === "due" || row.status === "in-progress") && (
+          <span className={`mock-card__deadline${row.overdue ? " is-overdue" : ""}`}>
+            <CalendarClock size={13} aria-hidden="true" />Due {formatReminderDate(row.deadline)} · {deadlineCountdown(row.deadline, nowMs)}
+          </span>
+        )}
+        {isTutor && row?.status === "done" && row.attempt && !row.attempt.reviewReleased && (
+          <span className="mock-card__deadline">Review not released yet</span>
+        )}
+        {!isTutor && row?.weak && (
+          <div className="mock-card__repair">
+            <span>Below {WEAK_SCORE}/{MOCK_QUESTION_COUNT}: repair before moving on.</span>
+            {onOpenMistakes && <button type="button" className="mock-button mock-button--ghost" onClick={onOpenMistakes}><Archive size={15} />Mistake Review</button>}
+            {onOpenRepair && <button type="button" className="mock-button mock-button--ghost" onClick={onOpenRepair}><RotateCcw size={15} />Repair queue</button>}
+          </div>
+        )}
         {entry.error && <small className="mock-card__error">{entry.error}</small>}
       </div>
       <div className="mock-card__action">

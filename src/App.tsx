@@ -621,6 +621,9 @@ function App() {
             notify={notify}
             openModuleId={moduleMocksSegment}
             onOpenHandled={clearModuleMocksSegment}
+            onOpenMistakes={() => navigate("errors")}
+            onOpenRepair={() => openPractice("repair")}
+            onOpenReminders={() => navigate("coach")}
           />
         );
       case "mocks":
