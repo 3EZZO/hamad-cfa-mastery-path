@@ -4,6 +4,7 @@ import { type FormEvent, useState } from "react";
 import { TOPICS } from "../data/plan";
 import { formatDate, todayDateOnly } from "../lib/dates";
 import { useAppDialog } from "../components/AppDialog";
+import { isRetestDue } from "../lib/retests";
 import type { ErrorEntry, TrackerState } from "../types";
 import { ERROR_CATEGORIES, EmptyState, MiniMetric, cx, makeId, topicShort } from "./shared";
 import type { Notify, UpdateTracker } from "./shared";
@@ -27,7 +28,7 @@ export function ErrorVaultView({
     revisitDate: "",
   });
   const openCount = tracker.errorEntries.filter((entry) => !entry.resolved).length;
-  const dueCount = tracker.errorEntries.filter((entry) => !entry.resolved && entry.revisitDate && entry.revisitDate <= todayDateOnly()).length;
+  const dueCount = tracker.errorEntries.filter((entry) => isRetestDue(entry, todayDateOnly())).length;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();

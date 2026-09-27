@@ -1,9 +1,10 @@
 import { getPlanTasks, getWeekSessions, PLAN } from "../data/plan";
-import type { TrackerState } from "../types";
+import type { PlanTask, TrackerState } from "../types";
 import { differenceInCalendarDays, getProgramWeek, parseDateOnly } from "./dates";
 import { effectiveSessionDate, getEffectiveSessions } from "./schedule";
 import { isTaskComplete } from "./taskStatus";
 import { weakMockSections } from "./mockSections";
+import { isRetestDue } from "./retests";
 
 export type RiskTone = "green" | "amber" | "red";
 
@@ -89,6 +90,34 @@ function signedPointDifference(value: number): string {
   return `${Math.abs(value)} percentage ${plural(Math.abs(value), "point")}`;
 }
 
+export interface OverdueWork {
+  task: PlanTask;
+  week: number;
+  dueDate: string;
+  sessionNumber: number | null;
+}
+
+/** Required plan work past its due date and not yet complete, oldest first. */
+export function listOverdueWork(tracker: TrackerState, today: string): OverdueWork[] {
+  return PLAN.flatMap((week) => {
+    const sessions = getWeekSessions(week);
+    return getPlanTasks(week, tracker.sessionOverrides).flatMap((task) => {
+      const sessionIndex = task.kind === "session"
+        ? Number(task.id.match(/session-(\d+)$/)?.[1] ?? 0) - 1
+        : -1;
+      const session = sessionIndex >= 0 ? sessions[sessionIndex] : null;
+      const dueDate = requiredWorkDueDate(
+        task.kind,
+        session ? effectiveSessionDate(session, tracker.sessionOverrides) : null,
+        week.endDate,
+      );
+      return !task.optional && isPast(dueDate, today) && !isTaskComplete(task, tracker)
+        ? [{ task, week: week.week, dueDate, sessionNumber: session?.number ?? null }]
+        : [];
+    });
+  }).sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+}
+
 export function buildRiskIndicators(
   tracker: TrackerState,
   today: string,
@@ -108,23 +137,7 @@ export function buildRiskIndicators(
   }
 
   const indicators: RiskIndicator[] = [];
-  const overdueWork = PLAN.flatMap((week) => {
-    const sessions = getWeekSessions(week);
-    return getPlanTasks(week, tracker.sessionOverrides).flatMap((task) => {
-      const sessionIndex = task.kind === "session"
-        ? Number(task.id.match(/session-(\d+)$/)?.[1] ?? 0) - 1
-        : -1;
-      const session = sessionIndex >= 0 ? sessions[sessionIndex] : null;
-      const dueDate = requiredWorkDueDate(
-        task.kind,
-        session ? effectiveSessionDate(session, tracker.sessionOverrides) : null,
-        week.endDate,
-      );
-      return !task.optional && isPast(dueDate, today) && !isTaskComplete(task, tracker)
-        ? [{ task, dueDate, sessionNumber: session?.number ?? null }]
-        : [];
-    });
-  }).sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+  const overdueWork = listOverdueWork(tracker, today);
   if (overdueWork.length) {
     const oldest = overdueWork[0];
     const oldestLabel = oldest.sessionNumber == null
@@ -207,9 +220,7 @@ export function buildRiskIndicators(
   }
 
   const openMistakes = tracker.errorEntries.filter((entry) => !entry.resolved);
-  const dueRetests = openMistakes.filter(
-    (entry) => !entry.resolved && entry.revisitDate && entry.revisitDate <= today,
-  );
+  const dueRetests = openMistakes.filter((entry) => isRetestDue(entry, today));
   if (dueRetests.length) {
     indicators.push({
       id: "due-retests",
