@@ -15,6 +15,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
 import { useHashSegment } from "./hooks/useHashTab";
+import { useWeekMirror } from "./hooks/useWeekMirror";
 import { buildHash, parseWeekSegment, readSegment, weekSegment, writeSegment } from "./lib/hashRoute";
 import { setShellBusy, useShellBusy } from "./lib/shellBusy";
 import { PRACTICE_INTENTS, practiceModuleSegment, type PracticeIntent } from "./lib/practiceIntents";
@@ -129,12 +130,23 @@ function App() {
   useEffect(() => {
     if (planRoute.section === "week" && planRoute.week) setSelectedWeek(planRoute.week);
   }, [planRoute.section, planRoute.week]);
-  useEffect(() => {
-    if (activeTab === "weekly") setWeeklySegment(weekSegment(selectedWeek));
-  }, [activeTab, selectedWeek, setWeeklySegment]);
-  useEffect(() => {
-    if (activeTab === "plan" && planRoute.section === "week") setPlanSegment(planSegment("week", selectedWeek));
-  }, [activeTab, planRoute.section, selectedWeek, setPlanSegment]);
+  useWeekMirror({
+    active: activeTab === "weekly",
+    readLinkedWeek: () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS),
+    writeWeek: (week) => setWeeklySegment(weekSegment(week)),
+    selectedWeek,
+    setSelectedWeek,
+  });
+  useWeekMirror({
+    active: activeTab === "plan",
+    readLinkedWeek: () => {
+      const route = parsePlanSegment(readSegment("plan"));
+      return route.section === "week" ? route.week : undefined;
+    },
+    writeWeek: (week) => setPlanSegment(planSegment("week", week)),
+    selectedWeek,
+    setSelectedWeek,
+  });
   // The Study Plan tab opens and scrolls to `#roadmap/week-N`.
   const [roadmapSegment, setRoadmapSegment] = useHashSegment("roadmap", activeTab);
   // Practice intents travel as `#practice/<intent>`; the coach clears the
