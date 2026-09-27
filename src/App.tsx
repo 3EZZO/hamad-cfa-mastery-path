@@ -1,7 +1,7 @@
 import { CalendarPlus, ChevronDown, ChevronRight, CircleAlert, CircleCheckBig, Command, Calculator, Clock3, Download, LogOut, Menu, Moon, MoreHorizontal, PlayCircle, RotateCcw, ShieldCheck, Sparkles, Sun, Target, Upload, X } from "lucide-react";
 import { type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { getPlanTasks, PLAN } from "./data/plan";
-import { daysUntilExam, getProgramWeek, TOTAL_WEEKS } from "./lib/dates";
+import { daysUntilExam, getProgramWeek, TOTAL_WEEKS, todayDateOnly } from "./lib/dates";
 import { downloadBackup, readBackup } from "./lib/storage";
 import { downloadProject202Calendar } from "./lib/calendarExport";
 import { addPracticeMistake, bridgedQuestionIds } from "./lib/practiceMistakeBridge";
@@ -38,6 +38,8 @@ import { PracticeLogView } from "./views/PracticeLogView";
 import { MasteryView } from "./views/MasteryView";
 import { MockView } from "./views/MockView";
 import { ProgressView, parseProgressSection } from "./views/ProgressView";
+import { PracticeHubView } from "./views/PracticeHubView";
+import { isRetestDue } from "./lib/retests";
 import { ErrorVaultView } from "./views/ErrorVaultView";
 import { TutorAdminView } from "./views/TutorAdminView";
 import { NotesView } from "./views/NotesView";
@@ -483,23 +485,37 @@ function App() {
         );
       case "practice":
         return (
-          <PracticeCoach
-            uid={user.uid}
-            role={role!}
-            notify={notify}
-            onComplete={(summary) => updateTracker((current) => ({
-              ...current,
-              practiceLogs: [
-                { id: makeId("practice"), ...summary },
-                ...current.practiceLogs,
-              ],
-            }))}
-            onAddMistake={(entry) => updateTracker((current) => addPracticeMistake(current, entry).tracker)}
-            bridgedQuestionIds={bridgedQuestionIds(tracker.errorEntries)}
-            intent={practiceSegment}
-            onIntentHandled={() => setPracticeSegment("")}
-            manualLog={(
-              <PracticeLogView
+          <PracticeHubView
+            segment={practiceSegment}
+            onSegment={setPracticeSegment}
+            dueRetests={tracker.errorEntries.filter((entry) => isRetestDue(entry, todayDateOnly())).length}
+            practise={(
+              <PracticeCoach
+                uid={user.uid}
+                role={role!}
+                notify={notify}
+                onComplete={(summary) => updateTracker((current) => ({
+                  ...current,
+                  practiceLogs: [
+                    { id: makeId("practice"), ...summary },
+                    ...current.practiceLogs,
+                  ],
+                }))}
+                onAddMistake={(entry) => updateTracker((current) => addPracticeMistake(current, entry).tracker)}
+                bridgedQuestionIds={bridgedQuestionIds(tracker.errorEntries)}
+                intent={practiceSegment}
+                onIntentHandled={() => setPracticeSegment("")}
+                manualLog={(
+                  <PracticeLogView
+                    tracker={tracker}
+                    updateTracker={updateTracker}
+                    notify={notify}
+                  />
+                )}
+              />
+            )}
+            mistakes={(
+              <ErrorVaultView
                 tracker={tracker}
                 updateTracker={updateTracker}
                 notify={notify}
