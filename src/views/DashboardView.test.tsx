@@ -5,7 +5,11 @@ import { createDefaultState } from "../lib/storage";
 import type { TrackerState } from "../types";
 
 const sources = vi.hoisted(() => ({
-  value: { dueReviews: null as number | null, pendingModuleTests: null as null | Array<{ moduleId: string; title: string; deadline: string | null }> },
+  value: {
+    dueReviews: null as number | null,
+    pendingModuleTests: null as null | Array<{ moduleId: string; title: string; deadline: string | null; inProgress?: boolean }>,
+    moduleTestProgress: null as null | { published: number; completed: number },
+  },
 }));
 vi.mock("../hooks/useTodaySources", () => ({ useTodaySources: () => sources.value }));
 
@@ -70,7 +74,7 @@ describe("Home Today card", () => {
     vi.stubGlobal("cancelAnimationFrame", () => undefined);
     vi.useFakeTimers();
     vi.setSystemTime(new Date(`${TODAY}T09:00:00`));
-    sources.value = { dueReviews: null, pendingModuleTests: null };
+    sources.value = { dueReviews: null, pendingModuleTests: null, moduleTestProgress: null };
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -91,6 +95,7 @@ describe("Home Today card", () => {
     sources.value = {
       dueReviews: 6,
       pendingModuleTests: [{ moduleId: "m01-rates-and-returns", title: "Rates and Returns", deadline: null }],
+      moduleTestProgress: null,
     };
     const { tree, handlers } = await render({ tracker: upToDate() });
     expect(textOf(tree.root.findByType("h1"))).toBe("Module test: Rates and Returns");
@@ -102,13 +107,29 @@ describe("Home Today card", () => {
     expect(textOf(tree.root.findByProps({ className: "today-queue-total" }))).toContain("About 21 min of timed work");
   });
 
-  it("leads with overdue work before anything else", async () => {
+  it("resumes a test in progress ahead of overdue work and shows the test status strip", async () => {
+    sources.value = {
+      dueReviews: null,
+      pendingModuleTests: [
+        { moduleId: "m03-statistical-measures", title: "Statistical Measures of Asset Returns", deadline: "2026-10-02" },
+        { moduleId: "m02-time-value-of-money", title: "The Time Value of Money in Finance", deadline: null, inProgress: true },
+      ],
+      moduleTestProgress: { published: 5, completed: 3 },
+    };
+    const { tree, handlers } = await render({ tracker: createDefaultState() });
+    expect(textOf(tree.root.findByType("h1"))).toBe("Module test: The Time Value of Money in Finance");
+    expect(textOf(tree.root.findByProps({ className: "today-test-strip" }))).toBe(" Module tests: 3 of 5 done · one in progress · next due Fri 2 Oct");
+    await act(async () => buttonNamed(tree.root, "Resume the test").props.onClick());
+    expect(handlers.onOpenModuleTest).toHaveBeenCalledWith("m02-time-value-of-money");
+  });
+
+  it("leads with overdue work when no module test is waiting", async () => {
     const { tree } = await render({ tracker: createDefaultState() });
     expect(textOf(tree.root.findByType("h1"))).toBe("Catch up first");
   });
 
   it("never starts practice for the tutor", async () => {
-    sources.value = { dueReviews: 6, pendingModuleTests: null };
+    sources.value = { dueReviews: 6, pendingModuleTests: null, moduleTestProgress: null };
     const tracker = upToDate();
     getPlanTasks(PLAN[3]).forEach((task) => { tracker.taskCompletions[task.id] = true; });
     const { tree, handlers } = await render({ tracker, role: "tutor", studentUid: null });

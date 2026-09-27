@@ -10,15 +10,28 @@ import type { TodayPendingModuleTest } from "../lib/todayQueue";
  * dynamic imports so neither reaches the Home chunk, and both degrade to
  * null — "unknown" — rather than blocking the tracker-based items.
  */
+export interface ModuleTestProgress {
+  /** Published tests the student can take. */
+  published: number;
+  /** Of those, submitted (graded or awaiting grading). */
+  completed: number;
+}
+
 export interface TodaySources {
   dueReviews: number | null;
   pendingModuleTests: TodayPendingModuleTest[] | null;
+  moduleTestProgress: ModuleTestProgress | null;
 }
 
-const EMPTY: TodaySources = { dueReviews: null, pendingModuleTests: null };
+interface ModuleTestStatus {
+  pending: TodayPendingModuleTest[];
+  progress: ModuleTestProgress;
+}
+
+const EMPTY: TodaySources = { dueReviews: null, pendingModuleTests: null, moduleTestProgress: null };
 /** Module-test status changes rarely; avoid 20+ reads on every visit to Home. */
 const MODULE_TEST_CACHE_MS = 5 * 60_000;
-let moduleTestCache: { uid: string; at: number; value: TodayPendingModuleTest[] } | null = null;
+let moduleTestCache: { uid: string; at: number; value: ModuleTestStatus } | null = null;
 
 export function clearTodaySourcesCache(): void {
   moduleTestCache = null;
@@ -68,20 +81,27 @@ async function loadReminderDeadlines(uid: string): Promise<Map<string, string>> 
   });
 }
 
-async function loadPendingModuleTests(uid: string): Promise<TodayPendingModuleTest[]> {
+async function loadModuleTestStatus(uid: string): Promise<ModuleTestStatus> {
   const { getMockAttempt, getMockTestMeta } = await import("../lib/cloudMockTests");
   const [statuses, deadlines] = await Promise.all([
     Promise.all(MOCK_MODULES.map(async (module) => {
       const meta = await getMockTestMeta(module.id);
-      if (!meta || meta.status !== "published") return null;
+      if (!meta || meta.status !== "published") return { module, state: "unpublished" as const };
       const attempt = await getMockAttempt(uid, module.id);
-      return !attempt || attempt.status === "active" ? module : null;
+      if (!attempt) return { module, state: "pending" as const };
+      return { module, state: attempt.status === "active" ? "active" as const : "done" as const };
     })),
     loadReminderDeadlines(uid),
   ]);
-  return statuses.flatMap((module) => module
-    ? [{ moduleId: module.id, title: module.title, deadline: deadlines.get(module.id) ?? null }]
-    : []);
+  return {
+    pending: statuses.flatMap(({ module, state }) => state === "pending" || state === "active"
+      ? [{ moduleId: module.id, title: module.title, deadline: deadlines.get(module.id) ?? null, inProgress: state === "active" }]
+      : []),
+    progress: {
+      published: statuses.filter(({ state }) => state !== "unpublished").length,
+      completed: statuses.filter(({ state }) => state === "done").length,
+    },
+  };
 }
 
 function whenIdle(callback: () => void): () => void {
@@ -98,7 +118,9 @@ function whenIdle(callback: () => void): () => void {
 /** Student only: a tutor's Home shows the tracker-based items. `uid` null disables loading. */
 export function useTodaySources(uid: string | null): TodaySources {
   const [sources, setSources] = useState<TodaySources>(() =>
-    uid && moduleTestCache?.uid === uid ? { dueReviews: null, pendingModuleTests: moduleTestCache.value } : EMPTY,
+    uid && moduleTestCache?.uid === uid
+      ? { dueReviews: null, pendingModuleTests: moduleTestCache.value.pending, moduleTestProgress: moduleTestCache.value.progress }
+      : EMPTY,
   );
 
   useEffect(() => {
@@ -114,16 +136,18 @@ export function useTodaySources(uid: string | null): TodaySources {
 
       if (moduleTestCache?.uid === uid && Date.now() - moduleTestCache.at < MODULE_TEST_CACHE_MS) {
         const cached = moduleTestCache.value;
-        setSources((current) => ({ ...current, pendingModuleTests: cached }));
+        setSources((current) => ({ ...current, pendingModuleTests: cached.pending, moduleTestProgress: cached.progress }));
         return;
       }
-      loadPendingModuleTests(uid)
-        .then((pendingModuleTests) => {
-          moduleTestCache = { uid, at: Date.now(), value: pendingModuleTests };
-          return pendingModuleTests;
+      loadModuleTestStatus(uid)
+        .then((status) => {
+          moduleTestCache = { uid, at: Date.now(), value: status };
+          return status;
         })
         .catch(() => null)
-        .then((pendingModuleTests) => { if (active) setSources((current) => ({ ...current, pendingModuleTests })); });
+        .then((status) => {
+          if (active) setSources((current) => ({ ...current, pendingModuleTests: status?.pending ?? null, moduleTestProgress: status?.progress ?? null }));
+        });
     });
     return () => {
       active = false;

@@ -131,6 +131,19 @@ export function DashboardView({
     todayTotal.untimed ? `${todayTotal.untimed} plan ${todayTotal.untimed === 1 ? "task" : "tasks"}` : "",
   ].filter(Boolean).join(" · ");
   const isStudent = role === "student";
+  const progress = sources.moduleTestProgress;
+  const pendingTests = sources.pendingModuleTests ?? [];
+  const nextTestDeadline = pendingTests.map((test) => test.deadline).filter((value): value is string => Boolean(value)).sort()[0];
+  const testInProgress = pendingTests.some((test) => test.inProgress);
+  const testStrip = progress && progress.published
+    ? [
+      `Module tests: ${progress.completed} of ${progress.published} done`,
+      testInProgress ? "one in progress" : "",
+      nextTestDeadline ? `next due ${formatDate(nextTestDeadline.slice(0, 10), { weekday: "short", day: "numeric", month: "short" })}` : "",
+    ].filter(Boolean).join(" · ")
+    : "";
+  const leadResumes = lead?.action.type === "moduleTest"
+    && pendingTests.some((test) => test.inProgress && lead.action.type === "moduleTest" && test.moduleId === lead.action.moduleId);
   const openItem = (item: TodayItem) => {
     const action = item.action;
     if (action.type === "week") onNavigate("weekly", action.week);
@@ -146,7 +159,7 @@ export function DashboardView({
     : lead.task
       ? taskActionLabel(lead.task, tracker, role)
       : lead.kind === "moduleTest"
-        ? isStudent ? "Open the test" : "View module tests"
+        ? isStudent ? leadResumes ? "Resume the test" : "Open the test" : "View module tests"
         : lead.kind === "review"
           ? isStudent ? "Start review" : "Open Practice"
           : "Open Mistake Review";
@@ -166,6 +179,7 @@ export function DashboardView({
         <div className="today-focus">
           <div className="today-focus-copy">
             <p className="hero-kicker">TODAY · WEEK {String(currentWeek).padStart(2, "0")}</p>
+            {testStrip && <p className="today-test-strip"><ClipboardCheck size={15} aria-hidden="true" /> {testStrip}</p>}
             {lead ? (
               <>
                 <h1>{leadHeading(lead)}</h1>
