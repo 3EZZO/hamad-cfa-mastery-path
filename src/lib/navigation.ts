@@ -40,7 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "weekly", label: "This Week", mobileLabel: "Week", icon: ListChecks },
   { id: "sessions", label: "Session Notes", mobileLabel: "Sessions", icon: GraduationCap, hint: "Lesson outcomes & homework" },
   { id: "practice", label: "Practice", mobileLabel: "Practice", icon: TimerReset },
-  { id: "progress", label: "Progress", mobileLabel: "Progress", icon: Grid3x3, hint: "Module heatmap, tests and mocks" },
+  { id: "progress", label: "Progress", mobileLabel: "Progress", icon: Grid3x3, hint: "Module heatmap and mocks" },
   { id: "mastery", label: "Topic Progress", mobileLabel: "Topics", icon: Gauge, hint: "Mastery by subject" },
   { id: "moduleMocks", label: "Module Tests", mobileLabel: "Tests", icon: ClipboardCheck, hint: "Compulsory timed assessments" },
   { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
@@ -141,9 +141,9 @@ export const TAB_COPY: Record<TabId, { eyebrow: string; title: string; descripti
     description: "Strengthen weak concepts with fresh questions, immediate feedback, and spaced review.",
   },
   progress: {
-    eyebrow: "Evidence by module, test and mock",
+    eyebrow: "Evidence by module and mock",
     title: "Progress",
-    description: "Every curriculum module by exam weight, with module test and mock results alongside.",
+    description: "Every curriculum module by exam weight, with full mock results alongside.",
   },
   mastery: {
     eyebrow: "Honest topic evidence",

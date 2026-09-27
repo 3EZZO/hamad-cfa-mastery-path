@@ -27,7 +27,7 @@ function textOf(node: ReactTestInstance): string {
   return node.children.map((child) => (typeof child === "string" ? child : textOf(child))).join("");
 }
 
-async function render(role: "tutor" | "student", section: "topics" | "tests" | "mocks" = "topics") {
+async function render(role: "tutor" | "student", section: "topics" | "mocks" = "topics") {
   const handlers = { onSection: vi.fn(), onPracticeModule: vi.fn() };
   let tree!: ReturnType<typeof create>;
   await act(async () => {
@@ -41,7 +41,6 @@ async function render(role: "tutor" | "student", section: "topics" | "tests" | "
         uid="uid-1"
         canEditMastery={role === "tutor"}
         canManageMocks={role === "tutor"}
-        moduleMockScores={<p>Module scores slot</p>}
         {...handlers}
       />,
     );
@@ -67,18 +66,13 @@ describe("Progress view", () => {
   it("renders the sections as tabs and reports a change", async () => {
     const { tree, handlers } = await render("student");
     const tabs = tree.root.findAllByProps({ role: "tab" });
-    expect(tabs.map((tab) => textOf(tab))).toEqual(["Topics", "Module tests", "Mocks"]);
-    expect(tabs.map((tab) => tab.props["aria-selected"])).toEqual([true, false, false]);
-    expect(tabs.map((tab) => tab.props.tabIndex)).toEqual([0, -1, -1]);
+    expect(tabs.map((tab) => textOf(tab))).toEqual(["Topics", "Mocks"]);
+    expect(tabs.map((tab) => tab.props["aria-selected"])).toEqual([true, false]);
+    expect(tabs.map((tab) => tab.props.tabIndex)).toEqual([0, -1]);
     const panel = tree.root.findByProps({ role: "tabpanel" });
     expect(panel.props["aria-labelledby"]).toBe("progress-tab-topics");
     await act(async () => tabs[1].props.onClick());
-    expect(handlers.onSection).toHaveBeenCalledWith("tests");
-  });
-
-  it("shows the module test slot in its section", async () => {
-    const { tree } = await render("student", "tests");
-    expect(textOf(tree.root.findByProps({ role: "tabpanel" }))).toContain("Module scores slot");
+    expect(handlers.onSection).toHaveBeenCalledWith("mocks");
   });
 
   it("opens a module's detail and starts practice for the student", async () => {

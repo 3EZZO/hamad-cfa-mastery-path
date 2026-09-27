@@ -519,7 +519,6 @@ function App() {
             uid={user.uid}
             canEditMastery={capabilities.canEditMastery}
             canManageMocks={capabilities.canManageMocks}
-            moduleMockScores={<ModuleMockScores uid={user.uid} role={role!} />}
             onPracticeModule={openPracticeModule}
           />
         );

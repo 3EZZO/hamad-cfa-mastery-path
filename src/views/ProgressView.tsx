@@ -1,5 +1,5 @@
-import { ArrowRight, ClipboardCheck, Grid3x3, TrendingUp, X } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { ArrowRight, Grid3x3, TrendingUp, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { formatExamWeight } from "../data/examWeights";
 import { usePracticeSnapshot } from "../hooks/usePracticeSnapshot";
 import { formatDate } from "../lib/dates";
@@ -11,11 +11,11 @@ import { MockView } from "./MockView";
 import { SectionPanel, SectionTabs, cx, topicShort } from "./shared";
 import type { Notify, UpdateTracker } from "./shared";
 
-export type ProgressSection = "topics" | "tests" | "mocks";
+/** Module test results live on the Tests destination, not here. */
+export type ProgressSection = "topics" | "mocks";
 
 const SECTIONS: Array<{ id: ProgressSection; label: string; icon: typeof Grid3x3 }> = [
   { id: "topics", label: "Topics", icon: Grid3x3 },
-  { id: "tests", label: "Module tests", icon: ClipboardCheck },
   { id: "mocks", label: "Mocks", icon: TrendingUp },
 ];
 
@@ -157,7 +157,6 @@ export function ProgressView({
   uid,
   canEditMastery,
   canManageMocks,
-  moduleMockScores,
   onPracticeModule,
 }: {
   section: ProgressSection;
@@ -169,7 +168,6 @@ export function ProgressView({
   uid: string;
   canEditMastery: boolean;
   canManageMocks: boolean;
-  moduleMockScores: ReactNode;
   onPracticeModule: (moduleId: string) => void;
 }) {
   return (
@@ -182,7 +180,6 @@ export function ProgressView({
             <MasteryView tracker={tracker} updateTracker={updateTracker} canEdit={canEditMastery} />
           </div>
         )}
-        {section === "tests" && moduleMockScores}
         {section === "mocks" && (
           <MockView tracker={tracker} updateTracker={updateTracker} notify={notify} canManage={canManageMocks} />
         )}
