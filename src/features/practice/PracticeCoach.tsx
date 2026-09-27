@@ -74,7 +74,7 @@ import { buildFormulaSheet, countFormulae } from "../../lib/formulaSheet";
 import { FormulaSheet } from "./FormulaSheet";
 import { buildExamReport, examRemainingMs, formatClock } from "../../lib/examDrill";
 import { setShellBusy } from "../../lib/shellBusy";
-import { intentAllowedFor, parsePracticeIntent, PRACTICE_INTENTS } from "../../lib/practiceIntents";
+import { intentAllowedFor, parsePracticeIntent, parsePracticeModuleSegment, PRACTICE_INTENTS } from "../../lib/practiceIntents";
 import "./practiceCoach.css";
 
 export interface PracticeCompletionSummary {
@@ -579,10 +579,25 @@ export function PracticeCoach({
   const handledIntent = useRef("");
   useEffect(() => {
     const parsed = parsePracticeIntent(intent);
-    if (!parsed) { handledIntent.current = ""; return; }
+    const moduleId = parsed ? null : parsePracticeModuleSegment(intent);
+    if (!parsed && !moduleId) { handledIntent.current = ""; return; }
     if (handledIntent.current === intent || !assignmentLoaded) return;
     handledIntent.current = intent;
     const canRun = role === "student" || isRehearsal;
+    if (moduleId) {
+      if (!canRun) {
+        // Nothing to start for the tutor; the segment is simply cleared.
+      } else if (activeRun) {
+        setMessage(`Finish or leave the current ${modeLabel(activeRun.mode)} set before starting module practice.`);
+      } else if (!modules.includes(moduleId)) {
+        setMessage("That module is not in your assigned practice yet.");
+      } else {
+        void begin("module", 10, moduleId);
+      }
+      onIntentHandled?.();
+      return;
+    }
+    if (!parsed) return;
     if (!intentAllowedFor(parsed, canRun)) {
       onIntentHandled?.();
       return;

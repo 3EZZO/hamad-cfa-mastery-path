@@ -52,33 +52,8 @@ async function loadDueReviews(uid: string, nowMs: number): Promise<number | null
 }
 
 async function loadReminderDeadlines(uid: string): Promise<Map<string, string>> {
-  const { subscribeToMyMockReminders } = await import("../lib/cloudMockReminders");
-  return new Promise((resolve) => {
-    let settled = false;
-    let unsubscribe: (() => void) | null = null;
-    const finish = (deadlines: Map<string, string>) => {
-      if (settled) return;
-      settled = true;
-      unsubscribe?.();
-      resolve(deadlines);
-    };
-    unsubscribe = subscribeToMyMockReminders(
-      uid,
-      (reminders) => {
-        const deadlines = new Map<string, string>();
-        reminders.forEach((reminder) => {
-          if (!reminder.deadline) return;
-          reminder.moduleIds.forEach((moduleId) => {
-            const current = deadlines.get(moduleId);
-            if (!current || reminder.deadline! < current) deadlines.set(moduleId, reminder.deadline!);
-          });
-        });
-        finish(deadlines);
-      },
-      () => finish(new Map()),
-    );
-    if (settled) unsubscribe();
-  });
+  const { loadMyReminderDeadlines } = await import("../lib/cloudMockReminders");
+  return loadMyReminderDeadlines(uid);
 }
 
 async function loadModuleTestStatus(uid: string): Promise<ModuleTestStatus> {

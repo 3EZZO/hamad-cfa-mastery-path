@@ -18,6 +18,17 @@ export function parsePracticeIntent(segment: string): PracticeIntent | null {
     : null;
 }
 
+const MODULE_SEGMENT = /^module-([a-z0-9][a-z0-9-]*)$/i;
+
+/** `#practice/module-<moduleId>`: a focused module set, e.g. from a Progress heatmap cell. */
+export function practiceModuleSegment(moduleId: string): string {
+  return `module-${moduleId}`;
+}
+
+export function parsePracticeModuleSegment(segment: string): string | null {
+  return MODULE_SEGMENT.exec(segment)?.[1] ?? null;
+}
+
 /** Intents that start a run are for the student (or a rehearsal); the calculator is for anyone. */
 export function intentAllowedFor(intent: PracticeIntent, canRun: boolean): boolean {
   return PRACTICE_INTENTS[intent].mode === null || canRun;
