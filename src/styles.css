@@ -5888,3 +5888,15 @@ input[type="checkbox"],
 @keyframes update-toast-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .update-toast__spin { animation: none; } }
 @media (max-width: 1023px) { .update-toast { left: 12px; right: auto; } }
+/* Today queue (Home hero) -------------------------------------------------- */
+.today-queue { display: grid; gap: 2px; max-width: 720px; margin: 20px 0 0; padding: 0; list-style: none; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+.today-queue li { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.today-queue button { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 6px; border: 0; border-radius: 8px; background: transparent; color: #deebf8; font: inherit; text-align: left; cursor: pointer; }
+.today-queue button:hover { background: rgba(255, 255, 255, 0.06); }
+.today-queue button svg { color: #a9c7ff; }
+.today-queue-copy { display: grid; gap: 2px; min-width: 0; }
+.today-queue-copy strong { overflow: hidden; color: #fff; font-size: 0.88rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.today-queue-copy small { overflow: hidden; color: #afc3d8; font-size: 0.76rem; text-overflow: ellipsis; white-space: nowrap; }
+.today-queue-minutes { color: #c5d5e5; font-size: 0.76rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.today-focus-copy > p.today-queue-total { margin: 12px 0 0; color: #afc3d8; font-size: 0.78rem; }
+.today-focus-copy > p.today-test-strip { display: inline-flex; align-items: center; gap: 7px; margin: 10px 0 0; padding: 5px 11px; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 999px; color: #deebf8; font-size: 0.8rem; font-weight: 600; }
