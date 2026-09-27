@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { parseHash, readSegment, writeSegment } from "../lib/hashRoute";
+import { buildHash, parseHash, readSegment, resolveLegacyRoute, writeSegment } from "../lib/hashRoute";
 
 interface HashTabOptions<T extends string> {
   /** Window title for a tab; applied on every change and on first load. */
@@ -11,8 +11,19 @@ function readHash<T extends string>(allowed: readonly T[], fallback: T): T {
   if (typeof window === "undefined") return fallback;
   // `#tab/segment`: only the tab part selects the view; the segment belongs
   // to that view (see useHashSegment).
-  const candidate = parseHash(window.location.hash).tab;
-  return (allowed as readonly string[]).includes(candidate) ? (candidate as T) : fallback;
+  const route = parseHash(window.location.hash);
+  if ((allowed as readonly string[]).includes(route.tab)) return route.tab as T;
+  // A retired tab: rewrite its link in place to the view that now hosts it,
+  // before any segment reader looks, so the old sub-route is kept.
+  const moved = resolveLegacyRoute(route);
+  if (moved && (allowed as readonly string[]).includes(moved.tab)) {
+    const next = buildHash(moved.tab, moved.segment);
+    const history = (window as Window & { history?: History }).history;
+    if (history && typeof history.replaceState === "function") history.replaceState(null, "", next);
+    else window.location.hash = next;
+    return moved.tab as T;
+  }
+  return fallback;
 }
 
 function reducedMotion(): boolean {
