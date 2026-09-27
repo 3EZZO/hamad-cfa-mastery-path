@@ -48,7 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "practice", label: "Practice", mobileLabel: "Practice", icon: TimerReset, keywords: ["Mistake Review", "Mistakes", "Retests"] },
   { id: "progress", label: "Progress", mobileLabel: "Progress", icon: Grid3x3, hint: "Module heatmap and mocks", keywords: ["Topic Progress", "Topics", "Mock Results", "Mocks", "Heatmap"] },
   { id: "mastery", label: "Topic Progress", mobileLabel: "Topics", icon: Gauge, hint: "Mastery by subject" },
-  { id: "moduleMocks", label: "Module Tests", mobileLabel: "Tests", icon: ClipboardCheck, hint: "Compulsory timed assessments" },
+  { id: "moduleMocks", label: "Module Tests", mobileLabel: "Tests", icon: ClipboardCheck, hint: "Compulsory timed assessments", keywords: ["Tests", "Module mock", "Assessment", "Results", "Scores"] },
   { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
   { id: "errors", label: "Mistake Review", mobileLabel: "Mistakes", icon: Archive, hint: "Corrections & retests" },
   { id: "notes", label: "Notes & Data", mobileLabel: "Notes", icon: NotebookPen, hint: "General notes & backups" },
@@ -68,9 +68,10 @@ export function navItem(id: TabId): NavItem {
 
 
 /**
- * Two navigation layouts over one set of views. "destinations" is the
- * four-place layout (Today · Plan · Practice · Progress, plus Notes and the
- * tutor group); "classic" restores the earlier tab list for a few weeks as a
+ * Two navigation layouts over one set of views. "destinations" leads with
+ * Module Tests, then Today · Plan · Practice · Progress, plus Notes and the
+ * tutor group, and opens on Tests; "classic" restores the earlier tab list
+ * (opening on Home) for a few weeks as a
  * device-only fallback (see navLayout.ts). The retired tabs are allowed only
  * in classic, so in the new layout their links resolve through the aliases
  * in hashRoute.ts.
@@ -84,6 +85,8 @@ export interface NavGroup {
 
 export interface NavConfig {
   layout: NavLayout;
+  /** Where the app opens when the link names no tab (a fresh launch). */
+  home: TabId;
   /** Tabs the hash may select in this layout. */
   tabs: readonly TabId[];
   groups: NavGroup[];
@@ -97,20 +100,22 @@ export const TUTOR_TAB_IDS: readonly TabId[] = ["live", "coach", "payments"];
 
 const DESTINATIONS: NavConfig = {
   layout: "destinations",
-  tabs: ["dashboard", "plan", "practice", "progress", "notes", "live", "coach", "payments"],
+  home: "moduleMocks",
+  tabs: ["moduleMocks", "dashboard", "plan", "practice", "progress", "notes", "live", "coach", "payments"],
   groups: [
-    { label: "Focus", ids: ["dashboard"] },
+    { label: "Focus", ids: ["moduleMocks", "dashboard"] },
     { label: "Study", ids: ["plan", "practice", "progress"] },
     { label: "Records", ids: ["notes"] },
     { label: "Tutor", ids: ["live", "coach", "payments"] },
   ],
-  mobilePrimary: ["dashboard", "plan", "practice", "progress"],
-  mobileMore: ["notes", "live", "coach", "payments"],
-  shortcutOrder: ["dashboard", "plan", "practice", "progress", "notes", "live", "coach", "payments"],
+  mobilePrimary: ["moduleMocks", "dashboard", "plan", "practice"],
+  mobileMore: ["progress", "notes", "live", "coach", "payments"],
+  shortcutOrder: ["moduleMocks", "dashboard", "plan", "practice", "progress", "notes", "live", "coach", "payments"],
 };
 
 const CLASSIC: NavConfig = {
   layout: "classic",
+  home: "dashboard",
   tabs: TAB_IDS,
   groups: [
     { label: "Focus", ids: ["dashboard", "weekly"] },

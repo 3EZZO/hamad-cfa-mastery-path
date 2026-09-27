@@ -111,7 +111,7 @@ function App() {
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
   const navLayout = useNavLayout();
   const nav = navConfig(navLayout);
-  const [activeTab, setActiveTab] = useHashTab<TabId>(nav.tabs, "dashboard", {
+  const [activeTab, setActiveTab] = useHashTab<TabId>(nav.tabs, nav.home, {
     title: (tab) => `${TAB_COPY[tab].title} · Hamad CFA Mastery`,
   });
   // This Week mirrors its week to `#weekly/week-N` so reload, back/forward
@@ -351,7 +351,7 @@ function App() {
       id: "nav-layout",
       label: navLayout === "classic" ? "Use the new navigation" : "Use classic navigation",
       group: "Actions",
-      hint: navLayout === "classic" ? "Today · Plan · Practice · Progress" : "The earlier tab list, on this device only",
+      hint: navLayout === "classic" ? "Tests · Today · Plan · Practice · Progress" : "The earlier tab list, on this device only",
       keywords: ["navigation", "layout", "classic", "tabs", "menu"],
       icon: Menu,
       run: () => setNavLayout(navLayout === "classic" ? "destinations" : "classic"),
@@ -881,7 +881,7 @@ function App() {
             </button>}
             <button type="button" onClick={() => setNavLayout(navLayout === "classic" ? "destinations" : "classic")}>
               <Menu size={16} />
-              <span>{navLayout === "classic" ? "Use the new navigation" : "Use classic navigation"}<small>{navLayout === "classic" ? "Today · Plan · Practice · Progress" : "The earlier tab list, on this device only"}</small></span>
+              <span>{navLayout === "classic" ? "Use the new navigation" : "Use classic navigation"}<small>{navLayout === "classic" ? "Tests · Today · Plan · Practice · Progress" : "The earlier tab list, on this device only"}</small></span>
             </button>
             <button
               className="workspace-signout"
