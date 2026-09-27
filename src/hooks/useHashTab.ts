@@ -101,9 +101,19 @@ export function useHashSegment(
 ): [string, (segment: string) => void] {
   const active = tab === activeTab;
   const [segment, setSegment] = useState(() => (active ? readSegment(tab) : ""));
+  // Whether `segment` has caught up with the hash since this tab became
+  // active. On the render that activates the tab the state still holds the
+  // previous value, so read the live hash instead: otherwise a view briefly
+  // sees no segment and can overwrite the link (e.g. #roadmap/week-18
+  // becoming the current week).
+  const synced = useRef(active);
 
   useEffect(() => {
-    if (!active || typeof window === "undefined") return;
+    if (!active || typeof window === "undefined") {
+      synced.current = false;
+      return;
+    }
+    synced.current = true;
     setSegment(readSegment(tab));
     const onHashChange = () => setSegment(readSegment(tab));
     window.addEventListener("hashchange", onHashChange);
@@ -115,5 +125,5 @@ export function useHashSegment(
     if (active) writeSegment(tab, next);
   }, [active, tab]);
 
-  return [segment, set];
+  return [active && !synced.current ? readSegment(tab) : segment, set];
 }

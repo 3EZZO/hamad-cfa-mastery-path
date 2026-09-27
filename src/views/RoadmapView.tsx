@@ -1,37 +1,54 @@
 // Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
 import { BookOpenCheck, Check, ChevronRight } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getWeekSessions, getWeekProgressForState, PHASES, PLAN } from "../data/plan";
 import program from "../data/program.json";
 import { READING_CATALOG } from "../data/readings";
 import { formatDate, TOTAL_WEEKS } from "../lib/dates";
 import { effectiveSessionDate, sessionDayLabel } from "../lib/schedule";
-import { useHashSegment } from "../hooks/useHashTab";
-import { parseWeekSegment, weekSegment } from "../lib/hashRoute";
 import type { TrackerState } from "../types";
-import type { TabId } from "../lib/navigation";
 import { CHECKPOINT_TIME, ProgressBar, ReadingCoverage, cx, phaseShort } from "./shared";
 
 export function RoadmapView({
   tracker,
   currentWeek,
-  onNavigate,
+  focusWeek,
+  onFocusWeek,
+  onOpenWeek,
 }: {
   tracker: TrackerState;
   currentWeek: number;
-  onNavigate: (tab: TabId, week?: number) => void;
+  /** The week a link points at (from the host's hash segment); opened and scrolled to. */
+  focusWeek: number | null;
+  /** A week was opened here; the host records it in its hash segment. */
+  onFocusWeek: (week: number) => void;
+  /** "Open Week N checklist". */
+  onOpenWeek: (week: number) => void;
 }) {
   const [phase, setPhase] = useState("All phases");
-  // Only mounted while Study Plan is the active tab, so the segment is ours.
-  const [segment, setSegment] = useHashSegment("roadmap", "roadmap");
-  const focusWeek = parseWeekSegment(segment, TOTAL_WEEKS);
   const openWeek = focusWeek ?? currentWeek;
+  const weekNodes = useRef(new Map<number, HTMLDetailsElement>());
   const scrolledTo = useRef<number | null>(null);
-  const scrollToWeek = (node: HTMLDetailsElement | null, week: number) => {
-    if (!node || focusWeek !== week || scrolledTo.current === week) return;
-    scrolledTo.current = week;
-    if (typeof node.scrollIntoView === "function") node.scrollIntoView({ block: "start" });
-  };
+  // A week opened here by hand (a click on its summary, which keyboard
+  // activation also fires) is recorded in the link too; do not jump to it.
+  const openedHere = useRef<number | null>(null);
+  // Scroll to a linked week after the page has painted: scrolling while the
+  // view is still being swapped in (tab switch, view transition) was lost,
+  // so `#roadmap/week-12` opened week 12 but left the page at the top.
+  useEffect(() => {
+    if (!focusWeek || scrolledTo.current === focusWeek) return;
+    scrolledTo.current = focusWeek;
+    if (openedHere.current === focusWeek || typeof window === "undefined") return;
+    // A task after the commit (not an animation frame, which a hidden page
+    // never runs), once the opened week has been laid out.
+    const timer = window.setTimeout(() => {
+      const node = weekNodes.current.get(focusWeek);
+      // Instant: the page scrolls smoothly by default, and a smooth scroll
+      // is cut short when the opened week's content lays out mid-way.
+      if (node && typeof node.scrollIntoView === "function") node.scrollIntoView({ block: "start", behavior: "instant" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [focusWeek]);
   const visibleWeeks = phase === "All phases" ? PLAN : PLAN.filter((week) => week.phase === phase);
   const totalQuestions = PLAN.reduce((sum, week) => sum + week.questionTarget, 0);
   const plannedSessions = PLAN.flatMap(getWeekSessions);
@@ -80,10 +97,13 @@ export function RoadmapView({
               className={cx("timeline-week", week.week === currentWeek && "is-current")}
               key={week.week}
               open={week.week === openWeek}
-              ref={(node) => scrollToWeek(node, week.week)}
-              onToggle={(event) => { if (event.currentTarget.open) setSegment(weekSegment(week.week)); }}
+              ref={(node) => {
+                if (node) weekNodes.current.set(week.week, node);
+                else weekNodes.current.delete(week.week);
+              }}
+              onToggle={(event) => { if (event.currentTarget.open) onFocusWeek(week.week); }}
             >
-              <summary>
+              <summary onClick={() => { openedHere.current = week.week; }}>
                 <span className="timeline-index">{String(week.week).padStart(2, "0")}</span>
                 <span className="timeline-summary-copy">
                   <small>{phaseShort(week.phase)} · {formatDate(week.startDate, { day: "numeric", month: "short" })}–{formatDate(week.endDate, { day: "numeric", month: "short" })}</small>
@@ -130,7 +150,7 @@ export function RoadmapView({
                     </article>
                   )}
                 </div>
-                <button className="button button-secondary" type="button" onClick={() => onNavigate("weekly", week.week)}>
+                <button className="button button-secondary" type="button" onClick={() => onOpenWeek(week.week)}>
                   Open Week {week.week} checklist <ChevronRight size={16} />
                 </button>
               </div>

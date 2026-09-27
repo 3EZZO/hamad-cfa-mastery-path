@@ -1,11 +1,12 @@
 // Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
-import { Archive, Banknote, CalendarDays, ClipboardCheck, Gauge, GraduationCap, Grid3x3, LayoutDashboard, ListChecks, NotebookPen, PlayCircle, TimerReset, TrendingUp, UserCog } from "lucide-react";
+import { Archive, Banknote, CalendarDays, CalendarRange, ClipboardCheck, Gauge, GraduationCap, Grid3x3, LayoutDashboard, ListChecks, NotebookPen, PlayCircle, TimerReset, TrendingUp, UserCog } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TOTAL_WEEKS } from "../lib/dates";
 
 export type TabId =
   | "dashboard"
   | "roadmap"
+  | "plan"
   | "weekly"
   | "sessions"
   | "practice"
@@ -36,6 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
     mobileLabel: "Home",
     icon: LayoutDashboard,
   },
+  { id: "plan", label: "Plan", mobileLabel: "Plan", icon: CalendarRange, hint: "This week, the full plan and session notes" },
   { id: "roadmap", label: "Study Plan", mobileLabel: "Plan", icon: CalendarDays },
   { id: "weekly", label: "This Week", mobileLabel: "Week", icon: ListChecks },
   { id: "sessions", label: "Session Notes", mobileLabel: "Sessions", icon: GraduationCap, hint: "Lesson outcomes & homework" },
@@ -74,6 +76,7 @@ export const SHORTCUT_TAB_ORDER: readonly TabId[] = [
   "coach",
   "payments",
   "progress",
+  "plan",
 ];
 
 
@@ -85,7 +88,7 @@ export function shortcutTabs(visible: readonly TabId[]): TabId[] {
 
 export const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
   { label: "Focus", ids: ["dashboard", "weekly"] },
-  { label: "Plan", ids: ["roadmap", "sessions"] },
+  { label: "Plan", ids: ["plan", "roadmap", "sessions"] },
   { label: "Evidence", ids: ["progress", "practice", "moduleMocks", "mastery", "mocks", "errors"] },
   { label: "Records", ids: ["notes"] },
   { label: "Tutor", ids: ["live", "coach", "payments"] },
@@ -101,6 +104,7 @@ export const MOBILE_PRIMARY_IDS: TabId[] = [
 
 
 export const MOBILE_MORE_IDS: TabId[] = [
+  "plan",
   "progress",
   "moduleMocks",
   "sessions",
@@ -119,6 +123,11 @@ export const TAB_COPY: Record<TabId, { eyebrow: string; title: string; descripti
     eyebrow: "Your study workspace",
     title: "Home",
     description: "One clear next step, with the full plan available when you need it.",
+  },
+  plan: {
+    eyebrow: "Week by week to 27 February 2027",
+    title: "Plan",
+    description: "This week's work, the full plan and the record of each lesson.",
   },
   roadmap: {
     eyebrow: "August 2026 — February 2027",
