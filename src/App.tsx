@@ -435,6 +435,9 @@ function App() {
             rawProgramWeek={rawProgramWeek}
             onToggleTask={toggleTask}
             onNavigate={navigate}
+            onOpenPractice={openPractice}
+            onOpenModuleTest={openModuleMock}
+            studentUid={role === "student" ? user.uid : null}
             role={role!}
             loading={syncStatus === "loading"}
           />
