@@ -5,6 +5,7 @@ import {
   parseSessionSegment,
   parseWeekSegment,
   readSegment,
+  resolveLegacyRoute,
   sessionSegment,
   weekSegment,
   writeSegment,
@@ -62,5 +63,31 @@ describe("hash route grammar", () => {
     writeSegment("live", "", plain);
     expect(plain.location.hash).toBe("#live");
     writeSegment("live", "session-03", undefined);
+  });
+});
+
+describe("legacy routes", () => {
+  const moved = (hash: string) => {
+    const next = resolveLegacyRoute(parseHash(hash));
+    return next ? buildHash(next.tab, next.segment) : null;
+  };
+
+  it("maps every retired tab, keeping its sub-route", () => {
+    expect(moved("#weekly")).toBe("#plan");
+    expect(moved("#weekly/week-7")).toBe("#plan/week-7");
+    expect(moved("#roadmap")).toBe("#plan/roadmap");
+    expect(moved("#roadmap/week-12")).toBe("#plan/roadmap-week-12");
+    expect(moved("#sessions")).toBe("#plan/sessions");
+    expect(moved("#mastery")).toBe("#progress/topics");
+    expect(moved("#mocks")).toBe("#progress/mocks");
+    expect(moved("#moduleMocks")).toBe("#practice/tests");
+    expect(moved("#moduleMocks/m01-rates-and-returns")).toBe("#practice/tests-m01-rates-and-returns");
+    expect(moved("#errors")).toBe("#practice/mistakes");
+  });
+
+  it("leaves tabs that still exist, unknown tabs and prototype keys alone", () => {
+    for (const tab of ["dashboard", "practice", "notes", "live", "coach", "payments", "plan", "progress", "nope", "toString", "__proto__"]) {
+      expect(resolveLegacyRoute({ tab, segment: "" })).toBeNull();
+    }
   });
 });

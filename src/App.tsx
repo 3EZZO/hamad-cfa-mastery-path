@@ -25,7 +25,7 @@ import { useDialogFocus } from "./features/liveSession/useDialogFocus";
 import { MockReminderHost, ModuleMockScores, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
 import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
-import { MOBILE_MORE_IDS, MOBILE_PRIMARY_IDS, NAV_GROUPS, NAV_ITEMS, TAB_COPY, TAB_IDS } from "./lib/navigation";
+import { MOBILE_MORE_IDS, MOBILE_PRIMARY_IDS, NAV_GROUPS, NAV_ITEMS, TAB_COPY, TAB_IDS, shortcutTabs } from "./lib/navigation";
 import type { TabId } from "./lib/navigation";
 import { EmptyState, PageHeading, cx, makeId, syncPresentation } from "./views/shared";
 import type { Notify } from "./views/shared";
@@ -183,9 +183,10 @@ function App() {
   const visibleNav = NAV_ITEMS.filter(
     (item) => capabilities.canUseLiveSession || !NAV_GROUPS.some((group) => group.label === "Tutor" && group.ids.includes(item.id)),
   );
+  const shortcutIds = shortcutTabs(visibleNav.map((item) => item.id));
   useGlobalShortcuts({
     onTogglePalette: () => setPaletteOpen((open) => !open),
-    tabs: isLiveShell ? [] : visibleNav.map((item) => () => setActiveTab(item.id)),
+    tabs: isLiveShell ? [] : shortcutIds.map((id) => () => setActiveTab(id)),
     paletteOpen,
     helpKey: !isLiveShell,
     enabled: Boolean(user && trackerReady) && !mockTestRunning,
@@ -288,13 +289,13 @@ function App() {
     : [];
 
   const commands: PaletteCommand[] = [
-    ...visibleNav.map<PaletteCommand>((item, index) => ({
+    ...visibleNav.map<PaletteCommand>((item) => ({
       id: `go-${item.id}`,
       label: item.label,
       group: "Go to",
       hint: item.hint ?? TAB_COPY[item.id].description,
       keywords: [item.mobileLabel],
-      shortcut: index < 9 ? `Alt+${index + 1}` : undefined,
+      shortcut: shortcutIds.includes(item.id) ? `Alt+${shortcutIds.indexOf(item.id) + 1}` : undefined,
       icon: item.icon,
       run: () => navigate(item.id),
     })),

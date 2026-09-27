@@ -53,6 +53,33 @@ export const NAV_ITEMS: NavItem[] = [
 export const TAB_IDS: readonly TabId[] = NAV_ITEMS.map((item) => item.id);
 
 
+/**
+ * Alt+1…9 order. Explicit rather than derived from the sidebar so moving a
+ * sidebar entry never silently re-points a shortcut someone has learned.
+ */
+export const SHORTCUT_TAB_ORDER: readonly TabId[] = [
+  "dashboard",
+  "roadmap",
+  "weekly",
+  "sessions",
+  "practice",
+  "mastery",
+  "moduleMocks",
+  "mocks",
+  "errors",
+  "notes",
+  "live",
+  "coach",
+  "payments",
+];
+
+
+/** The tabs Alt+1…9 reach, in order, from those the account can see. */
+export function shortcutTabs(visible: readonly TabId[]): TabId[] {
+  return SHORTCUT_TAB_ORDER.filter((id) => visible.includes(id)).slice(0, 9);
+}
+
+
 export const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
   { label: "Focus", ids: ["dashboard", "weekly"] },
   { label: "Plan", ids: ["roadmap", "sessions"] },
