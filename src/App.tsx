@@ -38,7 +38,7 @@ import { PracticeLogView } from "./views/PracticeLogView";
 import { MasteryView } from "./views/MasteryView";
 import { MockView } from "./views/MockView";
 import { ProgressView, parseProgressSection } from "./views/ProgressView";
-import { PracticeHubView, practiceTestModule } from "./views/PracticeHubView";
+import { PracticeHubView } from "./views/PracticeHubView";
 import { isRetestDue } from "./lib/retests";
 import { ErrorVaultView } from "./views/ErrorVaultView";
 import { TutorAdminView } from "./views/TutorAdminView";
@@ -519,15 +519,6 @@ function App() {
                 tracker={tracker}
                 updateTracker={updateTracker}
                 notify={notify}
-              />
-            )}
-            tests={(
-              <ModuleMockTests
-                uid={user.uid}
-                role={role!}
-                notify={notify}
-                openModuleId={practiceTestModule(practiceSegment)}
-                onOpenHandled={() => setPracticeSegment("tests")}
               />
             )}
           />
