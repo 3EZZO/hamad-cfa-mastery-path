@@ -5967,3 +5967,5 @@ html:root[data-theme="dark"] .heatmap-cell.is-stale, html:root[data-theme="dark"
 .tutor-brief__list strong { color: var(--ink); font-size: 0.86rem; font-weight: 600; }
 .tutor-brief__list span { color: var(--muted); font-size: 0.78rem; }
 @media (prefers-reduced-motion: reduce) { .tutor-brief > summary > svg:last-child { transition: none; } }
+/* Keep a linked Full plan week clear of the sticky top bar. */
+.timeline .timeline-week { scroll-margin-top: 96px; }

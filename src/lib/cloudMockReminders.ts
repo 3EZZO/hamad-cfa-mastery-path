@@ -19,6 +19,7 @@ import {
   mapCloudError,
 } from "./cloud";
 import { validateReminderDraft, type MockReminder, type ReminderDraft } from "./mockReminders";
+import { deadlinesByModule } from "./testBoard";
 
 const PROGRAM_ID = "project-202";
 const COLLECTION = "mockReminders";
@@ -130,6 +131,29 @@ export async function listMockReminders(): Promise<MockReminder[]> {
 }
 
 // ---------------------------------------------------------------- student
+
+/**
+ * One read of the student's active reminder deadlines, earliest per module.
+ * Resolves with an empty map on any error so callers degrade quietly.
+ */
+export function loadMyReminderDeadlines(uid: string): Promise<Map<string, string>> {
+  return new Promise((resolve) => {
+    let settled = false;
+    let unsubscribe: (() => void) | null = null;
+    const finish = (deadlines: Map<string, string>) => {
+      if (settled) return;
+      settled = true;
+      unsubscribe?.();
+      resolve(deadlines);
+    };
+    unsubscribe = subscribeToMyMockReminders(
+      uid,
+      (reminders) => finish(deadlinesByModule(reminders, uid)),
+      () => finish(new Map()),
+    );
+    if (settled) unsubscribe();
+  });
+}
 
 /** Live list of the student's active reminders. */
 export function subscribeToMyMockReminders(
