@@ -50,7 +50,7 @@ describe("buildTodayQueue", () => {
     expect(items).toHaveLength(TODAY_LIMITS.weekTasks);
     expect(items.every((item) => item.kind === "task")).toBe(true);
     expect(items[0].action).toEqual({ type: "week", week: 1 });
-    expect(items[0].taskId).toBe("w1-independent-1");
+    expect(items[0].task?.id).toBe("w1-independent-1");
   });
 
   it("shows nothing from the plan before launch (week 0)", () => {
@@ -78,7 +78,7 @@ describe("buildTodayQueue", () => {
     expect(items.map((item) => item.kind)).toEqual([
       "overdue", "moduleTest", "retest", "review", "task", "task", "task",
     ]);
-    expect(items[0].taskId).toBe("w2-evidence-gate");
+    expect(items[0].task?.id).toBe("w2-evidence-gate");
     expect(items[0].action).toEqual({ type: "week", week: 2 });
     expect(items[1].action).toEqual({ type: "moduleTest", moduleId: "m01-rates-and-returns" });
     expect(items[1].detail).toContain("1 more test waiting");
@@ -103,11 +103,13 @@ describe("buildTodayQueue", () => {
     expect(withoutRequest.some((item) => item.id === `overdue-${firstSession.id}`)).toBe(true);
   });
 
-  it("does not offer a session as student-completable", () => {
-    const tracker = completeThrough(createDefaultState(), 0);
+  it("carries the plan task so the card can pick the right action", () => {
+    const tracker = completeThrough(createDefaultState(), 1);
+    getPlanTasks(PLAN[1]).filter((task) => task.kind === "independent")
+      .forEach((task) => { tracker.taskCompletions[task.id] = true; });
     const items = buildTodayQueue({ tracker, week: 2, today: PLAN[1].startDate });
-    const sessions = items.filter((item) => item.id.includes("-session-"));
-    sessions.forEach((item) => expect(item.taskId).toBeUndefined());
+    expect(items[0].task?.kind).toBe("session");
+    expect(items[0].id).toBe(`task-${items[0].task?.id}`);
   });
 
   it("degrades without practice or module test data", () => {

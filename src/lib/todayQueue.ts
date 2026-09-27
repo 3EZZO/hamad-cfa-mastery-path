@@ -30,8 +30,8 @@ export interface TodayItem {
   /** Known duration only (timed tests, question sets); null when the plan gives none. */
   minutes: number | null;
   action: TodayAction;
-  /** A student-completable plan task (not a session, which needs tutor approval). */
-  taskId?: string;
+  /** The plan task behind an overdue/task item; sessions complete only through tutor approval. */
+  task?: PlanTask;
 }
 
 export interface TodayPendingModuleTest {
@@ -83,7 +83,7 @@ function taskItem(task: PlanTask, week: number, kind: "overdue" | "task", detail
     detail,
     minutes: null,
     action: { type: "week", week },
-    ...(task.kind === "session" ? {} : { taskId: task.id }),
+    task,
   };
 }
 
