@@ -64,6 +64,7 @@ import type {
   TutorPlaybookPackage,
 } from "../lib/tutorContent";
 import type { PrivateTutorNote, TrackerState } from "../types";
+import { TutorBriefPanel } from "./TutorBrief";
 
 const MAX_PRIVATE_PACKAGE_BYTES = 8 * 1024 * 1024;
 const DESK_COMPLETE_NOTE = "[[session-desk-complete:v1]]";
@@ -1474,6 +1475,7 @@ function SessionWorkspace({
           onComplete={completeSession}
           onDiscardRehearsal={discardPreSessionRehearsal}
           onExit={onExit}
+          brief={active ? <TutorBriefPanel tracker={tracker} /> : null}
         />
       )}
       <input

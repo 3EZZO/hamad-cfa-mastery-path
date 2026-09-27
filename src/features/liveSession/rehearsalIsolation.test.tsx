@@ -66,6 +66,16 @@ describe("P5 live/rehearsal isolation", () => {
     expect(tree!.root.findAllByProps({ role: "alertdialog" })).toHaveLength(0);
     expect(focused).toEqual(["Keep rehearsal", "Discard rehearsal & start fresh"]);
   });
+  it("shows the tutor brief on the live launch screen only", async () => {
+    const playbook = adaptTutorPlaybookPackage(await syntheticPlaybook(2));
+    const brief = <p>Brief fixture</p>;
+    await act(async () => { tree = create(<LiveSessionConsole session={{ id: "s2", number: 2, date: "2026-09-19", startTime: "09:00", title: "Fixture", candidateName: "Hamad", topic: "Quant" }} playbook={playbook} onComplete={vi.fn()} brief={brief} />); });
+    expect(tree!.root.findByType(SessionLaunch).props.brief).toBe(brief);
+    expect(tree!.root.findAll(node => node.type === "p" && node.children.includes("Brief fixture"))).toHaveLength(1);
+    await act(async () => tree!.root.findByType(SessionLaunch).props.onRehearse(playbook.routes[0]));
+    const rehearsal = tree!.root.findByType(RehearsalWorkspace);
+    expect(rehearsal.findAll(node => node.type === "p" && node.children.includes("Brief fixture"))).toHaveLength(0);
+  });
   it("can rehearse from launch without passing the live-start gate", async () => {
     const playbook = adaptTutorPlaybookPackage(await syntheticPlaybook(2));
     const complete = vi.fn();

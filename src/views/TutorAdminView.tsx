@@ -10,6 +10,7 @@ import { getTaskStatus } from "../lib/taskStatus";
 import { cascadeReschedule, getEffectiveSessions, restoreCanonicalSession } from "../lib/schedule";
 import type { TrackerSyncStatus } from "../hooks/useTrackerSync";
 import { useAppDialog } from "../components/AppDialog";
+import { TutorBriefPanel } from "../components/TutorBrief";
 import { MockTestAdmin, PracticeBankAdmin } from "../lazyViews";
 import type { TrackerState } from "../types";
 import { CHECKPOINT_TIME, EmptyState, PLANNED_SESSIONS, cx } from "./shared";
@@ -174,6 +175,7 @@ export function TutorAdminView({
 
   return (
     <div className="view-stack tutor-console">
+      <TutorBriefPanel tracker={tracker} />
       <PracticeBankAdmin notify={notify} />
       <MockTestAdmin notify={notify} />
       <section className="panel approval-queue">

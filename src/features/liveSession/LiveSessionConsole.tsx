@@ -290,6 +290,7 @@ function LiveSessionWorkspace({
   syncState = "synced",
   syncMessage,
   offlineReady = false,
+  brief,
   onRetry,
   onPrepareOffline,
   onRemoveOffline,
@@ -654,6 +655,7 @@ function LiveSessionWorkspace({
           onStart={handleStart}
           onRehearse={onOpenRehearsal}
           onExit={onExit}
+          brief={brief}
         />
       </WorkspaceFrame>
     );
