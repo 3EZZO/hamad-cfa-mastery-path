@@ -10,6 +10,7 @@ import { getTaskStatus, isTaskComplete } from "../lib/taskStatus";
 import type { TrackerSyncStatus } from "../hooks/useTrackerSync";
 import type { PlanTask, PlanSession, PlanWeek, TrackerState } from "../types";
 import { TAB_COPY } from "../lib/navigation";
+import { useRovingNav } from "../hooks/useRovingNav";
 import type { TabId } from "../lib/navigation";
 
 export type UpdateTracker = (
@@ -422,5 +423,71 @@ export function EvidenceRow({ label, value }: { label: string; value: number }) 
 export function MiniMetric({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) {
   return (
     <article className="mini-metric"><span><Icon size={17} /></span><div><strong>{value}</strong><p>{label}</p></div></article>
+  );
+}
+
+
+export interface SectionTabItem<T extends string> {
+  id: T;
+  label: string;
+  icon?: LucideIcon;
+  /** Small count shown after the label (e.g. due retests). */
+  count?: number;
+}
+
+/**
+ * Sub-sections inside a destination (Progress › Topics / Tests / Mocks).
+ * Tabs pattern: arrow keys move focus, Enter/Space selects, only the active
+ * tab is in the Tab order. Pair with <SectionPanel> using the same idPrefix.
+ */
+export function SectionTabs<T extends string>({
+  label,
+  idPrefix,
+  items,
+  active,
+  onSelect,
+  disabled = false,
+}: {
+  label: string;
+  idPrefix: string;
+  items: SectionTabItem<T>[];
+  active: T;
+  onSelect: (id: T) => void;
+  disabled?: boolean;
+}) {
+  const onKeyDown = useRovingNav("horizontal");
+  return (
+    <div className="section-tabs" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+      {items.map((item) => {
+        const selected = item.id === active;
+        const Icon = item.icon;
+        return (
+          <button
+            key={item.id}
+            id={`${idPrefix}-tab-${item.id}`}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            aria-controls={`${idPrefix}-panel`}
+            tabIndex={selected ? 0 : -1}
+            className={cx("section-tab", selected && "is-active")}
+            disabled={disabled}
+            onClick={() => onSelect(item.id)}
+          >
+            {Icon && <Icon size={16} aria-hidden="true" />}
+            <span>{item.label}</span>
+            {item.count ? <em aria-label={`${item.count} due`}>{item.count}</em> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function SectionPanel({ idPrefix, active, children }: { idPrefix: string; active: string; children: ReactNode }) {
+  return (
+    <div className="section-panel" role="tabpanel" id={`${idPrefix}-panel`} aria-labelledby={`${idPrefix}-tab-${active}`}>
+      {children}
+    </div>
   );
 }

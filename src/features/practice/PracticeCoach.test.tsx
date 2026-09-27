@@ -333,6 +333,22 @@ describe("Practice Coach role views", () => {
     await act(async () => tree.unmount());
   });
 
+  it("starts focused module practice from #practice/module-<id> and ignores unassigned modules", async () => {
+    const onIntentHandled = vi.fn();
+    let tree!: ReactTestRenderer;
+    const mount = (intent: string) => (
+      <PracticeCoach uid="student-01" role="student" manualLog={null} onComplete={vi.fn()} notify={vi.fn()} intent={intent} onIntentHandled={onIntentHandled} />
+    );
+    await act(async () => { tree = create(mount("module-m999-not-assigned")); await Promise.resolve(); await Promise.resolve(); });
+    expect(onIntentHandled).toHaveBeenCalledTimes(1);
+    expect(tree.root.findAllByProps({ "aria-label": "Module practice practice set" })).toHaveLength(0);
+    expect(renderedText(tree)).toContain("That module is not in your assigned practice yet.");
+    await act(async () => tree.update(mount("module-module-01")));
+    expect(onIntentHandled).toHaveBeenCalledTimes(2);
+    expect(tree.root.findAllByProps({ "aria-label": "Module practice practice set" })).toHaveLength(1);
+    await act(async () => tree.unmount());
+  });
+
   it("shows the tutor Hamad's read-only performance and missed answer", async () => {
     const tree = await render("tutor", "tutor-uid");
     const text = renderedText(tree);

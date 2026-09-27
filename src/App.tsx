@@ -17,7 +17,7 @@ import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
 import { useHashSegment } from "./hooks/useHashTab";
 import { buildHash, parseWeekSegment, readSegment, weekSegment, writeSegment } from "./lib/hashRoute";
 import { setShellBusy, useShellBusy } from "./lib/shellBusy";
-import { PRACTICE_INTENTS, type PracticeIntent } from "./lib/practiceIntents";
+import { PRACTICE_INTENTS, practiceModuleSegment, type PracticeIntent } from "./lib/practiceIntents";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
@@ -37,6 +37,7 @@ import { SessionLogView } from "./views/SessionLogView";
 import { PracticeLogView } from "./views/PracticeLogView";
 import { MasteryView } from "./views/MasteryView";
 import { MockView } from "./views/MockView";
+import { ProgressView, parseProgressSection } from "./views/ProgressView";
 import { ErrorVaultView } from "./views/ErrorVaultView";
 import { TutorAdminView } from "./views/TutorAdminView";
 import { NotesView } from "./views/NotesView";
@@ -130,6 +131,8 @@ function App() {
   const openModuleMock = useCallback((moduleId: string) => {
     window.location.hash = buildHash("moduleMocks", moduleId);
   }, []);
+  // `#progress/<section>`: Topics (heatmap), Module tests or Mocks.
+  const [progressSegment, setProgressSegment] = useHashSegment("progress", activeTab);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
@@ -273,6 +276,12 @@ function App() {
     // so the segment is already there when the coach mounts or re-reads it.
     writeSegment("practice", intent);
     setPracticeSegment(intent);
+  };
+  const openPracticeModule = (moduleId: string) => {
+    const segment = practiceModuleSegment(moduleId);
+    navigate("practice");
+    writeSegment("practice", segment);
+    setPracticeSegment(segment);
   };
   const practiceCommands: PaletteCommand[] = !isLiveShell
     ? (Object.keys(PRACTICE_INTENTS) as PracticeIntent[])
@@ -496,6 +505,21 @@ function App() {
                 notify={notify}
               />
             )}
+          />
+        );
+      case "progress":
+        return (
+          <ProgressView
+            section={parseProgressSection(progressSegment)}
+            onSection={setProgressSegment}
+            tracker={tracker}
+            updateTracker={updateTracker}
+            notify={notify}
+            role={role!}
+            uid={user.uid}
+            canEditMastery={capabilities.canEditMastery}
+            canManageMocks={capabilities.canManageMocks}
+            onPracticeModule={openPracticeModule}
           />
         );
       case "mastery":

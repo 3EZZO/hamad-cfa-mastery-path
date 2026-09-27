@@ -1,5 +1,5 @@
 // Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
-import { Archive, Banknote, CalendarDays, ClipboardCheck, Gauge, GraduationCap, LayoutDashboard, ListChecks, NotebookPen, PlayCircle, TimerReset, TrendingUp, UserCog } from "lucide-react";
+import { Archive, Banknote, CalendarDays, ClipboardCheck, Gauge, GraduationCap, Grid3x3, LayoutDashboard, ListChecks, NotebookPen, PlayCircle, TimerReset, TrendingUp, UserCog } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TOTAL_WEEKS } from "../lib/dates";
 
@@ -10,6 +10,7 @@ export type TabId =
   | "sessions"
   | "practice"
   | "mastery"
+  | "progress"
   | "mocks"
   | "moduleMocks"
   | "errors"
@@ -39,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "weekly", label: "This Week", mobileLabel: "Week", icon: ListChecks },
   { id: "sessions", label: "Session Notes", mobileLabel: "Sessions", icon: GraduationCap, hint: "Lesson outcomes & homework" },
   { id: "practice", label: "Practice", mobileLabel: "Practice", icon: TimerReset },
+  { id: "progress", label: "Progress", mobileLabel: "Progress", icon: Grid3x3, hint: "Module heatmap and mocks" },
   { id: "mastery", label: "Topic Progress", mobileLabel: "Topics", icon: Gauge, hint: "Mastery by subject" },
   { id: "moduleMocks", label: "Module Tests", mobileLabel: "Tests", icon: ClipboardCheck, hint: "Compulsory timed assessments" },
   { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
@@ -71,6 +73,7 @@ export const SHORTCUT_TAB_ORDER: readonly TabId[] = [
   "live",
   "coach",
   "payments",
+  "progress",
 ];
 
 
@@ -83,7 +86,7 @@ export function shortcutTabs(visible: readonly TabId[]): TabId[] {
 export const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
   { label: "Focus", ids: ["dashboard", "weekly"] },
   { label: "Plan", ids: ["roadmap", "sessions"] },
-  { label: "Evidence", ids: ["practice", "moduleMocks", "mastery", "mocks", "errors"] },
+  { label: "Evidence", ids: ["progress", "practice", "moduleMocks", "mastery", "mocks", "errors"] },
   { label: "Records", ids: ["notes"] },
   { label: "Tutor", ids: ["live", "coach", "payments"] },
 ];
@@ -98,6 +101,7 @@ export const MOBILE_PRIMARY_IDS: TabId[] = [
 
 
 export const MOBILE_MORE_IDS: TabId[] = [
+  "progress",
   "moduleMocks",
   "sessions",
   "mastery",
@@ -135,6 +139,11 @@ export const TAB_COPY: Record<TabId, { eyebrow: string; title: string; descripti
     eyebrow: "Adaptive independent practice",
     title: "Practice",
     description: "Strengthen weak concepts with fresh questions, immediate feedback, and spaced review.",
+  },
+  progress: {
+    eyebrow: "Evidence by module and mock",
+    title: "Progress",
+    description: "Every curriculum module by exam weight, with full mock results alongside.",
   },
   mastery: {
     eyebrow: "Honest topic evidence",
