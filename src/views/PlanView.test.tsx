@@ -2,7 +2,7 @@ import { act, create, type ReactTestInstance } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildHash, parseHash, resolveLegacyRoute } from "../lib/hashRoute";
 import { PlanView, parsePlanSegment, planSegment } from "./PlanView";
-import { practiceSectionFor, practiceTestModule } from "./PracticeHubView";
+import { practiceSectionFor } from "./PracticeHubView";
 import { parseProgressSection } from "./ProgressView";
 
 function textOf(node: ReactTestInstance): string {
@@ -41,10 +41,10 @@ describe("every retired link lands on the right section", () => {
 
   it("Practice links", () => {
     expect(practiceSectionFor(land("#errors").segment)).toBe("mistakes");
-    const test = land("#moduleMocks/m03-statistical-measures");
-    expect(test.tab).toBe("practice");
-    expect(practiceSectionFor(test.segment)).toBe("tests");
-    expect(practiceTestModule(test.segment)).toBe("m03-statistical-measures");
+  });
+
+  it("module test links stay on their own destination", () => {
+    expect(resolveLegacyRoute(parseHash("#moduleMocks/m03-statistical-measures"))).toBeNull();
   });
 
   it("Progress links", () => {
