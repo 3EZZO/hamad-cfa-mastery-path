@@ -39,6 +39,8 @@ export interface TodayPendingModuleTest {
   title: string;
   /** ISO date or date-time from the tutor's reminder; null when none was set. */
   deadline: string | null;
+  /** Started and not yet submitted: resume before anything else. */
+  inProgress?: boolean;
 }
 
 export interface TodayQueueInput {
@@ -88,6 +90,7 @@ function taskItem(task: PlanTask, week: number, kind: "overdue" | "task", detail
 }
 
 function byDeadline(left: TodayPendingModuleTest, right: TodayPendingModuleTest): number {
+  if (Boolean(left.inProgress) !== Boolean(right.inProgress)) return left.inProgress ? -1 : 1;
   if (left.deadline && right.deadline) return left.deadline.localeCompare(right.deadline);
   if (left.deadline) return -1;
   if (right.deadline) return 1;
@@ -104,14 +107,7 @@ export function buildTodayQueue({
   if (week > PLAN.length) return [];
   const items: TodayItem[] = [];
 
-  const overdue = week >= 1
-    ? listOverdueWork(tracker, today).filter(({ task }) => !isWaitingOnTutor(task, tracker))
-    : [];
-  const overdueIds = new Set(overdue.map(({ task }) => task.id));
-  overdue.slice(0, TODAY_LIMITS.overdue).forEach(({ task, week: taskWeek, dueDate }) => {
-    items.push(taskItem(task, taskWeek, "overdue", `Overdue since ${dueDate} · week ${taskWeek}`));
-  });
-
+  // Module tests always lead: they are compulsory, timed and single-attempt.
   const pending = [...(pendingModuleTests ?? [])].sort(byDeadline);
   if (pending.length) {
     const next = pending[0];
@@ -121,13 +117,21 @@ export function buildTodayQueue({
       kind: "moduleTest",
       title: `Module test: ${next.title}`,
       detail: [
-        next.deadline ? `Due ${next.deadline.slice(0, 10)}` : "One attempt · 12 minutes",
+        next.inProgress ? "In progress · resume now" : next.deadline ? `Due ${next.deadline.slice(0, 10)}` : "One attempt · 12 minutes",
         more ? `${more} more ${plural(more, "test")} waiting` : "",
       ].filter(Boolean).join(" · "),
       minutes: TODAY_MINUTES.moduleTest,
       action: { type: "moduleTest", moduleId: next.moduleId },
     });
   }
+
+  const overdue = week >= 1
+    ? listOverdueWork(tracker, today).filter(({ task }) => !isWaitingOnTutor(task, tracker))
+    : [];
+  const overdueIds = new Set(overdue.map(({ task }) => task.id));
+  overdue.slice(0, TODAY_LIMITS.overdue).forEach(({ task, week: taskWeek, dueDate }) => {
+    items.push(taskItem(task, taskWeek, "overdue", `Overdue since ${dueDate} · week ${taskWeek}`));
+  });
 
   const dueRetests = tracker.errorEntries.filter((entry) => isRetestDue(entry, today)).length;
   if (dueRetests) {

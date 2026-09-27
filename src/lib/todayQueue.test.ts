@@ -58,7 +58,7 @@ describe("buildTodayQueue", () => {
     expect(items.map((item) => item.kind)).toEqual(["review"]);
   });
 
-  it("orders overdue work, the next module test, retests, reviews, then this week", () => {
+  it("orders the next module test, overdue work, retests, reviews, then this week", () => {
     const tracker = completeThrough(createDefaultState(), 2);
     tracker.errorEntries = [mistake({ id: "a" }), mistake({ id: "b", revisitDate: "2026-10-30" })];
     const week3 = PLAN[2];
@@ -76,15 +76,29 @@ describe("buildTodayQueue", () => {
       ],
     });
     expect(items.map((item) => item.kind)).toEqual([
-      "overdue", "moduleTest", "retest", "review", "task", "task", "task",
+      "moduleTest", "overdue", "retest", "review", "task", "task", "task",
     ]);
-    expect(items[0].task?.id).toBe("w2-evidence-gate");
-    expect(items[0].action).toEqual({ type: "week", week: 2 });
-    expect(items[1].action).toEqual({ type: "moduleTest", moduleId: "m01-rates-and-returns" });
-    expect(items[1].detail).toContain("1 more test waiting");
+    expect(items[0].action).toEqual({ type: "moduleTest", moduleId: "m01-rates-and-returns" });
+    expect(items[0].detail).toContain("1 more test waiting");
+    expect(items[1].task?.id).toBe("w2-evidence-gate");
+    expect(items[1].action).toEqual({ type: "week", week: 2 });
     expect(items[2].title).toBe("1 mistake retest due");
     expect(items[3]).toMatchObject({ action: { type: "practice", intent: "review" }, minutes: 15 });
     expect(items[3].detail).toBe("Start with a set of 10");
+  });
+
+  it("puts a test in progress ahead of one with an earlier deadline", () => {
+    const items = buildTodayQueue({
+      tracker: createDefaultState(),
+      week: 1,
+      today: "2026-09-06",
+      pendingModuleTests: [
+        { moduleId: "m01-rates-and-returns", title: "Rates and Returns", deadline: "2026-09-07" },
+        { moduleId: "m02-time-value-of-money", title: "The Time Value of Money in Finance", deadline: null, inProgress: true },
+      ],
+    });
+    expect(items[0]).toMatchObject({ kind: "moduleTest", action: { moduleId: "m02-time-value-of-money" } });
+    expect(items[0].detail).toContain("In progress · resume now");
   });
 
   it("caps overdue work and skips sessions waiting on the tutor", () => {
