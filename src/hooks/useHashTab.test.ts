@@ -169,9 +169,9 @@ describe("useHashTab legacy links", () => {
 
   it("follows a retired link from back/forward too", async () => {
     await mount();
-    await act(async () => fireHashChange("#moduleMocks/m02-time-value-of-money"));
+    await act(async () => fireHashChange("#errors"));
     expect(latest.tab).toBe("practice");
-    expect(hash).toBe("#practice/tests-m02-time-value-of-money");
+    expect(hash).toBe("#practice/mistakes");
   });
 
   it("never redirects a tab that still exists, and falls back when the new home is unknown", async () => {

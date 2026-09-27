@@ -80,13 +80,12 @@ describe("legacy routes", () => {
     expect(moved("#sessions")).toBe("#plan/sessions");
     expect(moved("#mastery")).toBe("#progress/topics");
     expect(moved("#mocks")).toBe("#progress/mocks");
-    expect(moved("#moduleMocks")).toBe("#practice/tests");
-    expect(moved("#moduleMocks/m01-rates-and-returns")).toBe("#practice/tests-m01-rates-and-returns");
     expect(moved("#errors")).toBe("#practice/mistakes");
   });
 
   it("leaves tabs that still exist, unknown tabs and prototype keys alone", () => {
-    for (const tab of ["dashboard", "practice", "notes", "live", "coach", "payments", "plan", "progress", "nope", "toString", "__proto__"]) {
+    // Module tests keep their own destination, so their links never move.
+    for (const tab of ["dashboard", "moduleMocks", "practice", "notes", "live", "coach", "payments", "plan", "progress", "nope", "toString", "__proto__"]) {
       expect(resolveLegacyRoute({ tab, segment: "" })).toBeNull();
     }
   });

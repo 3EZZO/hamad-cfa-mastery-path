@@ -27,8 +27,8 @@ export function buildHash(tab: string, segment = ""): string {
 }
 
 /**
- * Where a retired tab's links now live. The four-destination navigation
- * folds ten student tabs into Today · Plan · Practice · Progress; old
+ * Where a retired tab's links now live. The destination navigation folds
+ * the student tabs into Tests · Today · Plan · Practice · Progress; old
  * bookmarks, history entries and reminder links keep working by mapping
  * `#old/segment` to the hub and sub-view that now hosts that screen.
  * Only consulted for a tab the shell no longer knows (see useHashTab), so
@@ -40,7 +40,6 @@ const LEGACY_ROUTES: Record<string, (segment: string) => HashRoute> = {
   sessions: () => ({ tab: "plan", segment: "sessions" }),
   mastery: () => ({ tab: "progress", segment: "topics" }),
   mocks: () => ({ tab: "progress", segment: "mocks" }),
-  moduleMocks: (segment) => ({ tab: "practice", segment: segment ? `tests-${segment}` : "tests" }),
   errors: () => ({ tab: "practice", segment: "mistakes" }),
 };
 
