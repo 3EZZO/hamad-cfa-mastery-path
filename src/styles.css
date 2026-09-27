@@ -5900,3 +5900,16 @@ input[type="checkbox"],
 .today-queue-minutes { color: #c5d5e5; font-size: 0.76rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .today-focus-copy > p.today-queue-total { margin: 12px 0 0; color: #afc3d8; font-size: 0.78rem; }
 .today-focus-copy > p.today-test-strip { display: inline-flex; align-items: center; gap: 7px; margin: 10px 0 0; padding: 5px 11px; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 999px; color: #deebf8; font-size: 0.8rem; font-weight: 600; }
+/* Phase-aware Home panels --------------------------------------------------- */
+.phase-panel { display: grid; gap: 14px; }
+.phase-panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.phase-stat { display: grid; gap: 3px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); }
+.phase-stat span { color: var(--muted); font-size: 0.76rem; font-weight: 600; }
+.phase-stat strong { color: var(--ink); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.phase-stat small { color: var(--muted); font-size: 0.78rem; }
+.phase-weak { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 10px; background: var(--danger-pale); }
+.phase-weak p { margin: 0; color: var(--danger); font-size: 0.86rem; font-weight: 600; }
+.phase-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.phase-list li { display: flex; gap: 12px; align-items: baseline; }
+.phase-list strong { min-width: 56px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.phase-list span { color: var(--ink-2); }

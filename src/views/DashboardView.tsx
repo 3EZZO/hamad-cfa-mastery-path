@@ -9,10 +9,11 @@ import { getTaskStatus, isTaskComplete } from "../lib/taskStatus";
 import type { PracticeIntent } from "../lib/practiceIntents";
 import { buildTodayQueue, todayQueueMinutes, type TodayItem } from "../lib/todayQueue";
 import { useTodaySources } from "../hooks/useTodaySources";
+import { getPlanPhase, mockCampaignStatus, type PlanPhase } from "../lib/planPhase";
 import { PlanRouteGraphic } from "../components/PlanRouteGraphic";
 import type { PlanTask, TrackerState } from "../types";
 import type { TabId } from "../lib/navigation";
-import { EmptyState, EvidenceRow, MetricCard, ProgressBar, TaskChecklist, average, clamp, cx, humanizeTaskDetail, sortByDateDesc } from "./shared";
+import { EmptyState, EvidenceRow, MetricCard, ProgressBar, TaskChecklist, average, clamp, cx, humanizeTaskDetail, sortByDateDesc, topicShort } from "./shared";
 
 const TODAY_ICONS: Record<TodayItem["kind"], LucideIcon> = {
   overdue: CalendarClock,
@@ -31,6 +32,90 @@ function taskActionLabel(task: PlanTask, tracker: TrackerState, role: "tutor" | 
     : status === "returned"
       ? "Request approval again"
       : "Request tutor approval";
+}
+
+const PHASE_KICKER: Record<PlanPhase, string> = {
+  pre: "TODAY",
+  coverage: "TODAY",
+  integration: "INTEGRATION GATE",
+  mock: "MOCK CAMPAIGN",
+  taper: "TAPER",
+  post: "TODAY",
+};
+
+function MockCampaignPanel({
+  tracker,
+  week,
+  isStudent,
+  onOpenPractice,
+  onNavigate,
+}: {
+  tracker: TrackerState;
+  week: number;
+  isStudent: boolean;
+  onOpenPractice?: (intent: PracticeIntent) => void;
+  onNavigate: (tab: TabId, week?: number) => void;
+}) {
+  const status = mockCampaignStatus(tracker, week);
+  const { nextMock, latest, weakSections } = status;
+  return (
+    <section className="panel phase-panel" aria-labelledby="mock-campaign-heading">
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">Mock campaign</p>
+          <h3 id="mock-campaign-heading">{nextMock ? `Next: ${nextMock.label}` : "All planned mocks recorded"}</h3>
+        </div>
+        <TrendingUp size={21} />
+      </div>
+      <div className="phase-panel-grid">
+        {nextMock && (
+          <div className="phase-stat">
+            <span>Target</span>
+            <strong>{nextMock.target}%</strong>
+            <small>Week {nextMock.week} · {formatDate(nextMock.startDate, { day: "numeric", month: "short" })} – {formatDate(nextMock.endDate, { day: "numeric", month: "short" })}</small>
+          </div>
+        )}
+        <div className="phase-stat">
+          <span>Latest mock</span>
+          <strong>{latest ? `${latest.score}%` : "—"}</strong>
+          <small>{latest ? `${latest.label}${latest.target != null ? ` · target ${latest.target}%` : ""}` : "No full mock recorded yet"}</small>
+        </div>
+      </div>
+      {weakSections.length > 0 && (
+        <div className="phase-weak">
+          <p>Repair first: {weakSections.map((section) => `${topicShort(section.topic)} ${section.accuracy}%`).join(" · ")}</p>
+          {isStudent && onOpenPractice
+            ? <button className="button button-secondary" type="button" onClick={() => onOpenPractice("repair")}>Start repair queue <ChevronRight size={16} /></button>
+            : <button className="button button-secondary" type="button" onClick={() => onNavigate("mocks")}>Open mock results <ChevronRight size={16} /></button>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TaperPanel({ today }: { today: string }) {
+  const remaining = program.administrativeMilestones.filter((milestone) => milestone.date >= today);
+  return (
+    <section className="panel phase-panel" aria-labelledby="taper-heading">
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">Exam week</p>
+          <h3 id="taper-heading">Light review only — protect the plan</h3>
+        </div>
+        <ShieldCheck size={21} />
+      </div>
+      {remaining.length > 0 && (
+        <ul className="phase-list">
+          {remaining.map((milestone) => (
+            <li key={milestone.date}><strong>{formatDate(milestone.date, { day: "numeric", month: "short" })}</strong><span>{milestone.label}</span></li>
+          ))}
+        </ul>
+      )}
+      <ul className="outcome-list">
+        {program.examDayChecklist.map((item) => <li key={item}><Check size={15} />{item}</li>)}
+      </ul>
+    </section>
+  );
 }
 
 function leadHeading(item: TodayItem): string {
@@ -116,6 +201,7 @@ export function DashboardView({
       : rawProgramWeek > TOTAL_WEEKS
         ? "Mission complete"
         : `Week ${rawProgramWeek} live`;
+  const phase = getPlanPhase(rawProgramWeek);
   const sources = useTodaySources(role === "student" ? studentUid : null);
   const todayItems = buildTodayQueue({
     tracker,
@@ -178,7 +264,7 @@ export function DashboardView({
         </div>
         <div className="today-focus">
           <div className="today-focus-copy">
-            <p className="hero-kicker">TODAY · WEEK {String(currentWeek).padStart(2, "0")}</p>
+            <p className="hero-kicker">{PHASE_KICKER[phase]} · WEEK {String(currentWeek).padStart(2, "0")}</p>
             {testStrip && <p className="today-test-strip"><ClipboardCheck size={15} aria-hidden="true" /> {testStrip}</p>}
             {lead ? (
               <>
@@ -243,6 +329,11 @@ export function DashboardView({
           <button type="button" onClick={() => onNavigate("errors")}><Archive size={16} /> Review mistakes</button>
         </div>
       </section>
+
+      {(phase === "integration" || phase === "mock") && (
+        <MockCampaignPanel tracker={tracker} week={currentWeek} isStudent={isStudent} onOpenPractice={onOpenPractice} onNavigate={onNavigate} />
+      )}
+      {phase === "taper" && <TaperPanel today={now} />}
 
       <section className="metric-grid home-metrics" aria-label="Progress at a glance">
         <MetricCard
