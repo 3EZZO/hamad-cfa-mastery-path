@@ -10,22 +10,20 @@ export interface ExamWeight {
 }
 
 /**
- * CFA Program Level I topic weights, as published by CFA Institute.
- *
- * OWNER TO CONFIRM against the 2027 Level I topic outline before relying on
- * them; update the ranges here if the 2027 outline differs. Used only to
- * order and weight the Progress heatmap — never as a pass prediction.
+ * CFA Program Level I topic weights for the 2027 exam (27 February 2027),
+ * confirmed by the owner on 2026-09-27. Used only to order and weight the
+ * Progress heatmap — never as a pass prediction.
  */
 export const EXAM_WEIGHTS: Record<CurriculumTopic, ExamWeight> = {
-  "Ethical and Professional Standards": { min: 15, max: 20 },
-  "Quantitative Methods": { min: 6, max: 9 },
+  "Ethical and Professional Standards": { min: 10, max: 15 },
+  "Quantitative Methods": { min: 11, max: 14 },
   Economics: { min: 6, max: 9 },
   "Financial Statement Analysis": { min: 11, max: 14 },
   "Corporate Issuers": { min: 6, max: 9 },
   "Equity Investments": { min: 11, max: 14 },
   "Fixed Income": { min: 11, max: 14 },
-  Derivatives: { min: 5, max: 8 },
-  "Alternative Investments": { min: 7, max: 10 },
+  Derivatives: { min: 6, max: 9 },
+  "Alternative Investments": { min: 6, max: 9 },
   "Portfolio Management": { min: 8, max: 12 },
 };
 

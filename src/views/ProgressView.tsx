@@ -142,7 +142,7 @@ function ModuleHeatmapPanel({
           </ul>
         </details>
       )}
-      <p className="fine-print">Exam weights are CFA Institute's published Level I ranges. Coaching indicator only—not a pass prediction.</p>
+      <p className="fine-print">Exam weights are the 2027 Level I topic ranges. Coaching indicator only—not a pass prediction.</p>
     </section>
   );
 }

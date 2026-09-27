@@ -13,6 +13,14 @@ function insight(moduleId: string, overrides: Partial<PracticeModuleInsight> = {
 }
 
 describe("exam weights", () => {
+  it("use the owner-confirmed 2027 ranges", () => {
+    expect(EXAM_WEIGHTS["Ethical and Professional Standards"]).toEqual({ min: 10, max: 15 });
+    expect(EXAM_WEIGHTS["Quantitative Methods"]).toEqual({ min: 11, max: 14 });
+    expect(EXAM_WEIGHTS.Derivatives).toEqual({ min: 6, max: 9 });
+    expect(EXAM_WEIGHTS["Alternative Investments"]).toEqual({ min: 6, max: 9 });
+    expect(EXAM_WEIGHTS["Portfolio Management"]).toEqual({ min: 8, max: 12 });
+  });
+
   it("cover every curriculum topic with a sane range", () => {
     for (const topic of TOPICS) {
       expect(EXAM_WEIGHTS[topic].min).toBeGreaterThan(0);
