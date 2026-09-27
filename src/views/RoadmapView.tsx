@@ -6,25 +6,26 @@ import program from "../data/program.json";
 import { READING_CATALOG } from "../data/readings";
 import { formatDate, TOTAL_WEEKS } from "../lib/dates";
 import { effectiveSessionDate, sessionDayLabel } from "../lib/schedule";
-import { useHashSegment } from "../hooks/useHashTab";
-import { parseWeekSegment, weekSegment } from "../lib/hashRoute";
 import type { TrackerState } from "../types";
-import type { TabId } from "../lib/navigation";
 import { CHECKPOINT_TIME, ProgressBar, ReadingCoverage, cx, phaseShort } from "./shared";
 
 export function RoadmapView({
   tracker,
   currentWeek,
-  onNavigate,
+  focusWeek,
+  onFocusWeek,
+  onOpenWeek,
 }: {
   tracker: TrackerState;
   currentWeek: number;
-  onNavigate: (tab: TabId, week?: number) => void;
+  /** The week a link points at (from the host's hash segment); opened and scrolled to. */
+  focusWeek: number | null;
+  /** A week was opened here; the host records it in its hash segment. */
+  onFocusWeek: (week: number) => void;
+  /** "Open Week N checklist". */
+  onOpenWeek: (week: number) => void;
 }) {
   const [phase, setPhase] = useState("All phases");
-  // Only mounted while Study Plan is the active tab, so the segment is ours.
-  const [segment, setSegment] = useHashSegment("roadmap", "roadmap");
-  const focusWeek = parseWeekSegment(segment, TOTAL_WEEKS);
   const openWeek = focusWeek ?? currentWeek;
   const scrolledTo = useRef<number | null>(null);
   const scrollToWeek = (node: HTMLDetailsElement | null, week: number) => {
@@ -81,7 +82,7 @@ export function RoadmapView({
               key={week.week}
               open={week.week === openWeek}
               ref={(node) => scrollToWeek(node, week.week)}
-              onToggle={(event) => { if (event.currentTarget.open) setSegment(weekSegment(week.week)); }}
+              onToggle={(event) => { if (event.currentTarget.open) onFocusWeek(week.week); }}
             >
               <summary>
                 <span className="timeline-index">{String(week.week).padStart(2, "0")}</span>
@@ -130,7 +131,7 @@ export function RoadmapView({
                     </article>
                   )}
                 </div>
-                <button className="button button-secondary" type="button" onClick={() => onNavigate("weekly", week.week)}>
+                <button className="button button-secondary" type="button" onClick={() => onOpenWeek(week.week)}>
                   Open Week {week.week} checklist <ChevronRight size={16} />
                 </button>
               </div>

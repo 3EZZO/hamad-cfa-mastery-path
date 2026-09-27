@@ -39,6 +39,7 @@ import { MasteryView } from "./views/MasteryView";
 import { MockView } from "./views/MockView";
 import { ProgressView, parseProgressSection } from "./views/ProgressView";
 import { PracticeHubView } from "./views/PracticeHubView";
+import { PlanView, parsePlanSegment, planSegment } from "./views/PlanView";
 import { isRetestDue } from "./lib/retests";
 import { ErrorVaultView } from "./views/ErrorVaultView";
 import { TutorAdminView } from "./views/TutorAdminView";
@@ -113,16 +114,29 @@ function App() {
   // and pasted links land on the same week; a deep link wins over the
   // programme week only on first load.
   const [weeklySegment, setWeeklySegment] = useHashSegment("weekly", activeTab);
+  // Plan › This week does the same through `#plan/week-N` (see PlanView).
+  const [planSegmentValue, setPlanSegment] = useHashSegment("plan", activeTab);
+  const planRoute = parsePlanSegment(planSegmentValue);
   const [selectedWeek, setSelectedWeek] = useState(
-    () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS) ?? initialWeek,
+    () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS)
+      ?? (parsePlanSegment(readSegment("plan")).section === "week" ? parsePlanSegment(readSegment("plan")).week : null)
+      ?? initialWeek,
   );
   useEffect(() => {
     const linked = parseWeekSegment(weeklySegment, TOTAL_WEEKS);
     if (linked) setSelectedWeek(linked);
   }, [weeklySegment]);
   useEffect(() => {
+    if (planRoute.section === "week" && planRoute.week) setSelectedWeek(planRoute.week);
+  }, [planRoute.section, planRoute.week]);
+  useEffect(() => {
     if (activeTab === "weekly") setWeeklySegment(weekSegment(selectedWeek));
   }, [activeTab, selectedWeek, setWeeklySegment]);
+  useEffect(() => {
+    if (activeTab === "plan" && planRoute.section === "week") setPlanSegment(planSegment("week", selectedWeek));
+  }, [activeTab, planRoute.section, selectedWeek, setPlanSegment]);
+  // The Study Plan tab opens and scrolls to `#roadmap/week-N`.
+  const [roadmapSegment, setRoadmapSegment] = useHashSegment("roadmap", activeTab);
   // Practice intents travel as `#practice/<intent>`; the coach clears the
   // segment once it has acted, so the URL never replays an action.
   const [practiceSegment, setPracticeSegment] = useHashSegment("practice", activeTab);
@@ -459,7 +473,48 @@ function App() {
           <RoadmapView
             tracker={tracker}
             currentWeek={initialWeek}
-            onNavigate={navigate}
+            focusWeek={parseWeekSegment(roadmapSegment, TOTAL_WEEKS)}
+            onFocusWeek={(week) => setRoadmapSegment(weekSegment(week))}
+            onOpenWeek={(week) => navigate("weekly", week)}
+          />
+        );
+      case "plan":
+        return (
+          <PlanView
+            section={planRoute.section}
+            onSection={(section) => setPlanSegment(planSegment(section, section === "week" ? selectedWeek : null))}
+            week={(
+              <WeeklyView
+                tracker={tracker}
+                selectedWeek={selectedWeek}
+                setSelectedWeek={setSelectedWeek}
+                onToggleTask={toggleTask}
+                notify={notify}
+                role={role!}
+              />
+            )}
+            roadmap={(
+              <RoadmapView
+                tracker={tracker}
+                currentWeek={initialWeek}
+                focusWeek={planRoute.section === "roadmap" ? planRoute.week : null}
+                onFocusWeek={(week) => setPlanSegment(planSegment("roadmap", week))}
+                onOpenWeek={(week) => {
+                  setSelectedWeek(week);
+                  setPlanSegment(planSegment("week", week));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            )}
+            sessions={(
+              <SessionLogView
+                tracker={tracker}
+                currentWeek={initialWeek}
+                updateTracker={updateTracker}
+                notify={notify}
+                canManage={capabilities.canManageTutorSessions}
+              />
+            )}
           />
         );
       case "weekly":
