@@ -142,4 +142,24 @@ describe("Home Today card", () => {
     const { tree } = await render({ tracker: createDefaultState(), currentWeek: 25, rawProgramWeek: 26 });
     expect(textOf(tree.root.findByType("h1"))).toBe("The plan is complete.");
   });
+
+  it("adds the mock campaign panel in the mock phase", async () => {
+    vi.setSystemTime(new Date("2027-01-12T09:00:00"));
+    const { tree } = await render({ tracker: createDefaultState(), currentWeek: 19, rawProgramWeek: 19 });
+    expect(textOf(tree.root.findByProps({ className: "hero-kicker" }))).toBe("MOCK CAMPAIGN · WEEK 19");
+    expect(textOf(tree.root.findByProps({ id: "mock-campaign-heading" }))).toBe("Next: Mock 1");
+  });
+
+  it("shows the exam-week panel in the taper phase", async () => {
+    vi.setSystemTime(new Date("2027-02-22T09:00:00"));
+    const { tree } = await render({ tracker: createDefaultState(), currentWeek: 25, rawProgramWeek: 25 });
+    expect(textOf(tree.root.findByProps({ id: "taper-heading" }))).toContain("Light review only");
+    expect(tree.root.findAllByProps({ id: "mock-campaign-heading" })).toHaveLength(0);
+  });
+
+  it("keeps the coverage Home free of phase panels", async () => {
+    const { tree } = await render({ tracker: upToDate() });
+    expect(textOf(tree.root.findByProps({ className: "hero-kicker" }))).toBe("TODAY · WEEK 04");
+    expect(tree.root.findAll((node) => String(node.props.className ?? "").includes("phase-panel"))).toHaveLength(0);
+  });
 });
