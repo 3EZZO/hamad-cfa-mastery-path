@@ -57,8 +57,19 @@ export function useHashTab<T extends string>(
     const transition = typeof document !== "undefined"
       ? (document as Document & { startViewTransition?: (callback: () => void) => unknown }).startViewTransition
       : undefined;
-    if (typeof transition === "function" && !reducedMotion()) {
-      transition.call(document, () => flushSync(update));
+    // A hidden page (background tab, minimised app) cannot animate: the
+    // browser skips the transition and rejects its promises, which would
+    // surface as unhandled errors in the console and the diagnostics log.
+    const hidden = typeof document !== "undefined" && (document as { hidden?: boolean }).hidden === true;
+    if (typeof transition === "function" && !reducedMotion() && !hidden) {
+      const running = transition.call(document, () => flushSync(update)) as
+        | { ready?: Promise<unknown>; finished?: Promise<unknown>; updateCallbackDone?: Promise<unknown> }
+        | undefined;
+      // A skipped or interrupted transition is not an error: the tab has switched either way.
+      const ignore = () => undefined;
+      running?.ready?.catch(ignore);
+      running?.finished?.catch(ignore);
+      running?.updateCallbackDone?.catch(ignore);
     } else {
       update();
     }

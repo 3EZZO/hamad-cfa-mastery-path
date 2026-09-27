@@ -285,3 +285,34 @@ describe("useHashSegment", () => {
     expect(hash).toBe("#weekly/week-5");
   });
 });
+
+describe("useHashTab view transitions", () => {
+  it("switches without a transition while the page is hidden", async () => {
+    startViewTransition = vi.fn((callback: () => void) => { callback(); });
+    doc.startViewTransition = startViewTransition;
+    (doc as { hidden?: boolean }).hidden = true;
+    await mount();
+    await act(async () => latest.navigate("mocks"));
+    expect(latest.tab).toBe("mocks");
+    expect(startViewTransition).not.toHaveBeenCalled();
+  });
+
+  it("swallows a rejected transition so it never reaches the console", async () => {
+    const rejected = () => { const promise = Promise.reject(new Error("InvalidStateError")); return promise; };
+    let handled = 0;
+    startViewTransition = vi.fn((callback: () => void) => {
+      callback();
+      const ready = rejected();
+      const finished = rejected();
+      const originalCatch = ready.catch.bind(ready);
+      ready.catch = ((fn: () => void) => { handled += 1; return originalCatch(fn); }) as typeof ready.catch;
+      finished.catch(() => undefined);
+      return { ready, finished };
+    });
+    doc.startViewTransition = startViewTransition;
+    await mount();
+    await act(async () => latest.navigate("practice"));
+    expect(latest.tab).toBe("practice");
+    expect(handled).toBe(1);
+  });
+});
