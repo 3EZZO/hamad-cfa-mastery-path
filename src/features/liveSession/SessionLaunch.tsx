@@ -7,7 +7,7 @@ import {
   Target,
   Upload,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import type { SessionPreflightReport } from "./sessionPreflight";
 import { SessionPreflightPanel } from "./SessionPreflightPanel";
 import { SessionCountLegend, libraryDeckCount } from "./sessionGlossary";
@@ -39,6 +39,8 @@ export interface SessionLaunchProps {
   onStart: (route: LiveSessionRoute) => void;
   onRehearse?: (route: LiveSessionRoute) => void;
   onExit?: () => void;
+  /** Tutor's pre-session brief (what the student did since the last lesson). */
+  brief?: ReactNode;
 }
 
 function displayDate(value: string): string {
@@ -74,6 +76,7 @@ export function SessionLaunch({
   onStart,
   onRehearse,
   onExit,
+  brief,
 }: SessionLaunchProps) {
   const initialRoute = useMemo(
     () =>
@@ -168,6 +171,8 @@ export function SessionLaunch({
           </span>
         </div>
       </div>
+
+      {brief}
 
       <fieldset className="ls-route-picker">
         <legend>

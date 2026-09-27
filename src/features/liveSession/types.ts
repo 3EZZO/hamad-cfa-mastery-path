@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 export type LiveSessionPhase = "launch" | "running" | "closeout" | "complete";
 
 export type EvidenceVerdict = "correct" | "partial" | "repair" | "parked";
@@ -226,6 +227,8 @@ export interface LiveSessionConsoleProps {
     result: LiveSessionCloseoutResult
   ) => void | Promise<void>;
   onExit?: () => void;
+  /** Tutor's pre-session brief, shown on the launch screen of the live session only. */
+  brief?: ReactNode;
 }
 
 export const ERROR_CODE_COPY: Record<
