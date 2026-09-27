@@ -2,6 +2,7 @@
 import { Archive, Banknote, CalendarDays, CalendarRange, ClipboardCheck, Gauge, GraduationCap, Grid3x3, LayoutDashboard, ListChecks, NotebookPen, PlayCircle, TimerReset, TrendingUp, UserCog } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TOTAL_WEEKS } from "../lib/dates";
+import { resolveLegacyRoute, weekSegment } from "./hashRoute";
 
 export type TabId =
   | "dashboard"
@@ -27,22 +28,25 @@ export interface NavItem {
   mobileLabel: string;
   icon: LucideIcon;
   hint?: string;
+  /** Extra palette search words, e.g. the names of screens this destination now hosts. */
+  keywords?: string[];
 }
 
 
 export const NAV_ITEMS: NavItem[] = [
   {
     id: "dashboard",
-    label: "Home",
-    mobileLabel: "Home",
+    label: "Today",
+    mobileLabel: "Today",
     icon: LayoutDashboard,
+    keywords: ["Home"],
   },
-  { id: "plan", label: "Plan", mobileLabel: "Plan", icon: CalendarRange, hint: "This week, the full plan and session notes" },
+  { id: "plan", label: "Plan", mobileLabel: "Plan", icon: CalendarRange, hint: "This week, the full plan and session notes", keywords: ["Study Plan", "This Week", "Week", "Session Notes", "Roadmap"] },
   { id: "roadmap", label: "Study Plan", mobileLabel: "Plan", icon: CalendarDays },
   { id: "weekly", label: "This Week", mobileLabel: "Week", icon: ListChecks },
   { id: "sessions", label: "Session Notes", mobileLabel: "Sessions", icon: GraduationCap, hint: "Lesson outcomes & homework" },
-  { id: "practice", label: "Practice", mobileLabel: "Practice", icon: TimerReset },
-  { id: "progress", label: "Progress", mobileLabel: "Progress", icon: Grid3x3, hint: "Module heatmap and mocks" },
+  { id: "practice", label: "Practice", mobileLabel: "Practice", icon: TimerReset, keywords: ["Mistake Review", "Mistakes", "Retests"] },
+  { id: "progress", label: "Progress", mobileLabel: "Progress", icon: Grid3x3, hint: "Module heatmap and mocks", keywords: ["Topic Progress", "Topics", "Mock Results", "Mocks", "Heatmap"] },
   { id: "mastery", label: "Topic Progress", mobileLabel: "Topics", icon: Gauge, hint: "Mastery by subject" },
   { id: "moduleMocks", label: "Module Tests", mobileLabel: "Tests", icon: ClipboardCheck, hint: "Compulsory timed assessments" },
   { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
@@ -54,74 +58,110 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 
+/** Every tab the shell can render (either layout). */
 export const TAB_IDS: readonly TabId[] = NAV_ITEMS.map((item) => item.id);
 
 
-/**
- * Alt+1…9 order. Explicit rather than derived from the sidebar so moving a
- * sidebar entry never silently re-points a shortcut someone has learned.
- */
-export const SHORTCUT_TAB_ORDER: readonly TabId[] = [
-  "dashboard",
-  "roadmap",
-  "weekly",
-  "sessions",
-  "practice",
-  "mastery",
-  "moduleMocks",
-  "mocks",
-  "errors",
-  "notes",
-  "live",
-  "coach",
-  "payments",
-  "progress",
-  "plan",
-];
-
-
-/** The tabs Alt+1…9 reach, in order, from those the account can see. */
-export function shortcutTabs(visible: readonly TabId[]): TabId[] {
-  return SHORTCUT_TAB_ORDER.filter((id) => visible.includes(id)).slice(0, 9);
+export function navItem(id: TabId): NavItem {
+  return NAV_ITEMS.find((item) => item.id === id)!;
 }
 
 
-export const NAV_GROUPS: Array<{ label: string; ids: TabId[] }> = [
-  { label: "Focus", ids: ["dashboard", "weekly"] },
-  { label: "Plan", ids: ["plan", "roadmap", "sessions"] },
-  { label: "Evidence", ids: ["progress", "practice", "moduleMocks", "mastery", "mocks", "errors"] },
-  { label: "Records", ids: ["notes"] },
-  { label: "Tutor", ids: ["live", "coach", "payments"] },
-];
+/**
+ * Two navigation layouts over one set of views. "destinations" is the
+ * four-place layout (Today · Plan · Practice · Progress, plus Notes and the
+ * tutor group); "classic" restores the earlier tab list for a few weeks as a
+ * device-only fallback (see navLayout.ts). The retired tabs are allowed only
+ * in classic, so in the new layout their links resolve through the aliases
+ * in hashRoute.ts.
+ */
+export type NavLayout = "destinations" | "classic";
 
+export interface NavGroup {
+  label: string;
+  ids: TabId[];
+}
 
-export const MOBILE_PRIMARY_IDS: TabId[] = [
-  "dashboard",
-  "weekly",
-  "roadmap",
-  "practice",
-];
+export interface NavConfig {
+  layout: NavLayout;
+  /** Tabs the hash may select in this layout. */
+  tabs: readonly TabId[];
+  groups: NavGroup[];
+  mobilePrimary: TabId[];
+  mobileMore: TabId[];
+  /** Alt+1…9 order; explicit so moving a sidebar entry never re-points a learned shortcut. */
+  shortcutOrder: readonly TabId[];
+}
 
+export const TUTOR_TAB_IDS: readonly TabId[] = ["live", "coach", "payments"];
 
-export const MOBILE_MORE_IDS: TabId[] = [
-  "plan",
-  "progress",
-  "moduleMocks",
-  "sessions",
-  "mastery",
-  "mocks",
-  "errors",
-  "notes",
-  "live",
-  "coach",
-  "payments",
-];
+const DESTINATIONS: NavConfig = {
+  layout: "destinations",
+  tabs: ["dashboard", "plan", "practice", "progress", "notes", "live", "coach", "payments"],
+  groups: [
+    { label: "Focus", ids: ["dashboard"] },
+    { label: "Study", ids: ["plan", "practice", "progress"] },
+    { label: "Records", ids: ["notes"] },
+    { label: "Tutor", ids: ["live", "coach", "payments"] },
+  ],
+  mobilePrimary: ["dashboard", "plan", "practice", "progress"],
+  mobileMore: ["notes", "live", "coach", "payments"],
+  shortcutOrder: ["dashboard", "plan", "practice", "progress", "notes", "live", "coach", "payments"],
+};
+
+const CLASSIC: NavConfig = {
+  layout: "classic",
+  tabs: TAB_IDS,
+  groups: [
+    { label: "Focus", ids: ["dashboard", "weekly"] },
+    { label: "Plan", ids: ["roadmap", "sessions"] },
+    { label: "Evidence", ids: ["practice", "moduleMocks", "mastery", "mocks", "errors"] },
+    { label: "Records", ids: ["notes"] },
+    { label: "Tutor", ids: ["live", "coach", "payments"] },
+  ],
+  mobilePrimary: ["dashboard", "weekly", "roadmap", "practice"],
+  mobileMore: ["moduleMocks", "sessions", "mastery", "mocks", "errors", "notes", "live", "coach", "payments"],
+  shortcutOrder: ["dashboard", "roadmap", "weekly", "sessions", "practice", "mastery", "moduleMocks", "mocks", "errors", "notes", "live", "coach", "payments"],
+};
+
+export function navConfig(layout: NavLayout): NavConfig {
+  return layout === "classic" ? CLASSIC : DESTINATIONS;
+}
+
+/** The items a layout shows, in sidebar order, for an account that may or may not teach. */
+export function visibleNavItems(config: NavConfig, canTeach: boolean): NavItem[] {
+  return config.groups
+    .flatMap((group) => group.ids)
+    .filter((id) => canTeach || !TUTOR_TAB_IDS.includes(id))
+    .map(navItem);
+}
+
+/**
+ * Where a request for `tab` (optionally at a week) opens in this layout: the
+ * tab itself when the layout offers it, otherwise the destination and
+ * section that now host that screen. Null when neither is available.
+ */
+export function navigationTarget(
+  config: NavConfig,
+  tab: TabId,
+  week?: number,
+): { tab: TabId; segment: string | null } | null {
+  if (config.tabs.includes(tab)) return { tab, segment: null };
+  const moved = resolveLegacyRoute({ tab, segment: tab === "weekly" && week ? weekSegment(week) : "" });
+  if (!moved || !config.tabs.includes(moved.tab as TabId)) return null;
+  return { tab: moved.tab as TabId, segment: moved.segment };
+}
+
+/** The tabs Alt+1…9 reach, in order, from those the account can see. */
+export function shortcutTabs(config: NavConfig, visible: readonly TabId[]): TabId[] {
+  return config.shortcutOrder.filter((id) => visible.includes(id)).slice(0, 9);
+}
 
 
 export const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: string }> = {
   dashboard: {
     eyebrow: "Your study workspace",
-    title: "Home",
+    title: "Today",
     description: "One clear next step, with the full plan available when you need it.",
   },
   plan: {
