@@ -188,6 +188,28 @@ describe("useHashTab legacy links", () => {
   });
 });
 
+describe("useHashTab when the allowed tabs change", () => {
+  let setAllowed: (next: readonly string[]) => void = () => undefined;
+  let current = "";
+  function LayoutProbe({ allowed }: { allowed: readonly string[] }) {
+    const [tab] = useHashTab<string>(allowed, "dashboard");
+    current = tab;
+    return createElement("span", null, tab);
+  }
+
+  it("moves a tab the new layout no longer offers to its new home", async () => {
+    hash = "#errors";
+    let allowed: readonly string[] = ["dashboard", "practice", "errors"];
+    setAllowed = (next) => { allowed = next; };
+    await act(async () => { tree = create(createElement(LayoutProbe, { allowed })); });
+    expect(current).toBe("errors");
+    setAllowed(["dashboard", "practice"]);
+    await act(async () => tree!.update(createElement(LayoutProbe, { allowed })));
+    expect(current).toBe("practice");
+    expect(hash).toBe("#practice/mistakes");
+  });
+});
+
 describe("useHashSegment", () => {
   let replaceState: ReturnType<typeof vi.fn>;
   let latestSegment: { segment: string; set: (segment: string) => void };

@@ -26,7 +26,8 @@ import { useDialogFocus } from "./features/liveSession/useDialogFocus";
 import { MockReminderHost, ModuleMockScores, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
 import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
-import { MOBILE_MORE_IDS, MOBILE_PRIMARY_IDS, NAV_GROUPS, NAV_ITEMS, TAB_COPY, TAB_IDS, shortcutTabs } from "./lib/navigation";
+import { TAB_COPY, TUTOR_TAB_IDS, navConfig, navItem, navigationTarget, shortcutTabs, visibleNavItems } from "./lib/navigation";
+import { setNavLayout, useNavLayout } from "./lib/navLayout";
 import type { TabId } from "./lib/navigation";
 import { EmptyState, PageHeading, cx, makeId, syncPresentation } from "./views/shared";
 import type { Notify } from "./views/shared";
@@ -39,7 +40,7 @@ import { PracticeLogView } from "./views/PracticeLogView";
 import { MasteryView } from "./views/MasteryView";
 import { MockView } from "./views/MockView";
 import { ProgressView, parseProgressSection } from "./views/ProgressView";
-import { PracticeHubView } from "./views/PracticeHubView";
+import { PracticeHubView, practiceSectionFor } from "./views/PracticeHubView";
 import { PlanView, parsePlanSegment, planSegment } from "./views/PlanView";
 import { isRetestDue } from "./lib/retests";
 import { ErrorVaultView } from "./views/ErrorVaultView";
@@ -108,7 +109,9 @@ function WorkspaceActions({
 function App() {
   const rawProgramWeek = getProgramWeek();
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
-  const [activeTab, setActiveTab] = useHashTab<TabId>(TAB_IDS, "dashboard", {
+  const navLayout = useNavLayout();
+  const nav = navConfig(navLayout);
+  const [activeTab, setActiveTab] = useHashTab<TabId>(nav.tabs, nav.home, {
     title: (tab) => `${TAB_COPY[tab].title} · Hamad CFA Mastery`,
   });
   // This Week mirrors its week to `#weekly/week-N` so reload, back/forward
@@ -211,10 +214,8 @@ function App() {
     setShellBusy("session");
     return () => setShellBusy(null);
   }, [isLiveShell]);
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => capabilities.canUseLiveSession || !NAV_GROUPS.some((group) => group.label === "Tutor" && group.ids.includes(item.id)),
-  );
-  const shortcutIds = shortcutTabs(visibleNav.map((item) => item.id));
+  const visibleNav = visibleNavItems(nav, capabilities.canUseLiveSession);
+  const shortcutIds = shortcutTabs(nav, visibleNav.map((item) => item.id));
   useGlobalShortcuts({
     onTogglePalette: () => setPaletteOpen((open) => !open),
     tabs: isLiveShell ? [] : shortcutIds.map((id) => () => setActiveTab(id)),
@@ -288,9 +289,19 @@ function App() {
 
   const navigate = (tab: TabId, week?: number) => {
     if (week) setSelectedWeek(week);
-    setActiveTab(tab);
     setMobileMoreOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    const target = navigationTarget(nav, tab, week);
+    if (!target) return;
+    setActiveTab(target.tab);
+    if (target.segment === null) return;
+    // A screen that now lives inside a destination (views still ask for
+    // "weekly", "errors", …): open it at that section. The tab switch writes
+    // the hash synchronously, so the segment is written after it.
+    writeSegment(target.tab, target.segment);
+    if (target.tab === "plan") setPlanSegment(target.segment);
+    else if (target.tab === "practice") setPracticeSegment(target.segment);
+    else if (target.tab === "progress") setProgressSegment(target.segment);
   };
 
   const handleExport = () => {
@@ -331,11 +342,20 @@ function App() {
       label: item.label,
       group: "Go to",
       hint: item.hint ?? TAB_COPY[item.id].description,
-      keywords: [item.mobileLabel],
+      keywords: [item.mobileLabel, ...(item.keywords ?? [])],
       shortcut: shortcutIds.includes(item.id) ? `Alt+${shortcutIds.indexOf(item.id) + 1}` : undefined,
       icon: item.icon,
       run: () => navigate(item.id),
     })),
+    {
+      id: "nav-layout",
+      label: navLayout === "classic" ? "Use the new navigation" : "Use classic navigation",
+      group: "Actions",
+      hint: navLayout === "classic" ? "Tests · Today · Plan · Practice · Progress" : "The earlier tab list, on this device only",
+      keywords: ["navigation", "layout", "classic", "tabs", "menu"],
+      icon: Menu,
+      run: () => setNavLayout(navLayout === "classic" ? "destinations" : "classic"),
+    },
     {
       id: "theme",
       label: theme === "dark" ? "Switch to light theme" : "Switch to dark theme",
@@ -743,15 +763,15 @@ function App() {
     );
   }
 
-  const sidebarGroups = NAV_GROUPS.filter(
+  const sidebarGroups = nav.groups.filter(
     (group) => group.label !== "Tutor" || capabilities.canUseLiveSession,
   );
   const sidebarIds = sidebarGroups.flatMap((group) => group.ids);
   // The "More" button stands in for sections that live behind the sheet.
-  const mobileTabbable: TabId | "more" = MOBILE_PRIMARY_IDS.includes(activeTab) ? activeTab : "more";
+  const mobileTabbable: TabId | "more" = nav.mobilePrimary.includes(activeTab) ? activeTab : "more";
 
   return (
-    <div className={cx("app-shell", activeTab === "practice" && "sidebar-collapsed")}>
+    <div className={cx("app-shell", activeTab === "practice" && practiceSectionFor(practiceSegment) === "practise" && "sidebar-collapsed")}>
       <a className="skip-link" href="#tracker-content">Skip to content</a>
       <aside className="sidebar">
         <div className="brand-lockup">
@@ -775,7 +795,7 @@ function App() {
             <div className="nav-group" key={group.label}>
               <span className="nav-group-label">{group.label}</span>
               {group.ids.map((id) => {
-                const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
+                const item = navItem(id);
                 const Icon = item.icon;
                 return (
                   <button
@@ -859,6 +879,10 @@ function App() {
               <Upload size={16} />
               <span>Import backup<small>Restore shared tracker data</small></span>
             </button>}
+            <button type="button" onClick={() => setNavLayout(navLayout === "classic" ? "destinations" : "classic")}>
+              <Menu size={16} />
+              <span>{navLayout === "classic" ? "Use the new navigation" : "Use classic navigation"}<small>{navLayout === "classic" ? "Tests · Today · Plan · Practice · Progress" : "The earlier tab list, on this device only"}</small></span>
+            </button>
             <button
               className="workspace-signout"
               type="button"
@@ -882,8 +906,8 @@ function App() {
         <SyncRecoveryNotice state={syncStatus} message={syncError} onRetry={retrySync} />
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrow-key delegation for the buttons inside */}
         <nav className="mobile-nav" aria-label="Primary project sections" onKeyDown={mobileNavKeyDown}>
-          {MOBILE_PRIMARY_IDS.map((id) => {
-            const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
+          {nav.mobilePrimary.map((id) => {
+            const item = navItem(id);
             const Icon = item.icon;
             return (
               <button
@@ -902,7 +926,7 @@ function App() {
           <button
             className={cx(
               "mobile-nav-button",
-              (mobileMoreOpen || MOBILE_MORE_IDS.includes(activeTab)) && "is-active",
+              (mobileMoreOpen || nav.mobileMore.includes(activeTab)) && "is-active",
             )}
             type="button"
             tabIndex={mobileTabbable === "more" ? 0 : -1}
@@ -938,12 +962,10 @@ function App() {
               <button ref={mobileCloseRef} className="icon-button" type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close menu"><X size={19} /></button>
             </header>
             <div className="mobile-more-grid">
-              {MOBILE_MORE_IDS.filter(
-                (id) =>
-                  (id !== "live" && id !== "coach" && id !== "payments") ||
-                  capabilities.canUseLiveSession,
+              {nav.mobileMore.filter(
+                (id) => !TUTOR_TAB_IDS.includes(id) || capabilities.canUseLiveSession,
               ).map((id) => {
-                const item = NAV_ITEMS.find((candidate) => candidate.id === id)!;
+                const item = navItem(id);
                 const Icon = item.icon;
                 return (
                   <button
