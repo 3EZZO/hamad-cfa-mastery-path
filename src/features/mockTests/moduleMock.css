@@ -553,12 +553,14 @@
   :root:not([data-theme="light"]) .mock-status--draft,
   :root:not([data-theme="light"]) .mock-confidence--medium { color: #ffd98f; background: #423724; }
   :root:not([data-theme="light"]) .mock-option.is-selected { background: color-mix(in srgb, var(--mk-blue) 22%, var(--mk-surface)); }
+  :root:not([data-theme="light"]) .mock-status--todo { color: #a8c5ff; background: #203958; }
 }
 :root[data-theme="dark"] .mock-button--flag.is-on { color: #ffd98f; background: #423724; }
 :root[data-theme="dark"] .mock-status--live,
 :root[data-theme="dark"] .mock-status--draft,
 :root[data-theme="dark"] .mock-confidence--medium { color: #ffd98f; background: #423724; }
 :root[data-theme="dark"] .mock-option.is-selected { background: color-mix(in srgb, var(--mk-blue) 22%, var(--mk-surface)); }
+:root[data-theme="dark"] .mock-status--todo { color: #a8c5ff; background: #203958; }
 
 /* ------------------------------------------------------------ small screens */
 @media (max-width: 760px) {

@@ -369,8 +369,8 @@ export function ModuleMockTests({
 
       {isTutor && (
         <p className="mock-hub__note">
-          <ShieldAlert size={16} />Tutor view. Upload, review and publish tests, see results and reset attempts in
-          <strong> Tutor Admin</strong>. Rehearse runs the real exam screen locally and saves nothing.
+          <ShieldAlert size={16} />
+          <span>Tutor view. Upload, review and publish tests, see results and reset attempts in <strong>Tutor Admin</strong>. Rehearse runs the real exam screen locally and saves nothing.</span>
         </p>
       )}
       {!loading && summary.published > 0 && (

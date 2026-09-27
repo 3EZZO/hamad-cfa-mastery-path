@@ -916,7 +916,8 @@ function App() {
         </nav>
 
         <div className="page-shell" id="tracker-content" tabIndex={-1}>
-          {activeTab !== "dashboard" && activeTab !== "weekly" && <PageHeading tab={activeTab} />}
+          {/* Home, This Week and Module Tests open with their own hero heading. */}
+          {activeTab !== "dashboard" && activeTab !== "weekly" && activeTab !== "moduleMocks" && <PageHeading tab={activeTab} />}
           <Suspense fallback={<ViewSkeleton label={`Loading ${TAB_COPY[activeTab].title}`} />}>{renderView()}</Suspense>
         </div>
       </main>
