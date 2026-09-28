@@ -81,7 +81,7 @@ export function useHashTab<T extends string>(
       const next = readHash(allowed, fallback);
       if (next !== targetRef.current) applyTab(next);
     };
-    // The allowed set can change (navigation layout): re-check the current
+    // The allowed set can change between renders: re-check the current
     // link so a tab that is no longer offered moves to its new home.
     if (!(allowed as readonly string[]).includes(targetRef.current)) onHashChange();
     window.addEventListener("hashchange", onHashChange);

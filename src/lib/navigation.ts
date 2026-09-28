@@ -58,7 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 
-/** Every tab the shell can render (either layout). */
+/** Every tab id the app knows, including the retired ones that now resolve to a destination section. */
 export const TAB_IDS: readonly TabId[] = NAV_ITEMS.map((item) => item.id);
 
 
@@ -68,26 +68,21 @@ export function navItem(id: TabId): NavItem {
 
 
 /**
- * Two navigation layouts over one set of views. "destinations" leads with
- * Module Tests, then Today · Plan · Practice · Progress, plus Notes and the
- * tutor group, and opens on Tests; "classic" restores the earlier tab list
- * (opening on Home) for a few weeks as a
- * device-only fallback (see navLayout.ts). The retired tabs are allowed only
- * in classic, so in the new layout their links resolve through the aliases
- * in hashRoute.ts.
+ * The navigation: Module Tests first, then Today · Plan · Practice ·
+ * Progress, plus Notes and the tutor group; the app opens on Tests. The
+ * retired tab ids (weekly, roadmap, sessions, mastery, mocks, errors) are no
+ * longer offered: their links and in-app requests resolve through the
+ * aliases in hashRoute.ts to the section that now hosts each screen.
  */
-export type NavLayout = "destinations" | "classic";
-
 export interface NavGroup {
   label: string;
   ids: TabId[];
 }
 
 export interface NavConfig {
-  layout: NavLayout;
   /** Where the app opens when the link names no tab (a fresh launch). */
   home: TabId;
-  /** Tabs the hash may select in this layout. */
+  /** Tabs the hash may select. */
   tabs: readonly TabId[];
   groups: NavGroup[];
   mobilePrimary: TabId[];
@@ -98,8 +93,7 @@ export interface NavConfig {
 
 export const TUTOR_TAB_IDS: readonly TabId[] = ["live", "coach", "payments"];
 
-const DESTINATIONS: NavConfig = {
-  layout: "destinations",
+export const NAV: NavConfig = {
   home: "moduleMocks",
   tabs: ["moduleMocks", "dashboard", "plan", "practice", "progress", "notes", "live", "coach", "payments"],
   groups: [
@@ -113,27 +107,7 @@ const DESTINATIONS: NavConfig = {
   shortcutOrder: ["moduleMocks", "dashboard", "plan", "practice", "progress", "notes", "live", "coach", "payments"],
 };
 
-const CLASSIC: NavConfig = {
-  layout: "classic",
-  home: "dashboard",
-  tabs: TAB_IDS,
-  groups: [
-    { label: "Focus", ids: ["dashboard", "weekly"] },
-    { label: "Plan", ids: ["roadmap", "sessions"] },
-    { label: "Evidence", ids: ["practice", "moduleMocks", "mastery", "mocks", "errors"] },
-    { label: "Records", ids: ["notes"] },
-    { label: "Tutor", ids: ["live", "coach", "payments"] },
-  ],
-  mobilePrimary: ["dashboard", "weekly", "roadmap", "practice"],
-  mobileMore: ["moduleMocks", "sessions", "mastery", "mocks", "errors", "notes", "live", "coach", "payments"],
-  shortcutOrder: ["dashboard", "roadmap", "weekly", "sessions", "practice", "mastery", "moduleMocks", "mocks", "errors", "notes", "live", "coach", "payments"],
-};
-
-export function navConfig(layout: NavLayout): NavConfig {
-  return layout === "classic" ? CLASSIC : DESTINATIONS;
-}
-
-/** The items a layout shows, in sidebar order, for an account that may or may not teach. */
+/** The items the navigation shows, in sidebar order, for an account that may or may not teach. */
 export function visibleNavItems(config: NavConfig, canTeach: boolean): NavItem[] {
   return config.groups
     .flatMap((group) => group.ids)
@@ -142,8 +116,8 @@ export function visibleNavItems(config: NavConfig, canTeach: boolean): NavItem[]
 }
 
 /**
- * Where a request for `tab` (optionally at a week) opens in this layout: the
- * tab itself when the layout offers it, otherwise the destination and
+ * Where a request for `tab` (optionally at a week) opens: the tab itself
+ * when the navigation offers it, otherwise the destination and
  * section that now host that screen. Null when neither is available.
  */
 export function navigationTarget(
