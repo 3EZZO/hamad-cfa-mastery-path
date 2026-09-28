@@ -16,18 +16,17 @@ import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { rovingTabIndex, useRovingNav } from "./hooks/useRovingNav";
 import { useHashSegment } from "./hooks/useHashTab";
 import { useWeekMirror } from "./hooks/useWeekMirror";
-import { buildHash, parseWeekSegment, readSegment, weekSegment, writeSegment } from "./lib/hashRoute";
+import { buildHash, readSegment, writeSegment } from "./lib/hashRoute";
 import { setShellBusy, useShellBusy } from "./lib/shellBusy";
 import { PRACTICE_INTENTS, practiceModuleSegment, type PracticeIntent } from "./lib/practiceIntents";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
-import { MockReminderHost, ModuleMockScores, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
+import { MockReminderHost, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
 import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
-import { TAB_COPY, TUTOR_TAB_IDS, navConfig, navItem, navigationTarget, shortcutTabs, visibleNavItems } from "./lib/navigation";
-import { setNavLayout, useNavLayout } from "./lib/navLayout";
+import { NAV, TAB_COPY, TUTOR_TAB_IDS, navItem, navigationTarget, shortcutTabs, visibleNavItems } from "./lib/navigation";
 import type { TabId } from "./lib/navigation";
 import { EmptyState, PageHeading, cx, makeId, syncPresentation } from "./views/shared";
 import type { Notify } from "./views/shared";
@@ -37,8 +36,6 @@ import { RoadmapView } from "./views/RoadmapView";
 import { WeeklyView } from "./views/WeeklyView";
 import { SessionLogView } from "./views/SessionLogView";
 import { PracticeLogView } from "./views/PracticeLogView";
-import { MasteryView } from "./views/MasteryView";
-import { MockView } from "./views/MockView";
 import { ProgressView, parseProgressSection } from "./views/ProgressView";
 import { PracticeHubView, practiceSectionFor } from "./views/PracticeHubView";
 import { PlanView, parsePlanSegment, planSegment } from "./views/PlanView";
@@ -109,37 +106,23 @@ function WorkspaceActions({
 function App() {
   const rawProgramWeek = getProgramWeek();
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
-  const navLayout = useNavLayout();
-  const nav = navConfig(navLayout);
+  const nav = NAV;
   const [activeTab, setActiveTab] = useHashTab<TabId>(nav.tabs, nav.home, {
     title: (tab) => `${TAB_COPY[tab].title} · Hamad CFA Mastery`,
   });
-  // This Week mirrors its week to `#weekly/week-N` so reload, back/forward
-  // and pasted links land on the same week; a deep link wins over the
-  // programme week only on first load.
-  const [weeklySegment, setWeeklySegment] = useHashSegment("weekly", activeTab);
-  // Plan › This week does the same through `#plan/week-N` (see PlanView).
+  // Plan › This week mirrors its week to `#plan/week-N` (see PlanView) so
+  // reload, back/forward and pasted links land on the same week; a deep link
+  // wins over the programme week. Old `#weekly/week-N` links are rewritten
+  // to it before this reads the hash.
   const [planSegmentValue, setPlanSegment] = useHashSegment("plan", activeTab);
   const planRoute = parsePlanSegment(planSegmentValue);
   const [selectedWeek, setSelectedWeek] = useState(
-    () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS)
-      ?? (parsePlanSegment(readSegment("plan")).section === "week" ? parsePlanSegment(readSegment("plan")).week : null)
+    () => (parsePlanSegment(readSegment("plan")).section === "week" ? parsePlanSegment(readSegment("plan")).week : null)
       ?? initialWeek,
   );
   useEffect(() => {
-    const linked = parseWeekSegment(weeklySegment, TOTAL_WEEKS);
-    if (linked) setSelectedWeek(linked);
-  }, [weeklySegment]);
-  useEffect(() => {
     if (planRoute.section === "week" && planRoute.week) setSelectedWeek(planRoute.week);
   }, [planRoute.section, planRoute.week]);
-  useWeekMirror({
-    active: activeTab === "weekly",
-    readLinkedWeek: () => parseWeekSegment(readSegment("weekly"), TOTAL_WEEKS),
-    writeWeek: (week) => setWeeklySegment(weekSegment(week)),
-    selectedWeek,
-    setSelectedWeek,
-  });
   useWeekMirror({
     active: activeTab === "plan",
     readLinkedWeek: () => {
@@ -150,8 +133,6 @@ function App() {
     selectedWeek,
     setSelectedWeek,
   });
-  // The Study Plan tab opens and scrolls to `#roadmap/week-N`.
-  const [roadmapSegment, setRoadmapSegment] = useHashSegment("roadmap", activeTab);
   // Practice intents travel as `#practice/<intent>`; the coach clears the
   // segment once it has acted, so the URL never replays an action.
   const [practiceSegment, setPracticeSegment] = useHashSegment("practice", activeTab);
@@ -348,15 +329,6 @@ function App() {
       run: () => navigate(item.id),
     })),
     {
-      id: "nav-layout",
-      label: navLayout === "classic" ? "Use the new navigation" : "Use classic navigation",
-      group: "Actions",
-      hint: navLayout === "classic" ? "Tests · Today · Plan · Practice · Progress" : "The earlier tab list, on this device only",
-      keywords: ["navigation", "layout", "classic", "tabs", "menu"],
-      icon: Menu,
-      run: () => setNavLayout(navLayout === "classic" ? "destinations" : "classic"),
-    },
-    {
       id: "theme",
       label: theme === "dark" ? "Switch to light theme" : "Switch to dark theme",
       group: "Actions",
@@ -500,16 +472,6 @@ function App() {
             loading={syncStatus === "loading"}
           />
         );
-      case "roadmap":
-        return (
-          <RoadmapView
-            tracker={tracker}
-            currentWeek={initialWeek}
-            focusWeek={parseWeekSegment(roadmapSegment, TOTAL_WEEKS)}
-            onFocusWeek={(week) => setRoadmapSegment(weekSegment(week))}
-            onOpenWeek={(week) => navigate("weekly", week)}
-          />
-        );
       case "plan":
         return (
           <PlanView
@@ -547,27 +509,6 @@ function App() {
                 canManage={capabilities.canManageTutorSessions}
               />
             )}
-          />
-        );
-      case "weekly":
-        return (
-          <WeeklyView
-            tracker={tracker}
-            selectedWeek={selectedWeek}
-            setSelectedWeek={setSelectedWeek}
-            onToggleTask={toggleTask}
-            notify={notify}
-            role={role!}
-          />
-        );
-      case "sessions":
-        return (
-          <SessionLogView
-            tracker={tracker}
-            currentWeek={initialWeek}
-            updateTracker={updateTracker}
-            notify={notify}
-            canManage={capabilities.canManageTutorSessions}
           />
         );
       case "practice":
@@ -625,14 +566,6 @@ function App() {
             onPracticeModule={openPracticeModule}
           />
         );
-      case "mastery":
-        return (
-          <MasteryView
-            tracker={tracker}
-            updateTracker={updateTracker}
-            canEdit={capabilities.canEditMastery}
-          />
-        );
       case "moduleMocks":
         return (
           <ModuleMockTests
@@ -644,24 +577,6 @@ function App() {
             onOpenMistakes={() => navigate("errors")}
             onOpenRepair={() => openPractice("repair")}
             onOpenReminders={() => navigate("coach")}
-          />
-        );
-      case "mocks":
-        return (
-          <MockView
-            tracker={tracker}
-            updateTracker={updateTracker}
-            notify={notify}
-            canManage={capabilities.canManageMocks}
-            moduleMockScores={<ModuleMockScores uid={user.uid} role={role!} />}
-          />
-        );
-      case "errors":
-        return (
-          <ErrorVaultView
-            tracker={tracker}
-            updateTracker={updateTracker}
-            notify={notify}
           />
         );
       case "notes":
@@ -879,10 +794,6 @@ function App() {
               <Upload size={16} />
               <span>Import backup<small>Restore shared tracker data</small></span>
             </button>}
-            <button type="button" onClick={() => setNavLayout(navLayout === "classic" ? "destinations" : "classic")}>
-              <Menu size={16} />
-              <span>{navLayout === "classic" ? "Use the new navigation" : "Use classic navigation"}<small>{navLayout === "classic" ? "Tests · Today · Plan · Practice · Progress" : "The earlier tab list, on this device only"}</small></span>
-            </button>
             <button
               className="workspace-signout"
               type="button"
