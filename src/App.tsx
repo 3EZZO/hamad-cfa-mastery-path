@@ -1,4 +1,4 @@
-import { CalendarPlus, ChevronDown, ChevronRight, CircleAlert, CircleCheckBig, Command, Calculator, Clock3, Download, LogOut, Menu, Moon, MoreHorizontal, PlayCircle, RotateCcw, ShieldCheck, Sparkles, Sun, Target, Upload, X } from "lucide-react";
+import { Box, CalendarPlus, ChevronDown, ChevronRight, CircleAlert, CircleCheckBig, Command, Calculator, Clock3, Download, LogOut, Menu, Moon, MoreHorizontal, PlayCircle, RotateCcw, ShieldCheck, Sparkles, Sun, Upload, X } from "lucide-react";
 import { type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { getPlanTasks, PLAN } from "./data/plan";
 import { daysUntilExam, getProgramWeek, TOTAL_WEEKS, todayDateOnly } from "./lib/dates";
@@ -9,6 +9,8 @@ import { getTaskStatus } from "./lib/taskStatus";
 import { useTrackerSync } from "./hooks/useTrackerSync";
 import { useHashTab } from "./hooks/useHashTab";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Crest } from "./components/Crest";
+import { readDepthPreference, setDepthPreference, type DepthPreference } from "./lib/depthMotion";
 import CalendarExportDialog from "./components/CalendarExportDialog";
 import { ThemeProvider, ThemeToggle, useTheme } from "./components/ThemeToggle";
 import { CommandPalette } from "./components/CommandPalette";
@@ -147,6 +149,12 @@ function App() {
   const [progressSegment, setProgressSegment] = useHashSegment("progress", activeTab);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [depthPreference, setDepthPreferenceState] = useState<DepthPreference>(readDepthPreference);
+  const toggleDepth = () => {
+    const next = depthPreference === "on" ? "off" : "on";
+    setDepthPreference(next);
+    setDepthPreferenceState(next);
+  };
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const mobileDialogRef = useRef<HTMLElement>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
@@ -690,7 +698,7 @@ function App() {
       <a className="skip-link" href="#tracker-content">Skip to content</a>
       <aside className="sidebar">
         <div className="brand-lockup">
-          <span className="brand-mark"><Target size={24} /></span>
+          <span className="brand-mark"><Crest size={30} /></span>
           <div>
             <strong>MASTERY PATH</strong>
             <span>Hamad · CFA Level I</span>
@@ -745,7 +753,7 @@ function App() {
       <main className="main-shell">
         <header className="topbar">
           <div className="mobile-brand">
-            <span className="brand-mark"><Target size={20} /></span>
+            <span className="brand-mark"><Crest size={26} /></span>
             <div>
               <strong>MASTERY PATH</strong>
               <span>Hamad · CFA Level I</span>
@@ -794,6 +802,10 @@ function App() {
               <Upload size={16} />
               <span>Import backup<small>Restore shared tracker data</small></span>
             </button>}
+            <button type="button" onClick={toggleDepth} aria-pressed={depthPreference === "on"}>
+              <Box size={16} />
+              <span>3D effects: {depthPreference === "on" ? "On" : "Off"}<small>{depthPreference === "on" ? "Depth, tilt and reveals" : "Calm 2D motion only"}</small></span>
+            </button>
             <button
               className="workspace-signout"
               type="button"

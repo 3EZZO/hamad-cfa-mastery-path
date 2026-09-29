@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 const SHEETS = [
   "./styles.css",
   "./theme.css",
+  "./identity.css",
   "./features/mockTests/moduleMock.css",
   "./features/liveSession/liveSession.css",
   "./features/practice/practiceCoach.css",

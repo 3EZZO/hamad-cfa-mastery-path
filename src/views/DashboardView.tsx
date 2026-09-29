@@ -1,6 +1,7 @@
 // Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
 import { Archive, BookOpenCheck, CalendarClock, Check, ChevronDown, ChevronRight, CircleCheckBig, ClipboardCheck, Gauge, GraduationCap, ListChecks, PlayCircle, RotateCcw, ShieldCheck, Sparkles, TimerReset, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Crest } from "../components/Crest";
 import { getOverallProgressForState, getPlanTasks, getRequiredTasks, getWeekProgressForState, PLAN, TOPICS } from "../data/plan";
 import program from "../data/program.json";
 import { daysUntilExam, formatDate, todayDateOnly, TOTAL_WEEKS } from "../lib/dates";
@@ -259,6 +260,7 @@ export function DashboardView({
     <div className="view-stack home-view">
       <section className="today-hero">
         <div className="today-hero-top">
+          <Crest size={52} animated className="today-hero__crest" />
           <div className="status-line"><span className="live-dot" />{programState}</div>
           <div className="exam-countdown"><strong>{days}</strong><span>days to exam</span></div>
         </div>

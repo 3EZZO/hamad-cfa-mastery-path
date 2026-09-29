@@ -6,7 +6,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ThemeToggle } from "./ThemeToggle";
+import { ThemeToggle, useSessionThemeScope } from "./ThemeToggle";
 import { useHashSegment } from "../hooks/useHashTab";
 import { parseSessionSegment, sessionSegment } from "../lib/hashRoute";
 import {
@@ -429,6 +429,7 @@ function sessionFromSegment(segment: string): TutorSessionNumber | null {
 }
 
 export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps) {
+  useSessionThemeScope();
   // Session Mode is only mounted while it is the active tab, so the
   // `#live/session-NN` segment belongs to this switcher.
   const [segment, setSegment] = useHashSegment("live", "live");

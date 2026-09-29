@@ -4,11 +4,14 @@ import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import PwaInstallPrompt from "./components/PwaInstallPrompt";
 import UpdateToast from "./components/UpdateToast";
+import { installDepthMotion } from "./lib/depthMotion";
 import { installGlobalErrorCapture } from "./lib/errorReport";
 import { registerProject202ServiceWorker } from "./lib/pwa";
 import "./styles.css";
+import "./identity.css";
 
 installGlobalErrorCapture();
+installDepthMotion();
 
 // Registered after load so the first paint never competes with the worker;
 // the update toast waits on the same promise.
