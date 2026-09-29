@@ -116,6 +116,26 @@ html:root :is(.eyebrow, .mini-label) {
   .sidebar-nav { scrollbar-color: #3a4864 transparent; }
 }
 
+/* Top bar: the page heading, days-to-exam (sidebar card) and sync (top-bar
+   pill) each appear once. Phones keep days-to-exam; they have no sidebar. */
+.data-actions { margin-left: auto; }
+@media (min-width: 1024px) {
+  .topbar-exam { display: none; }
+}
+.theme-toggle:not(.command-palette-launch) { width: 44px; padding: 8px; }
+.sync-retry {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  border-radius: 10px;
+  color: var(--danger);
+  background: var(--danger-pale);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* --------------------------------------------------------------- buttons */
 .button-primary,
 .button-accent {

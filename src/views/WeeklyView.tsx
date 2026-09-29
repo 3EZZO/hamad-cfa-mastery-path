@@ -9,6 +9,14 @@ import type { TrackerState } from "../types";
 import { CHECKPOINT_TIME, ProgressBar, ReadingCoverage, TaskChecklist } from "./shared";
 import type { Notify } from "./shared";
 
+/** Week focus for the selector: cut at a word boundary with "…"; the full title is the option's tooltip. */
+export function shortTitle(text: string, max = 48): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max + 1);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > max / 2 ? cut.slice(0, space) : text.slice(0, max)).replace(/[\s,:;·—-]+$/, "")}…`;
+}
+
 export function WeeklyView({
   tracker,
   selectedWeek,
@@ -54,8 +62,8 @@ export function WeeklyView({
         <button className="icon-button" type="button" disabled={selectedWeek === 1} onClick={() => setSelectedWeek(selectedWeek - 1)} aria-label="Previous week"><ChevronLeft size={19} /></button>
         <label>
           <span>Selected week</span>
-          <select value={selectedWeek} onChange={(event) => setSelectedWeek(Number(event.target.value))}>
-            {PLAN.map((item) => <option value={item.week} key={item.week}>Week {item.week} · {item.focus}</option>)}
+          <select value={selectedWeek} title={`Week ${week.week} · ${week.focus}`} onChange={(event) => setSelectedWeek(Number(event.target.value))}>
+            {PLAN.map((item) => <option value={item.week} key={item.week} title={`Week ${item.week} · ${item.focus}`}>Week {item.week} · {shortTitle(item.focus)}</option>)}
           </select>
         </label>
         <button className="icon-button" type="button" disabled={selectedWeek === TOTAL_WEEKS} onClick={() => setSelectedWeek(selectedWeek + 1)} aria-label="Next week"><ChevronRight size={19} /></button>

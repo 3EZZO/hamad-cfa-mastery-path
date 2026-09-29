@@ -89,8 +89,8 @@ describe("Module Tests priority board", () => {
       "The Time Value of Money in Finance", // done
     ]);
     const summary = textOf(root.findByProps({ className: "mock-hub__summary" }));
-    expect(summary).toContain("2 of 4 done");
-    expect(summary).toContain("Next due");
+    expect(summary).toContain("0 of 1 due by Saturday, 3 October");
+    expect(summary).toContain("2 of 4 done overall");
   });
 
   it("offers repair after a weak result", async () => {
@@ -112,7 +112,7 @@ describe("Module Tests priority board", () => {
     const text = textOf(root);
     expect(text).toContain("Hamad: 4/8");
     expect(text).toContain("Review not released yet");
-    expect(textOf(root.findByProps({ className: "mock-hub__summary" }))).toContain("Hamad: 2 of 4 done");
+    expect(textOf(root.findByProps({ className: "mock-hub__summary" }))).toContain("Hamad: 0 of 1 due by");
     const remind = root.find((node) => node.type === "button" && textOf(node).includes("Send a reminder"));
     await act(async () => remind.props.onClick());
     expect(onOpenReminders).toHaveBeenCalledTimes(1);
