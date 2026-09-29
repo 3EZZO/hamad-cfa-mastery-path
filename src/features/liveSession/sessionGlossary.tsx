@@ -21,8 +21,8 @@ export function SessionCountLegend({ counts = {} }: {
   counts?: Partial<Record<keyof typeof SESSION_TERMS, number | string>>;
 }) {
   return (
-    <details className="ls-count-legend">
-      <summary><Info size={15} aria-hidden="true" /> Counts explained</summary>
+    <details className="ls-count-legend" title="Counts explained">
+      <summary><Info size={15} aria-hidden="true" /> <span className="ls-count-legend__label">Counts explained</span></summary>
       <dl>
         {Object.entries(SESSION_TERMS).map(([key, term]) => (
           <div key={key}>

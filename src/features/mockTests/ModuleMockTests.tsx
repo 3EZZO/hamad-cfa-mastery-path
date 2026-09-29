@@ -80,6 +80,7 @@ export function ModuleMockTests({
   onOpenMistakes,
   onOpenRepair,
   onOpenReminders,
+  onOpenTutorAdmin,
 }: {
   uid: string;
   role: ProjectRole;
@@ -93,6 +94,8 @@ export function ModuleMockTests({
   onOpenRepair?: () => void;
   /** Tutor: go to the reminder tools in Tutor Admin. */
   onOpenReminders?: () => void;
+  /** Tutor: open Tutor Admin from the tutor note. */
+  onOpenTutorAdmin?: () => void;
 }) {
   const isTutor = role === "tutor";
   const [modules, setModules] = useState<ModuleState[]>([]);
@@ -355,10 +358,7 @@ export function ModuleMockTests({
         <div>
           <p className="mock-hub__eyebrow">Assessment · not practice</p>
           <h2 id="mock-hub-title">Module Tests</h2>
-          <p>
-            Every published module has one compulsory mock test: {MOCK_QUESTION_COUNT} questions, 12 minutes,
-            one attempt, full screen. Your result goes straight to your tutor.
-          </p>
+          <p>One compulsory test per published module, in full screen. Your result goes straight to your tutor.</p>
         </div>
         <ul className="mock-hub__rules" aria-label="Test rules">
           <li><Target size={16} />{MOCK_QUESTION_COUNT} questions</li>
@@ -370,15 +370,17 @@ export function ModuleMockTests({
       {isTutor && (
         <p className="mock-hub__note">
           <ShieldAlert size={16} />
-          <span>Tutor view. Upload, review and publish tests, see results and reset attempts in <strong>Tutor Admin</strong>. Rehearse runs the real exam screen locally and saves nothing.</span>
+          <span>Tutor view. Upload, review and publish tests, see results and reset attempts in {onOpenTutorAdmin ? <button type="button" className="mock-hub__link" onClick={onOpenTutorAdmin}>Tutor Admin</button> : <strong>Tutor Admin</strong>}. Rehearse runs the real exam screen locally and saves nothing.</span>
         </p>
       )}
       {!loading && summary.published > 0 && (
         <div className="mock-hub__summary" role="status">
-          <strong>{isTutor ? "Hamad: " : ""}{summary.done} of {summary.published} done</strong>
+          <strong>{isTutor ? "Hamad: " : ""}{summary.nextDeadline
+            ? `${summary.doneNext} of ${summary.dueNext} due by ${formatReminderDate(summary.nextDeadline)}`
+            : `${summary.done} of ${summary.published} done`}</strong>
           {summary.inProgress > 0 && <span className="is-live">{summary.inProgress} in progress</span>}
           {summary.overdue > 0 && <span className="is-overdue">{summary.overdue} overdue</span>}
-          {summary.nextDeadline && <span><CalendarClock size={14} aria-hidden="true" />Next due {formatReminderDate(summary.nextDeadline)} · {deadlineCountdown(summary.nextDeadline, now)}</span>}
+          {summary.nextDeadline && <span><CalendarClock size={14} aria-hidden="true" />{deadlineCountdown(summary.nextDeadline, now)} · {summary.done} of {summary.published} done overall</span>}
           {awaitingRelease > 0 && <span>{awaitingRelease} {awaitingRelease === 1 ? "review" : "reviews"} not released</span>}
           {isTutor && onOpenReminders && (
             <button type="button" className="mock-button mock-button--ghost" onClick={onOpenReminders}><BellRing size={16} />Send a reminder</button>

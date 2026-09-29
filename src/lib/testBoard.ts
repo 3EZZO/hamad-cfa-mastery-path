@@ -35,6 +35,9 @@ export interface BoardSummary {
   overdue: number;
   /** Earliest deadline among tests still to take. */
   nextDeadline: string | null;
+  /** Published tests carrying that next deadline, and how many of them are finished. */
+  dueNext: number;
+  doneNext: number;
 }
 
 /** Below 6 of 8 (75%) a module test result asks for repair. */
@@ -78,14 +81,20 @@ export function buildTestBoard(entries: BoardEntry[], nowMs: number): BoardRow[]
       || left.number - right.number);
 }
 
+const isFinished = (row: BoardRow) => row.status === "done" || row.status === "grading" || row.status === "forfeited";
+
 export function summarizeTestBoard(rows: BoardRow[]): BoardSummary {
   const toTake = rows.filter((row) => row.status === "due" || row.status === "available" || row.status === "in-progress");
+  const nextDeadline = toTake.map((row) => row.deadline).filter((value): value is string => Boolean(value)).sort()[0] ?? null;
+  const dueByNext = nextDeadline ? rows.filter((row) => row.status !== "unpublished" && row.deadline === nextDeadline) : [];
   return {
     published: rows.filter((row) => row.status !== "unpublished").length,
-    done: rows.filter((row) => row.status === "done" || row.status === "grading" || row.status === "forfeited").length,
+    done: rows.filter(isFinished).length,
     inProgress: rows.filter((row) => row.status === "in-progress").length,
     overdue: rows.filter((row) => row.overdue).length,
-    nextDeadline: toTake.map((row) => row.deadline).filter((value): value is string => Boolean(value)).sort()[0] ?? null,
+    nextDeadline,
+    dueNext: dueByNext.length,
+    doneNext: dueByNext.filter(isFinished).length,
   };
 }
 

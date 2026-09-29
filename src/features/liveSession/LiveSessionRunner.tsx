@@ -58,7 +58,6 @@ import {
 } from "./sessionDeckModel";
 import { StageCard } from "./StageCard";
 import { SessionReadingContext } from "./SessionReadingContext";
-import { PlanRouteGraphic } from "../../components/PlanRouteGraphic";
 import { SyncRecoveryNotice } from "../../components/SyncRecoveryNotice";
 import { SessionCountLegend, SESSION_TERMS } from "./sessionGlossary";
 import type { SessionTimerController } from "./useSessionTimer";
@@ -1193,10 +1192,10 @@ export function LiveSessionRunner({
               <circle cx="24" cy="24" r="20" stroke="var(--border)" strokeWidth="4" fill="none" />
               <circle 
                 cx="24" cy="24" r="20" 
-                stroke={timer.expired ? "var(--alert-red)" : (timer.remainingMs !== undefined && timer.remainingMs < 5 * 60_000) ? "var(--gold-bright)" : "var(--theme-blue)"} 
+                stroke={timer.expired ? "var(--danger)" : (timer.remainingMs !== undefined && timer.remainingMs < 5 * 60_000) ? "var(--gold-bright)" : "var(--theme-blue)"}
                 strokeWidth="4" fill="none"
                 strokeDasharray={2 * Math.PI * 20}
-                strokeDashoffset={timer.progress !== undefined ? (Math.min(timer.progress, 1)) * (2 * Math.PI * 20) : 0}
+                strokeDashoffset={(1 - Math.min(Math.max(timer.progress, 0), 100) / 100) * (2 * Math.PI * 20)}
                 strokeLinecap="round"
                 transform="rotate(-90 24 24)"
                 style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s ease" }}
@@ -1304,23 +1303,19 @@ export function LiveSessionRunner({
         aria-label="Teaching deck control centre"
       >
         <div className="ls-deck-console__coverage">
-          <div>
-            <span>
-              Route deck {currentDeck?.globalNumber ?? 1} of {progress.totalDecks}
-            </span>
-            <strong>{SESSION_TERMS.covered.label}: {progress.coveredDecks}</strong>
+          <div className="ls-deck-console__line">
+            <strong>Deck {currentDeck?.globalNumber ?? 1} of {progress.totalDecks}</strong>
+            <span>· {progress.coveredDecks} covered · target {liveTargetDecks}</span>
           </div>
-          <div className="ls-deck-console-graphic">
-            <PlanRouteGraphic 
-              nodes={allDecks.map((deck) => ({
-                id: deck.key,
-                isPast: deck.globalNumber < (currentDeck?.globalNumber ?? 1),
-                isCurrent: deck.globalNumber === (currentDeck?.globalNumber ?? 1),
-                isComplete: completedDeskIds.includes(deck.key),
-              }))}
-              columns={15}
-              compact={true}
-            />
+          <div
+            className="ls-deck-console__bar"
+            role="progressbar"
+            aria-label={SESSION_TERMS.covered.label}
+            aria-valuemin={0}
+            aria-valuemax={progress.totalDecks}
+            aria-valuenow={progress.coveredDecks}
+          >
+            <i style={{ width: `${progress.totalDecks ? Math.min(100, (progress.coveredDecks / progress.totalDecks) * 100) : 0}%` }} />
           </div>
           <small>
             {SESSION_TERMS.proofs.label}: {progress.recordedProofs} / {progress.totalProofs} recorded

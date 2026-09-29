@@ -56,7 +56,19 @@ describe("buildTestBoard", () => {
   });
 
   it("summarizes progress and the next deadline", () => {
-    expect(summarizeTestBoard(board)).toEqual({ published: 7, done: 3, inProgress: 1, overdue: 1, nextDeadline: "2026-09-30" });
+    expect(summarizeTestBoard(board)).toEqual({ published: 7, done: 3, inProgress: 1, overdue: 1, nextDeadline: "2026-09-30", dueNext: 1, doneNext: 0 });
+  });
+
+  it("counts progress against the tests due by the next deadline, finished ones included", () => {
+    const shared = buildTestBoard([
+      entry(1, { deadline: "2026-10-01", attempt: attempt({ score: 7 }) }),
+      entry(2, { deadline: "2026-10-01" }),
+      entry(3, { deadline: "2026-10-01" }),
+      entry(4, { deadline: "2026-10-08" }),
+      entry(5),
+      entry(6, { published: false, deadline: "2026-10-01" }),
+    ], NOW);
+    expect(summarizeTestBoard(shared)).toMatchObject({ published: 5, nextDeadline: "2026-10-01", dueNext: 3, doneNext: 1 });
   });
 });
 

@@ -1,4 +1,6 @@
 import {
+  ChevronLeft,
+  ChevronRight,
   CloudAlert,
   LockKeyhole,
   RefreshCw,
@@ -445,10 +447,23 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
     if (linked !== null && linked !== selected) selectSession(linked);
     // Follows back/forward or pasted links only; `selected` is read, not tracked.
   }, [segment]);
+  // One compact row: the tab strip scrolls (arrows, no visible bar) and keeps
+  // the chosen session in view.
+  const tabStrip = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    tabStrip.current?.querySelector<HTMLElement>('[aria-pressed="true"]')
+      ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [selected]);
+  const scrollTabs = (direction: 1 | -1) =>
+    tabStrip.current?.scrollBy({ left: direction * 280, behavior: "smooth" });
   return (
     <div className="ls-session-hub">
       <nav className="ls-session-switcher" aria-label="Choose tutoring session">
         <span>Session Mode</span>
+        <button type="button" className="ls-session-switcher__arrow" aria-label="Earlier sessions" onClick={() => scrollTabs(-1)}>
+          <ChevronLeft size={18} aria-hidden="true" />
+        </button>
+        <div className="ls-session-switcher__tabs" ref={tabStrip}>
         {TUTOR_SESSION_NUMBERS.map(number => {
           const entry = getTutorSession(number);
           const date = effectiveSessionDate(entry.session, props.tracker.sessionOverrides);
@@ -461,7 +476,11 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
             </button>
           );
         })}
-        <small>Switching pauses the timer. Each session keeps its own progress.</small>
+        </div>
+        <button type="button" className="ls-session-switcher__arrow" aria-label="Later sessions" onClick={() => scrollTabs(1)}>
+          <ChevronRight size={18} aria-hidden="true" />
+        </button>
+        <small title="Switching pauses the timer. Each session keeps its own progress.">Switching pauses the timer. Each session keeps its own progress.</small>
         <ThemeToggle />
       </nav>
       {visited.map(number => (

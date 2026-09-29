@@ -585,6 +585,7 @@ function App() {
             onOpenMistakes={() => navigate("errors")}
             onOpenRepair={() => openPractice("repair")}
             onOpenReminders={() => navigate("coach")}
+            onOpenTutorAdmin={() => navigate("coach")}
           />
         );
       case "notes":
@@ -727,10 +728,11 @@ function App() {
                     onClick={() => navigate(item.id)}
                     aria-current={activeTab === item.id ? "page" : undefined}
                     tabIndex={rovingTabIndex(sidebarIds, activeTab, item.id)}
+                    title={item.hint}
                     type="button"
                   >
                     <Icon size={17} />
-                    <span>{item.label}{item.hint && <small className="nav-task-hint">{item.hint}</small>}</span>
+                    <span>{item.label}</span>
                   </button>
                 );
               })}
@@ -738,16 +740,6 @@ function App() {
           ))}
         </nav>
 
-        <div className={cx("sidebar-local", syncCopy.tone)}>
-          <SyncIcon size={17} />
-          <div>
-            <strong>{syncCopy.label}</strong>
-            <span>{syncStatus === "error" ? syncError ?? syncCopy.detail : syncCopy.detail}</span>
-            {syncStatus === "error" && (
-              <button type="button" onClick={retrySync}>Try again</button>
-            )}
-          </div>
-        </div>
       </aside>
 
       <main className="main-shell">
@@ -759,10 +751,6 @@ function App() {
               <span>Hamad · CFA Level I</span>
               <small className="creator-credit">Created by Mohamed Ali, CFA</small>
             </div>
-          </div>
-          <div className="topbar-title">
-            <span>{role === "tutor" ? "Tutor workspace" : "Hamad's study workspace"} · CFA Level I</span>
-            <strong>{TAB_COPY[activeTab].title}</strong>
           </div>
           <div className="topbar-exam"><span>{daysUntilExam()} days</span><small>to exam</small></div>
           <div className="data-actions">
@@ -781,6 +769,9 @@ function App() {
               <SyncIcon size={15} />
               <span>{syncCopy.label}</span>
             </span>
+            {syncStatus === "error" && (
+              <button type="button" className="sync-retry" onClick={retrySync} title={syncError ?? syncCopy.detail}>Try again</button>
+            )}
             {capabilities.canUseLiveSession && (
               <button className="button button-primary header-session-action" type="button" onClick={() => navigate("live")} title="Open Session Mode" aria-label="Open Session Mode">
                 <PlayCircle size={17} /><span>Session Mode</span>

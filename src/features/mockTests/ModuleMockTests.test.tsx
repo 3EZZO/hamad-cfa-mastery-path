@@ -1,6 +1,7 @@
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MockAttempt } from "../../lib/mockTestContent";
+import { formatReminderDate } from "../../lib/mockReminders";
 
 const now = new Date(2026, 9, 1, 12, 0, 0).getTime();
 
@@ -89,8 +90,9 @@ describe("Module Tests priority board", () => {
       "The Time Value of Money in Finance", // done
     ]);
     const summary = textOf(root.findByProps({ className: "mock-hub__summary" }));
-    expect(summary).toContain("2 of 4 done");
-    expect(summary).toContain("Next due");
+    // The date follows the device locale, so compare against the app's own formatter.
+    expect(summary).toContain(`0 of 1 due by ${formatReminderDate("2026-10-03")}`);
+    expect(summary).toContain("2 of 4 done overall");
   });
 
   it("offers repair after a weak result", async () => {
@@ -112,7 +114,7 @@ describe("Module Tests priority board", () => {
     const text = textOf(root);
     expect(text).toContain("Hamad: 4/8");
     expect(text).toContain("Review not released yet");
-    expect(textOf(root.findByProps({ className: "mock-hub__summary" }))).toContain("Hamad: 2 of 4 done");
+    expect(textOf(root.findByProps({ className: "mock-hub__summary" }))).toContain("Hamad: 0 of 1 due by");
     const remind = root.find((node) => node.type === "button" && textOf(node).includes("Send a reminder"));
     await act(async () => remind.props.onClick());
     expect(onOpenReminders).toHaveBeenCalledTimes(1);
