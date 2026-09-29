@@ -1,6 +1,7 @@
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MockAttempt } from "../../lib/mockTestContent";
+import { formatReminderDate } from "../../lib/mockReminders";
 
 const now = new Date(2026, 9, 1, 12, 0, 0).getTime();
 
@@ -89,7 +90,8 @@ describe("Module Tests priority board", () => {
       "The Time Value of Money in Finance", // done
     ]);
     const summary = textOf(root.findByProps({ className: "mock-hub__summary" }));
-    expect(summary).toContain("0 of 1 due by Saturday, 3 October");
+    // The date follows the device locale, so compare against the app's own formatter.
+    expect(summary).toContain(`0 of 1 due by ${formatReminderDate("2026-10-03")}`);
     expect(summary).toContain("2 of 4 done overall");
   });
 
