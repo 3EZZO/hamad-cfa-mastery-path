@@ -698,7 +698,7 @@ function App() {
       <a className="skip-link" href="#tracker-content">Skip to content</a>
       <aside className="sidebar">
         <div className="brand-lockup">
-          <span className="brand-mark"><Crest size={30} /></span>
+          <span className="brand-mark"><Crest size={38} /></span>
           <div>
             <strong>MASTERY PATH</strong>
             <span>Hamad · CFA Level I</span>
@@ -753,7 +753,7 @@ function App() {
       <main className="main-shell">
         <header className="topbar">
           <div className="mobile-brand">
-            <span className="brand-mark"><Crest size={26} /></span>
+            <span className="brand-mark"><Crest size={32} /></span>
             <div>
               <strong>MASTERY PATH</strong>
               <span>Hamad · CFA Level I</span>

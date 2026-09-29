@@ -20,14 +20,34 @@ html:root :is(.eyebrow, .mini-label) {
 
 /* ------------------------------------------------------------- the crest */
 .crest { display: block; overflow: visible; }
+/* Fixed boxes (crest aspect 64:72) so the header never shifts while loading. */
 .brand-mark,
 .sidebar .brand-mark {
-  width: auto;
-  height: auto;
+  display: grid;
+  width: 32px;
+  height: 36px;
+  place-items: center;
   border: 0;
   border-radius: 0;
   background: none;
   box-shadow: none;
+}
+.sidebar .brand-mark { width: 40px; height: 44px; }
+.brand-mark .crest {
+  filter: drop-shadow(0 2px 4px rgba(10, 17, 32, 0.28));
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+:is(.brand-lockup, .mobile-brand):hover .brand-mark .crest {
+  transform: scale(1.05);
+  filter: drop-shadow(0 2px 4px rgba(10, 17, 32, 0.28)) drop-shadow(0 0 8px rgba(216, 181, 99, 0.4));
+}
+@media (min-width: 1024px) {
+  /* Expanded: the crest lines up with the nav icons below it (8px grid). */
+  .sidebar .brand-lockup { padding-left: 8px; }
+  .sidebar,
+  .main-shell { transition: width 0.3s ease-in-out, padding 0.3s ease-in-out, margin-left 0.3s ease-in-out; }
+  /* Collapsed: the name is hidden, so the crest alone sits centred. */
+  .app-shell.sidebar-collapsed .brand-lockup { justify-content: center; padding-left: 0; }
 }
 .access-mark--crest,
 .access-mark.access-mark--crest {
