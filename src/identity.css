@@ -20,19 +20,19 @@ html:root :is(.eyebrow, .mini-label) {
 
 /* ------------------------------------------------------------- the crest */
 .crest { display: block; overflow: visible; }
-/* Fixed boxes (crest aspect 64:72) so the header never shifts while loading. */
+/* Fixed square boxes so the header never shifts while the mark loads. */
 .brand-mark,
 .sidebar .brand-mark {
   display: grid;
   width: 32px;
-  height: 36px;
+  height: 32px;
   place-items: center;
   border: 0;
   border-radius: 0;
   background: none;
   box-shadow: none;
 }
-.sidebar .brand-mark { width: 40px; height: 44px; }
+.sidebar .brand-mark { width: 40px; height: 40px; }
 .brand-mark .crest {
   filter: drop-shadow(0 2px 4px rgba(10, 17, 32, 0.28));
   transition: transform 0.3s ease, filter 0.3s ease;
