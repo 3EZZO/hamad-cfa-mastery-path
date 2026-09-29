@@ -8,6 +8,7 @@ import {
   CloudOff,
   Command,
   Flag,
+  Info,
   Layers3,
   Map,
   Maximize2,
@@ -1255,6 +1256,82 @@ export function LiveSessionRunner({
             )}
           </button>
         </div>
+        {focusMode ? (
+          <>
+            {/* Teaching focus: one compact bar. Every control reuses the
+                handlers and values of the rows it replaces. */}
+            <div className="ls-focus-bar">
+              <button
+                className="ls-focus-bar__back"
+                type="button"
+                disabled={!hasPreviousQueueDeck}
+                onClick={goPrevious}
+                aria-label="Return to the previous teaching deck"
+                title="Previous deck (←)"
+              >
+                <ArrowLeft size={18} />
+              </button>
+              <div className="ls-focus-bar__title" title={`${stage.label} · ${question?.title || stage.title}`}>
+                <strong>{stage.label} · {question?.title || stage.title}</strong>
+                {stage.objective ? (
+                  <details className="ls-focus-bar__objective">
+                    <summary aria-label="Teaching objective" title="Teaching objective"><Info size={15} aria-hidden="true" /></summary>
+                    <p>{stage.objective}</p>
+                  </details>
+                ) : null}
+              </div>
+              <div className="ls-focus-bar__step">
+                <strong>Step {linearStepNumber} of {linearStepTotal} · {linearStepLabel}</strong>
+                <SessionPacingStatus
+                  pacing={pacing}
+                  completedDecks={completedLiveTargetDecks}
+                  targetDecks={liveTargetDecks}
+                  paused={pacingPaused}
+                  calibrating={pacingCalibrating}
+                  className="ls-pacing-status--linear ls-pacing-status--focus"
+                />
+              </div>
+              <div className="ls-focus-bar__timers" aria-label="Session timers">
+                <span className={`ls-focus-timer${timer.expired ? " is-overtime" : ""}`} title="Session time remaining">
+                  <small>Session</small>
+                  <time>{timer.display}</time>
+                  <i style={{ width: `${Math.min(Math.max(timer.progress, 0), 100)}%` }} />
+                </span>
+                <span className={`ls-focus-timer${deskOvertime ? " is-overtime" : ""}`} title="Response time">
+                  <small>Response</small>
+                  <time>{deskDisplay}</time>
+                  <i style={{ width: `${Math.min(100, (deskElapsedSeconds / deskTargetSeconds) * 100)}%` }} />
+                </span>
+                <button
+                  type="button"
+                  disabled={timer.status === "complete"}
+                  onClick={timer.toggle}
+                  aria-label={timer.status === "running" ? "Pause session timer" : "Resume session timer"}
+                  title={timer.status === "running" ? "Pause the session clock (T)" : "Resume the session clock (T)"}
+                >
+                  {timer.status === "running" ? <Pause size={16} /> : <Play size={16} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeskElapsedSeconds(0)}
+                  aria-label="Reset response timer"
+                  title="Reset the response clock"
+                >
+                  <RotateCcw size={16} />
+                </button>
+              </div>
+            </div>
+            <button
+              className="ls-focus-bar__next"
+              type="button"
+              onClick={advanceLinearSequence}
+            >
+              <span>{primaryActionLabel}</span>
+              <kbd>Space</kbd>
+              <ArrowRight size={18} />
+            </button>
+          </>
+        ) : null}
         <div className="ls-livebar__actions">
           {mode === "rehearsal" ? <span className="ls-rehearsal-badge">Practice only</span> : (syncState === "error" || syncState === "offline") && onSyncRetry ? (
             <button
@@ -1269,6 +1346,7 @@ export function LiveSessionRunner({
           ) : (
             <span
               className={`ls-sync ls-sync--${syncState}`}
+              title={syncCopy(syncState).label}
               role={syncState === "error" || syncState === "offline" ? undefined : "status"}
               aria-atomic="true"
             >
