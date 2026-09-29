@@ -5973,3 +5973,242 @@ html:root[data-theme="dark"] .financial-working {
   outline: 2px solid var(--theme-blue);
   outline-offset: 2px;
 }
+
+/* ------------------------------------------------ identity cleanup (UI pass)
+   Session Mode brought to the app's navy / ivory / gold identity. Later in
+   the sheet, so these win over the layered laptop/focus rules above by
+   source order; class names and layout hooks used by tests are unchanged. */
+
+/* Session tabs: one compact row; the strip scrolls with arrows, no bar.
+   Colours follow the bar's own text colour (sessionPilot.css sets the bar
+   ivory in light and navy in dark). */
+.ls-session-switcher { min-height: 52px; padding: 0 12px; overflow: hidden; }
+.ls-session-switcher__tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-padding-inline: 8px;
+  overscroll-behavior-x: contain;
+}
+.ls-session-switcher__tabs::-webkit-scrollbar { display: none; }
+html:root .ls-session-switcher .ls-session-switcher__tabs button,
+html:root .ls-session-switcher button.ls-session-switcher__arrow {
+  min-height: 36px;
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, currentColor 26%, transparent);
+  color: inherit;
+  background: transparent;
+}
+html:root .ls-session-switcher .ls-session-switcher__tabs button[aria-pressed="true"] {
+  color: var(--navy);
+  border-color: transparent;
+  background: linear-gradient(135deg, #f0dba6, #d2ab55);
+}
+html:root .ls-session-switcher button.ls-session-switcher__arrow {
+  display: grid;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  place-items: center;
+  flex-shrink: 0;
+}
+.ls-session-switcher > small {
+  overflow: hidden;
+  max-width: 240px;
+  opacity: 0.78;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ls-session-switcher button:focus-visible { outline-color: var(--focus-ring); }
+
+/* Timers: one grouped control with evenly sized buttons. */
+html:root .live-session .ls-clock-cluster {
+  align-items: center;
+  gap: 0;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+}
+html:root .live-session .ls-clock {
+  min-width: 0;
+  padding: 2px 10px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+}
+html:root .live-session .ls-clock + .ls-clock { border-left: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+html:root .live-session .ls-clock span { color: inherit; opacity: 0.75; letter-spacing: 0.03em; }
+html:root .live-session .ls-clock time { color: inherit; }
+html:root .live-session .ls-clock--desk {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding-right: 10px;
+}
+html:root .live-session .ls-clock--desk > div {
+  position: static;
+  display: flex;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  gap: 4px;
+}
+html:root .live-session .ls-clock--desk button,
+html:root .live-session .ls-timer-toggle {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 8px;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+html:root .live-session .ls-clock--desk button svg { width: 15px; height: 15px; }
+html:root .live-session .ls-timer-toggle {
+  margin-left: 6px;
+  border-color: transparent;
+  color: var(--navy);
+  background: linear-gradient(135deg, #f0dba6, #d2ab55);
+}
+
+/* Deck row: one progress line + bar, then the two compact tool buttons. */
+.live-session .ls-deck-console {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+}
+.live-session .ls-deck-console__coverage {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  min-width: 0;
+  padding: 6px 12px;
+  border-color: var(--border);
+  background: var(--surface);
+}
+.live-session .ls-deck-console__line {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+.live-session .ls-deck-console__line strong,
+.live-session .ls-deck-console__coverage strong {
+  color: var(--ink);
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.live-session .ls-deck-console__line span { color: var(--muted); }
+.live-session .ls-deck-console__bar {
+  flex: 1 1 120px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.live-session .ls-deck-console__bar > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gold);
+}
+.live-session .ls-deck-console__coverage > small {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live-session .ls-deck-console .ls-count-legend > summary { padding: 4px; }
+.live-session .ls-deck-console .ls-count-legend__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.live-session .ls-deck-tools > summary,
+.live-session .ls-reference-shortcut {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--surface);
+  white-space: nowrap;
+}
+.live-session .ls-deck-tools > summary small { display: none; }
+
+/* Typography: labels in the reading sans; numbers stay tabular. */
+.live-session :is(.ls-pacing-status__rail > span, .ls-linear-control__meta span, .ls-linear-control__meta strong) {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Next: the gold primary action. */
+html:root .live-session .ls-linear-control .ls-linear-control__next {
+  border-color: transparent;
+  color: var(--navy);
+  background: linear-gradient(135deg, #f0dba6, #d2ab55);
+  box-shadow: 0 4px 12px rgba(210, 171, 85, 0.28);
+}
+html:root .live-session .ls-linear-control .ls-linear-control__next:hover {
+  background: linear-gradient(135deg, #f6e5ba, #dcb863);
+}
+
+/* Teach / Ask / Answer: quiet tints from the palette; the current step leads. */
+html:root .live-session .ls-command-block.ls-command-block--explain > header {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--theme-blue) 10%, var(--surface));
+}
+html:root .live-session .ls-command-block.ls-command-block--question > header {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--theme-teal) 10%, var(--surface));
+}
+html:root .live-session .ls-command-block.ls-command-block--answer > header {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--gold) 12%, var(--surface));
+}
+html:root .live-session .ls-command-block.is-active {
+  box-shadow: inset 0 3px 0 var(--gold);
+}
+html:root .live-session .ls-command-block.is-active > header {
+  background: color-mix(in srgb, var(--gold) 20%, var(--surface));
+}
+.live-session--running .ls-command-block__body {
+  scrollbar-gutter: auto;
+  scrollbar-width: thin;
+}
+
+/* Shortcut badges: readable in both themes. */
+html:root .live-session kbd {
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--ink);
+  background: var(--surface-2);
+  font: 700 0.72rem/1.5 var(--font-financial);
+}
+html:root .live-session .ls-command-block__body :is(.ls-hints, .ls-flow-forward),
+html:root .live-session .ls-question-options li {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--theme-teal) 7%, var(--surface));
+}
+html:root .live-session .ls-command-block__body .ls-spoken-answer {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--gold) 8%, var(--surface));
+}
+html:root .live-session .ls-command-block__body .ls-script-ribbon {
+  background: color-mix(in srgb, var(--theme-blue) 7%, var(--surface));
+}
