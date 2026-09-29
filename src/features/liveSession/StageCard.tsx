@@ -54,6 +54,48 @@ function TextList({
   );
 }
 
+/** Plain text with "- " / "• " lines rendered as a real bullet list. */
+export function RichText({ text }: { text: string }) {
+  // Playbooks also write lists inline ("because: - one. - two."): a dash
+  // after ":" or "." starts an item; dashes inside formulas are left alone.
+  if (!/\n/.test(text) && /[:.]\s+-\s+/.test(text)) {
+    const [lead, ...items] = text.split(/(?<=[:.])\s+-\s+/);
+    text = [lead, ...items.map(item => `- ${item}`)].join("\n");
+  }
+  const blocks: Array<{ list: boolean; lines: string[] }> = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const bullet = /^[-•*]\s+/.test(line);
+    const content = bullet ? line.replace(/^[-•*]\s+/, "") : line;
+    const last = blocks[blocks.length - 1];
+    if (last && last.list === bullet && bullet) last.lines.push(content);
+    else blocks.push({ list: bullet, lines: [content] });
+  }
+  if (blocks.length <= 1 && !blocks[0]?.list) return <p>{text}</p>;
+  return (
+    <>
+      {blocks.map((block, index) =>
+        block.list ? (
+          <ul className="ls-rich-list" key={index}>
+            {block.lines.map((line, lineIndex) => <li key={lineIndex}>{line}</li>)}
+          </ul>
+        ) : (
+          <p key={index}>{block.lines[0]}</p>
+        )
+      )}
+    </>
+  );
+}
+
+const normalised = (value: string) => value.replace(/\s+/g, " ").trim().toLowerCase();
+
+/** Answer shows only the working lines that Teach has not already put on screen. */
+export function questionSpecificLines(working: string[], shownInTeach: string[]): string[] {
+  const shown = new Set(shownInTeach.map(normalised));
+  return working.filter(line => !shown.has(normalised(line)));
+}
+
 function ApplicationSequence({ items }: { items: string[] }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
@@ -113,6 +155,15 @@ function CommandBlock({
     if (bodyRef.current) bodyRef.current.scrollTop = initialScrollTop;
     updateReadingProgress();
   }, [children, initialScrollTop]);
+  // Teaching focus: a column that becomes the current step starts at its top.
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current && bodyRef.current?.closest('[data-focus="true"]')) {
+      bodyRef.current.scrollTop = 0;
+      updateReadingProgress();
+    }
+    wasActive.current = active;
+  }, [active]);
   return (
     <section
       ref={sectionRef}
@@ -202,11 +253,9 @@ export function StageCard({
     ? question.listenFor
     : stage.listenFor;
   const repair = question?.repair?.length ? question.repair : stage.repair;
-  const write = question?.write?.length
-    ? question.write
-    : question?.working?.length
-      ? question.working
-      : stage.write;
+  // Teach shows board notes; the question's worked lines belong to Answer.
+  const write = question?.write?.length ? question.write : stage.write;
+  const answerWorking = questionSpecificLines(question?.working ?? [], [...(question?.formulae ?? []), ...(write ?? [])]);
   const teachRef = useRef<HTMLElement>(null);
   const askRef = useRef<HTMLElement>(null);
   const answerRef = useRef<HTMLElement>(null);
@@ -308,7 +357,7 @@ export function StageCard({
           {question?.depthNotes ? (
             <div className="ls-depth-note">
               <span>Teaching depth</span>
-              <p>{question.depthNotes}</p>
+              <RichText text={question.depthNotes} />
             </div>
           ) : null}
           {question?.formulae?.length ? (
@@ -408,19 +457,19 @@ export function StageCard({
               <p>{question.answer}</p>
             </div>
           ) : null}
-          {question?.working?.length ? (
-            <ApplicationSequence items={question.working} />
+          {answerWorking.length ? (
+            <ApplicationSequence items={answerWorking} />
           ) : null}
           {question?.rationale ? (
             <div className="ls-answer-detail">
               <span>Why this method</span>
-              <p>{question.rationale}</p>
+              <RichText text={question.rationale} />
             </div>
           ) : null}
           {question?.interpretation ? (
             <div className="ls-answer-detail">
               <span>Economic meaning</span>
-              <p>{question.interpretation}</p>
+              <RichText text={question.interpretation} />
             </div>
           ) : null}
           {question?.trap ? (
@@ -435,7 +484,7 @@ export function StageCard({
           {question?.followUp ? (
             <div className="ls-answer-detail">
               <span>Pressure follow-up</span>
-              <p>{question.followUp}</p>
+              <RichText text={question.followUp} />
             </div>
           ) : null}
         </CommandBlock>

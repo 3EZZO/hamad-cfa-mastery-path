@@ -913,3 +913,241 @@ html:root[data-theme="dark"] .live-session {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ------------------------------------------------ Teaching focus: compact bar
+   One ~56px bar (LiveSessionRunner renders .ls-focus-bar only in focus
+   mode) and full-height Teach / Ask / Answer columns. Later in the file, so
+   it overrides the earlier focus rules; colours follow the bar text colour
+   so they work in light and dark. */
+@media (min-width: 900px) {
+  .live-session .ls-runner[data-focus="true"] {
+    --ls-focus-livebar-h: 56px;
+    --ls-focus-cues-h: 34px;
+    /* Always the full window, even where short-window rules reflow the
+       normal layout to auto height (below 650px tall). */
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .live-session .ls-runner[data-focus="true"] :is(.ls-runner__grid, .ls-runner__main) {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .live-session .ls-runner[data-focus="true"] :is(.ls-focus-state, .ls-clock-cluster,
+    .ls-proof-progress, .ls-linear-control, .ls-stage-card__header) {
+    display: none;
+  }
+  .live-session .ls-runner[data-focus="true"] .ls-livebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    overflow: visible;
+  }
+  .live-session .ls-runner[data-focus="true"] .ls-livebar__actions { display: contents; }
+  .live-session .ls-runner[data-focus="true"] .ls-focus-bar { order: 1; }
+  .live-session .ls-runner[data-focus="true"] :is(.ls-sync, .ls-rehearsal-badge) { order: 2; }
+  .live-session .ls-runner[data-focus="true"] .ls-focus-bar__next { order: 3; }
+  .live-session .ls-runner[data-focus="true"] .ls-focus-toggle { order: 4; }
+
+  .ls-focus-bar {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+  }
+  .ls-focus-bar button,
+  .ls-focus-bar__objective > summary {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    place-items: center;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+    border-radius: 8px;
+    color: inherit;
+    background: color-mix(in srgb, currentColor 6%, transparent);
+    cursor: pointer;
+  }
+  .ls-focus-bar button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .ls-focus-bar__title {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+  }
+  .ls-focus-bar__title > strong {
+    overflow: hidden;
+    font-family: var(--font-heading);
+    font-size: 1.02rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ls-focus-bar__objective { position: relative; }
+  .ls-focus-bar__objective > summary { width: 26px; height: 26px; border: 0; list-style: none; }
+  .ls-focus-bar__objective > summary::-webkit-details-marker { display: none; }
+  .ls-focus-bar__objective > p {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 40;
+    width: min(420px, 60vw);
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--ink);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    line-height: 1.5;
+  }
+  .ls-focus-bar__step {
+    display: grid;
+    flex: 0 1 auto;
+    min-width: 0;
+    line-height: 1.25;
+  }
+  .ls-focus-bar__step > strong {
+    overflow: hidden;
+    max-width: 280px;
+    font-size: 0.8rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ls-focus-bar__step .ls-pacing-status--focus { font-size: 0.72rem; opacity: 0.85; }
+  .ls-focus-bar__step .ls-pacing-status--focus * { font-family: inherit; }
+  .ls-focus-bar__timers { display: flex; align-items: center; gap: 6px; }
+  .ls-focus-timer {
+    position: relative;
+    display: grid;
+    min-width: 104px;
+    padding: 3px 9px 5px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+    border-radius: 8px;
+    line-height: 1.15;
+  }
+  .ls-focus-timer small { font-size: 0.66rem; opacity: 0.72; }
+  .ls-focus-timer time { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .ls-focus-timer i {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: var(--gold);
+    transition: width 1s linear;
+  }
+  .ls-focus-timer.is-overtime i { width: 100% !important; background: var(--danger); }
+  .live-session .ls-runner[data-focus="true"] span.ls-sync {
+    width: 10px;
+    min-width: 10px;
+    height: 10px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    font-size: 0;
+    background: var(--green);
+  }
+  .live-session .ls-runner[data-focus="true"] span.ls-sync svg { display: none; }
+  .live-session .ls-runner[data-focus="true"] span.ls-sync--saving { background: var(--gold); }
+  .live-session .ls-runner[data-focus="true"] :is(span.ls-sync--offline, span.ls-sync--error) { background: var(--danger); }
+  .ls-focus-bar__next {
+    display: inline-flex;
+    min-height: 38px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--navy);
+    background: linear-gradient(135deg, #f0dba6, #d2ab55);
+    font: inherit;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  /* Columns fill the rest; the collapsed cues bar sits under them. */
+  .live-session .ls-runner[data-focus="true"] .ls-runner__grid { padding: 0 6px; }
+  .live-session .ls-runner[data-focus="true"] .ls-stage-card {
+    position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    padding-bottom: var(--ls-focus-cues-h);
+    border-radius: 0;
+  }
+  .live-session .ls-runner[data-focus="true"] .ls-command-grid { height: 100%; min-height: 0; }
+  .live-session .ls-runner[data-focus="true"][data-equal-columns="false"][data-flow-step="teach"] .ls-command-grid { grid-template-columns: minmax(0, 1.64fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .live-session .ls-runner[data-focus="true"][data-equal-columns="false"][data-flow-step="ask"] .ls-command-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.64fr) minmax(0, 1fr); }
+  .live-session .ls-runner[data-focus="true"][data-equal-columns="false"][data-flow-step="answer"] .ls-command-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.64fr); }
+  .live-session .ls-runner[data-focus="true"] .ls-command-grid { transition: grid-template-columns 250ms ease-out; }
+  .live-session .ls-runner[data-focus="true"] .ls-command-block { min-width: 0; }
+  html:root .live-session .ls-runner[data-focus="true"] .ls-command-block__body :is(.ls-hints, .ls-flow-forward, .ls-question-options li) {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--theme-teal) 7%, var(--surface));
+  }
+  html:root .live-session .ls-runner[data-focus="true"] .ls-command-block__body .ls-spoken-answer {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--gold) 8%, var(--surface));
+  }
+  .live-session .ls-runner[data-focus="true"] .ls-command-block__body {
+    overflow-y: auto;
+    scrollbar-gutter: auto;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, currentColor 25%, transparent) transparent;
+  }
+  .live-session .ls-runner[data-focus="true"] .ls-command-block.is-active { box-shadow: inset 0 3px 0 var(--gold); }
+
+  /* Presenting text: larger, the Ask question most prominent. */
+  .live-session .ls-runner[data-focus="true"] .ls-command-block__body :is(p, li) {
+    font-size: calc(1.08rem * var(--ls-reader-scale, 1));
+    line-height: 1.6;
+  }
+  .live-session .ls-runner[data-focus="true"] .ls-question-copy h3 {
+    font-size: calc(1.45rem * var(--ls-reader-scale, 1));
+    font-weight: 650;
+    line-height: 1.35;
+  }
+  .live-session .ls-rich-list { margin: 4px 0 0; padding-left: 1.2em; }
+  .live-session .ls-rich-list li + li { margin-top: 4px; }
+
+  /* Formulas in focus: clean formatted text, not the code grid. */
+  .live-session .ls-runner[data-focus="true"] :is(.ls-formula-stack, .ls-formula-line code, .financial-working) {
+    font-family: "IBM Plex Sans", "Segoe UI", sans-serif !important;
+    font-size: calc(1.08rem * var(--ls-reader-scale, 1));
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: 0.01em;
+    word-spacing: 0.12em;
+    background-image: none !important;
+  }
+  .live-session .ls-runner[data-focus="true"] .ls-formula-line code {
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+  }
+
+  /* Coaching cues: a slim bar that opens as a drawer over the columns. */
+  .live-session .ls-runner[data-focus="true"] .ls-coaching-drawer {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    margin: 0;
+  }
+  .live-session .ls-runner[data-focus="true"] .ls-coaching-drawer > summary { min-height: var(--ls-focus-cues-h); }
+  .live-session .ls-runner[data-focus="true"] .ls-coaching-drawer[open] {
+    box-shadow: 0 -12px 32px rgba(10, 17, 32, 0.22);
+  }
+  .live-session .ls-runner[data-focus="true"] .ls-coaching-drawer[open] .ls-coaching-rail {
+    max-height: 45dvh;
+    overflow-y: auto;
+  }
+}
