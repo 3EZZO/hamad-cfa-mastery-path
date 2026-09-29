@@ -437,11 +437,11 @@ export function PaymentsHub() {
                   <stop offset="95%" stopColor="#eab355" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey="month" stroke="#a9bacd" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#a9bacd" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+              <XAxis dataKey="month" stroke="var(--chart-tick)" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--chart-tick)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#13263b', border: '1px solid #3b5065', borderRadius: '8px', color: '#fff' }}
-                itemStyle={{ color: '#fff' }}
+                contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--ink)' }}
+                itemStyle={{ color: 'var(--ink)' }}
                 formatter={(value: any) => [formatDualCurrency(Number(value) || 0, config.currency), undefined]}
               />
               <Area type="monotone" dataKey="Expected" stroke="#eab355" fillOpacity={1} fill="url(#colorExpected)" />

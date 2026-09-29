@@ -140,7 +140,7 @@ export function shortcutTabs(config: NavConfig, visible: readonly TabId[]): TabI
 export const TAB_COPY: Record<TabId, { eyebrow: string; title: string; description: string }> = {
   dashboard: {
     eyebrow: "Your study workspace",
-    title: "Today",
+    title: "Daily Briefing",
     description: "One clear next step, with the full plan available when you need it.",
   },
   plan: {
@@ -170,7 +170,7 @@ export const TAB_COPY: Record<TabId, { eyebrow: string; title: string; descripti
   },
   progress: {
     eyebrow: "Evidence by module and mock",
-    title: "Progress",
+    title: "Performance Report",
     description: "Every curriculum module by exam weight, with full mock results alongside.",
   },
   mastery: {

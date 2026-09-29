@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
 const SHEETS = [
   "./styles.css",
   "./theme.css",
+  "./identity.css",
+  "./features/mockTests/moduleMock.css",
   "./features/liveSession/liveSession.css",
   "./features/practice/practiceCoach.css",
   "./features/practice/ba2plus.css",
@@ -15,7 +17,7 @@ const SHEETS = [
 ] as const;
 
 /** Set from inline `style` in a component, never from a stylesheet. */
-const SET_FROM_JS = new Set(["--slider-fill", "--readiness"]);
+const SET_FROM_JS = new Set(["--slider-fill", "--readiness", "--mock-score"]);
 
 const sources = Object.fromEntries(
   SHEETS.map(sheet => [sheet, readFileSync(new URL(sheet, import.meta.url), "utf8")]),
@@ -62,8 +64,8 @@ describe("theme tokens", () => {
     expect(light).toMatch(/:root\s*\{[^}]*--text-main:\s*var\(--ink\);/);
     expect(light).toMatch(/:root\s*\{[^}]*--text-muted:\s*var\(--muted\);/);
     expect(light).toMatch(/:root\s*\{[^}]*--line:\s*var\(--border\);/);
-    expect(light).toMatch(/:root\s*\{[^}]*--surface-3:\s*#eef2f6;/);
-    expect(light).toMatch(/:root\s*\{[^}]*--surface-floating:\s*rgba\(255, 255, 255, 0\.92\);/);
+    expect(light).toMatch(/:root\s*\{[^}]*--surface-3:\s*#f1ebdf;/);
+    expect(light).toMatch(/:root\s*\{[^}]*--surface-floating:\s*rgba\(255, 253, 248, 0\.92\);/);
     const dark = darkRootNames(sources["./theme.css"]);
     expect(dark.has("--surface-3")).toBe(true);
     expect(dark.has("--surface-floating")).toBe(true);
@@ -77,7 +79,23 @@ describe("theme tokens", () => {
     const blocks = stripComments(sources["./styles.css"]).match(/^:root\s*\{/gm) ?? [];
     expect(blocks).toHaveLength(1);
     // The values the second block used to override are now the only ones.
-    expect(sources["./styles.css"]).toMatch(/:root\s*\{[^}]*--paper:\s*#eef2f6;[^}]*--surface-2:\s*#f6f8fb;[^}]*--border:\s*#d5dee8;/);
+    expect(sources["./styles.css"]).toMatch(/:root\s*\{[^}]*--paper:\s*#f5f1e8;[^}]*--surface-2:\s*#faf7f0;[^}]*--border:\s*#ddd5c5;/);
+  });
+
+  it("gives every palette colour a dark value so light colours never leak into dark", () => {
+    const dark = darkRootNames(sources["./theme.css"]);
+    const palette = ["--ink", "--ink-2", "--ink-soft", "--muted", "--paper", "--surface", "--surface-2", "--surface-3",
+      "--border", "--forest", "--forest-soft", "--gold", "--gold-bright", "--gold-pale", "--green", "--green-pale",
+      "--teal", "--danger", "--danger-pale", "--navy", "--navy-2", "--on-navy", "--on-navy-muted", "--action",
+      "--on-accent", "--warning", "--warning-bg", "--theme-blue", "--theme-teal", "--theme-amber", "--theme-amber-bg",
+      "--chart-grid", "--chart-tick", "--chart-score", "--chart-target", "--focus-ring", "--focus-ring-halo"];
+    expect(palette.filter(name => !dark.has(name))).toEqual([]);
+  });
+
+  it("sets headings in the self-hosted serif and keeps question stems in the reading sans", () => {
+    expect(sources["./styles.css"]).toMatch(/--font-heading:\s*"Source Serif 4"/);
+    expect(sources["./styles.css"]).toContain(":where(h1, h2):where(:not(.practice-question h2, #ls-candidate-title))");
+    for (const sheet of SHEETS) expect(sources[sheet], sheet).not.toContain('"Sora"');
   });
 
   it("only overrides tracker tokens in dark mode that the light root declares", () => {

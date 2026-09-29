@@ -786,9 +786,9 @@
 
 .payment-action-error,
 .payment-modal-error {
-  color: #ddd6fe;
-  border: 1px solid rgba(129, 140, 248, 0.5);
-  background: rgba(79, 70, 229, 0.16);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  background: var(--danger-pale);
 }
 
 .payment-action-error {

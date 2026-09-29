@@ -73,7 +73,7 @@ export function PlanRouteGraphic({ nodes, columns = 5, compact = false }: PlanRo
         <path 
           d={pathData} 
           fill="none" 
-          stroke="rgba(255, 255, 255, 0.1)" 
+          stroke="var(--border)"
           strokeWidth={compact ? "1.5" : "3"}
           strokeLinecap="round" 
           strokeLinejoin="round" 
@@ -99,7 +99,7 @@ export function PlanRouteGraphic({ nodes, columns = 5, compact = false }: PlanRo
               <circle 
                 r={rNode}
                 fill={isActive ? "var(--theme-blue)" : "var(--surface-2)"} 
-                stroke={isActive ? "none" : "rgba(255, 255, 255, 0.2)"}
+                stroke={isActive ? "none" : "var(--border)"}
                 strokeWidth={compact ? "1" : "1.5"}
                 className={cx("plan-route-node", {
                   "is-current": node.isCurrent,

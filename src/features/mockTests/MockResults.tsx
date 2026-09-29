@@ -1,5 +1,6 @@
 import { ArrowLeft, Check, CircleAlert, Clock3, Flag, LockKeyhole, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Crest } from "../../components/Crest";
 import {
   getMockAnswerKey,
   getMockQuestions,
@@ -81,11 +82,14 @@ export function MockResults({
   const timeUsed = local ? local.timeUsedMs : attempt ? mockTimeUsedMs(attempt) : null;
   const forfeited = reason === "leave";
   const percent = score === null ? 0 : Math.round((score / MOCK_QUESTION_COUNT) * 100);
+  // A strong result (6 of 8 or better) earns the crest medal in the reveal.
+  const strong = !forfeited && score !== null && score >= Math.ceil(MOCK_QUESTION_COUNT * 0.75);
 
   return (
     <section className="mock-results" aria-labelledby="mock-results-title">
       <button type="button" className="mock-results__back" onClick={onBack}><ArrowLeft size={18} />All module tests</button>
-      <div className={`mock-results__reveal${forfeited ? " is-forfeit" : ""}`}>
+      <div className={`mock-results__reveal${forfeited ? " is-forfeit" : ""}${strong ? " is-strong" : ""}`}>
+        {strong && <Crest size={56} animated className="mock-results__medal" />}
         <p className="mock-results__eyebrow">{local ? "Rehearsal result · not saved" : moduleLabel}</p>
         <h2 id="mock-results-title">{forfeited ? "Test forfeited" : "Your result"}</h2>
         <div className="mock-score" style={{ ["--mock-score" as string]: `${percent}` }} aria-label={score === null ? "Grading" : `${score} out of ${MOCK_QUESTION_COUNT}`}>

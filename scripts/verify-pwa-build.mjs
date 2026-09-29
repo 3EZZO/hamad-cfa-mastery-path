@@ -11,7 +11,7 @@ const requiredFiles = [
   "icons/project-202-maskable-192.png",
   "icons/project-202-maskable-512.png",
   "icons/project-202-apple-touch.png",
-  "fonts/sora-100-800-latin.woff2",
+  "fonts/source-serif-4-600-latin.woff2",
   "fonts/ibm-plex-sans-400-700-latin.woff2",
   "fonts/ibm-plex-mono-500-latin.woff2",
   "fonts/ibm-plex-mono-600-latin.woff2",

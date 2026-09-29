@@ -1,5 +1,6 @@
 // Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
-import { CircleAlert, Cloud, LogIn, LogOut, ShieldCheck, Target } from "lucide-react";
+import { CircleAlert, Cloud, LogIn, LogOut, ShieldCheck } from "lucide-react";
+import { Crest } from "../components/Crest";
 import { type FormEvent, useState } from "react";
 import program from "../data/program.json";
 
@@ -92,7 +93,7 @@ export function SignInScreen({
     <main className="access-shell">
       <section className="access-card">
         <div className="access-brand">
-          <span className="access-mark"><Target size={27} /></span>
+          <span className="access-mark access-mark--crest"><Crest size={44} animated /></span>
           <div>
             <strong>HAMAD CFA MASTERY</strong>
             <span>Level I Mastery Path</span>
