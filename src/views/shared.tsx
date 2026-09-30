@@ -457,6 +457,7 @@ export function SectionTabs<T extends string>({
 }) {
   const onKeyDown = useRovingNav("horizontal");
   return (
+    // eslint-disable-next-line jsx-a11y/interactive-supports-focus -- the tabs take focus (roving tabindex); the list only delegates arrow keys
     <div className="section-tabs" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
       {items.map((item) => {
         const selected = item.id === active;
