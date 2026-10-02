@@ -1,17 +1,18 @@
 import { ArrowRight, Grid3x3, TrendingUp, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { formatExamWeight } from "../data/examWeights";
 import { usePracticeSnapshot } from "../hooks/usePracticeSnapshot";
 import { formatDate } from "../lib/dates";
 import { buildModuleHeatmap, STALE_DAYS, taughtCatalogIds, type HeatmapCell, type HeatmapState } from "../lib/moduleHeatmap";
 import { buildPracticeInsights } from "../lib/practiceInsights";
+import { ModuleMockScores } from "../lazyViews";
 import type { TrackerState } from "../types";
 import { MasteryView } from "./MasteryView";
 import { MockView } from "./MockView";
 import { SectionPanel, SectionTabs, cx, topicShort } from "./shared";
 import type { Notify, UpdateTracker } from "./shared";
 
-/** Module test results live on the Tests destination, not here. */
+/** Module tests are taken on the Tests destination; Mocks lists their scores. */
 export type ProgressSection = "topics" | "mocks";
 
 const SECTIONS: Array<{ id: ProgressSection; label: string; icon: typeof Grid3x3 }> = [
@@ -181,7 +182,13 @@ export function ProgressView({
           </div>
         )}
         {section === "mocks" && (
-          <MockView tracker={tracker} updateTracker={updateTracker} notify={notify} canManage={canManageMocks} />
+          <MockView
+            tracker={tracker}
+            updateTracker={updateTracker}
+            notify={notify}
+            canManage={canManageMocks}
+            moduleMockScores={<Suspense fallback={null}><ModuleMockScores uid={uid} role={role} /></Suspense>}
+          />
         )}
       </SectionPanel>
     </div>

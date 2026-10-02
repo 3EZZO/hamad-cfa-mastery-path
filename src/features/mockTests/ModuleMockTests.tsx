@@ -1,4 +1,4 @@
-import { Archive, BellRing, CalendarClock, CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, RotateCcw, ShieldAlert, Target, Timer } from "lucide-react";
+import { Archive, BellRing, BookOpenCheck, CalendarClock, CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, RotateCcw, ShieldAlert, Target, Timer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MOCK_MODULES, type MockModule } from "../../data/mockModules";
 import {
@@ -496,6 +496,9 @@ function ModuleCard({
         {isTutor && row?.status === "done" && row.attempt && !row.attempt.reviewReleased && (
           <span className="mock-card__deadline">Review not released yet</span>
         )}
+        {!isTutor && view === "completed" && attempt?.reviewReleased && (
+          <span className="mock-card__review"><BookOpenCheck size={13} aria-hidden="true" />Review ready</span>
+        )}
         {!isTutor && row?.weak && (
           <div className="mock-card__repair">
             <span>Below {WEAK_SCORE}/{MOCK_QUESTION_COUNT}: repair before moving on.</span>
@@ -519,8 +522,8 @@ function ModuleCard({
             Return
           </button>
         ) : (
-          <button type="button" className="mock-button mock-button--ghost" onClick={onResults}>
-            View result
+          <button type="button" className={`mock-button mock-button--${attempt?.reviewReleased ? "primary" : "ghost"}`} onClick={onResults}>
+            {attempt?.reviewReleased ? "Read review" : "View result"}
           </button>
         )}
       </div>

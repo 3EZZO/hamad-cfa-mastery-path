@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { act, create, type ReactTestInstance } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PracticeQuestion, PracticeQuestionState } from "../lib/practiceContent";
@@ -20,6 +21,12 @@ function state(questionId: string, correct: boolean): PracticeQuestionState {
 
 const snapshot = vi.hoisted(() => ({ value: null as unknown }));
 vi.mock("../hooks/usePracticeSnapshot", () => ({ usePracticeSnapshot: () => snapshot.value }));
+vi.mock("./MockView", () => ({
+  MockView: ({ moduleMockScores }: { moduleMockScores?: ReactNode }) => <div className="mock-view">{moduleMockScores}</div>,
+}));
+vi.mock("../lazyViews", () => ({
+  ModuleMockScores: ({ uid, role }: { uid: string; role: string }) => <p className="module-mock-scores">{`${role} ${uid}`}</p>,
+}));
 
 import { ProgressView } from "./ProgressView";
 
@@ -91,6 +98,13 @@ describe("Progress view", () => {
     await act(async () => cell.props.onClick());
     expect(tree.root.findAll((node) => node.type === "button" && textOf(node).includes("Practise this module"))).toHaveLength(0);
     expect(textOf(tree.root.findByProps({ className: "heatmap-detail" }))).toContain("Returns");
+  });
+
+  it("lists the module test scores on the Mocks section", async () => {
+    const { tree } = await render("student", "mocks");
+    const scores = tree.root.findByProps({ className: "module-mock-scores" });
+    expect(textOf(scores)).toBe("student uid-1");
+    expect(textOf(tree.root.findByProps({ className: "mock-view" }))).toBe("student uid-1");
   });
 
   it("explains when practice evidence is unavailable", async () => {

@@ -108,6 +108,19 @@ describe("Module Tests priority board", () => {
     expect(onOpenRepair).toHaveBeenCalledTimes(1);
   });
 
+  it("marks a released review on the student's card", async () => {
+    const root = (await render("student")).root;
+    const card = (title: string) => root.find((node) => node.type === "li"
+      && String(node.props.className ?? "").startsWith("mock-card")
+      && textOf(node.findByType("h3")) === title);
+    const released = card("The Time Value of Money in Finance");
+    expect(textOf(released)).toContain("Review ready");
+    expect(textOf(released.findByType("button"))).toBe("Read review");
+    const pending = card("Rates and Returns");
+    expect(textOf(pending)).not.toContain("Review ready");
+    expect(textOf(pending.findByType("button"))).toBe("View result");
+  });
+
   it("shows the tutor the student's status, unreleased reviews and a reminder shortcut", async () => {
     const onOpenReminders = vi.fn();
     const root = (await render("tutor", { onOpenReminders })).root;
