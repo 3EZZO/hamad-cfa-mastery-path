@@ -745,10 +745,11 @@
 .mock-hub__summary .mock-button { margin-left: auto; }
 .mock-card__deadline { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; color: var(--mk-muted); font-size: 0.78rem; font-weight: 600; }
 .mock-card__deadline.is-overdue { color: var(--mk-wrong); }
+.mock-card__review { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; color: var(--mk-right); font-size: 0.78rem; font-weight: 700; }
 .mock-card__repair { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--mk-wrong-bg); }
 .mock-card__repair > span { flex: 1 1 100%; color: var(--mk-wrong); font-size: 0.8rem; font-weight: 700; }
 :root[data-theme="dark"] .mock-hub__summary .is-live { color: var(--gold, #f1ce88); }
 @media (max-width: 600px) {
-  .mock-card__deadline { display: flex; margin: 6px 0 0; }
+  .mock-card__deadline, .mock-card__review { display: flex; margin: 6px 0 0; }
   .mock-hub__summary .mock-button { margin-left: 0; }
 }

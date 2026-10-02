@@ -84,6 +84,8 @@ export function MockResults({
   const percent = score === null ? 0 : Math.round((score / MOCK_QUESTION_COUNT) * 100);
   // A strong result (6 of 8 or better) earns the crest medal in the reveal.
   const strong = !forfeited && score !== null && score >= Math.ceil(MOCK_QUESTION_COUNT * 0.75);
+  // Until the tutor releases the review the student sees the final score only.
+  const reviewOpen = Boolean(local) || attempt?.reviewReleased === true;
 
   return (
     <section className="mock-results" aria-labelledby="mock-results-title">
@@ -98,27 +100,33 @@ export function MockResults({
         </div>
         <dl className="mock-results__facts">
           <div><dt>Score</dt><dd>{score === null ? "Grading…" : `${percent}%`}</dd></div>
-          <div><dt><Clock3 size={14} />Time used</dt><dd>{timeUsed === null ? "—" : formatMockClock(timeUsed)}</dd></div>
-          <div><dt>Finish</dt><dd>{reason ? FINISH_COPY[reason] : "—"}</dd></div>
+          {reviewOpen && (
+            <>
+              <div><dt><Clock3 size={14} />Time used</dt><dd>{timeUsed === null ? "—" : formatMockClock(timeUsed)}</dd></div>
+              <div><dt>Finish</dt><dd>{reason ? FINISH_COPY[reason] : "—"}</dd></div>
+            </>
+          )}
         </dl>
       </div>
       {error && <p className="mock-hub__error" role="alert"><CircleAlert size={16} />{error}</p>}
 
-      <ol className="mock-results__grid" aria-label="Question results">
-        {Array.from({ length: MOCK_QUESTION_COUNT }, (_, index) => {
-          const right = correct?.[index];
-          return (
-            <li key={index} className={right === undefined ? "" : right ? "is-right" : "is-wrong"}>
-              <span>Q{index + 1}</span>
-              {right === undefined ? null : right ? <Check size={16} aria-label="correct" /> : <X size={16} aria-label="wrong" />}
-              <small>{answers[index] === null ? "No answer" : `You chose ${optionLetter(answers[index])}`}</small>
-              {flags[index] && <Flag size={12} aria-label="flagged" />}
-            </li>
-          );
-        })}
-      </ol>
+      {reviewOpen && (
+        <ol className="mock-results__grid" aria-label="Question results">
+          {Array.from({ length: MOCK_QUESTION_COUNT }, (_, index) => {
+            const right = correct?.[index];
+            return (
+              <li key={index} className={right === undefined ? "" : right ? "is-right" : "is-wrong"}>
+                <span>Q{index + 1}</span>
+                {right === undefined ? null : right ? <Check size={16} aria-label="correct" /> : <X size={16} aria-label="wrong" />}
+                <small>{answers[index] === null ? "No answer" : `You chose ${optionLetter(answers[index])}`}</small>
+                {flags[index] && <Flag size={12} aria-label="flagged" />}
+              </li>
+            );
+          })}
+        </ol>
+      )}
 
-      {review ? (
+      {reviewOpen && review ? (
         <div className="mock-review">
           <h3>Answers and explanations</h3>
           {review.questions.map((question, index) => {
@@ -156,7 +164,7 @@ export function MockResults({
           })}
         </div>
       ) : (
-        <p className="mock-results__pending"><LockKeyhole size={16} />Correct answers and explanations appear here when your tutor releases the review.</p>
+        <p className="mock-results__pending"><LockKeyhole size={16} />Your question-by-question results, correct answers and explanations appear here when your tutor releases the review.</p>
       )}
     </section>
   );
