@@ -1,6 +1,6 @@
 import { BellRing, CalendarClock, CircleCheckBig, Clock3, PlayCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MOCK_MODULES, mockModuleById } from "../../data/mockModules";
+import { mockModuleById, mockModuleLabel, mockModuleOrder } from "../../data/mockModules";
 import { acknowledgeMockReminder, markMockReminderSeen, subscribeToMyMockReminders } from "../../lib/cloudMockReminders";
 import { getMockAttempt, getMockTestMeta } from "../../lib/cloudMockTests";
 import {
@@ -151,9 +151,7 @@ export function ReminderWindow({
   // Only "Got it" closes the window, so Escape is deliberately a no-op.
   useDialogFocus(true, cardRef, headingRef, () => undefined);
   const urgent = deadlineUrgent(reminder.deadline, nowMs);
-  const ordered = [...pending].sort(
-    (a, b) => (mockModuleById(a.id)?.number ?? 99) - (mockModuleById(b.id)?.number ?? 99),
-  );
+  const ordered = [...pending].sort((a, b) => mockModuleOrder(a.id) - mockModuleOrder(b.id));
 
   return (
     // A click on the backdrop neither closes the window nor pulls focus out of it.
@@ -193,17 +191,17 @@ export function ReminderWindow({
         </h3>
         <ul className="mock-reminder__modules">
           {ordered.map(item => {
-            const module = mockModuleById(item.id) ?? MOCK_MODULES.find(entry => entry.id === item.id);
+            const module = mockModuleById(item.id);
             return (
               <li key={item.id}>
                 <span className="mock-reminder__number" aria-hidden="true">{String(module?.number ?? "").padStart(2, "0")}</span>
                 <div>
-                  <strong>{module ? `Module ${module.number}` : item.id}</strong>
+                  <strong>{module ? mockModuleLabel(module) : item.id}</strong>
                   <small>{module?.title}{item.inProgress && <> · <Clock3 size={12} aria-hidden="true" /> in progress</>}</small>
                 </div>
                 <button type="button" className="mock-button mock-button--ghost" onClick={() => onOpenModule(item.id)}>
                   <PlayCircle size={16} />{item.inProgress ? "Return" : "Open"}
-                  <span className="visually-hidden"> Module {module?.number} mock test</span>
+                  <span className="visually-hidden"> {module ? mockModuleLabel(module) : item.id} mock test</span>
                 </button>
               </li>
             );

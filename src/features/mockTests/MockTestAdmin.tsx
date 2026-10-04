@@ -1,7 +1,7 @@
 import { ClipboardCheck, CircleAlert, CloudUpload, Eye, EyeOff, History, RotateCcw, Unlock } from "lucide-react";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useAppDialog } from "../../components/AppDialog";
-import { MOCK_MODULES, mockModuleById } from "../../data/mockModules";
+import { MOCK_MODULES, mockModuleById, mockModuleLabel } from "../../data/mockModules";
 import { analyzeKeystrokes } from "../../lib/calculatorDiagnostics";
 import { getCloudErrorMessage, listActiveStudentMembers, type ProjectMember } from "../../lib/cloud";
 import {
@@ -130,7 +130,7 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
   const reset = async (attempt: MockAttempt, studentName: string) => {
     const module = mockModuleById(attempt.moduleId);
     const ok = await dialog.confirm(
-      `Reset ${studentName}'s Module ${module?.number ?? ""} attempt? The current attempt is kept in the history and ${studentName} can take the test again. `
+      `Reset ${studentName}'s ${module ? mockModuleLabel(module) : attempt.moduleId} attempt? The current attempt is kept in the history and ${studentName} can take the test again. `
         + "If the review was released, the student has already seen the answers: consider uploading a new version first.",
     );
     if (!ok) return;
@@ -204,7 +204,7 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
           return (
             <article key={module.id} className="mock-admin__module">
               <div>
-                <span>Module {module.number}</span>
+                <span>{mockModuleLabel(module)}</span>
                 <strong>{module.title}</strong>
                 <small>{meta ? `${meta.status === "published" ? "Published" : "Draft"} · version ${meta.version}` : "No test uploaded"}</small>
               </div>
@@ -237,6 +237,8 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
             <tbody>
               {students.flatMap(student => MOCK_MODULES.map(module => {
                 const attempt = attempts.find(entry => entry.id === mockAttemptId(student.uid, module.id)) ?? null;
+                // Modules without an uploaded test and without an attempt add nothing to the table.
+                if (!attempt && !metas.some(entry => entry.moduleId === module.id)) return null;
                 const view = mockAttemptView(attempt, Date.now());
                 // Member records carry no names; this program has one student, Hamad.
                 const name = students.length === 1 ? "Hamad" : `Student ${student.uid.slice(0, 6)}`;
@@ -246,7 +248,7 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
                   <Fragment key={rowKey}>
                     <tr>
                       <th scope="row">{name}</th>
-                      <td>Module {module.number}</td>
+                      <td>{mockModuleLabel(module)}</td>
                       <td>{{ "not-started": "Not started", "in-progress": "In progress", expired: "Expired, not finalized", completed: "Completed", forfeited: "Forfeited" }[view]}</td>
                       <td>{attempt?.score != null ? `${attempt.score}/${MOCK_QUESTION_COUNT}` : attempt && view !== "in-progress" ? "Not graded" : "—"}</td>
                       <td>{attempt ? (mockTimeUsedMs(attempt) === null ? "—" : formatMockClock(mockTimeUsedMs(attempt)!)) : "—"}</td>

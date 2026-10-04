@@ -127,6 +127,9 @@
 .mock-hub__resume span { flex: 1 1 240px; }
 .mock-hub__loading { color: var(--mk-muted); }
 .mock-hub__list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.mock-hub__group { display: grid; gap: 10px; }
+.mock-hub__group + .mock-hub__group { margin-top: 18px; }
+.mock-hub__topic { margin: 0; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mk-muted); }
 
 .mock-card {
   display: grid;
@@ -157,7 +160,7 @@
 .mock-card--forfeit .mock-card__number { background: linear-gradient(135deg, #7d2a31, var(--mk-urgent)); }
 .mock-card--none .mock-card__number { color: var(--mk-muted); background: var(--mk-soft); }
 .mock-card__module { margin: 0; color: var(--mk-muted); font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.mock-card h3 { margin: 2px 0 8px; font-size: 1.05rem; }
+.mock-card h4 { margin: 2px 0 8px; font-size: 1.05rem; }
 .mock-card__error { display: block; margin-top: 6px; color: var(--mk-wrong); }
 .mock-status {
   display: inline-flex;

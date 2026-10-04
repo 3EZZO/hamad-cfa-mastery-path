@@ -59,7 +59,7 @@ async function render(role: "student" | "tutor", handlers: Record<string, () => 
 
 function cardTitles(root: ReactTestInstance): string[] {
   return root.findAll((node) => node.type === "li" && String(node.props.className ?? "").startsWith("mock-card"))
-    .map((card) => textOf(card.findByType("h3")));
+    .map((card) => textOf(card.findByType("h4")));
 }
 
 describe("Module Tests priority board", () => {
@@ -112,7 +112,7 @@ describe("Module Tests priority board", () => {
     const root = (await render("student")).root;
     const card = (title: string) => root.find((node) => node.type === "li"
       && String(node.props.className ?? "").startsWith("mock-card")
-      && textOf(node.findByType("h3")) === title);
+      && textOf(node.findByType("h4")) === title);
     const released = card("The Time Value of Money in Finance");
     expect(textOf(released)).toContain("Review ready");
     expect(textOf(released.findByType("button"))).toBe("Read review");
@@ -132,5 +132,22 @@ describe("Module Tests priority board", () => {
     await act(async () => remind.props.onClick());
     expect(onOpenReminders).toHaveBeenCalledTimes(1);
     expect(root.findAll((node) => node.props.className === "mock-card__repair")).toHaveLength(0);
+  });
+
+  it("groups tests by topic and hides a topic with no published test from the student", async () => {
+    const topics = (root: ReactTestInstance) => root.findAll((node) => node.type === "h3" && node.props.className === "mock-hub__topic").map(textOf);
+    expect(topics((await render("student")).root)).toEqual(["Quantitative Methods"]);
+    await act(async () => tree!.unmount());
+    expect(topics((await render("tutor")).root)).toEqual(["Quantitative Methods", "Economics"]);
+  });
+
+  it("shows a published Economics test in its own group, labelled by topic", async () => {
+    cloud.published.add("e08-exchange-rate-calculations");
+    const root = (await render("student")).root;
+    const group = root.find((node) => node.type === "section" && node.props.className === "mock-hub__group"
+      && textOf(node.findByType("h3")) === "Economics");
+    expect(group.findAll((node) => node.type === "li" && String(node.props.className ?? "").startsWith("mock-card"))
+      .map((card) => textOf(card.findByType("h4")))[0]).toBe("Exchange Rate Calculations");
+    expect(textOf(root.findByProps({ className: "mock-hub__summary" }))).toContain("2 of 5 done overall");
   });
 });
