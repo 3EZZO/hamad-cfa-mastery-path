@@ -57,7 +57,7 @@ const loaded: TutorConsoleData = {
 
 let tree: ReactTestRenderer | undefined;
 
-async function render(section: TutorSection, onSection = vi.fn(), onOpenPayments = vi.fn()) {
+async function render(section: TutorSection, onSection = vi.fn(), onOpenPayments = vi.fn(), onOpenSessionMode = vi.fn()) {
   await act(async () => {
     tree = create(
       <TutorAdminView
@@ -70,6 +70,7 @@ async function render(section: TutorSection, onSection = vi.fn(), onOpenPayments
         section={section}
         onSection={onSection}
         onOpenPayments={onOpenPayments}
+        onOpenSessionMode={onOpenSessionMode}
       />,
     );
   });
@@ -154,6 +155,31 @@ describe("Tutor Admin control centre", () => {
     await act(async () => hide.props.onClick());
     expect(items()).toHaveLength(3);
     expect(textOf(root)).toContain("Show 1 hidden");
+  });
+
+  it("shows student insights on the overview", async () => {
+    const root = await render("overview");
+    const insights = root.find((node) => node.type === "section" && node.props.className === "panel coach-insights");
+    expect(textOf(insights)).toContain("Plan tests taken");
+    expect(textOf(insights)).toContain("Exam");
+    // EC3 scored 7/8: listed, not weak.
+    expect(textOf(insights)).toContain("EC3 7/8");
+    expect(insights.findAll((node) => node.type === "tr" && node.props.className === "is-weak")).toHaveLength(0);
+  });
+
+  it("prepares the next session with a copyable agenda and Session Mode", async () => {
+    const writeText = vi.fn(async () => undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const onOpenSessionMode = vi.fn();
+    const root = await render("sessions", vi.fn(), vi.fn(), onOpenSessionMode);
+    const prep = root.find((node) => node.type === "section" && node.props.className === "panel coach-prep");
+    expect(textOf(prep.findByType("h3"))).toMatch(/^Session \d{2} · /);
+    const button = (label: string) => prep.find((node) => node.type === "button" && textOf(node).includes(label));
+    await act(async () => button("Copy agenda").props.onClick());
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect((writeText.mock.calls[0] as unknown as [string])[0]).toMatch(/^Session \d{2} · /);
+    await act(async () => button("Open Session Mode").props.onClick());
+    expect(onOpenSessionMode).toHaveBeenCalledTimes(1);
   });
 
   it("shows the activity feed", async () => {
