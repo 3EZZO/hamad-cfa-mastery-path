@@ -16,6 +16,7 @@ import {
   type ReminderProgress,
 } from "../../lib/mockReminders";
 import { isMockAttemptLocked, mockAttemptId, type MockAttempt, type MockTestMeta } from "../../lib/mockTestContent";
+import { consoleAnchor } from "../../lib/tutorConsole";
 
 type Notify = (message: string, tone?: "success" | "warning") => void;
 
@@ -163,7 +164,7 @@ export function MockReminderAdmin({
   const nowMs = Date.now();
 
   return (
-    <section className="mock-reminder-admin" aria-labelledby="mock-reminder-admin-title">
+    <section className="mock-reminder-admin" id={consoleAnchor.reminders} aria-labelledby="mock-reminder-admin-title">
       <div className="mock-reminder-admin__head">
         <BellRing size={19} aria-hidden="true" />
         <div>

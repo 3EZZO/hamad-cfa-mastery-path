@@ -1,9 +1,23 @@
-// Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
-import { CalendarClock, CalendarDays, Check, CircleAlert, CircleCheckBig, Cloud, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+// Tutor Admin: a tabbed control centre (`#coach/<section>`). The session,
+// schedule and recovery tools moved here from App.tsx in the P3.9 split.
+import { Archive, CalendarClock, CalendarDays, Check, CircleAlert, CircleCheckBig, ClipboardCheck, LayoutDashboard, LibraryBig, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
+import { type FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { getPlanTasks, PLAN } from "../data/plan";
 import program from "../data/program.json";
-import { formatDate } from "../lib/dates";
+import { formatDate, todayDateOnly } from "../lib/dates";
+import { MOCK_MODULES, mockModuleById, mockModuleCode } from "../data/mockModules";
+import { useTutorConsole } from "../hooks/useTutorConsole";
+import {
+  TUTOR_SECTIONS,
+  buildConsoleEntries,
+  consoleAnchor,
+  consoleGlance,
+  sectionCounts,
+  type ConsoleEntry,
+  type TutorSection,
+} from "../lib/tutorConsole";
+import { TutorOverview } from "./tutorConsole/TutorOverview";
+import { TutorQuickFind } from "./tutorConsole/TutorQuickFind";
 import { createDefaultState, downloadBackup } from "../lib/storage";
 import { isStateMeaningfullyEmpty } from "../lib/stateMerge";
 import { getTaskStatus } from "../lib/taskStatus";
@@ -13,8 +27,35 @@ import { useAppDialog } from "../components/AppDialog";
 import { TutorBriefPanel } from "../components/TutorBrief";
 import { MockTestAdmin, PracticeBankAdmin } from "../lazyViews";
 import type { TrackerState } from "../types";
-import { CHECKPOINT_TIME, EmptyState, PLANNED_SESSIONS, cx } from "./shared";
+import { CHECKPOINT_TIME, EmptyState, PLANNED_SESSIONS, SectionPanel, SectionTabs, cx } from "./shared";
 import type { Notify, UpdateTracker } from "./shared";
+
+const SECTION_ICON: Record<TutorSection, typeof LayoutDashboard> = {
+  overview: LayoutDashboard,
+  tests: ClipboardCheck,
+  practice: LibraryBig,
+  sessions: CalendarDays,
+  records: Archive,
+};
+
+/** Bring a row into view after its section renders (panels load their data asynchronously). */
+function revealAnchor(anchor: string): () => void {
+  if (typeof document === "undefined") return () => undefined;
+  let tries = 0;
+  const timer = window.setInterval(() => {
+    const target = document.getElementById(anchor);
+    tries += 1;
+    if (target) {
+      window.clearInterval(timer);
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.classList.add("is-located");
+      window.setTimeout(() => target.classList.remove("is-located"), 2400);
+    } else if (tries > 30) {
+      window.clearInterval(timer);
+    }
+  }, 100);
+  return () => window.clearInterval(timer);
+}
 
 export function TutorAdminView({
   tracker,
@@ -23,6 +64,9 @@ export function TutorAdminView({
   authoritativeReplaceBusy,
   syncStatus,
   notify,
+  section = "overview",
+  onSection = () => undefined,
+  onOpenPayments,
 }: {
   tracker: TrackerState;
   updateTracker: UpdateTracker;
@@ -30,8 +74,14 @@ export function TutorAdminView({
   authoritativeReplaceBusy: boolean;
   syncStatus: TrackerSyncStatus;
   notify: Notify;
+  section?: TutorSection;
+  onSection?: (section: TutorSection) => void;
+  onOpenPayments?: () => void;
 }) {
   const dialog = useAppDialog();
+  const consoleData = useTutorConsole();
+  const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
+  useEffect(() => (pendingAnchor ? revealAnchor(pendingAnchor) : undefined), [pendingAnchor, section]);
   const effectiveSessions = getEffectiveSessions(tracker.sessionOverrides);
   const [selectedSession, setSelectedSession] = useState(1);
   const selected = effectiveSessions.find(
@@ -76,6 +126,45 @@ export function TutorAdminView({
       .filter((entry) => entry.request && getTaskStatus(entry.task, tracker) === "requested"),
   );
 
+  const glance = consoleGlance({
+    metas: consoleData.metas,
+    attempts: consoleData.attempts,
+    reminders: consoleData.reminders,
+    banks: consoleData.banks,
+    assignedBankIds: consoleData.assignedBankIds,
+    approvals: pendingSessionRequests.length,
+  });
+  const counts = sectionCounts(glance);
+  const today = todayDateOnly();
+  const nextSession = effectiveSessions.find((entry) => entry.effectiveDate >= today) ?? null;
+  const entries = useMemo<ConsoleEntry[]>(() => {
+    const assigned = new Set(consoleData.assignedBankIds ?? []);
+    return buildConsoleEntries({
+      tests: MOCK_MODULES.map((module) => ({
+        id: module.id,
+        code: mockModuleCode(module),
+        title: module.title,
+        topic: module.topic,
+        status: consoleData.metas?.find((meta) => meta.moduleId === module.id)?.status ?? null,
+      })),
+      banks: (consoleData.banks ?? []).map((bank) => ({
+        storageId: bank.storageId, title: bank.title, topic: bank.topic, questions: bank.questions.length, unlocked: assigned.has(bank.storageId),
+      })),
+      sessions: effectiveSessions.map((entry) => ({
+        number: entry.session.number,
+        title: entry.session.title,
+        dateLabel: formatDate(entry.effectiveDate, { day: "numeric", month: "short" }),
+      })),
+      reminders: (consoleData.reminders ?? []).filter((reminder) => reminder.status === "active").map((reminder) => ({
+        id: reminder.id,
+        codes: reminder.moduleIds.map((id) => { const module = mockModuleById(id); return module ? mockModuleCode(module) : id; }),
+        deadline: reminder.deadline,
+      })),
+    });
+  }, [consoleData.assignedBankIds, consoleData.banks, consoleData.metas, consoleData.reminders, effectiveSessions]);
+  // After an action inside a section panel, the overview counts and badges catch up.
+  const notifyAndRefresh: Notify = (message, tone) => { notify(message, tone); consoleData.refresh(); };
+
   const reviewSessionRequest = async (
     taskId: string,
     status: "approved" | "returned",
@@ -110,6 +199,12 @@ export function TutorAdminView({
     );
     setSelectedSession(sessionNumber);
     if (entry) setNewDate(entry.effectiveDate);
+  };
+
+  const pickEntry = (entry: ConsoleEntry) => {
+    if (entry.kind === "session") chooseSession(Number(entry.id.replace("session-", "")));
+    onSection(entry.section);
+    setPendingAnchor(entry.anchor);
   };
 
   const submitReschedule = async (event: FormEvent) => {
@@ -173,70 +268,93 @@ export function TutorAdminView({
     }
   };
 
+  const approvalQueue = (
+    <section className="panel approval-queue" id={consoleAnchor.approvals}>
+      <div className="panel-heading"><div><p className="eyebrow">Tutor approval</p><h3>Session completion queue</h3></div><CircleCheckBig size={21} /></div>
+      {pendingSessionRequests.length ? <div className="entry-list">{pendingSessionRequests.map(({ task, request }) => <article className="approval-entry" key={task.id}><div><strong>{task.label}</strong><span>Requested {request ? new Date(request.requestedAt).toLocaleString() : ""}</span></div><div className="inline-actions"><button className="button button-primary" type="button" onClick={() => reviewSessionRequest(task.id, "approved")}><Check size={16} /> Approve</button><button className="button button-secondary" type="button" onClick={() => reviewSessionRequest(task.id, "returned")}><RotateCcw size={16} /> Return</button></div></article>)}</div> : <EmptyState icon={CircleCheckBig} title="No approvals waiting">Hamad&apos;s session-completion requests will appear here.</EmptyState>}
+    </section>
+  );
+
   return (
     <div className="view-stack tutor-console">
-      <TutorBriefPanel tracker={tracker} />
-      <PracticeBankAdmin notify={notify} />
-      <MockTestAdmin notify={notify} />
-      <section className="panel approval-queue">
-        <div className="panel-heading"><div><p className="eyebrow">Tutor approval</p><h3>Session completion queue</h3></div><CircleCheckBig size={21} /></div>
-        {pendingSessionRequests.length ? <div className="entry-list">{pendingSessionRequests.map(({ task, request }) => <article className="approval-entry" key={task.id}><div><strong>{task.label}</strong><span>Requested {request ? new Date(request.requestedAt).toLocaleString() : ""}</span></div><div className="inline-actions"><button className="button button-primary" type="button" onClick={() => reviewSessionRequest(task.id, "approved")}><Check size={16} /> Approve</button><button className="button button-secondary" type="button" onClick={() => reviewSessionRequest(task.id, "returned")}><RotateCcw size={16} /> Return</button></div></article>)}</div> : <EmptyState icon={CircleCheckBig} title="No approvals waiting">Hamad's session-completion requests will appear here.</EmptyState>}
-      </section>
-      <details className="tracker-secondary-tools">
-        <summary>
-          <span>Schedule, readiness & recovery</span>
-          <small>{Object.keys(tracker.sessionOverrides).length} changed dates · Tutor controls</small>
-        </summary>
-        <div className="tracker-secondary-tools__content">
-      <section className="panel launch-control-panel">
-        <div className="panel-heading"><div><p className="eyebrow">Pre-launch control</p><h3>Four live checks before the first session</h3></div><ShieldCheck size={21} /></div>
-        <div className="launch-check-grid">
-          {launchChecks.map((check) => (
-            <article className={cx("launch-check", check.complete && "is-complete")} key={check.label}>
-              {check.complete ? <CircleCheckBig size={18} /> : <CircleAlert size={18} />}
-              <div><strong>{check.label}</strong><p>{check.detail}</p></div>
-            </article>
-          ))}
-          <article className="launch-check launch-reminder">
-            <CircleAlert size={18} />
-            <div>
-              <strong>Manual account reminder</strong>
-              <p>Ask Hamad to replace the temporary Firebase password after his first successful login. Firebase does not expose password-change status to this tracker.</p>
-            </div>
-          </article>
-        </div>
-      </section>
+      <TutorQuickFind entries={entries} onPick={pickEntry} />
+      <SectionTabs
+        label="Tutor Admin sections"
+        idPrefix="coach"
+        items={TUTOR_SECTIONS.map((item) => ({ ...item, icon: SECTION_ICON[item.id], count: counts[item.id], countLabel: "waiting" }))}
+        active={section}
+        onSelect={onSection}
+      />
+      <SectionPanel idPrefix="coach" active={section}>
+        {section === "overview" && (
+          <TutorOverview
+            glance={glance}
+            data={consoleData}
+            nextSession={nextSession ? { number: nextSession.session.number, date: nextSession.effectiveDate, title: nextSession.session.title } : null}
+            today={new Date()}
+            onSection={onSection}
+            onOpenPayments={onOpenPayments}
+            brief={<TutorBriefPanel tracker={tracker} />}
+          />
+        )}
+        {section === "tests" && <Suspense fallback={null}><MockTestAdmin notify={notifyAndRefresh} /></Suspense>}
+        {section === "practice" && <Suspense fallback={null}><PracticeBankAdmin notify={notifyAndRefresh} /></Suspense>}
+        {section === "sessions" && (
+          <div className="view-stack">
+            {approvalQueue}
+            <section className="form-and-list tutor-tool-grid">
+              <form className="panel entry-form" id={consoleAnchor.reschedule} onSubmit={submitReschedule}>
+                <div className="panel-heading"><div><p className="eyebrow">Safe rescheduling</p><h3>Use a same-week Friday exception</h3></div><CalendarClock size={21} /></div>
+                <label><span>Session</span><select value={selectedSession} onChange={(event) => chooseSession(Number(event.target.value))}>{effectiveSessions.map((entry) => <option value={entry.session.number} key={entry.session.number}>S{String(entry.session.number).padStart(2, "0")} · {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })} · {entry.session.title}</option>)}</select></label>
+                <div className="form-grid form-grid-2">
+                  <label><span>New date</span><input type="date" min={program.programStart} max={PLANNED_SESSIONS.at(-1)!.session.date} required value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
+                  <label><span>Current date</span><input type="text" readOnly value={formatDate(selected.effectiveDate)} /></label>
+                </div>
+                <label><span>Reason</span><textarea required rows={3} maxLength={300} placeholder="Short tutor-approved reason for the schedule record." value={rescheduleReason} onChange={(event) => setRescheduleReason(event.target.value)} /></label>
+                <div className="inline-actions">
+                  <button className="button button-primary" type="submit"><CalendarClock size={16} /> Preview and apply</button>
+                  <button className="button button-secondary" type="button" onClick={restoreSchedule}><RotateCcw size={16} /> Restore S{String(selectedSession).padStart(2, "0")}</button>
+                </div>
+                <p className="fine-print">Each checkpoint stays on its planned Saturday unless Mohamed approves the immediately preceding Friday. The 09:00 Riyadh time, weekly sequence, and exam buffer remain fixed.</p>
+              </form>
 
-      <section className="form-and-list tutor-tool-grid">
-        <form className="panel entry-form" onSubmit={submitReschedule}>
-          <div className="panel-heading"><div><p className="eyebrow">Safe rescheduling</p><h3>Use a same-week Friday exception</h3></div><CalendarClock size={21} /></div>
-          <label><span>Session</span><select value={selectedSession} onChange={(event) => chooseSession(Number(event.target.value))}>{effectiveSessions.map((entry) => <option value={entry.session.number} key={entry.session.number}>S{String(entry.session.number).padStart(2, "0")} · {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })} · {entry.session.title}</option>)}</select></label>
-          <div className="form-grid form-grid-2">
-            <label><span>New date</span><input type="date" min={program.programStart} max={PLANNED_SESSIONS.at(-1)!.session.date} required value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
-            <label><span>Current date</span><input type="text" readOnly value={formatDate(selected.effectiveDate)} /></label>
+              <article className="panel override-panel">
+                <div className="panel-heading"><div><p className="eyebrow">Live schedule record</p><h3>{Object.keys(tracker.sessionOverrides).length} changed dates</h3></div><CalendarDays size={21} /></div>
+                {Object.keys(tracker.sessionOverrides).length ? (
+                  <div className="override-list">{effectiveSessions.filter((entry) => entry.rescheduled).map((entry) => <div key={entry.session.number}><strong>S{String(entry.session.number).padStart(2, "0")}</strong><span>{formatDate(entry.session.date, { day: "numeric", month: "short" })} → {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })}</span><small>{entry.reason}</small></div>)}</div>
+                ) : <EmptyState icon={CalendarDays} title="Canonical schedule active">No session date has been overridden.</EmptyState>}
+              </article>
+            </section>
           </div>
-          <label><span>Reason</span><textarea required rows={3} maxLength={300} placeholder="Short tutor-approved reason for the schedule record." value={rescheduleReason} onChange={(event) => setRescheduleReason(event.target.value)} /></label>
-          <div className="inline-actions">
-            <button className="button button-primary" type="submit"><CalendarClock size={16} /> Preview and apply</button>
-            <button className="button button-secondary" type="button" onClick={restoreSchedule}><RotateCcw size={16} /> Restore S{String(selectedSession).padStart(2, "0")}</button>
+        )}
+        {section === "records" && (
+          <div className="view-stack">
+            <section className="panel launch-control-panel">
+              <div className="panel-heading"><div><p className="eyebrow">Pre-launch control</p><h3>Four live checks before the first session</h3></div><ShieldCheck size={21} /></div>
+              <div className="launch-check-grid">
+                {launchChecks.map((check) => (
+                  <article className={cx("launch-check", check.complete && "is-complete")} key={check.label}>
+                    {check.complete ? <CircleCheckBig size={18} /> : <CircleAlert size={18} />}
+                    <div><strong>{check.label}</strong><p>{check.detail}</p></div>
+                  </article>
+                ))}
+                <article className="launch-check launch-reminder">
+                  <CircleAlert size={18} />
+                  <div>
+                    <strong>Manual account reminder</strong>
+                    <p>Ask Hamad to replace the temporary Firebase password after his first successful login. Firebase does not expose password-change status to this tracker.</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section className="panel danger-zone">
+              <div><p className="eyebrow">Protected recovery control</p><h3>Export, then reset all shared progress</h3><p>Use only before genuine course work begins. This creates a local JSON recovery copy before replacing the synchronized tracker on every device.</p></div>
+              <button className="button button-danger" type="button" disabled={authoritativeReplaceBusy || syncStatus !== "synced"} onClick={() => void resetSharedProgress()}><Trash2 size={16} />{authoritativeReplaceBusy ? "Resetting..." : "Export and reset"}</button>
+            </section>
           </div>
-          <p className="fine-print">Each checkpoint stays on its planned Saturday unless Mohamed approves the immediately preceding Friday. The 09:00 Riyadh time, weekly sequence, and exam buffer remain fixed.</p>
-        </form>
-
-        <article className="panel override-panel">
-          <div className="panel-heading"><div><p className="eyebrow">Live schedule record</p><h3>{Object.keys(tracker.sessionOverrides).length} changed dates</h3></div><CalendarDays size={21} /></div>
-          {Object.keys(tracker.sessionOverrides).length ? (
-            <div className="override-list">{effectiveSessions.filter((entry) => entry.rescheduled).map((entry) => <div key={entry.session.number}><strong>S{String(entry.session.number).padStart(2, "0")}</strong><span>{formatDate(entry.session.date, { day: "numeric", month: "short" })} → {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })}</span><small>{entry.reason}</small></div>)}</div>
-          ) : <EmptyState icon={CalendarDays} title="Canonical schedule active">No session date has been overridden.</EmptyState>}
-        </article>
-      </section>
-
-      <section className="panel danger-zone">
-        <div><p className="eyebrow">Protected recovery control</p><h3>Export, then reset all shared progress</h3><p>Use only before genuine course work begins. This creates a local JSON recovery copy before replacing the synchronized tracker on every device.</p></div>
-        <button className="button button-danger" type="button" disabled={authoritativeReplaceBusy || syncStatus !== "synced"} onClick={() => void resetSharedProgress()}><Trash2 size={16} />{authoritativeReplaceBusy ? "Resetting..." : "Export and reset"}</button>
-      </section>
-        </div>
-      </details>
+        )}
+      </SectionPanel>
     </div>
   );
 }

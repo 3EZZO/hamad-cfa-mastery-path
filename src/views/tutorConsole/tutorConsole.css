@@ -1,0 +1,88 @@
+/* Tutor Admin control centre: quick find and the overview tiles. Theme tokens come from styles.css / theme.css. */
+
+.coach-find { position: relative; }
+.coach-find__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--muted);
+  background: var(--surface);
+}
+.coach-find__field:focus-within { border-color: var(--action); box-shadow: 0 0 0 3px color-mix(in srgb, var(--action) 18%, transparent); }
+.coach-find__field input { flex: 1; min-width: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; }
+.coach-find__results {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  display: grid;
+  gap: 2px;
+  max-height: min(60vh, 420px);
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 18px 40px rgba(10, 17, 32, 0.18);
+  list-style: none;
+}
+.coach-find__results button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.coach-find__results button.is-active { background: var(--surface-2); }
+.coach-find__results span { display: grid; min-width: 0; }
+.coach-find__results small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+
+/* A row reached through quick find is briefly outlined. */
+.is-located { outline: 3px solid var(--gold-bright, #e7b75f); outline-offset: 3px; transition: outline-color .4s ease; }
+
+.coach-glance { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px; }
+.coach-tile {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+}
+.coach-tile.is-attention { border-color: color-mix(in srgb, var(--gold-bright, #e7b75f) 70%, var(--border)); }
+.coach-tile.is-good { border-color: color-mix(in srgb, var(--green, #066570) 45%, var(--border)); }
+.coach-tile header { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.coach-tile h4 { margin: 0; color: var(--ink); font-size: .95rem; }
+.coach-tile__body p { margin: 0 0 4px; line-height: 1.4; }
+.coach-tile__body .is-attention { color: var(--danger, #b1444d); font-weight: 700; }
+.coach-tile__action {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  color: var(--action);
+  background: none;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.coach-tile__action:focus-visible { outline: 3px solid var(--gold-bright, #e7b75f); outline-offset: 2px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .is-located { transition: none; } }

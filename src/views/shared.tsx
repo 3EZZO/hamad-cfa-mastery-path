@@ -433,6 +433,8 @@ export interface SectionTabItem<T extends string> {
   icon?: LucideIcon;
   /** Small count shown after the label (e.g. due retests). */
   count?: number;
+  /** Read after the count by screen readers ("3 due" by default). */
+  countLabel?: string;
 }
 
 /**
@@ -477,7 +479,7 @@ export function SectionTabs<T extends string>({
           >
             {Icon && <Icon size={16} aria-hidden="true" />}
             <span>{item.label}</span>
-            {item.count ? <em aria-label={`${item.count} due`}>{item.count}</em> : null}
+            {item.count ? <em aria-label={`${item.count} ${item.countLabel ?? "due"}`}>{item.count}</em> : null}
           </button>
         );
       })}
