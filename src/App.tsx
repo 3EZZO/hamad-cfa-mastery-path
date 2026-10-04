@@ -654,6 +654,7 @@ function App() {
             section={parseTutorSection(coachSegment)}
             onSection={setCoachSegment}
             onOpenPayments={() => navigate("payments")}
+            onOpenSessionMode={() => navigate("live")}
           />
         ) : (
           <EmptyState icon={ShieldCheck} title="Tutor access only">

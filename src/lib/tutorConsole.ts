@@ -95,6 +95,7 @@ export const consoleAnchor = {
   approvals: "coach-approvals",
   reschedule: "coach-reschedule",
   inbox: "coach-inbox",
+  prep: "coach-prep",
 } as const;
 
 function normalize(text: string): string {

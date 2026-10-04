@@ -88,10 +88,27 @@ function banksFor(catalogIds: readonly string[], input: InboxInput): Array<{ sto
     .map((bank) => ({ storageId: bank.storageId, title: bank.title, unlocked: assigned.has(bank.storageId) }));
 }
 
+/** Published tests past their earliest active reminder deadline and still not taken. */
+export function overdueModuleIds(input: Pick<InboxInput, "nowMs" | "metas" | "attempts" | "reminders" | "studentUid">): string[] {
+  const published = new Set((input.metas ?? []).filter((meta) => meta.status === "published").map((meta) => meta.moduleId));
+  const taken = new Set((input.attempts ?? []).filter((attempt) => attempt.status !== "active").map((attempt) => attempt.moduleId));
+  const deadlines = new Map<string, string>();
+  for (const reminder of input.reminders ?? []) {
+    if (reminder.status !== "active" || !reminder.deadline) continue;
+    if (input.studentUid && reminder.studentUid !== input.studentUid) continue;
+    for (const moduleId of reminder.moduleIds) {
+      const current = deadlines.get(moduleId);
+      if (!current || reminder.deadline < current) deadlines.set(moduleId, reminder.deadline);
+    }
+  }
+  return [...deadlines.entries()]
+    .filter(([moduleId, deadline]) => published.has(moduleId) && deadlinePassed(deadline, input.nowMs) && !taken.has(moduleId))
+    .map(([moduleId]) => moduleId);
+}
+
 export function buildTutorInbox(input: InboxInput): InboxItem[] {
   const items: InboxItem[] = [];
   const attempts = input.attempts ?? [];
-  const published = new Set((input.metas ?? []).filter((meta) => meta.status === "published").map((meta) => meta.moduleId));
 
   for (const attempt of attempts.filter((entry) => entry.status === "active")) {
     items.push({
@@ -118,20 +135,7 @@ export function buildTutorInbox(input: InboxInput): InboxItem[] {
     });
   }
 
-  // Overdue: a published test past its reminder deadline and still not taken.
-  const deadlines = new Map<string, string>();
-  for (const reminder of input.reminders ?? []) {
-    if (reminder.status !== "active" || !reminder.deadline) continue;
-    if (input.studentUid && reminder.studentUid !== input.studentUid) continue;
-    for (const moduleId of reminder.moduleIds) {
-      const current = deadlines.get(moduleId);
-      if (!current || reminder.deadline < current) deadlines.set(moduleId, reminder.deadline);
-    }
-  }
-  const overdue = [...deadlines.entries()]
-    .filter(([moduleId, deadline]) => published.has(moduleId) && deadlinePassed(deadline, input.nowMs)
-      && !finished.some((attempt) => attempt.moduleId === moduleId))
-    .map(([moduleId]) => moduleId);
+  const overdue = overdueModuleIds(input);
   if (overdue.length) {
     items.push({
       id: "overdue", kind: "overdue", priority: 80,

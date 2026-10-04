@@ -32,6 +32,7 @@ export function TutorOverview({
   onOpenPayments,
   brief,
   inbox,
+  insights,
 }: {
   glance: ConsoleGlance;
   data: TutorConsoleData;
@@ -42,6 +43,8 @@ export function TutorOverview({
   brief: ReactNode;
   /** The action inbox, shown first. */
   inbox?: ReactNode;
+  /** Student insights, after the tiles. */
+  insights?: ReactNode;
 }) {
   const { tests, practice, reminders, approvals } = glance;
   const payments = data.payments?.config ? summarizePayments(data.payments.config, data.payments.records, today) : null;
@@ -85,7 +88,7 @@ export function TutorOverview({
         <Tile
           icon={CalendarDays}
           title="Sessions"
-          action="Open sessions"
+          action="Prepare the session"
           onAction={() => onSection("sessions")}
           tone={approvals > 0 ? "attention" : undefined}
         >
@@ -114,6 +117,7 @@ export function TutorOverview({
           )}
         </Tile>
       </section>
+      {insights}
       {brief}
     </div>
   );

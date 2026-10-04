@@ -18,10 +18,14 @@ import {
   type TutorSection,
 } from "../lib/tutorConsole";
 import { buildActivity } from "../lib/tutorActivity";
-import { buildTutorInbox, isSnoozed, loadSnoozes, saveSnoozes, type InboxItem, type InboxSnoozes } from "../lib/tutorInbox";
+import { buildTutorInbox, isSnoozed, loadSnoozes, overdueModuleIds, saveSnoozes, type InboxItem, type InboxSnoozes } from "../lib/tutorInbox";
+import { buildSessionPrep } from "../lib/sessionPrep";
+import { moduleStandings, paceReport, suggestActions, type InsightSuggestion } from "../lib/tutorInsights";
 import { weekCatalogIds } from "../lib/weekTests";
 import { TutorActivity } from "./tutorConsole/TutorActivity";
 import { TutorInbox } from "./tutorConsole/TutorInbox";
+import { TutorInsights } from "./tutorConsole/TutorInsights";
+import { SessionPrepPanel } from "./tutorConsole/SessionPrepPanel";
 import { TutorOverview } from "./tutorConsole/TutorOverview";
 import { TutorQuickFind } from "./tutorConsole/TutorQuickFind";
 import { createDefaultState, downloadBackup } from "../lib/storage";
@@ -74,6 +78,7 @@ export function TutorAdminView({
   section = "overview",
   onSection = () => undefined,
   onOpenPayments,
+  onOpenSessionMode,
 }: {
   tracker: TrackerState;
   updateTracker: UpdateTracker;
@@ -84,6 +89,7 @@ export function TutorAdminView({
   section?: TutorSection;
   onSection?: (section: TutorSection) => void;
   onOpenPayments?: () => void;
+  onOpenSessionMode?: () => void;
 }) {
   const dialog = useAppDialog();
   const consoleData = useTutorConsole();
@@ -144,6 +150,8 @@ export function TutorAdminView({
     approvals: pendingSessionRequests.length,
   });
   const nowMs = new Date().getTime();
+  const today = todayDateOnly();
+  const nextSession = effectiveSessions.find((entry) => entry.effectiveDate >= today) ?? null;
   const sessionLabels = new Map(PLAN.flatMap((week) => getPlanTasks(week, tracker.sessionOverrides))
     .filter((task) => task.kind === "session").map((task) => [task.id, task.label] as const));
   const paymentSummary = consoleData.payments?.config
@@ -154,7 +162,7 @@ export function TutorAdminView({
   const practiceAnswers = (consoleData.runs ?? []).flatMap((run) => run.answers.flatMap((answer) => {
     const moduleId = questionModule.get(answer.questionId);
     const answeredAtMs = Date.parse(answer.answeredAt);
-    return moduleId && Number.isFinite(answeredAtMs) ? [{ moduleId, answeredAtMs }] : [];
+    return moduleId && Number.isFinite(answeredAtMs) ? [{ moduleId, answeredAtMs, correct: answer.correct }] : [];
   }));
   const inbox = consoleData.loading ? [] : buildTutorInbox({
     nowMs,
@@ -170,6 +178,27 @@ export function TutorAdminView({
     payment: paymentSummary,
   });
   const visibleInbox = inbox.filter((item) => !isSnoozed(item, snoozes, nowMs));
+  const publishedTestIds = new Set((consoleData.metas ?? []).filter((meta) => meta.status === "published").map((meta) => meta.moduleId));
+  const standings = moduleStandings(consoleData.attempts ?? [], practiceAnswers);
+  const pace = paceReport({
+    week: getProgramWeek(new Date(nowMs)),
+    nowMs,
+    examDate: program.examAppointment,
+    publishedTestIds,
+    attempts: consoleData.attempts ?? [],
+    answers: practiceAnswers,
+  });
+  const suggestions = suggestActions(pace, standings);
+  const nextIndex = nextSession ? effectiveSessions.indexOf(nextSession) : -1;
+  const prep = nextSession ? buildSessionPrep({
+    session: { number: nextSession.session.number, date: nextSession.effectiveDate, title: nextSession.session.title, readings: nextSession.session.readings },
+    since: nextIndex > 0 ? effectiveSessions[nextIndex - 1]!.effectiveDate : null,
+    attempts: consoleData.attempts ?? [],
+    answers: practiceAnswers,
+    standings,
+    overdueTestIds: overdueModuleIds({ nowMs, metas: consoleData.metas, attempts: consoleData.attempts, reminders: consoleData.reminders, studentUid: consoleData.studentUid }),
+    publishedTestIds,
+  }) : null;
   const counts = { ...sectionCounts(glance), overview: visibleInbox.length };
   const snooze = (item: InboxItem, mode: "day" | "changed") => {
     const next = { ...snoozes, [item.id]: mode === "day" ? { untilMs: nowMs + 24 * 60 * 60 * 1000 } : { version: item.version } };
@@ -196,8 +225,6 @@ export function TutorAdminView({
     payments: consoleData.payments?.records ?? [],
     currency: consoleData.payments?.config?.currency ?? null,
   }) : [];
-  const today = todayDateOnly();
-  const nextSession = effectiveSessions.find((entry) => entry.effectiveDate >= today) ?? null;
   const entries = useMemo<ConsoleEntry[]>(() => {
     const assigned = new Set(consoleData.assignedBankIds ?? []);
     return buildConsoleEntries({
@@ -265,6 +292,22 @@ export function TutorAdminView({
   const openSection = (target: TutorSection, anchor: string | null) => {
     onSection(target);
     if (anchor) setPendingAnchor(anchor);
+  };
+
+  const runSuggestion = (suggestion: InsightSuggestion) => {
+    const { action } = suggestion;
+    if (action.type === "remind") openSection("tests", consoleAnchor.reminders);
+    else if (action.type === "open-test") openSection("tests", consoleAnchor.test(action.moduleId));
+    else openSection("practice", null);
+  };
+
+  const copyAgenda = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      notify("Agenda copied.");
+    } catch {
+      notify("Copying is blocked here; select the agenda text instead.", "warning");
+    }
   };
 
   const runInboxAction = async (item: InboxItem) => {
@@ -405,12 +448,20 @@ export function TutorAdminView({
                 onShowHidden={showHidden}
               />
             )}
+            insights={<TutorInsights pace={pace} standings={standings} suggestions={suggestions} loading={consoleData.loading} onSuggestion={runSuggestion} />}
           />
         )}
         {section === "tests" && <Suspense fallback={null}><MockTestAdmin notify={notifyAndRefresh} /></Suspense>}
         {section === "practice" && <Suspense fallback={null}><PracticeBankAdmin notify={notifyAndRefresh} /></Suspense>}
         {section === "sessions" && (
           <div className="view-stack">
+            <SessionPrepPanel
+              prep={prep}
+              loading={consoleData.loading}
+              onCopy={(text) => void copyAgenda(text)}
+              onRemind={() => openSection("tests", consoleAnchor.reminders)}
+              onOpenSessionMode={onOpenSessionMode}
+            />
             {approvalQueue}
             <section className="form-and-list tutor-tool-grid">
               <form className="panel entry-form" id={consoleAnchor.reschedule} onSubmit={submitReschedule}>
