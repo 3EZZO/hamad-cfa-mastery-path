@@ -1,7 +1,7 @@
 import { BellRing, CircleAlert, Pencil, Send, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppDialog } from "../../components/AppDialog";
-import { MOCK_MODULES, mockModuleById } from "../../data/mockModules";
+import { MOCK_MODULES, mockModuleById, mockModuleCode, mockModuleLabel } from "../../data/mockModules";
 import { getCloudErrorMessage, type ProjectMember } from "../../lib/cloud";
 import { cancelMockReminder, editMockReminder, listMockReminders, sendMockReminder } from "../../lib/cloudMockReminders";
 import {
@@ -198,7 +198,7 @@ export function MockReminderAdmin({
               return (
                 <label key={module.id} className={done ? "is-done" : ""}>
                   <input type="checkbox" checked={selected.includes(module.id)} onChange={() => toggle(module.id)} />
-                  Module {module.number}{done && <small> · completed</small>}
+                  {mockModuleLabel(module)}{done && <small> · completed</small>}
                 </label>
               );
             })}
@@ -241,7 +241,7 @@ export function MockReminderAdmin({
                       {reminder.editedAtMs !== null && <small> · edited {when(reminder.editedAtMs)}</small>}
                     </th>
                     {students.length > 1 && <td>{studentName(students, reminder.studentUid)}</td>}
-                    <td>{reminder.moduleIds.map(id => mockModuleById(id)?.number ?? id).join(", ")}</td>
+                    <td>{reminder.moduleIds.map(id => { const module = mockModuleById(id); return module ? mockModuleCode(module) : id; }).join(", ")}</td>
                     <td>{reminder.deadline ? formatReminderDate(reminder.deadline) : "—"}</td>
                     <td><span className={`mock-reminder-status mock-reminder-status--${progress}`}>{PROGRESS_LABEL[progress]}</span></td>
                     <td>{when(reminder.seenAtMs) || "—"}</td>

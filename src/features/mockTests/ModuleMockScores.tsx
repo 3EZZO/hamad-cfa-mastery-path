@@ -1,6 +1,6 @@
 import { ClipboardCheck } from "lucide-react";
 import { useEffect, useState } from "react";
-import { MOCK_MODULES } from "../../data/mockModules";
+import { MOCK_MODULES, MOCK_TOPICS, mockModuleCode } from "../../data/mockModules";
 import { getMockAttempt, listMockAttempts } from "../../lib/cloudMockTests";
 import {
   MOCK_QUESTION_COUNT,
@@ -27,7 +27,11 @@ export function ModuleMockScores({ uid, role }: { uid: string; role: ProjectRole
   }, [role, uid]);
 
   if (!attempts) return null;
-  const rows = MOCK_MODULES.map(module => ({
+  // Only topics with at least one attempt get rows (Quant before any attempt
+  // exists), so untouched topics do not pad the table with dashes.
+  const attempted = MOCK_TOPICS.filter(topic => attempts.some(entry => MOCK_MODULES.some(module => module.topic === topic && module.id === entry.moduleId)));
+  const shown = attempted.length > 0 ? attempted : MOCK_TOPICS.slice(0, 1);
+  const rows = MOCK_MODULES.filter(module => shown.includes(module.topic)).map(module => ({
     module,
     attempt: attempts.find(entry => entry.moduleId === module.id && entry.status !== "active")
       ?? attempts.find(entry => entry.moduleId === module.id)
@@ -47,7 +51,7 @@ export function ModuleMockScores({ uid, role }: { uid: string; role: ProjectRole
           const used = attempt ? mockTimeUsedMs(attempt) : null;
           return (
             <li key={module.id} className={`mock-scores__row mock-scores__row--${view}`}>
-              <span className="mock-scores__module">M{module.number}</span>
+              <span className="mock-scores__module">{mockModuleCode(module)}</span>
               <span className="mock-scores__title">{module.title}</span>
               <span className="mock-scores__bar" aria-hidden="true"><i style={{ width: `${percent ?? 0}%` }} /></span>
               <strong className="mock-scores__value">

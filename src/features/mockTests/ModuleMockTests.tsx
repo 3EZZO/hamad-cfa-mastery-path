@@ -1,6 +1,6 @@
 import { Archive, BellRing, BookOpenCheck, CalendarClock, CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, RotateCcw, ShieldAlert, Target, Timer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MOCK_MODULES, type MockModule } from "../../data/mockModules";
+import { MOCK_MODULES, MOCK_TOPICS, mockModuleLabel, type MockModule } from "../../data/mockModules";
 import {
   finalizeExpiredMockAttempt,
   finishMockAttempt,
@@ -68,7 +68,11 @@ function workOf(attempt: MockAttempt): MockWork {
 }
 
 function moduleLabel(module: MockModule): string {
-  return `Module ${module.number} · ${module.title}`;
+  return `${mockModuleLabel(module)} · ${module.title}`;
+}
+
+function topicHeadingId(topic: string): string {
+  return `mock-topic-${topic.toLowerCase().replace(/\W+/g, "-")}`;
 }
 
 export function ModuleMockTests({
@@ -340,15 +344,21 @@ export function ModuleMockTests({
   const inProgress = modules.find(entry => entry.attempt?.status === "active");
   const now = Date.now();
   const boardDeadlines = isTutor ? tutorView?.deadlines ?? new Map<string, string>() : deadlines;
-  const board = buildTestBoard(modules.map(entry => ({
-    moduleId: entry.module.id,
-    number: entry.module.number,
-    published: entry.meta?.status === "published",
-    attempt: isTutor ? tutorView?.attempts.get(entry.module.id) ?? null : entry.attempt,
-    deadline: boardDeadlines.get(entry.module.id) ?? null,
-  })), now);
+  // One priority board per topic (numbers restart in each topic); a student
+  // only sees a topic once it has at least one published test.
+  const groups = MOCK_TOPICS.map(topic => {
+    const entries = modules.filter(entry => entry.module.topic === topic);
+    const rows = buildTestBoard(entries.map(entry => ({
+      moduleId: entry.module.id,
+      number: entry.module.number,
+      published: entry.meta?.status === "published",
+      attempt: isTutor ? tutorView?.attempts.get(entry.module.id) ?? null : entry.attempt,
+      deadline: boardDeadlines.get(entry.module.id) ?? null,
+    })), now);
+    return { topic, rows, ordered: rows.flatMap(row => entries.filter(entry => entry.module.id === row.moduleId)) };
+  }).filter(group => group.ordered.length > 0 && (isTutor || group.ordered.some(entry => entry.meta)));
+  const board = groups.flatMap(group => group.rows);
   const rowFor = new Map(board.map(row => [row.moduleId, row]));
-  const ordered = board.flatMap(row => modules.filter(entry => entry.module.id === row.moduleId));
   const summary = summarizeTestBoard(board);
   const awaitingRelease = isTutor ? board.filter(row => row.status === "done" && row.attempt && !row.attempt.reviewReleased).length : 0;
 
@@ -391,7 +401,7 @@ export function ModuleMockTests({
       {inProgress && !isTutor && (
         <div className="mock-hub__resume" role="alert">
           <Clock3 size={18} />
-          <span>Your <strong>Module {inProgress.module.number}</strong> test is in progress and its clock is still running.</span>
+          <span>Your <strong>{mockModuleLabel(inProgress.module)}</strong> test is in progress and its clock is still running.</span>
           <button type="button" className="mock-button mock-button--primary" disabled={busy} onClick={() => void resume(inProgress)}>
             <Maximize size={16} />Return to the test
           </button>
@@ -401,24 +411,29 @@ export function ModuleMockTests({
       {loading ? (
         <p className="mock-hub__loading" aria-busy="true">Loading module tests…</p>
       ) : (
-        <ol className="mock-hub__list">
-          {ordered.map(entry => (
-            <ModuleCard
-              key={entry.module.id}
-              entry={entry}
-              row={rowFor.get(entry.module.id)}
-              nowMs={now}
-              onOpenMistakes={onOpenMistakes}
-              onOpenRepair={onOpenRepair}
-              isTutor={isTutor}
-              busy={busy}
-              onOpen={() => { setError(""); setScreen({ kind: "start", moduleId: entry.module.id }); }}
-              onResume={() => void resume(entry)}
-              onResults={() => setScreen({ kind: "results", moduleId: entry.module.id })}
-              onRehearse={() => void rehearse(entry)}
-            />
-          ))}
-        </ol>
+        groups.map(group => (
+          <section key={group.topic} className="mock-hub__group" aria-labelledby={topicHeadingId(group.topic)}>
+            <h3 id={topicHeadingId(group.topic)} className="mock-hub__topic">{group.topic}</h3>
+            <ol className="mock-hub__list">
+              {group.ordered.map(entry => (
+                <ModuleCard
+                  key={entry.module.id}
+                  entry={entry}
+                  row={rowFor.get(entry.module.id)}
+                  nowMs={now}
+                  onOpenMistakes={onOpenMistakes}
+                  onOpenRepair={onOpenRepair}
+                  isTutor={isTutor}
+                  busy={busy}
+                  onOpen={() => { setError(""); setScreen({ kind: "start", moduleId: entry.module.id }); }}
+                  onResume={() => void resume(entry)}
+                  onResults={() => setScreen({ kind: "results", moduleId: entry.module.id })}
+                  onRehearse={() => void rehearse(entry)}
+                />
+              ))}
+            </ol>
+          </section>
+        ))
       )}
     </section>
   );
@@ -483,7 +498,7 @@ function ModuleCard({
       <span className="mock-card__number" aria-hidden="true">{String(module.number).padStart(2, "0")}</span>
       <div className="mock-card__body">
         <p className="mock-card__module">Module {module.number}</p>
-        <h3>{module.title}</h3>
+        <h4>{module.title}</h4>
         <span className={`mock-status mock-status--${status.tone}`}>
           {status.tone === "done" ? <CircleCheckBig size={14} /> : status.tone === "forfeit" ? <Flag size={14} /> : null}
           {status.label}
@@ -548,7 +563,7 @@ export function StartScreen({
   return (
     <section className="mock-start" aria-labelledby="mock-start-title">
       <div className="mock-start__card">
-        <p className="mock-start__eyebrow">Module {entry.module.number} mock test</p>
+        <p className="mock-start__eyebrow">{mockModuleLabel(entry.module)} mock test</p>
         <h2 id="mock-start-title">{entry.module.title}</h2>
         <div className="mock-start__clock" aria-hidden="true">12:00</div>
         <ul className="mock-start__rules">
