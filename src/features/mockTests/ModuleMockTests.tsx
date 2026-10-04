@@ -1,6 +1,6 @@
-import { Archive, BellRing, BookOpenCheck, CalendarClock, CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, RotateCcw, ShieldAlert, Target, Timer } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { MOCK_MODULES, MOCK_TOPICS, mockModuleLabel, type MockModule } from "../../data/mockModules";
+import { Archive, BellRing, BookOpenCheck, CalendarClock, ChevronDown, CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, RotateCcw, ShieldAlert, Target, Timer } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { MOCK_MODULES, MOCK_TOPICS, mockModuleCode, mockModuleLabel, type MockModule, type MockTopic } from "../../data/mockModules";
 import {
   finalizeExpiredMockAttempt,
   finishMockAttempt,
@@ -19,7 +19,8 @@ import {
 import { getCloudErrorMessage, listActiveStudentMembers } from "../../lib/cloud";
 import { listMockReminders, loadMyReminderDeadlines } from "../../lib/cloudMockReminders";
 import { deadlineCountdown, formatReminderDate } from "../../lib/mockReminders";
-import { buildTestBoard, deadlinesByModule, summarizeTestBoard, WEAK_SCORE, type BoardRow } from "../../lib/testBoard";
+import { buildTestBoard, deadlinesByModule, isSettled, summarizeTestBoard, summarizeTopic, WEAK_SCORE, type BoardRow, type TopicProgress } from "../../lib/testBoard";
+import { loadHubView, saveHubView, type HubTopicFilter, type MockHubView } from "../../lib/mockHubView";
 import {
   MOCK_QUESTION_COUNT,
   appendIncident,
@@ -71,10 +72,6 @@ function moduleLabel(module: MockModule): string {
   return `${mockModuleLabel(module)} · ${module.title}`;
 }
 
-function topicHeadingId(topic: string): string {
-  return `mock-topic-${topic.toLowerCase().replace(/\W+/g, "-")}`;
-}
-
 export function ModuleMockTests({
   uid,
   role,
@@ -109,6 +106,8 @@ export function ModuleMockTests({
   const [error, setError] = useState("");
   const [deadlines, setDeadlines] = useState<Map<string, string>>(new Map());
   const [tutorView, setTutorView] = useState<TutorView | null>(null);
+  const [view, setView] = useState<MockHubView>(loadHubView);
+  const updateView = (next: MockHubView) => { setView(next); saveHubView(next); };
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -355,10 +354,31 @@ export function ModuleMockTests({
       attempt: isTutor ? tutorView?.attempts.get(entry.module.id) ?? null : entry.attempt,
       deadline: boardDeadlines.get(entry.module.id) ?? null,
     })), now);
-    return { topic, rows, ordered: rows.flatMap(row => entries.filter(entry => entry.module.id === row.moduleId)) };
+    const ordered = rows.flatMap(row => entries.filter(entry => entry.module.id === row.moduleId));
+    const settledIds = new Set(rows.filter(isSettled).map(row => row.moduleId));
+    // The student sees unpublished tests as a count, not as cards; the tutor keeps them as cards (drafts to act on).
+    const upcomingIds = new Set(isTutor ? [] : rows.filter(row => row.status === "unpublished").map(row => row.moduleId));
+    return {
+      topic,
+      rows,
+      ordered,
+      progress: summarizeTopic(rows),
+      active: ordered.filter(entry => !settledIds.has(entry.module.id) && !upcomingIds.has(entry.module.id)),
+      settled: ordered.filter(entry => settledIds.has(entry.module.id)),
+      upcoming: upcomingIds.size,
+    };
   }).filter(group => group.ordered.length > 0 && (isTutor || group.ordered.some(entry => entry.meta)));
   const board = groups.flatMap(group => group.rows);
   const rowFor = new Map(board.map(row => [row.moduleId, row]));
+  // A saved topic that is not shown (e.g. nothing published yet) falls back to all topics.
+  const filter: HubTopicFilter = view.topic !== "all" && groups.some(group => group.topic === view.topic) ? view.topic : "all";
+  const shownGroups = filter === "all" ? groups : groups.filter(group => group.topic === filter);
+  // Picking one topic also opens it.
+  const chooseTopic = (topic: HubTopicFilter) => updateView({
+    ...view,
+    topic,
+    open: topic === "all" ? view.open : { ...view.open, [topic]: true },
+  });
   const summary = summarizeTestBoard(board);
   const awaitingRelease = isTutor ? board.filter(row => row.status === "done" && row.attempt && !row.attempt.reviewReleased).length : 0;
 
@@ -411,29 +431,65 @@ export function ModuleMockTests({
       {loading ? (
         <p className="mock-hub__loading" aria-busy="true">Loading module tests…</p>
       ) : (
-        groups.map(group => (
-          <section key={group.topic} className="mock-hub__group" aria-labelledby={topicHeadingId(group.topic)}>
-            <h3 id={topicHeadingId(group.topic)} className="mock-hub__topic">{group.topic}</h3>
-            <ol className="mock-hub__list">
-              {group.ordered.map(entry => (
-                <ModuleCard
-                  key={entry.module.id}
-                  entry={entry}
-                  row={rowFor.get(entry.module.id)}
-                  nowMs={now}
-                  onOpenMistakes={onOpenMistakes}
-                  onOpenRepair={onOpenRepair}
-                  isTutor={isTutor}
-                  busy={busy}
-                  onOpen={() => { setError(""); setScreen({ kind: "start", moduleId: entry.module.id }); }}
-                  onResume={() => void resume(entry)}
-                  onResults={() => setScreen({ kind: "results", moduleId: entry.module.id })}
-                  onRehearse={() => void rehearse(entry)}
-                />
+        <>
+          {groups.length > 1 && (
+            <div className="mock-switch" role="group" aria-label="Show tests for">
+              <button type="button" className="mock-switch__option" aria-pressed={filter === "all"} onClick={() => chooseTopic("all")}>
+                All topics
+              </button>
+              {groups.map(group => (
+                <button key={group.topic} type="button" className="mock-switch__option" aria-pressed={filter === group.topic} onClick={() => chooseTopic(group.topic)}>
+                  {group.topic}
+                  {group.progress.toTake > 0 && <span className="mock-switch__count">{group.progress.toTake} to do</span>}
+                </button>
               ))}
-            </ol>
-          </section>
-        ))
+            </div>
+          )}
+          {shownGroups.map(group => {
+            // Open while the topic still has something to act on, unless the viewer chose otherwise.
+            const open = view.open[group.topic] ?? group.active.length > 0;
+            const doneOpen = view.doneOpen[group.topic] ?? false;
+            return (
+              <TopicSection
+                key={group.topic}
+                topic={group.topic}
+                progress={group.progress}
+                upcoming={group.upcoming}
+                open={open}
+                onToggle={() => updateView({ ...view, open: { ...view.open, [group.topic]: !open } })}
+                doneOpen={doneOpen}
+                onToggleDone={() => updateView({ ...view, doneOpen: { ...view.doneOpen, [group.topic]: !doneOpen } })}
+                cards={group.active.map(entry => (
+                  <ModuleCard
+                    key={entry.module.id}
+                    entry={entry}
+                    row={rowFor.get(entry.module.id)}
+                    nowMs={now}
+                    onOpenMistakes={onOpenMistakes}
+                    onOpenRepair={onOpenRepair}
+                    isTutor={isTutor}
+                    busy={busy}
+                    onOpen={() => { setError(""); setScreen({ kind: "start", moduleId: entry.module.id }); }}
+                    onResume={() => void resume(entry)}
+                    onResults={() => setScreen({ kind: "results", moduleId: entry.module.id })}
+                    onRehearse={() => void rehearse(entry)}
+                  />
+                ))}
+                settled={group.settled.map(entry => (
+                  <SettledRow
+                    key={entry.module.id}
+                    entry={entry}
+                    row={rowFor.get(entry.module.id)}
+                    isTutor={isTutor}
+                    busy={busy}
+                    onResults={() => setScreen({ kind: "results", moduleId: entry.module.id })}
+                    onRehearse={() => void rehearse(entry)}
+                  />
+                ))}
+              />
+            );
+          })}
+        </>
       )}
     </section>
   );
@@ -464,34 +520,9 @@ function ModuleCard({
   onResults: () => void;
   onRehearse: () => void;
 }) {
-  const { module, meta, attempt } = entry;
+  const { module, attempt } = entry;
   const view = mockAttemptView(attempt, Date.now());
-  let status: { label: string; tone: string };
-  if (isTutor) {
-    status = !meta
-      ? { label: "No test uploaded", tone: "none" }
-      : meta.status !== "published"
-        ? { label: "Draft", tone: "draft" }
-        : row?.status === "done"
-          ? { label: `Hamad: ${row.score}/${MOCK_QUESTION_COUNT}`, tone: "done" }
-          : row?.status === "grading"
-            ? { label: "Hamad: submitted · awaiting grading", tone: "live" }
-            : row?.status === "forfeited"
-              ? { label: "Hamad: forfeited", tone: "forfeit" }
-              : row?.status === "in-progress"
-                ? { label: "Hamad: in progress", tone: "live" }
-                : { label: "Published · not taken yet", tone: "todo" };
-  } else if (!meta) {
-    status = { label: "No test yet", tone: "none" };
-  } else if (view === "completed") {
-    status = { label: attempt?.score === null ? "Completed" : `Completed · ${attempt!.score}/${MOCK_QUESTION_COUNT}`, tone: "done" };
-  } else if (view === "forfeited") {
-    status = { label: "Forfeited", tone: "forfeit" };
-  } else if (view === "in-progress" || view === "expired") {
-    status = { label: "In progress", tone: "live" };
-  } else {
-    status = { label: "Not started", tone: "todo" };
-  }
+  const status = cardStatus(entry, row, isTutor);
 
   return (
     <li className={`mock-card mock-card--${status.tone}`}>
@@ -524,25 +555,179 @@ function ModuleCard({
         {entry.error && <small className="mock-card__error">{entry.error}</small>}
       </div>
       <div className="mock-card__action">
-        {isTutor ? (
-          <button type="button" className="mock-button mock-button--ghost" disabled={busy || !meta} onClick={onRehearse}>
-            <PlayCircle size={16} />Rehearse
-          </button>
-        ) : !meta ? null : view === "not-started" ? (
-          <button type="button" className="mock-button mock-button--primary" disabled={busy} onClick={onOpen}>
-            Start
-          </button>
-        ) : view === "in-progress" || view === "expired" ? (
-          <button type="button" className="mock-button mock-button--primary" disabled={busy} onClick={onResume}>
-            Return
-          </button>
-        ) : (
-          <button type="button" className={`mock-button mock-button--${attempt?.reviewReleased ? "primary" : "ghost"}`} onClick={onResults}>
-            {attempt?.reviewReleased ? "Read review" : "View result"}
-          </button>
-        )}
+        <CardAction entry={entry} isTutor={isTutor} busy={busy} onOpen={onOpen} onResume={onResume} onResults={onResults} onRehearse={onRehearse} />
       </div>
     </li>
+  );
+}
+
+function cardStatus(entry: ModuleState, row: BoardRow | undefined, isTutor: boolean): { label: string; tone: string } {
+  const { meta, attempt } = entry;
+  if (isTutor) {
+    return !meta
+      ? { label: "No test uploaded", tone: "none" }
+      : meta.status !== "published"
+        ? { label: "Draft", tone: "draft" }
+        : row?.status === "done"
+          ? { label: `Hamad: ${row.score}/${MOCK_QUESTION_COUNT}`, tone: "done" }
+          : row?.status === "grading"
+            ? { label: "Hamad: submitted · awaiting grading", tone: "live" }
+            : row?.status === "forfeited"
+              ? { label: "Hamad: forfeited", tone: "forfeit" }
+              : row?.status === "in-progress"
+                ? { label: "Hamad: in progress", tone: "live" }
+                : { label: "Published · not taken yet", tone: "todo" };
+  }
+  const view = mockAttemptView(attempt, Date.now());
+  if (!meta) return { label: "No test yet", tone: "none" };
+  if (view === "completed") return { label: attempt?.score === null ? "Completed" : `Completed · ${attempt!.score}/${MOCK_QUESTION_COUNT}`, tone: "done" };
+  if (view === "forfeited") return { label: "Forfeited", tone: "forfeit" };
+  if (view === "in-progress" || view === "expired") return { label: "In progress", tone: "live" };
+  return { label: "Not started", tone: "todo" };
+}
+
+function CardAction({
+  entry,
+  isTutor,
+  busy,
+  onOpen,
+  onResume,
+  onResults,
+  onRehearse,
+}: {
+  entry: ModuleState;
+  isTutor: boolean;
+  busy: boolean;
+  onOpen?: () => void;
+  onResume?: () => void;
+  onResults: () => void;
+  onRehearse: () => void;
+}) {
+  const { meta, attempt } = entry;
+  const view = mockAttemptView(attempt, Date.now());
+  if (isTutor) {
+    return (
+      <button type="button" className="mock-button mock-button--ghost" disabled={busy || !meta} onClick={onRehearse}>
+        <PlayCircle size={16} />Rehearse
+      </button>
+    );
+  }
+  if (!meta) return null;
+  if (view === "not-started") {
+    return <button type="button" className="mock-button mock-button--primary" disabled={busy} onClick={onOpen}>Start</button>;
+  }
+  if (view === "in-progress" || view === "expired") {
+    return <button type="button" className="mock-button mock-button--primary" disabled={busy} onClick={onResume}>Return</button>;
+  }
+  return (
+    <button type="button" className={`mock-button mock-button--${attempt?.reviewReleased ? "primary" : "ghost"}`} onClick={onResults}>
+      {attempt?.reviewReleased ? "Read review" : "View result"}
+    </button>
+  );
+}
+
+/** A finished test with nothing left to do, folded into its topic's Done list. */
+function SettledRow({
+  entry,
+  row,
+  isTutor,
+  busy,
+  onResults,
+  onRehearse,
+}: {
+  entry: ModuleState;
+  row?: BoardRow;
+  isTutor: boolean;
+  busy: boolean;
+  onResults: () => void;
+  onRehearse: () => void;
+}) {
+  const status = cardStatus(entry, row, isTutor);
+  return (
+    <li className={`mock-done__row mock-done__row--${status.tone}`}>
+      <span className="mock-done__code">{mockModuleCode(entry.module)}</span>
+      <span className="mock-done__title">{entry.module.title}</span>
+      <span className={`mock-status mock-status--${status.tone}`}>
+        {status.tone === "done" ? <CircleCheckBig size={14} /> : status.tone === "forfeit" ? <Flag size={14} /> : null}
+        {status.label}
+      </span>
+      {isTutor && row?.status === "done" && row.attempt && !row.attempt.reviewReleased && (
+        <small className="mock-done__note">Review not released</small>
+      )}
+      <CardAction entry={entry} isTutor={isTutor} busy={busy} onResults={onResults} onRehearse={onRehearse} />
+    </li>
+  );
+}
+
+/** One topic on the Tests page: a collapsible header with progress, its open tests, and a Done fold. */
+function TopicSection({
+  topic,
+  progress,
+  upcoming,
+  open,
+  onToggle,
+  doneOpen,
+  onToggleDone,
+  cards,
+  settled,
+}: {
+  topic: MockTopic;
+  progress: TopicProgress;
+  /** Unpublished tests, shown to the student as a count only. */
+  upcoming: number;
+  open: boolean;
+  onToggle: () => void;
+  doneOpen: boolean;
+  onToggleDone: () => void;
+  cards: ReactNode[];
+  settled: ReactNode[];
+}) {
+  const slug = topic.toLowerCase().replace(/\W+/g, "-");
+  const headingId = `mock-topic-${slug}`;
+  const bodyId = `mock-topic-body-${slug}`;
+  const doneId = `mock-topic-done-${slug}`;
+  const percent = progress.published ? Math.round((progress.done / progress.published) * 100) : 0;
+  const dueOnTime = progress.due - progress.overdue;
+  return (
+    <section className={`mock-topic${open ? " is-open" : ""}`} aria-labelledby={headingId}>
+      <div className="mock-topic__head">
+        <h3 className="mock-topic__heading">
+          <button type="button" className="mock-topic__toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
+            <ChevronDown size={18} className="mock-topic__chevron" aria-hidden="true" />
+            <span id={headingId}>{topic}</span>
+          </button>
+        </h3>
+        <p className="mock-topic__stats">
+          {progress.published ? `${progress.done} of ${progress.published} done` : "No tests published yet"}
+          {progress.averageScore !== null && ` · avg ${progress.averageScore.toFixed(1)}/${MOCK_QUESTION_COUNT}`}
+        </p>
+        <span className="mock-topic__meter" aria-hidden="true"><i style={{ width: `${percent}%` }} /></span>
+        {(progress.inProgress > 0 || progress.due > 0 || progress.repair > 0) && (
+          <ul className="mock-topic__badges" aria-label={`${topic} status`}>
+            {progress.inProgress > 0 && <li className="mock-status mock-status--live">{progress.inProgress} in progress</li>}
+            {progress.overdue > 0 && <li className="mock-status mock-status--forfeit">{progress.overdue} overdue</li>}
+            {dueOnTime > 0 && <li className="mock-status mock-status--todo">{dueOnTime} due</li>}
+            {progress.repair > 0 && <li className="mock-status mock-status--draft">{progress.repair} to repair</li>}
+          </ul>
+        )}
+      </div>
+      <div id={bodyId} className="mock-topic__body" hidden={!open}>
+        {cards.length > 0
+          ? <ol className="mock-hub__list mock-hub__list--cards">{cards}</ol>
+          : upcoming === 0 && <p className="mock-topic__empty"><CircleCheckBig size={16} aria-hidden="true" />Every test in this topic is finished.</p>}
+        {upcoming > 0 && (
+          <p className="mock-topic__upcoming">{upcoming} more {upcoming === 1 ? "test" : "tests"} not published yet.</p>
+        )}
+        {settled.length > 0 && (
+          <div className="mock-done">
+            <button type="button" className="mock-done__toggle" aria-expanded={doneOpen} aria-controls={doneId} onClick={onToggleDone}>
+              <ChevronDown size={16} className="mock-topic__chevron" aria-hidden="true" />Done ({settled.length})
+            </button>
+            <ul id={doneId} className="mock-done__list" hidden={!doneOpen}>{settled}</ul>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 

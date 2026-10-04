@@ -98,6 +98,41 @@ export function summarizeTestBoard(rows: BoardRow[]): BoardSummary {
   };
 }
 
+export interface TopicProgress {
+  published: number;
+  /** Submitted, graded or forfeited. */
+  done: number;
+  /** Still to take: in progress, due or available. */
+  toTake: number;
+  inProgress: number;
+  due: number;
+  overdue: number;
+  /** Finished below WEAK_SCORE. */
+  repair: number;
+  /** Mean of the graded scores (out of MOCK_QUESTION_COUNT), or null before any grade. */
+  averageScore: number | null;
+}
+
+/** One topic's progress for its header on the Tests page. */
+export function summarizeTopic(rows: BoardRow[]): TopicProgress {
+  const graded = rows.filter((row) => row.status === "done" && row.score !== null).map((row) => row.score!);
+  return {
+    published: rows.filter((row) => row.status !== "unpublished").length,
+    done: rows.filter(isFinished).length,
+    toTake: rows.filter((row) => row.status === "in-progress" || row.status === "due" || row.status === "available").length,
+    inProgress: rows.filter((row) => row.status === "in-progress").length,
+    due: rows.filter((row) => row.status === "due").length,
+    overdue: rows.filter((row) => row.overdue).length,
+    repair: rows.filter((row) => row.weak).length,
+    averageScore: graded.length ? graded.reduce((sum, score) => sum + score, 0) / graded.length : null,
+  };
+}
+
+/** Finished with nothing left to do: these fold away; weak results stay in view for repair. */
+export function isSettled(row: BoardRow): boolean {
+  return (row.status === "done" && !row.weak) || row.status === "forfeited";
+}
+
 /** Earliest active deadline per module from a list of reminders for one student. */
 export function deadlinesByModule(
   reminders: Array<{ studentUid: string; status: string; deadline: string | null; moduleIds: string[] }>,
