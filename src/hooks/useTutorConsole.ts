@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MockReminder } from "../lib/mockReminders";
-import type { MockAttempt, MockTestMeta } from "../lib/mockTestContent";
+import type { MockAttempt, MockAttemptHistoryEntry, MockTestMeta } from "../lib/mockTestContent";
 import type { PaymentConfig, PaymentRecord } from "../lib/cloudPayments";
-import type { PublishedPracticeBank } from "../lib/practiceContent";
+import type { PracticeRun, PublishedPracticeBank } from "../lib/practiceContent";
 
 /**
  * Everything Tutor Admin's overview, badges and quick find read, loaded once
@@ -16,6 +16,10 @@ export interface TutorConsoleData {
   studentUid: string | null;
   metas: MockTestMeta[] | null;
   attempts: MockAttempt[] | null;
+  /** Attempts archived by a reset. */
+  history: MockAttemptHistoryEntry[] | null;
+  /** Hamad's practice sets, newest first. */
+  runs: PracticeRun[] | null;
   reminders: MockReminder[] | null;
   banks: PublishedPracticeBank[] | null;
   assignedBankIds: string[] | null;
@@ -27,6 +31,8 @@ const EMPTY: TutorConsoleData = {
   studentUid: null,
   metas: null,
   attempts: null,
+  history: null,
+  runs: null,
   reminders: null,
   banks: null,
   assignedBankIds: null,
@@ -44,9 +50,11 @@ async function loadConsole(): Promise<TutorConsoleData> {
   ]);
   const students = await settle(cloud.listActiveStudentMembers());
   const studentUid = students?.[0]?.uid ?? null;
-  const [metas, attempts, reminderList, banks, assignment, config, records] = await Promise.all([
+  const [metas, attempts, history, runs, reminderList, banks, assignment, config, records] = await Promise.all([
     settle(mocks.listMockTestMetas()),
     settle(mocks.listMockAttempts()),
+    settle(mocks.listMockAttemptHistory()),
+    studentUid ? settle(cloud.listPracticeRuns(studentUid)) : Promise.resolve(null),
     settle(reminders.listMockReminders()),
     settle(cloud.listPublishedPracticeBanks()),
     settle(cloud.loadPracticeAssignment()),
@@ -58,6 +66,8 @@ async function loadConsole(): Promise<TutorConsoleData> {
     studentUid,
     metas,
     attempts,
+    history,
+    runs,
     reminders: reminderList,
     banks,
     assignedBankIds: assignment === null && banks !== null ? [] : assignment?.bankStorageIds ?? null,

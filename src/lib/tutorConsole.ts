@@ -6,13 +6,14 @@ import type { PaymentConfig, PaymentRecord } from "./cloudPayments";
  * without Firestore.
  */
 
-export type TutorSection = "overview" | "tests" | "practice" | "sessions" | "records";
+export type TutorSection = "overview" | "tests" | "practice" | "sessions" | "activity" | "records";
 
 export const TUTOR_SECTIONS: ReadonlyArray<{ id: TutorSection; label: string }> = [
   { id: "overview", label: "Overview" },
   { id: "tests", label: "Tests" },
   { id: "practice", label: "Practice" },
   { id: "sessions", label: "Sessions" },
+  { id: "activity", label: "Activity" },
   { id: "records", label: "Records" },
 ];
 
@@ -93,6 +94,7 @@ export const consoleAnchor = {
   reminders: "coach-reminders",
   approvals: "coach-approvals",
   reschedule: "coach-reschedule",
+  inbox: "coach-inbox",
 } as const;
 
 function normalize(text: string): string {
