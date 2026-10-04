@@ -1,7 +1,7 @@
-import { ClipboardCheck, CircleAlert, CloudUpload, Eye, EyeOff, History, RotateCcw, Unlock } from "lucide-react";
+import { BadgeCheck, ClipboardCheck, CircleAlert, CloudUpload, Eye, EyeOff, History, RotateCcw, Unlock } from "lucide-react";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useAppDialog } from "../../components/AppDialog";
-import { MOCK_MODULES, mockModuleById, mockModuleLabel } from "../../data/mockModules";
+import { MOCK_MODULES, MOCK_TOPICS, mockModuleById, mockModuleCode, mockModuleLabel, mockModulesInTopic, type MockTopic } from "../../data/mockModules";
 import { analyzeKeystrokes } from "../../lib/calculatorDiagnostics";
 import { getCloudErrorMessage, listActiveStudentMembers, type ProjectMember } from "../../lib/cloud";
 import {
@@ -50,6 +50,9 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
   const [history, setHistory] = useState<MockAttemptHistoryEntry[]>([]);
   const [students, setStudents] = useState<ProjectMember[]>([]);
   const [keys, setKeys] = useState<Record<string, MockOption[]>>({});
+  // Answers below High confidence per uploaded test, shown before a bulk publish.
+  const [lowConfidence, setLowConfidence] = useState<Record<string, number>>({});
+  const [resultsTopic, setResultsTopic] = useState<MockTopic | "all">("all");
   const [reviewing, setReviewing] = useState<MockTestPackage | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -69,6 +72,10 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
       setStudents(nextStudents);
       const packages = await Promise.all(nextMetas.map(meta => loadMockTestPackage(meta.moduleId).catch(() => null)));
       setKeys(Object.fromEntries(packages.filter(Boolean).map(pkg => [pkg!.meta.moduleId, pkg!.key.correct])));
+      setLowConfidence(Object.fromEntries(packages.filter(Boolean).map(pkg => [
+        pkg!.meta.moduleId,
+        pkg!.review.items.filter(item => item.confidence !== "High").length,
+      ])));
     } catch (cause) {
       setError(getCloudErrorMessage(cause));
     }
@@ -159,6 +166,64 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
     }
   };
 
+  /** Publish every draft in a topic after one confirmation that lists them. */
+  const publishDrafts = async (topic: MockTopic, drafts: MockTestMeta[]) => {
+    const list = drafts.map(meta => {
+      const module = mockModuleById(meta.moduleId);
+      const low = lowConfidence[meta.moduleId] ?? 0;
+      const name = module ? `${mockModuleCode(module)} ${module.title}` : meta.title;
+      return `${name} (version ${meta.version}${low ? `, ${low} ${low === 1 ? "answer" : "answers"} below High confidence` : ""})`;
+    }).join("; ");
+    const ok = await dialog.confirm(
+      `Publish ${drafts.length} ${topic} ${drafts.length === 1 ? "draft" : "drafts"} without opening each answer-key screen? ${list}. `
+        + "They become visible to the student immediately.",
+    );
+    if (!ok) return;
+    setBusy(true);
+    setError("");
+    const failures: string[] = [];
+    for (const meta of drafts) {
+      try {
+        await setMockTestPublished(meta, true);
+      } catch (cause) {
+        failures.push(`${meta.title}: ${getCloudErrorMessage(cause)}`);
+      }
+    }
+    const published = drafts.length - failures.length;
+    if (published) notify(`${published} ${topic} ${published === 1 ? "test" : "tests"} published.`);
+    if (failures.length) setError(failures.join("\n"));
+    await refresh();
+    setBusy(false);
+  };
+
+  /** Release the review of every graded, unreleased attempt in a topic. */
+  const releaseReviews = async (topic: MockTopic, pending: MockAttempt[]) => {
+    const codes = pending.map(attempt => {
+      const module = mockModuleById(attempt.moduleId);
+      return module ? mockModuleCode(module) : attempt.moduleId;
+    }).join(", ");
+    const ok = await dialog.confirm(
+      `Release the review for ${pending.length} ${topic} ${pending.length === 1 ? "test" : "tests"} (${codes})? `
+        + "The student will see the answers and explanations.",
+    );
+    if (!ok) return;
+    setBusy(true);
+    setError("");
+    const failures: string[] = [];
+    for (const attempt of pending) {
+      try {
+        await setMockReviewReleased(attempt.id, true);
+      } catch (cause) {
+        failures.push(`${attempt.moduleId}: ${getCloudErrorMessage(cause)}`);
+      }
+    }
+    const released = pending.length - failures.length;
+    if (released) notify(`${released} ${released === 1 ? "review" : "reviews"} released.`);
+    if (failures.length) setError(failures.join("\n"));
+    await refresh();
+    setBusy(false);
+  };
+
   const grade = async (attempt: MockAttempt) => {
     setBusy(true);
     try {
@@ -198,36 +263,69 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
       </button>
       {error && <p className="form-error" role="alert" style={{ whiteSpace: "pre-line" }}><CircleAlert size={16} />{error}</p>}
 
-      <div className="mock-admin__modules">
-        {MOCK_MODULES.map(module => {
-          const meta = metas.find(entry => entry.moduleId === module.id);
-          return (
-            <article key={module.id} className="mock-admin__module">
-              <div>
-                <span>{mockModuleLabel(module)}</span>
-                <strong>{module.title}</strong>
-                <small>{meta ? `${meta.status === "published" ? "Published" : "Draft"} · version ${meta.version}` : "No test uploaded"}</small>
-              </div>
-              {meta && (
-                <div className="mock-admin__actions">
-                  <button type="button" className="button" disabled={busy} onClick={() => void openReview(module.id)}>
-                    <Eye size={16} />{meta.status === "published" ? "View key" : "Review key"}
-                  </button>
-                  {meta.status === "published" && (
-                    <button type="button" className="button" disabled={busy} onClick={() => void unpublish(meta)}>
-                      <EyeOff size={16} />Unpublish
-                    </button>
-                  )}
-                </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
+      {MOCK_TOPICS.map(topic => {
+        const topicModules = mockModulesInTopic(topic);
+        const topicMetas = metas.filter(meta => topicModules.some(module => module.id === meta.moduleId));
+        const drafts = topicMetas.filter(meta => meta.status === "draft");
+        const unreleased = attempts.filter(attempt => topicModules.some(module => module.id === attempt.moduleId)
+          && attempt.status !== "active" && attempt.score !== null && !attempt.reviewReleased);
+        return (
+          <details key={topic} className="mock-admin__topic" open>
+            <summary>
+              <strong>{topic}</strong>
+              <span>
+                {topicMetas.length} of {topicModules.length} uploaded · {topicMetas.length - drafts.length} published
+                {drafts.length > 0 && ` · ${drafts.length} ${drafts.length === 1 ? "draft" : "drafts"}`}
+              </span>
+            </summary>
+            <div className="mock-admin__bulk">
+              <button type="button" className="button" disabled={busy || drafts.length === 0} onClick={() => void publishDrafts(topic, drafts)}>
+                <BadgeCheck size={16} />Publish all drafts ({drafts.length})
+              </button>
+              <button type="button" className="button" disabled={busy || unreleased.length === 0} onClick={() => void releaseReviews(topic, unreleased)}>
+                <Unlock size={16} />Release all reviews ({unreleased.length})
+              </button>
+            </div>
+            <div className="mock-admin__modules">
+              {topicModules.map(module => {
+                const meta = metas.find(entry => entry.moduleId === module.id);
+                return (
+                  <article key={module.id} className="mock-admin__module">
+                    <div>
+                      <span>{mockModuleLabel(module)}</span>
+                      <strong>{module.title}</strong>
+                      <small>{meta ? `${meta.status === "published" ? "Published" : "Draft"} · version ${meta.version}` : "No test uploaded"}</small>
+                    </div>
+                    {meta && (
+                      <div className="mock-admin__actions">
+                        <button type="button" className="button" disabled={busy} onClick={() => void openReview(module.id)}>
+                          <Eye size={16} />{meta.status === "published" ? "View key" : "Review key"}
+                        </button>
+                        {meta.status === "published" && (
+                          <button type="button" className="button" disabled={busy} onClick={() => void unpublish(meta)}>
+                            <EyeOff size={16} />Unpublish
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </details>
+        );
+      })}
 
       <MockReminderAdmin students={students} metas={metas} attempts={attempts} notify={notify} />
 
       <h4 className="mock-admin__subhead">Student results</h4>
+      <div className="mock-switch" role="group" aria-label="Show results for">
+        {(["all", ...MOCK_TOPICS] as const).map(topic => (
+          <button key={topic} type="button" className="mock-switch__option" aria-pressed={resultsTopic === topic} onClick={() => setResultsTopic(topic)}>
+            {topic === "all" ? "All topics" : topic}
+          </button>
+        ))}
+      </div>
       {students.length === 0 ? <p>No active student accounts.</p> : (
         <div className="mock-table-wrap">
           <table className="mock-table mock-admin__results">
@@ -235,55 +333,62 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
               <tr><th scope="col">Student</th><th scope="col">Module</th><th scope="col">Status</th><th scope="col">Score</th><th scope="col">Time used</th><th scope="col">Incidents</th><th scope="col">Actions</th></tr>
             </thead>
             <tbody>
-              {students.flatMap(student => MOCK_MODULES.map(module => {
-                const attempt = attempts.find(entry => entry.id === mockAttemptId(student.uid, module.id)) ?? null;
+              {students.flatMap(student => {
                 // Modules without an uploaded test and without an attempt add nothing to the table.
-                if (!attempt && !metas.some(entry => entry.moduleId === module.id)) return null;
-                const view = mockAttemptView(attempt, Date.now());
-                // Member records carry no names; this program has one student, Hamad.
-                const name = students.length === 1 ? "Hamad" : `Student ${student.uid.slice(0, 6)}`;
-                const rowKey = `${student.uid}-${module.id}`;
-                const archived = history.filter(entry => entry.id === mockAttemptId(student.uid, module.id));
-                return (
-                  <Fragment key={rowKey}>
-                    <tr>
-                      <th scope="row">{name}</th>
-                      <td>{mockModuleLabel(module)}</td>
-                      <td>{{ "not-started": "Not started", "in-progress": "In progress", expired: "Expired, not finalized", completed: "Completed", forfeited: "Forfeited" }[view]}</td>
-                      <td>{attempt?.score != null ? `${attempt.score}/${MOCK_QUESTION_COUNT}` : attempt && view !== "in-progress" ? "Not graded" : "—"}</td>
-                      <td>{attempt ? (mockTimeUsedMs(attempt) === null ? "—" : formatMockClock(mockTimeUsedMs(attempt)!)) : "—"}</td>
-                      <td>{attempt ? attempt.incidents.length : "—"}</td>
-                      <td className="mock-admin__row-actions">
-                        {attempt && (
-                          <button type="button" className="button" onClick={() => setExpanded(expanded === rowKey ? null : rowKey)}>
-                            {expanded === rowKey ? "Hide" : "Details"}
-                          </button>
-                        )}
-                        {attempt && attempt.status !== "active" && attempt.score === null && (
-                          <button type="button" className="button" disabled={busy} onClick={() => void grade(attempt)}>Grade</button>
-                        )}
-                        {attempt && attempt.status !== "active" && (
-                          <button type="button" className="button" disabled={busy} onClick={() => void release(attempt, !attempt.reviewReleased)}>
-                            <Unlock size={15} />{attempt.reviewReleased ? "Hide review" : "Release review"}
-                          </button>
-                        )}
-                        {attempt && (
-                          <button type="button" className="button" disabled={busy} onClick={() => void reset(attempt, name)}>
-                            <RotateCcw size={15} />Reset
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                    {expanded === rowKey && attempt && (
-                      <tr className="mock-admin__detail-row">
-                        <td colSpan={7}>
-                          <AttemptDetail attempt={attempt} keyAnswers={keys[module.id]} archived={archived} />
+                const listed = MOCK_MODULES.filter(module => (resultsTopic === "all" || module.topic === resultsTopic)
+                  && (attempts.some(entry => entry.id === mockAttemptId(student.uid, module.id)) || metas.some(entry => entry.moduleId === module.id)));
+                return listed.map((module, index) => {
+                  const attempt = attempts.find(entry => entry.id === mockAttemptId(student.uid, module.id)) ?? null;
+                  const firstOfTopic = index === 0 || listed[index - 1]!.topic !== module.topic;
+                  const view = mockAttemptView(attempt, Date.now());
+                  // Member records carry no names; this program has one student, Hamad.
+                  const name = students.length === 1 ? "Hamad" : `Student ${student.uid.slice(0, 6)}`;
+                  const rowKey = `${student.uid}-${module.id}`;
+                  const archived = history.filter(entry => entry.id === mockAttemptId(student.uid, module.id));
+                  return (
+                    <Fragment key={rowKey}>
+                      {firstOfTopic && (
+                        <tr className="mock-admin__topic-row"><th scope="colgroup" colSpan={7}>{module.topic}</th></tr>
+                      )}
+                      <tr>
+                        <th scope="row">{name}</th>
+                        <td>{mockModuleLabel(module)}</td>
+                        <td>{{ "not-started": "Not started", "in-progress": "In progress", expired: "Expired, not finalized", completed: "Completed", forfeited: "Forfeited" }[view]}</td>
+                        <td>{attempt?.score != null ? `${attempt.score}/${MOCK_QUESTION_COUNT}` : attempt && view !== "in-progress" ? "Not graded" : "—"}</td>
+                        <td>{attempt ? (mockTimeUsedMs(attempt) === null ? "—" : formatMockClock(mockTimeUsedMs(attempt)!)) : "—"}</td>
+                        <td>{attempt ? attempt.incidents.length : "—"}</td>
+                        <td className="mock-admin__row-actions">
+                          {attempt && (
+                            <button type="button" className="button" onClick={() => setExpanded(expanded === rowKey ? null : rowKey)}>
+                              {expanded === rowKey ? "Hide" : "Details"}
+                            </button>
+                          )}
+                          {attempt && attempt.status !== "active" && attempt.score === null && (
+                            <button type="button" className="button" disabled={busy} onClick={() => void grade(attempt)}>Grade</button>
+                          )}
+                          {attempt && attempt.status !== "active" && (
+                            <button type="button" className="button" disabled={busy} onClick={() => void release(attempt, !attempt.reviewReleased)}>
+                              <Unlock size={15} />{attempt.reviewReleased ? "Hide review" : "Release review"}
+                            </button>
+                          )}
+                          {attempt && (
+                            <button type="button" className="button" disabled={busy} onClick={() => void reset(attempt, name)}>
+                              <RotateCcw size={15} />Reset
+                            </button>
+                          )}
                         </td>
                       </tr>
-                    )}
-                  </Fragment>
-                );
-              }))}
+                      {expanded === rowKey && attempt && (
+                        <tr className="mock-admin__detail-row">
+                          <td colSpan={7}>
+                            <AttemptDetail attempt={attempt} keyAnswers={keys[module.id]} archived={archived} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                });
+              })}
             </tbody>
           </table>
         </div>
