@@ -4,6 +4,7 @@ import { saveMockAnswerKey, setMockTestPublished, type MockTestPackage } from ".
 import { getCloudErrorMessage } from "../../lib/cloud";
 import { optionLetter, type MockOption, type MockReviewItem, type MockTestMeta } from "../../lib/mockTestContent";
 import "./moduleMock.css";
+import { MockExhibits } from "./MockExhibits";
 
 /**
  * Tutor-only answer key review. The tutor checks every question, answer,
@@ -91,23 +92,7 @@ export function MockAnswerKeyReview({
               {item.sourceRef && <small>{item.sourceRef}{item.sourceFiles.length ? ` · ${item.sourceFiles.join(", ")}` : ""}</small>}
             </header>
             <p className="mock-review__stem">{question.stem}</p>
-            {question.table && (
-              <div className="mock-table-wrap">
-                <table className="mock-table">
-                  {question.table.caption && <caption>{question.table.caption}</caption>}
-                  <thead><tr>{question.table.headers.map((header, column) => <th key={column} scope="col">{header}</th>)}</tr></thead>
-                  <tbody>
-                    {question.table.rows.map((row, rowIndex) => (
-                      <tr key={rowIndex}>
-                        {row.cells.map((cell, column) => column === 0
-                          ? <th key={column} scope="row">{cell}</th>
-                          : <td key={column}>{cell}</td>)}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <MockExhibits question={question} />
             <fieldset className="mock-keyreview__options" disabled={published || busy}>
               <legend>Correct answer</legend>
               {question.options.map((text, option) => (

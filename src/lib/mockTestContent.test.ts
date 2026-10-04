@@ -100,6 +100,58 @@ describe("mock test content contract", () => {
   });
 });
 
+function syntheticFigure(overrides: Record<string, unknown> = {}) {
+  return {
+    title: "Market for widgets",
+    description: "Demand falls and supply rises with price; they cross at a price of 40.",
+    xLabel: "Quantity",
+    yLabel: "Price",
+    xMin: 0, xMax: 100, yMin: 0, yMax: 80,
+    xTicks: [0, 50, 100],
+    yTicks: [0, 40, 80],
+    series: [
+      { kind: "line", label: "Demand", points: [{ x: 0, y: 80 }, { x: 100, y: 0 }] },
+      { kind: "line", label: "Supply", tone: "secondary", dashed: true, points: [{ x: 0, y: 0 }, { x: 100, y: 80 }] },
+    ],
+    guides: [{ axis: "y", value: 40, label: "P = 40" }],
+    markers: [{ x: 50, y: 40, label: "E" }],
+    ...overrides,
+  };
+}
+
+describe("question figures", () => {
+  it("parses a figure with defaults and keeps it in the student questions document", () => {
+    const upload = syntheticDraft();
+    (upload.questions[1] as Record<string, unknown>).figure = syntheticFigure();
+    const draft = parseMockTestDraft(upload);
+    const figure = draft.questions[1]!.figure!;
+    expect(figure.series.map(series => [series.label, series.tone, series.dashed])).toEqual([
+      ["Demand", "primary", false],
+      ["Supply", "secondary", true],
+    ]);
+    expect(draft.questions[0]!.figure).toBeNull();
+    expect(splitMockDraft(draft).questions.questions[1]!.figure).toEqual(figure);
+  });
+
+  it("rejects malformed figures", () => {
+    const cases: Array<[Record<string, unknown>, RegExp]> = [
+      [{ xMin: 10, xMax: 10 }, /xMin < xMax/],
+      [{ yMax: Number.NaN }, /yMax must be a number/],
+      [{ series: [] }, /series is empty/],
+      [{ series: [{ kind: "pie", label: "x", points: [{ x: 0, y: 0 }] }] }, /kind/],
+      [{ series: [{ kind: "line", label: "x", tone: "neon", points: [{ x: 0, y: 0 }] }] }, /tone/],
+      [{ series: [{ kind: "line", label: "x", points: [[0, 0]] }] }, /\{x, y\}/],
+      [{ series: [{ kind: "line", label: "x", points: Array.from({ length: 201 }, (_, x) => ({ x, y: x })) }] }, /at most 200/],
+      [{ guides: [{ axis: "z", value: 1, label: "" }] }, /axis/],
+    ];
+    for (const [override, message] of cases) {
+      const upload = syntheticDraft();
+      (upload.questions[0] as Record<string, unknown>).figure = syntheticFigure(override);
+      expect(() => parseMockTestDraft(upload)).toThrow(message);
+    }
+  });
+});
+
 describe("grading and timing", () => {
   it("grades unanswered questions as wrong", () => {
     const result = gradeMockAnswers([0, 1, null, 0, 2, 2, null, 1], [0, 1, 2, 0, 1, 2, 0, 1]);
