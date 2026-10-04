@@ -1,10 +1,10 @@
 // Tutor Admin: a tabbed control centre (`#coach/<section>`). The session,
 // schedule and recovery tools moved here from App.tsx in the P3.9 split.
-import { Archive, CalendarClock, CalendarDays, Check, CircleAlert, CircleCheckBig, ClipboardCheck, LayoutDashboard, LibraryBig, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
+import { Archive, CalendarClock, CalendarDays, Check, CircleAlert, CircleCheckBig, ClipboardCheck, History, LayoutDashboard, LibraryBig, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
 import { type FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { getPlanTasks, PLAN } from "../data/plan";
 import program from "../data/program.json";
-import { formatDate, todayDateOnly } from "../lib/dates";
+import { formatDate, getProgramWeek, todayDateOnly } from "../lib/dates";
 import { MOCK_MODULES, mockModuleById, mockModuleCode } from "../data/mockModules";
 import { useTutorConsole } from "../hooks/useTutorConsole";
 import {
@@ -13,9 +13,15 @@ import {
   consoleAnchor,
   consoleGlance,
   sectionCounts,
+  summarizePayments,
   type ConsoleEntry,
   type TutorSection,
 } from "../lib/tutorConsole";
+import { buildActivity } from "../lib/tutorActivity";
+import { buildTutorInbox, isSnoozed, loadSnoozes, saveSnoozes, type InboxItem, type InboxSnoozes } from "../lib/tutorInbox";
+import { weekCatalogIds } from "../lib/weekTests";
+import { TutorActivity } from "./tutorConsole/TutorActivity";
+import { TutorInbox } from "./tutorConsole/TutorInbox";
 import { TutorOverview } from "./tutorConsole/TutorOverview";
 import { TutorQuickFind } from "./tutorConsole/TutorQuickFind";
 import { createDefaultState, downloadBackup } from "../lib/storage";
@@ -35,6 +41,7 @@ const SECTION_ICON: Record<TutorSection, typeof LayoutDashboard> = {
   tests: ClipboardCheck,
   practice: LibraryBig,
   sessions: CalendarDays,
+  activity: History,
   records: Archive,
 };
 
@@ -81,6 +88,8 @@ export function TutorAdminView({
   const dialog = useAppDialog();
   const consoleData = useTutorConsole();
   const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
+  const [snoozes, setSnoozes] = useState<InboxSnoozes>(loadSnoozes);
+  const [busyItem, setBusyItem] = useState<string | null>(null);
   useEffect(() => (pendingAnchor ? revealAnchor(pendingAnchor) : undefined), [pendingAnchor, section]);
   const effectiveSessions = getEffectiveSessions(tracker.sessionOverrides);
   const [selectedSession, setSelectedSession] = useState(1);
@@ -134,7 +143,59 @@ export function TutorAdminView({
     assignedBankIds: consoleData.assignedBankIds,
     approvals: pendingSessionRequests.length,
   });
-  const counts = sectionCounts(glance);
+  const nowMs = new Date().getTime();
+  const sessionLabels = new Map(PLAN.flatMap((week) => getPlanTasks(week, tracker.sessionOverrides))
+    .filter((task) => task.kind === "session").map((task) => [task.id, task.label] as const));
+  const paymentSummary = consoleData.payments?.config
+    ? summarizePayments(consoleData.payments.config, consoleData.payments.records, new Date(nowMs))
+    : null;
+  // Practice answers tied to their practice module, via the published banks.
+  const questionModule = new Map((consoleData.banks ?? []).flatMap((bank) => bank.questions.map((question) => [question.id, question.moduleId] as const)));
+  const practiceAnswers = (consoleData.runs ?? []).flatMap((run) => run.answers.flatMap((answer) => {
+    const moduleId = questionModule.get(answer.questionId);
+    const answeredAtMs = Date.parse(answer.answeredAt);
+    return moduleId && Number.isFinite(answeredAtMs) ? [{ moduleId, answeredAtMs }] : [];
+  }));
+  const inbox = consoleData.loading ? [] : buildTutorInbox({
+    nowMs,
+    approvals: pendingSessionRequests.map(({ task, request }) => ({ taskId: task.id, label: task.label, requestedAt: request!.requestedAt })),
+    metas: consoleData.metas,
+    attempts: consoleData.attempts,
+    reminders: consoleData.reminders,
+    studentUid: consoleData.studentUid,
+    banks: consoleData.banks,
+    assignedBankIds: consoleData.assignedBankIds,
+    practiceAnswers,
+    weekCatalogIds: weekCatalogIds(getProgramWeek()),
+    payment: paymentSummary,
+  });
+  const visibleInbox = inbox.filter((item) => !isSnoozed(item, snoozes, nowMs));
+  const counts = { ...sectionCounts(glance), overview: visibleInbox.length };
+  const snooze = (item: InboxItem, mode: "day" | "changed") => {
+    const next = { ...snoozes, [item.id]: mode === "day" ? { untilMs: nowMs + 24 * 60 * 60 * 1000 } : { version: item.version } };
+    setSnoozes(next);
+    saveSnoozes(next);
+  };
+  const showHidden = () => {
+    const next = Object.fromEntries(Object.entries(snoozes).filter(([id]) => !inbox.some((item) => item.id === id)));
+    setSnoozes(next);
+    saveSnoozes(next);
+  };
+  const activity = section === "activity" ? buildActivity({
+    attempts: consoleData.attempts ?? [],
+    history: consoleData.history ?? [],
+    runs: consoleData.runs ?? [],
+    sessionRequests: Object.values(tracker.sessionCompletionRequests).map((request) => ({
+      taskId: request.taskId, label: sessionLabels.get(request.taskId) ?? request.taskId, requestedAt: request.requestedAt,
+    })),
+    sessionReviews: Object.values(tracker.sessionCompletionReviews).map((review) => ({
+      ...review, label: sessionLabels.get(review.taskId) ?? review.taskId,
+    })),
+    reminders: consoleData.reminders ?? [],
+    mistakes: tracker.errorEntries,
+    payments: consoleData.payments?.records ?? [],
+    currency: consoleData.payments?.config?.currency ?? null,
+  }) : [];
   const today = todayDateOnly();
   const nextSession = effectiveSessions.find((entry) => entry.effectiveDate >= today) ?? null;
   const entries = useMemo<ConsoleEntry[]>(() => {
@@ -199,6 +260,44 @@ export function TutorAdminView({
     );
     setSelectedSession(sessionNumber);
     if (entry) setNewDate(entry.effectiveDate);
+  };
+
+  const openSection = (target: TutorSection, anchor: string | null) => {
+    onSection(target);
+    if (anchor) setPendingAnchor(anchor);
+  };
+
+  const runInboxAction = async (item: InboxItem) => {
+    const { action } = item;
+    if (action.type === "open") return openSection(action.section, action.anchor);
+    if (action.type === "open-payments") return onOpenPayments?.();
+    // Reminders: the composer lives on the Tests tab.
+    if (action.type === "remind") return openSection("tests", consoleAnchor.reminders);
+    if (action.type === "approve-session") return reviewSessionRequest(action.taskId, "approved");
+    setBusyItem(item.id);
+    try {
+      if (action.type === "grade" || action.type === "release-review") {
+        const mocks = await import("../lib/cloudMockTests");
+        const attempt = consoleData.attempts?.find((entry) => entry.id === action.attemptId);
+        if (!attempt) throw new Error("That attempt is no longer available. Refresh and try again.");
+        if (action.type === "grade") {
+          const graded = await mocks.tutorGradeMockAttempt(attempt);
+          notifyAndRefresh(`Graded: ${graded.score ?? "?"}/8.`);
+        } else {
+          await mocks.setMockReviewReleased(attempt.id, true);
+          notifyAndRefresh("Review released to Hamad.");
+        }
+      } else if (action.type === "unlock-bank") {
+        const { savePracticeAssignment } = await import("../lib/cloud");
+        const assigned = consoleData.assignedBankIds ?? [];
+        if (!assigned.includes(action.storageId)) await savePracticeAssignment([...assigned, action.storageId]);
+        notifyAndRefresh("Practice module unlocked for Hamad.");
+      }
+    } catch (cause) {
+      notify(cause instanceof Error ? cause.message : "That action did not complete.", "warning");
+    } finally {
+      setBusyItem(null);
+    }
   };
 
   const pickEntry = (entry: ConsoleEntry) => {
@@ -295,6 +394,17 @@ export function TutorAdminView({
             onSection={onSection}
             onOpenPayments={onOpenPayments}
             brief={<TutorBriefPanel tracker={tracker} />}
+            inbox={(
+              <TutorInbox
+                items={visibleInbox}
+                hiddenCount={inbox.length - visibleInbox.length}
+                loading={consoleData.loading}
+                busyId={busyItem}
+                onAction={(item) => void runInboxAction(item)}
+                onSnooze={snooze}
+                onShowHidden={showHidden}
+              />
+            )}
           />
         )}
         {section === "tests" && <Suspense fallback={null}><MockTestAdmin notify={notifyAndRefresh} /></Suspense>}
@@ -327,6 +437,7 @@ export function TutorAdminView({
             </section>
           </div>
         )}
+        {section === "activity" && <TutorActivity events={activity} nowMs={nowMs} loading={consoleData.loading} />}
         {section === "records" && (
           <div className="view-stack">
             <section className="panel launch-control-panel">

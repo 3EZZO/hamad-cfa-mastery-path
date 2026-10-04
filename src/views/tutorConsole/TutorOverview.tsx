@@ -31,6 +31,7 @@ export function TutorOverview({
   onSection,
   onOpenPayments,
   brief,
+  inbox,
 }: {
   glance: ConsoleGlance;
   data: TutorConsoleData;
@@ -39,12 +40,15 @@ export function TutorOverview({
   onSection: (section: TutorSection) => void;
   onOpenPayments?: () => void;
   brief: ReactNode;
+  /** The action inbox, shown first. */
+  inbox?: ReactNode;
 }) {
   const { tests, practice, reminders, approvals } = glance;
   const payments = data.payments?.config ? summarizePayments(data.payments.config, data.payments.records, today) : null;
   const loading = data.loading;
   return (
     <div className="view-stack">
+      {inbox}
       <section className="coach-glance" aria-label="At a glance">
         <Tile
           icon={ClipboardCheck}

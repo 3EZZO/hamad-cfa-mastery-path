@@ -104,6 +104,6 @@ describe("buildConsoleEntries", () => {
     expect(entries.find((entry) => entry.kind === "bank")).toMatchObject({ detail: "Economics · 40 questions · Locked", section: "practice" });
     expect(searchConsole(entries, "s5")[0]!.id).toBe("session-5");
     expect(searchConsole(entries, "ec7")[0]!.label).toBe("Reminder: EC6, EC7");
-    expect(entries.filter((entry) => entry.kind === "section")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.kind === "section")).toHaveLength(6);
   });
 });
