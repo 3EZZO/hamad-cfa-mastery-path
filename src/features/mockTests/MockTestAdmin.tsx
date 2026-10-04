@@ -29,6 +29,7 @@ import {
   type MockOption,
   type MockTestMeta,
 } from "../../lib/mockTestContent";
+import { consoleAnchor } from "../../lib/tutorConsole";
 import { MockAnswerKeyReview } from "./MockAnswerKeyReview";
 import { MockReminderAdmin } from "./MockReminderAdmin";
 import "./moduleMock.css";
@@ -290,7 +291,7 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
               {topicModules.map(module => {
                 const meta = metas.find(entry => entry.moduleId === module.id);
                 return (
-                  <article key={module.id} className="mock-admin__module">
+                  <article key={module.id} id={consoleAnchor.test(module.id)} className="mock-admin__module">
                     <div>
                       <span>{mockModuleLabel(module)}</span>
                       <strong>{module.title}</strong>

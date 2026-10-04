@@ -1,4 +1,4 @@
-import { Box, CalendarPlus, ChevronDown, ChevronRight, CircleAlert, CircleCheckBig, Command, Calculator, Clock3, Download, LogOut, Menu, Moon, MoreHorizontal, PlayCircle, RotateCcw, ShieldCheck, Sparkles, Sun, Upload, X } from "lucide-react";
+import { Box, CalendarPlus, ChevronDown, ChevronRight, CircleAlert, CircleCheckBig, Command, Calculator, Clock3, Download, LogOut, Menu, Moon, MoreHorizontal, PlayCircle, RotateCcw, ShieldCheck, Sparkles, Sun, Upload, UserCog, X } from "lucide-react";
 import { type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { getPlanTasks, PLAN } from "./data/plan";
 import { daysUntilExam, getProgramWeek, TOTAL_WEEKS, todayDateOnly } from "./lib/dates";
@@ -22,6 +22,7 @@ import { buildHash, readSegment, writeSegment } from "./lib/hashRoute";
 import { setShellBusy, useShellBusy } from "./lib/shellBusy";
 import { PRACTICE_INTENTS, practiceModuleSegment, type PracticeIntent } from "./lib/practiceIntents";
 import { testsForWeek } from "./lib/weekTests";
+import { TUTOR_SECTIONS, parseTutorSection, type TutorSection } from "./lib/tutorConsole";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
@@ -150,6 +151,7 @@ function App() {
   }, []);
   // `#progress/<section>`: Topics (heatmap), Module tests or Mocks.
   const [progressSegment, setProgressSegment] = useHashSegment("progress", activeTab);
+  const [coachSegment, setCoachSegment] = useHashSegment("coach", activeTab);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [depthPreference, setDepthPreferenceState] = useState<DepthPreference>(readDepthPreference);
@@ -314,6 +316,23 @@ function App() {
     writeSegment("practice", segment);
     setPracticeSegment(segment);
   };
+  const openCoach = (section: TutorSection) => {
+    navigate("coach");
+    writeSegment("coach", section);
+    setCoachSegment(section);
+  };
+  // Tutor Admin sections, reachable straight from the palette (Ctrl+K).
+  const coachCommands: PaletteCommand[] = role === "tutor" && !isLiveShell
+    ? TUTOR_SECTIONS.map((section) => ({
+        id: `coach-${section.id}`,
+        label: `Tutor Admin: ${section.label}`,
+        group: "Go to",
+        hint: `Open the ${section.label} section of Tutor Admin`,
+        keywords: ["tutor", "admin", "coach", section.id],
+        icon: UserCog,
+        run: () => openCoach(section.id),
+      }))
+    : [];
   const practiceCommands: PaletteCommand[] = !isLiveShell
     ? (Object.keys(PRACTICE_INTENTS) as PracticeIntent[])
         .filter((intent) => PRACTICE_INTENTS[intent].mode === null || role === "student")
@@ -366,6 +385,7 @@ function App() {
       run: () => setCalendarDialogOpen(true),
     },
     ...practiceCommands,
+    ...coachCommands,
     ...(capabilities.canUseLiveSession && !isLiveShell
       ? [{ id: "live", label: "Open Session Mode", group: "Actions", hint: "Private tutor workspace", keywords: ["teach", "classroom"], icon: PlayCircle, run: () => navigate("live") } satisfies PaletteCommand]
       : []),
@@ -587,8 +607,8 @@ function App() {
             onOpenHandled={clearModuleMocksSegment}
             onOpenMistakes={() => navigate("errors")}
             onOpenRepair={() => openPractice("repair")}
-            onOpenReminders={() => navigate("coach")}
-            onOpenTutorAdmin={() => navigate("coach")}
+            onOpenReminders={() => openCoach("tests")}
+            onOpenTutorAdmin={() => openCoach("tests")}
             onPracticeModule={openPracticeModule}
             thisWeek={thisWeekTests}
           />
@@ -631,6 +651,9 @@ function App() {
             authoritativeReplaceBusy={authoritativeReplaceBusy}
             syncStatus={syncStatus}
             notify={notify}
+            section={parseTutorSection(coachSegment)}
+            onSection={setCoachSegment}
+            onOpenPayments={() => navigate("payments")}
           />
         ) : (
           <EmptyState icon={ShieldCheck} title="Tutor access only">
