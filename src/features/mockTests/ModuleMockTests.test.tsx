@@ -62,9 +62,31 @@ function cardTitles(root: ReactTestInstance): string[] {
     .map((card) => textOf(card.findByType("h4")));
 }
 
+function doneRow(root: ReactTestInstance, title: string): ReactTestInstance {
+  return root.find((node) => node.type === "li" && String(node.props.className ?? "").startsWith("mock-done__row")
+    && textOf(node).includes(title));
+}
+
+function topicSection(root: ReactTestInstance, topic: string): ReactTestInstance {
+  return root.find((node) => node.type === "section" && String(node.props.className ?? "").startsWith("mock-topic")
+    && textOf(node.findByType("h3")) === topic);
+}
+
+function topicNames(root: ReactTestInstance): string[] {
+  return root.findAll((node) => node.type === "section" && String(node.props.className ?? "").startsWith("mock-topic"))
+    .map((section) => textOf(section.findByType("h3")));
+}
+
+const storage = new Map<string, string>();
+
 describe("Module Tests priority board", () => {
   beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    storage.clear();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => { storage.set(key, value); },
+    });
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(now);
     cloud.published = new Set(["m01-rates-and-returns", "m02-time-value-of-money", "m03-statistical-measures", "m04-probability-trees"]);
@@ -83,12 +105,15 @@ describe("Module Tests priority board", () => {
 
   it("orders the student's tests by what needs doing and summarizes progress", async () => {
     const root = (await render("student")).root;
-    expect(cardTitles(root).slice(0, 4)).toEqual([
+    expect(cardTitles(root)).toEqual([
       "Probability Trees and Conditional Expectations", // due
       "Statistical Measures of Asset Returns", // available
-      "Rates and Returns", // done
-      "The Time Value of Money in Finance", // done
+      "Rates and Returns", // done below 6/8: stays in view for repair
     ]);
+    // A finished test with nothing left to do folds into the Done list.
+    expect(textOf(doneRow(root, "The Time Value of Money in Finance"))).toContain("QM2");
+    // Unpublished tests appear to the student only as a count.
+    expect(textOf(root.findByProps({ className: "mock-topic__upcoming" }))).toBe("7 more tests not published yet.");
     const summary = textOf(root.findByProps({ className: "mock-hub__summary" }));
     // The date follows the device locale, so compare against the app's own formatter.
     expect(summary).toContain(`0 of 1 due by ${formatReminderDate("2026-10-03")}`);
@@ -108,13 +133,13 @@ describe("Module Tests priority board", () => {
     expect(onOpenRepair).toHaveBeenCalledTimes(1);
   });
 
-  it("marks a released review on the student's card", async () => {
+  it("offers the released review on a finished test and the result on a pending one", async () => {
     const root = (await render("student")).root;
     const card = (title: string) => root.find((node) => node.type === "li"
       && String(node.props.className ?? "").startsWith("mock-card")
       && textOf(node.findByType("h4")) === title);
-    const released = card("The Time Value of Money in Finance");
-    expect(textOf(released)).toContain("Review ready");
+    const released = doneRow(root, "The Time Value of Money in Finance");
+    expect(textOf(released)).toContain("Completed · 8/8");
     expect(textOf(released.findByType("button"))).toBe("Read review");
     const pending = card("Rates and Returns");
     expect(textOf(pending)).not.toContain("Review ready");
@@ -135,19 +160,64 @@ describe("Module Tests priority board", () => {
   });
 
   it("groups tests by topic and hides a topic with no published test from the student", async () => {
-    const topics = (root: ReactTestInstance) => root.findAll((node) => node.type === "h3" && node.props.className === "mock-hub__topic").map(textOf);
-    expect(topics((await render("student")).root)).toEqual(["Quantitative Methods"]);
+    const student = (await render("student")).root;
+    expect(topicNames(student)).toEqual(["Quantitative Methods"]);
+    // With a single topic there is nothing to switch between.
+    expect(student.findAll((node) => node.props.className === "mock-switch")).toHaveLength(0);
     await act(async () => tree!.unmount());
-    expect(topics((await render("tutor")).root)).toEqual(["Quantitative Methods", "Economics"]);
+    expect(topicNames((await render("tutor")).root)).toEqual(["Quantitative Methods", "Economics"]);
   });
 
   it("shows a published Economics test in its own group, labelled by topic", async () => {
     cloud.published.add("e08-exchange-rate-calculations");
     const root = (await render("student")).root;
-    const group = root.find((node) => node.type === "section" && node.props.className === "mock-hub__group"
-      && textOf(node.findByType("h3")) === "Economics");
-    expect(group.findAll((node) => node.type === "li" && String(node.props.className ?? "").startsWith("mock-card"))
+    expect(topicSection(root, "Economics").findAll((node) => node.type === "li" && String(node.props.className ?? "").startsWith("mock-card"))
       .map((card) => textOf(card.findByType("h4")))[0]).toBe("Exchange Rate Calculations");
     expect(textOf(root.findByProps({ className: "mock-hub__summary" }))).toContain("2 of 5 done overall");
+  });
+
+  it("heads each topic with its progress, average and what needs attention", async () => {
+    const quant = topicSection((await render("student")).root, "Quantitative Methods");
+    expect(textOf(quant.findByProps({ className: "mock-topic__stats" }))).toBe("2 of 4 done · avg 6.0/8");
+    const badges = quant.findByProps({ className: "mock-topic__badges" }).findAllByType("li").map(textOf);
+    expect(badges).toEqual(["1 due", "1 to repair"]);
+  });
+
+  it("switches between topics and remembers the choice on this device", async () => {
+    cloud.published.add("e08-exchange-rate-calculations");
+    const root = (await render("student")).root;
+    const option = (label: string) => root.find((node) => node.type === "button"
+      && node.props.className === "mock-switch__option" && textOf(node).startsWith(label));
+    expect(option("All topics").props["aria-pressed"]).toBe(true);
+    expect(textOf(option("Economics"))).toBe("Economics1 to do");
+    await act(async () => option("Economics").props.onClick());
+    expect(topicNames(root)).toEqual(["Economics"]);
+    expect(JSON.parse(storage.get("hamad-mock-hub-view")!).topic).toBe("Economics");
+    await act(async () => tree!.unmount());
+    expect(topicNames((await render("student")).root)).toEqual(["Economics"]);
+  });
+
+  it("folds a topic and its Done list open and closed", async () => {
+    const root = (await render("student")).root;
+    const quant = () => topicSection(root, "Quantitative Methods");
+    const toggle = () => quant().find((node) => node.type === "button" && node.props.className === "mock-topic__toggle");
+    const body = () => quant().findByProps({ className: "mock-topic__body" });
+    const doneToggle = () => quant().find((node) => node.type === "button" && node.props.className === "mock-done__toggle");
+    // Open by default while the topic has tests to take; the Done list starts folded.
+    expect(toggle().props["aria-expanded"]).toBe(true);
+    expect(body().props.hidden).toBe(false);
+    expect(textOf(doneToggle())).toBe("Done (1)");
+    expect(doneToggle().props["aria-expanded"]).toBe(false);
+    await act(async () => doneToggle().props.onClick());
+    expect(doneToggle().props["aria-expanded"]).toBe(true);
+    await act(async () => toggle().props.onClick());
+    expect(toggle().props["aria-expanded"]).toBe(false);
+    expect(body().props.hidden).toBe(true);
+  });
+
+  it("starts a topic folded once every test in it is finished", async () => {
+    cloud.published = new Set(["m02-time-value-of-money"]);
+    const quant = topicSection((await render("student")).root, "Quantitative Methods");
+    expect(quant.find((node) => node.type === "button" && node.props.className === "mock-topic__toggle").props["aria-expanded"]).toBe(false);
   });
 });

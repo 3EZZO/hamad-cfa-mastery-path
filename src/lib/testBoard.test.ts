@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MockAttempt } from "./mockTestContent";
 import { MOCK_DURATION_MS } from "./mockTestContent";
-import { boardStatus, buildTestBoard, deadlinesByModule, summarizeTestBoard, type BoardEntry } from "./testBoard";
+import { boardStatus, buildTestBoard, deadlinesByModule, isSettled, summarizeTestBoard, summarizeTopic, type BoardEntry } from "./testBoard";
 
 const NOW = new Date(2026, 9, 1, 12, 0, 0).getTime(); // 1 Oct 2026, local noon
 
@@ -57,6 +57,19 @@ describe("buildTestBoard", () => {
 
   it("summarizes progress and the next deadline", () => {
     expect(summarizeTestBoard(board)).toEqual({ published: 7, done: 3, inProgress: 1, overdue: 1, nextDeadline: "2026-09-30", dueNext: 1, doneNext: 0 });
+  });
+
+  it("summarizes a topic for its header", () => {
+    expect(summarizeTopic(board)).toEqual({
+      published: 7, done: 3, toTake: 4, inProgress: 1, due: 2, overdue: 1, repair: 1, averageScore: 6.5,
+    });
+    expect(summarizeTopic(buildTestBoard([entry(1, { published: false })], NOW))).toMatchObject({ published: 0, averageScore: null });
+  });
+
+  it("folds away only finished tests that need nothing more", () => {
+    expect(board.filter(isSettled).map((row) => row.number)).toEqual([8]);
+    const forfeited = buildTestBoard([entry(9, { attempt: attempt({ status: "forfeited", score: 0 }) })], NOW);
+    expect(isSettled(forfeited[0])).toBe(true);
   });
 
   it("counts progress against the tests due by the next deadline, finished ones included", () => {
