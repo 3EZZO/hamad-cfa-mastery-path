@@ -740,7 +740,16 @@
 
 .practice-bank-admin__intro { color: var(--pc-muted, var(--muted)); line-height: 1.5; }
 .practice-bank-admin .form-error { white-space: pre-line; }
-.practice-bank-admin__list { display: grid; gap: 8px; margin-top: 16px; }
+.practice-bank-admin__list { display: grid; gap: 8px; margin-top: 10px; }
+.practice-bank-admin__topic { margin-top: 18px; }
+.practice-bank-admin__topic > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.practice-bank-admin__topic > header > div { display: grid; gap: 2px; }
+.practice-bank-admin__topic > header small { color: var(--muted); font-size: .8rem; }
+.practice-bank-admin__topic > header .button { min-height: 40px; }
+.practice-bank-admin__gaps { margin-top: 18px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 12px; }
+.practice-bank-admin__gaps summary { min-height: 32px; font-weight: 700; cursor: pointer; }
+.practice-bank-admin__gaps ul { margin: 8px 0 0; padding-left: 18px; }
+.practice-bank-admin__gaps small { color: var(--muted); }
 .practice-bank-admin__list article { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
 .practice-bank-admin__list article > div { display: grid; gap: 3px; }
 .practice-bank-admin__list span,

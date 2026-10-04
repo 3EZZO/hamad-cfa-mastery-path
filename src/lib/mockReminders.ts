@@ -5,8 +5,6 @@
  * `acknowledgedAt` (see firestore.rules, mockReminders).
  */
 
-export const DEFAULT_REMINDER_MESSAGE =
-  "Please complete your module mock tests as soon as possible, and no later than Thursday, 1 October.";
 export const REMINDER_MESSAGE_MAX = 1000;
 export const REMINDER_URGENT_MS = 24 * 60 * 60 * 1000;
 

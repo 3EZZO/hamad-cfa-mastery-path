@@ -1,4 +1,4 @@
-import { BadgeCheck, ClipboardCheck, CircleAlert, CloudUpload, Eye, EyeOff, History, RotateCcw, Unlock } from "lucide-react";
+import { BadgeCheck, BellRing, CalendarClock, CalendarX, ClipboardCheck, CircleAlert, CloudUpload, Eye, EyeOff, History, RotateCcw, TimerOff, Unlock } from "lucide-react";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useAppDialog } from "../../components/AppDialog";
 import { MOCK_MODULES, MOCK_TOPICS, mockModuleById, mockModuleCode, mockModuleLabel, mockModulesInTopic, type MockTopic } from "../../data/mockModules";
@@ -20,6 +20,7 @@ import {
   MOCK_QUESTION_COUNT,
   formatMockClock,
   incidentLabel,
+  isMockAttemptLocked,
   mockAttemptId,
   mockAttemptView,
   mockTimeUsedMs,
@@ -29,6 +30,10 @@ import {
   type MockOption,
   type MockTestMeta,
 } from "../../lib/mockTestContent";
+import { cancelMockReminder, editMockReminder, listMockReminders, sendMockReminder } from "../../lib/cloudMockReminders";
+import { deadlineCountdown, deadlinePassed, formatReminderDate, isReminderDate, localDay, type MockReminder } from "../../lib/mockReminders";
+import { clearDeadlineChanges, composeReminderMessage, daysFromNow, overdueDraft, type ReminderPreset, type ReminderTone } from "../../lib/reminderComposer";
+import { deadlinesByModule } from "../../lib/testBoard";
 import { consoleAnchor } from "../../lib/tutorConsole";
 import { MockAnswerKeyReview } from "./MockAnswerKeyReview";
 import { MockReminderAdmin } from "./MockReminderAdmin";
@@ -43,7 +48,17 @@ const FINISH: Record<string, string> = {
   leave: "Forfeited (Leave Test)",
 };
 
-export function MockTestAdmin({ notify }: { notify: Notify }) {
+/** Scroll a panel element into view (guarded for non-browser renders). */
+function reveal(id: string) {
+  if (typeof document === "undefined") return;
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+export function MockTestAdmin({ notify, reminderPreset = null }: {
+  notify: Notify;
+  /** Prefills the reminder composer (e.g. from Tutor Admin's inbox); a new object applies again. */
+  reminderPreset?: ReminderPreset | null;
+}) {
   const dialog = useAppDialog();
   const input = useRef<HTMLInputElement>(null);
   const [metas, setMetas] = useState<MockTestMeta[]>([]);
@@ -56,6 +71,18 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
   const [resultsTopic, setResultsTopic] = useState<MockTopic | "all">("all");
   const [reviewing, setReviewing] = useState<MockTestPackage | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [reminders, setReminders] = useState<MockReminder[]>([]);
+  // The composer remounts with each new preset (its own or one handed down).
+  const [preset, setPreset] = useState<ReminderPreset | null>(reminderPreset);
+  const [presetSerial, setPresetSerial] = useState(0);
+  const [seenPreset, setSeenPreset] = useState(reminderPreset);
+  if (reminderPreset !== seenPreset) {
+    setSeenPreset(reminderPreset);
+    if (reminderPreset) {
+      setPreset(reminderPreset);
+      setPresetSerial(presetSerial + 1);
+    }
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -82,7 +109,108 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
     }
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  const refreshReminders = useCallback(async () => {
+    try {
+      setReminders(await listMockReminders());
+    } catch (cause) {
+      setError(getCloudErrorMessage(cause));
+    }
+  }, []);
+
+  useEffect(() => { void refresh(); void refreshReminders(); }, [refresh, refreshReminders]);
+
+  // This program has one student; the row controls act for the first active one.
+  const studentUid = students[0]?.uid ?? null;
+  const deadlines = deadlinesByModule(reminders, studentUid);
+  const attemptFor = (moduleId: string) => (studentUid ? attempts.find(entry => entry.id === mockAttemptId(studentUid, moduleId)) ?? null : null);
+  const isDone = (moduleId: string) => { const attempt = attemptFor(moduleId); return attempt ? isMockAttemptLocked(attempt) : false; };
+  const label = (ids: readonly string[]) => ids.map(id => { const module = mockModuleById(id); return module ? mockModuleCode(module) : id; }).join(", ");
+
+  const remind = (moduleIds: string[], tone: ReminderTone = "friendly") => {
+    setPreset({ moduleIds, tone });
+    setPresetSerial(serial => serial + 1);
+    reveal(consoleAnchor.reminders);
+  };
+
+  const markOverdue = async (moduleIds: string[]) => {
+    if (!studentUid || moduleIds.length === 0) return;
+    const ok = await dialog.confirm(
+      `Mark ${label(moduleIds)} overdue? They show as overdue on Hamad's Tests page from now (a reminder dated yesterday). `
+        + "No pop-up appears for a passed deadline; send a reminder too if you want him notified.",
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await sendMockReminder(overdueDraft(studentUid, moduleIds, Date.now()));
+      notify(`${label(moduleIds)} marked overdue.`);
+      await refreshReminders();
+    } catch (cause) {
+      setError(getCloudErrorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const clearDeadline = async (moduleIds: string[]) => {
+    if (!studentUid) return;
+    const changes = clearDeadlineChanges(reminders, studentUid, moduleIds);
+    if (changes.length === 0) return;
+    const edits = changes.filter(change => change.type === "edit").length;
+    const ok = await dialog.confirm(
+      `Clear the deadline for ${label(moduleIds)}? ${changes.length - edits} ${changes.length - edits === 1 ? "reminder is" : "reminders are"} cancelled`
+        + (edits ? ` and ${edits} ${edits === 1 ? "reminder that also lists other tests is" : "reminders that also list other tests are"} re-sent without them` : "")
+        + ".",
+    );
+    if (!ok) return;
+    setBusy(true);
+    const failures: string[] = [];
+    for (const change of changes) {
+      try {
+        if (change.type === "cancel") await cancelMockReminder(change.reminder.id);
+        else await editMockReminder(change.reminder.id, change.draft);
+      } catch (cause) {
+        failures.push(getCloudErrorMessage(cause));
+      }
+    }
+    if (failures.length) setError(failures.join("\n"));
+    else notify(`Deadline cleared for ${label(moduleIds)}.`);
+    await refreshReminders();
+    setBusy(false);
+  };
+
+  /** One reminder with one due date for every pending published test in a topic. */
+  const setTopicDueDate = async (topic: MockTopic, moduleIds: string[]) => {
+    if (!studentUid || moduleIds.length === 0) return;
+    const nowMs = Date.now();
+    const value = await dialog.prompt(`Due date for ${moduleIds.length} pending ${topic} ${moduleIds.length === 1 ? "test" : "tests"} (${label(moduleIds)}), as YYYY-MM-DD:`, daysFromNow(nowMs, 7));
+    if (value === null) return;
+    const deadline = value.trim();
+    if (!isReminderDate(deadline) || deadline < localDay(nowMs)) {
+      setError("Enter a date from today onwards, as YYYY-MM-DD.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await sendMockReminder({
+        studentUid, moduleIds, deadline,
+        message: composeReminderMessage({ moduleIds, deadline, nowMs, tone: "friendly" }),
+      });
+      notify(`${label(moduleIds)} due ${formatReminderDate(deadline)}. Hamad gets a reminder.`);
+      await refreshReminders();
+    } catch (cause) {
+      setError(getCloudErrorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openResult = (module: (typeof MOCK_MODULES)[number]) => {
+    if (!studentUid) return;
+    const rowKey = `${studentUid}-${module.id}`;
+    setResultsTopic(module.topic);
+    setExpanded(rowKey);
+    window.setTimeout(() => reveal(`mock-result-${rowKey}`), 50);
+  };
 
   const upload = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -270,6 +398,9 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
         const drafts = topicMetas.filter(meta => meta.status === "draft");
         const unreleased = attempts.filter(attempt => topicModules.some(module => module.id === attempt.moduleId)
           && attempt.status !== "active" && attempt.score !== null && !attempt.reviewReleased);
+        const pendingInTopic = topicModules
+          .filter(module => metas.some(meta => meta.moduleId === module.id && meta.status === "published") && !isDone(module.id))
+          .map(module => module.id);
         return (
           <details key={topic} className="mock-admin__topic" open>
             <summary>
@@ -286,16 +417,38 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
               <button type="button" className="button" disabled={busy || unreleased.length === 0} onClick={() => void releaseReviews(topic, unreleased)}>
                 <Unlock size={16} />Release all reviews ({unreleased.length})
               </button>
+              <button type="button" className="button" disabled={busy || pendingInTopic.length === 0} onClick={() => void setTopicDueDate(topic, pendingInTopic)}>
+                <CalendarClock size={16} />Set a due date ({pendingInTopic.length})
+              </button>
+              <button type="button" className="button" disabled={busy || pendingInTopic.length === 0} onClick={() => remind(pendingInTopic)}>
+                <BellRing size={16} />Remind about pending
+              </button>
             </div>
             <div className="mock-admin__modules">
               {topicModules.map(module => {
                 const meta = metas.find(entry => entry.moduleId === module.id);
+                const attempt = attemptFor(module.id);
+                const done = isDone(module.id);
+                const due = deadlines.get(module.id);
+                const overdue = due !== undefined && !done && deadlinePassed(due, Date.now());
+                const live = meta?.status === "published" && studentUid !== null;
                 return (
                   <article key={module.id} id={consoleAnchor.test(module.id)} className="mock-admin__module">
                     <div>
                       <span>{mockModuleLabel(module)}</span>
                       <strong>{module.title}</strong>
                       <small>{meta ? `${meta.status === "published" ? "Published" : "Draft"} · version ${meta.version}` : "No test uploaded"}</small>
+                      {live && (
+                        <small className={overdue ? "mock-admin__due is-overdue" : "mock-admin__due"}>
+                          {done
+                            ? `Done${attempt?.score != null ? ` · ${attempt.score}/${MOCK_QUESTION_COUNT}` : ""}`
+                            : overdue
+                              ? `Overdue · was due ${formatReminderDate(due!)}`
+                              : due
+                                ? `Due ${formatReminderDate(due)} · ${deadlineCountdown(due, Date.now())}`
+                                : attempt ? "In progress" : "No deadline"}
+                        </small>
+                      )}
                     </div>
                     {meta && (
                       <div className="mock-admin__actions">
@@ -305,6 +458,26 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
                         {meta.status === "published" && (
                           <button type="button" className="button" disabled={busy} onClick={() => void unpublish(meta)}>
                             <EyeOff size={16} />Unpublish
+                          </button>
+                        )}
+                        {live && !done && (
+                          <button type="button" className="button" disabled={busy} onClick={() => remind([module.id], overdue ? "overdue" : due ? "firm" : "friendly")}>
+                            <BellRing size={16} />Remind
+                          </button>
+                        )}
+                        {live && !done && !overdue && (
+                          <button type="button" className="button" disabled={busy} onClick={() => void markOverdue([module.id])}>
+                            <TimerOff size={16} />Mark overdue
+                          </button>
+                        )}
+                        {live && !done && due && (
+                          <button type="button" className="button" disabled={busy} onClick={() => void clearDeadline([module.id])}>
+                            <CalendarX size={16} />Clear deadline
+                          </button>
+                        )}
+                        {attempt && (
+                          <button type="button" className="button" disabled={busy} onClick={() => openResult(module)}>
+                            <ClipboardCheck size={16} />Result
                           </button>
                         )}
                       </div>
@@ -317,7 +490,16 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
         );
       })}
 
-      <MockReminderAdmin students={students} metas={metas} attempts={attempts} notify={notify} />
+      <MockReminderAdmin
+        key={presetSerial}
+        preset={preset}
+        students={students}
+        metas={metas}
+        attempts={attempts}
+        reminders={reminders}
+        onChanged={refreshReminders}
+        notify={notify}
+      />
 
       <h4 className="mock-admin__subhead">Student results</h4>
       <div className="mock-switch" role="group" aria-label="Show results for">
@@ -351,7 +533,7 @@ export function MockTestAdmin({ notify }: { notify: Notify }) {
                       {firstOfTopic && (
                         <tr className="mock-admin__topic-row"><th scope="colgroup" colSpan={7}>{module.topic}</th></tr>
                       )}
-                      <tr>
+                      <tr id={`mock-result-${rowKey}`}>
                         <th scope="row">{name}</th>
                         <td>{mockModuleLabel(module)}</td>
                         <td>{{ "not-started": "Not started", "in-progress": "In progress", expired: "Expired, not finalized", completed: "Completed", forfeited: "Forfeited" }[view]}</td>

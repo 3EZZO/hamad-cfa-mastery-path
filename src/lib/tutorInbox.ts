@@ -2,7 +2,7 @@ import { mockModuleById, mockModuleCode } from "../data/mockModules";
 import { deadlinePassed, type MockReminder } from "./mockReminders";
 import type { MockAttempt } from "./mockTestContent";
 import { catalogIdForPracticeModule } from "./practiceLinks";
-import { WEAK_SCORE } from "./testBoard";
+import { WEAK_SCORE, deadlinesByModule } from "./testBoard";
 import type { PaymentSummary, TutorSection } from "./tutorConsole";
 
 /**
@@ -92,15 +92,7 @@ function banksFor(catalogIds: readonly string[], input: InboxInput): Array<{ sto
 export function overdueModuleIds(input: Pick<InboxInput, "nowMs" | "metas" | "attempts" | "reminders" | "studentUid">): string[] {
   const published = new Set((input.metas ?? []).filter((meta) => meta.status === "published").map((meta) => meta.moduleId));
   const taken = new Set((input.attempts ?? []).filter((attempt) => attempt.status !== "active").map((attempt) => attempt.moduleId));
-  const deadlines = new Map<string, string>();
-  for (const reminder of input.reminders ?? []) {
-    if (reminder.status !== "active" || !reminder.deadline) continue;
-    if (input.studentUid && reminder.studentUid !== input.studentUid) continue;
-    for (const moduleId of reminder.moduleIds) {
-      const current = deadlines.get(moduleId);
-      if (!current || reminder.deadline < current) deadlines.set(moduleId, reminder.deadline);
-    }
-  }
+  const deadlines = deadlinesByModule([...(input.reminders ?? [])], input.studentUid);
   return [...deadlines.entries()]
     .filter(([moduleId, deadline]) => published.has(moduleId) && deadlinePassed(deadline, input.nowMs) && !taken.has(moduleId))
     .map(([moduleId]) => moduleId);

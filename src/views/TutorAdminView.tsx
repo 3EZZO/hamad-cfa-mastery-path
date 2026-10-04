@@ -20,6 +20,7 @@ import {
 import { buildActivity } from "../lib/tutorActivity";
 import { buildTutorInbox, isSnoozed, loadSnoozes, overdueModuleIds, saveSnoozes, type InboxItem, type InboxSnoozes } from "../lib/tutorInbox";
 import { buildSessionPrep } from "../lib/sessionPrep";
+import type { ReminderPreset, ReminderTone } from "../lib/reminderComposer";
 import { moduleStandings, paceReport, suggestActions, type InsightSuggestion } from "../lib/tutorInsights";
 import { weekCatalogIds } from "../lib/weekTests";
 import { TutorActivity } from "./tutorConsole/TutorActivity";
@@ -96,6 +97,8 @@ export function TutorAdminView({
   const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
   const [snoozes, setSnoozes] = useState<InboxSnoozes>(loadSnoozes);
   const [busyItem, setBusyItem] = useState<string | null>(null);
+  // Prefills the reminder composer on the Tests tab; cleared when leaving it.
+  const [reminderPreset, setReminderPreset] = useState<ReminderPreset | null>(null);
   useEffect(() => (pendingAnchor ? revealAnchor(pendingAnchor) : undefined), [pendingAnchor, section]);
   const effectiveSessions = getEffectiveSessions(tracker.sessionOverrides);
   const [selectedSession, setSelectedSession] = useState(1);
@@ -289,14 +292,23 @@ export function TutorAdminView({
     if (entry) setNewDate(entry.effectiveDate);
   };
 
-  const openSection = (target: TutorSection, anchor: string | null) => {
+  const selectSection = (target: TutorSection) => {
+    if (target !== "tests") setReminderPreset(null);
     onSection(target);
+  };
+  const openSection = (target: TutorSection, anchor: string | null) => {
+    selectSection(target);
     if (anchor) setPendingAnchor(anchor);
+  };
+  /** Open the composer on the Tests tab with these tests and tone. */
+  const composeReminder = (moduleIds: string[], tone: ReminderTone) => {
+    setReminderPreset({ moduleIds, tone });
+    openSection("tests", consoleAnchor.reminders);
   };
 
   const runSuggestion = (suggestion: InsightSuggestion) => {
     const { action } = suggestion;
-    if (action.type === "remind") openSection("tests", consoleAnchor.reminders);
+    if (action.type === "remind") composeReminder(action.moduleIds, "firm");
     else if (action.type === "open-test") openSection("tests", consoleAnchor.test(action.moduleId));
     else openSection("practice", null);
   };
@@ -315,7 +327,7 @@ export function TutorAdminView({
     if (action.type === "open") return openSection(action.section, action.anchor);
     if (action.type === "open-payments") return onOpenPayments?.();
     // Reminders: the composer lives on the Tests tab.
-    if (action.type === "remind") return openSection("tests", consoleAnchor.reminders);
+    if (action.type === "remind") return composeReminder(action.moduleIds, item.kind === "overdue" ? "overdue" : item.kind === "reminder" ? "firm" : "friendly");
     if (action.type === "approve-session") return reviewSessionRequest(action.taskId, "approved");
     setBusyItem(item.id);
     try {
@@ -345,7 +357,7 @@ export function TutorAdminView({
 
   const pickEntry = (entry: ConsoleEntry) => {
     if (entry.kind === "session") chooseSession(Number(entry.id.replace("session-", "")));
-    onSection(entry.section);
+    selectSection(entry.section);
     setPendingAnchor(entry.anchor);
   };
 
@@ -425,7 +437,7 @@ export function TutorAdminView({
         idPrefix="coach"
         items={TUTOR_SECTIONS.map((item) => ({ ...item, icon: SECTION_ICON[item.id], count: counts[item.id], countLabel: "waiting" }))}
         active={section}
-        onSelect={onSection}
+        onSelect={selectSection}
       />
       <SectionPanel idPrefix="coach" active={section}>
         {section === "overview" && (
@@ -434,7 +446,7 @@ export function TutorAdminView({
             data={consoleData}
             nextSession={nextSession ? { number: nextSession.session.number, date: nextSession.effectiveDate, title: nextSession.session.title } : null}
             today={new Date()}
-            onSection={onSection}
+            onSection={selectSection}
             onOpenPayments={onOpenPayments}
             brief={<TutorBriefPanel tracker={tracker} />}
             inbox={(
@@ -451,15 +463,15 @@ export function TutorAdminView({
             insights={<TutorInsights pace={pace} standings={standings} suggestions={suggestions} loading={consoleData.loading} onSuggestion={runSuggestion} />}
           />
         )}
-        {section === "tests" && <Suspense fallback={null}><MockTestAdmin notify={notifyAndRefresh} /></Suspense>}
-        {section === "practice" && <Suspense fallback={null}><PracticeBankAdmin notify={notifyAndRefresh} /></Suspense>}
+        {section === "tests" && <Suspense fallback={null}><MockTestAdmin notify={notifyAndRefresh} reminderPreset={reminderPreset} /></Suspense>}
+        {section === "practice" && <Suspense fallback={null}><PracticeBankAdmin notify={notifyAndRefresh} runs={consoleData.runs} /></Suspense>}
         {section === "sessions" && (
           <div className="view-stack">
             <SessionPrepPanel
               prep={prep}
               loading={consoleData.loading}
               onCopy={(text) => void copyAgenda(text)}
-              onRemind={() => openSection("tests", consoleAnchor.reminders)}
+              onRemind={(moduleIds) => composeReminder(moduleIds, "friendly")}
               onOpenSessionMode={onOpenSessionMode}
             />
             {approvalQueue}
