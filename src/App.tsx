@@ -21,6 +21,7 @@ import { useWeekMirror } from "./hooks/useWeekMirror";
 import { buildHash, readSegment, writeSegment } from "./lib/hashRoute";
 import { setShellBusy, useShellBusy } from "./lib/shellBusy";
 import { PRACTICE_INTENTS, practiceModuleSegment, type PracticeIntent } from "./lib/practiceIntents";
+import { testsForWeek } from "./lib/weekTests";
 import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
@@ -108,6 +109,8 @@ function WorkspaceActions({
 function App() {
   const rawProgramWeek = getProgramWeek();
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
+  // The module tests that belong to this study-plan week (none outside the plan).
+  const thisWeekTests = { week: rawProgramWeek, moduleIds: testsForWeek(rawProgramWeek).map((module) => module.id) };
   const nav = NAV;
   const [activeTab, setActiveTab] = useHashTab<TabId>(nav.tabs, nav.home, {
     title: (tab) => `${TAB_COPY[tab].title} · Hamad CFA Mastery`,
@@ -586,6 +589,8 @@ function App() {
             onOpenRepair={() => openPractice("repair")}
             onOpenReminders={() => navigate("coach")}
             onOpenTutorAdmin={() => navigate("coach")}
+            onPracticeModule={openPracticeModule}
+            thisWeek={thisWeekTests}
           />
         );
       case "notes":

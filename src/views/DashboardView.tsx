@@ -9,6 +9,7 @@ import { buildRiskIndicators } from "../lib/risk";
 import { getTaskStatus, isTaskComplete } from "../lib/taskStatus";
 import type { PracticeIntent } from "../lib/practiceIntents";
 import { buildTodayQueue, todayQueueMinutes, type TodayItem } from "../lib/todayQueue";
+import { testsForWeek } from "../lib/weekTests";
 import { useTodaySources } from "../hooks/useTodaySources";
 import { getPlanPhase, mockCampaignStatus, type PlanPhase } from "../lib/planPhase";
 import { PlanRouteGraphic } from "../components/PlanRouteGraphic";
@@ -222,10 +223,13 @@ export function DashboardView({
   const pendingTests = sources.pendingModuleTests ?? [];
   const nextTestDeadline = pendingTests.map((test) => test.deadline).filter((value): value is string => Boolean(value)).sort()[0];
   const testInProgress = pendingTests.some((test) => test.inProgress);
+  const weekTestIds = new Set(testsForWeek(currentWeek).map((module) => module.id));
+  const weekPending = pendingTests.filter((test) => weekTestIds.has(test.moduleId)).length;
   const testStrip = progress && progress.published
     ? [
       `Module tests: ${progress.completed} of ${progress.published} done`,
       testInProgress ? "one in progress" : "",
+      weekPending ? `${weekPending} from this week still to take` : "",
       nextTestDeadline ? `next due ${formatDate(nextTestDeadline.slice(0, 10), { weekday: "short", day: "numeric", month: "short" })}` : "",
     ].filter(Boolean).join(" · ")
     : "";

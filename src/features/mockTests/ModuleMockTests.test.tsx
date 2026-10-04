@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MockAttempt } from "../../lib/mockTestContent";
@@ -18,6 +19,18 @@ const cloud = vi.hoisted(() => ({
   published: new Set<string>(),
   attempts: new Map<string, unknown>(),
   deadlines: new Map<string, string>(),
+  practiceModuleIds: [] as string[],
+}));
+
+// The student's assigned practice sets (one question per practice module is enough here).
+vi.mock("../../hooks/usePracticeSnapshot", () => ({
+  usePracticeSnapshot: () => ({
+    status: "ready",
+    studentUid: "student-1",
+    questions: cloud.practiceModuleIds.map((moduleId) => ({ id: `${moduleId}-q1`, moduleId })),
+    states: {},
+    runs: [],
+  }),
 }));
 
 vi.mock("../../lib/cloudMockTests", () => ({
@@ -49,7 +62,7 @@ function textOf(node: ReactTestInstance): string {
 
 let tree: ReactTestRenderer | undefined;
 
-async function render(role: "student" | "tutor", handlers: Record<string, () => void> = {}) {
+async function render(role: "student" | "tutor", handlers: Partial<ComponentProps<typeof ModuleMockTests>> = {}) {
   await act(async () => {
     tree = create(<ModuleMockTests uid={role === "tutor" ? "tutor-1" : "student-1"} role={role} notify={vi.fn()} {...handlers} />);
   });
@@ -95,6 +108,7 @@ describe("Module Tests priority board", () => {
       ["m02-time-value-of-money", attempt("m02-time-value-of-money", { score: 8, reviewReleased: true })],
     ]);
     cloud.deadlines = new Map([["m04-probability-trees", "2026-10-03"]]);
+    cloud.practiceModuleIds = [];
   });
   afterEach(async () => {
     if (tree) await act(async () => tree!.unmount());
@@ -219,5 +233,44 @@ describe("Module Tests priority board", () => {
     cloud.published = new Set(["m02-time-value-of-money"]);
     const quant = topicSection((await render("student")).root, "Quantitative Methods");
     expect(quant.find((node) => node.type === "button" && node.props.className === "mock-topic__toggle").props["aria-expanded"]).toBe(false);
+  });
+
+  it("lists this week's tests and tags them, linking each to its test", async () => {
+    cloud.published.add("e07-capital-flows-fx-market");
+    const root = (await render("student", {
+      thisWeek: { week: 5, moduleIds: ["e06-international-trade", "e07-capital-flows-fx-market", "e08-exchange-rate-calculations"] },
+    })).root;
+    const strip = root.findByProps({ className: "mock-week" });
+    expect(textOf(strip)).toContain("Week 5 of the plan");
+    expect(textOf(strip.findByProps({ className: "mock-week__count" }))).toBe("0 of 1 done");
+    const items = strip.findAll((node) => String(node.props.className ?? "") === "mock-week__item");
+    expect(items.map((item) => item.type)).toEqual(["div", "button", "div"]);
+    expect(textOf(items[0])).toContain("Not published yet");
+    expect(textOf(items[1])).toBe("EC7Capital Flows and the FX MarketNot started");
+    const card = root.find((node) => node.type === "li" && String(node.props.className ?? "").startsWith("mock-card")
+      && textOf(node.findByType("h4")) === "Capital Flows and the FX Market");
+    expect(textOf(card)).toContain("This week");
+    await act(async () => items[1].props.onClick());
+    expect(root.findAll((node) => node.props.id === "mock-start-title")).toHaveLength(1);
+  });
+
+  it("offers the practice set for a weak test's curriculum module", async () => {
+    cloud.practiceModuleIds = ["m014-fiscal-tools", "m002-return-types"];
+    const onPracticeModule = vi.fn();
+    const root = (await render("student", { onPracticeModule })).root;
+    const repair = root.findByProps({ className: "mock-card__repair" });
+    const practise = repair.find((node) => node.type === "button" && textOf(node).includes("Practise"));
+    expect(textOf(practise)).toBe("Practise Rates and Returns");
+    await act(async () => practise.props.onClick());
+    // QM1 covers curriculum Modules 001 and 002; the assigned set for 002 is the target.
+    expect(onPracticeModule).toHaveBeenCalledWith("m002-return-types");
+  });
+
+  it("keeps the repair box without a practice button when no set covers the module", async () => {
+    cloud.practiceModuleIds = ["m014-fiscal-tools"];
+    const root = (await render("student", { onPracticeModule: vi.fn(), onOpenMistakes: vi.fn(), onOpenRepair: vi.fn() })).root;
+    const repair = root.findByProps({ className: "mock-card__repair" });
+    expect(repair.findAll((node) => node.type === "button" && textOf(node).includes("Practise"))).toHaveLength(0);
+    expect(repair.findAllByType("button").map(textOf)).toEqual(["Mistake Review", "Repair queue"]);
   });
 });

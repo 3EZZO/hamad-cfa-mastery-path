@@ -1,7 +1,7 @@
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MockAttempt, MockQuestion, MockReviewItem } from "../../lib/mockTestContent";
-import type { LocalReview } from "./MockResults";
+import type { LocalReview, ReviewPractice } from "./MockResults";
 
 const questions: MockQuestion[] = Array.from({ length: 8 }, (_, index) => ({
   id: `q${index + 1}`, stem: `Stem ${index + 1}`, table: null, options: ["One", "Two", "Three"],
@@ -39,7 +39,7 @@ function attempt(reviewReleased: boolean): MockAttempt {
 
 let tree: ReactTestRenderer | undefined;
 
-async function render(props: { attempt?: MockAttempt; local?: LocalReview }) {
+async function render(props: { attempt?: MockAttempt; local?: LocalReview; practice?: ReviewPractice }) {
   await act(async () => {
     tree = create(<MockResults moduleLabel="Module 1" onBack={vi.fn()} {...props} />);
   });
@@ -94,5 +94,72 @@ describe("Module test results", () => {
     const root = await render({ local });
     expect(hasClass(root, "mock-results__grid")).toBe(true);
     expect(hasClass(root, "mock-review")).toBe(true);
+  });
+
+  const articles = (root: ReactTestInstance) => root.findAll((node) => node.type === "article");
+  const button = (root: ReactTestInstance, label: string) =>
+    root.find((node) => node.type === "button" && textOf(node).startsWith(label));
+
+  it("filters the explanations to the mistakes, counting an unanswered question", async () => {
+    const root = await render({ attempt: attempt(true) });
+    expect(articles(root)).toHaveLength(8);
+    const only = button(root, "Only my mistakes");
+    expect(textOf(only)).toBe("Only my mistakes 3");
+    await act(async () => only.props.onClick());
+    expect(articles(root).map((article) => article.props.id)).toEqual(["mock-review-q2", "mock-review-q5", "mock-review-q8"]);
+    await act(async () => button(root, "All questions").props.onClick());
+    expect(articles(root)).toHaveLength(8);
+  });
+
+  it("jumps from the grid to a question's explanation, showing it if the filter hides it", async () => {
+    const target = { scrollIntoView: vi.fn(), focus: vi.fn() };
+    const getElementById = vi.fn(() => target);
+    vi.stubGlobal("document", { getElementById });
+    const root = await render({ attempt: attempt(true) });
+    const jumps = root.findAll((node) => node.props.className === "mock-results__jump");
+    await act(async () => jumps[1].props.onClick());
+    expect(getElementById).toHaveBeenLastCalledWith("mock-review-q2");
+    expect(target.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(target.focus).toHaveBeenCalledWith({ preventScroll: true });
+    await act(async () => button(root, "Only my mistakes").props.onClick());
+    await act(async () => jumps[0].props.onClick()); // Q1 was right, so the filter hides it
+    expect(articles(root)).toHaveLength(8);
+    expect(getElementById).toHaveBeenLastCalledWith("mock-review-q1");
+  });
+
+  it("links the mistakes to the practice set for this module", async () => {
+    const onPractise = vi.fn();
+    const root = await render({
+      attempt: attempt(true),
+      practice: { moduleTitle: "Fiscal Policy", practiceModuleId: "m014-fiscal-tools", onPractise },
+    });
+    const panel = root.findByProps({ className: "mock-practice" });
+    expect(textOf(panel)).toContain("3 to repair.");
+    await act(async () => button(panel, "Practise Fiscal Policy").props.onClick());
+    expect(onPractise).toHaveBeenCalledWith("m014-fiscal-tools");
+    // One link on each wrong answer as well.
+    expect(root.findAll((node) => node.props.className === "mock-review__practice")).toHaveLength(3);
+  });
+
+  it("falls back to Mistake Review and the repair queue when no practice set covers the module", async () => {
+    const onOpenMistakes = vi.fn();
+    const onOpenRepair = vi.fn();
+    const root = await render({
+      attempt: attempt(true),
+      practice: { moduleTitle: "Fiscal Policy", practiceModuleId: null, onPractise: vi.fn(), onOpenMistakes, onOpenRepair },
+    });
+    const panel = root.findByProps({ className: "mock-practice" });
+    expect(textOf(panel)).toContain("No practice set for Fiscal Policy yet.");
+    await act(async () => button(panel, "Mistake Review").props.onClick());
+    await act(async () => button(panel, "Repair queue").props.onClick());
+    expect(onOpenMistakes).toHaveBeenCalledTimes(1);
+    expect(onOpenRepair).toHaveBeenCalledTimes(1);
+    expect(root.findAll((node) => node.props.className === "mock-review__practice")).toHaveLength(0);
+  });
+
+  it("shows no practice links in a tutor rehearsal or before the review is released", async () => {
+    const practice: ReviewPractice = { moduleTitle: "Fiscal Policy", practiceModuleId: "m014-fiscal-tools", onPractise: vi.fn() };
+    const root = await render({ attempt: attempt(false), practice });
+    expect(root.findAll((node) => node.props.className === "mock-practice")).toHaveLength(0);
   });
 });

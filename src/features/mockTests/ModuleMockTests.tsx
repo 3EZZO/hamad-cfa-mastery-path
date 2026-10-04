@@ -1,4 +1,4 @@
-import { Archive, BellRing, BookOpenCheck, CalendarClock, ChevronDown, CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, RotateCcw, ShieldAlert, Target, Timer } from "lucide-react";
+import { Archive, BellRing, BookOpenCheck, CalendarClock, CalendarRange, ChevronDown, Dumbbell, CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, RotateCcw, ShieldAlert, Target, Timer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { MOCK_MODULES, MOCK_TOPICS, mockModuleCode, mockModuleLabel, type MockModule, type MockTopic } from "../../data/mockModules";
 import {
@@ -21,6 +21,9 @@ import { listMockReminders, loadMyReminderDeadlines } from "../../lib/cloudMockR
 import { deadlineCountdown, formatReminderDate } from "../../lib/mockReminders";
 import { buildTestBoard, deadlinesByModule, isSettled, summarizeTestBoard, summarizeTopic, WEAK_SCORE, type BoardRow, type TopicProgress } from "../../lib/testBoard";
 import { loadHubView, saveHubView, type HubTopicFilter, type MockHubView } from "../../lib/mockHubView";
+import { buildPracticeInsights } from "../../lib/practiceInsights";
+import { practiceModuleForTest } from "../../lib/practiceLinks";
+import { usePracticeSnapshot } from "../../hooks/usePracticeSnapshot";
 import {
   MOCK_QUESTION_COUNT,
   appendIncident,
@@ -82,6 +85,8 @@ export function ModuleMockTests({
   onOpenRepair,
   onOpenReminders,
   onOpenTutorAdmin,
+  onPracticeModule,
+  thisWeek,
 }: {
   uid: string;
   role: ProjectRole;
@@ -97,8 +102,20 @@ export function ModuleMockTests({
   onOpenReminders?: () => void;
   /** Tutor: open Tutor Admin from the tutor note. */
   onOpenTutorAdmin?: () => void;
+  /** Student: open a practice module set (`#practice/module-<id>`). */
+  onPracticeModule?: (practiceModuleId: string) => void;
+  /** The study-plan week and the module tests that belong to it (see testsForWeek). */
+  thisWeek?: { week: number; moduleIds: readonly string[] };
 }) {
   const isTutor = role === "tutor";
+  // The student's assigned practice sets, weakest first: the target of "Practise <module>".
+  const practice = usePracticeSnapshot({ role, uid, enabled: !isTutor && Boolean(onPracticeModule) });
+  const practiceInsights = useMemo(
+    () => buildPracticeInsights({ questions: practice.questions, states: practice.states, runs: [] }).modules,
+    [practice.questions, practice.states],
+  );
+  const practiceFor = (module: MockModule) => (isTutor || !onPracticeModule ? null : practiceModuleForTest(module, practiceInsights));
+  const weekIds = new Set(thisWeek?.moduleIds ?? []);
   const [modules, setModules] = useState<ModuleState[]>([]);
   const [loading, setLoading] = useState(true);
   const [screen, setScreen] = useState<Screen>({ kind: "hub" });
@@ -326,6 +343,13 @@ export function ModuleMockTests({
         moduleLabel={moduleLabel(current.module)}
         attempt={current.attempt}
         onBack={() => setScreen({ kind: "hub" })}
+        practice={isTutor ? undefined : {
+          moduleTitle: current.module.title,
+          practiceModuleId: practiceFor(current.module),
+          onPractise: (practiceModuleId: string) => onPracticeModule?.(practiceModuleId),
+          onOpenMistakes,
+          onOpenRepair,
+        }}
       />
     );
   }
@@ -381,6 +405,24 @@ export function ModuleMockTests({
   });
   const summary = summarizeTestBoard(board);
   const awaitingRelease = isTutor ? board.filter(row => row.status === "done" && row.attempt && !row.attempt.reviewReleased).length : 0;
+  // This study-plan week's tests, in curriculum order (unpublished ones are listed as such).
+  const weekEntries = modules.filter(entry => weekIds.has(entry.module.id));
+  const weekRows = weekEntries.map(entry => rowFor.get(entry.module.id)).filter((row): row is BoardRow => Boolean(row));
+  const weekPublished = weekRows.filter(row => row.status !== "unpublished").length;
+  const weekDone = weekRows.filter(row => row.status === "done" || row.status === "grading" || row.status === "forfeited").length;
+  const openEntry = (entry: ModuleState) => {
+    const attemptView = mockAttemptView(entry.attempt, Date.now());
+    if (!entry.meta) return;
+    if (attemptView === "not-started") { setError(""); setScreen({ kind: "start", moduleId: entry.module.id }); }
+    else if (attemptView === "in-progress" || attemptView === "expired") void resume(entry);
+    else setScreen({ kind: "results", moduleId: entry.module.id });
+  };
+  const practiseProps = (entry: ModuleState) => {
+    const practiceModuleId = practiceFor(entry.module);
+    return practiceModuleId && onPracticeModule
+      ? { practiceModuleId, onPractise: () => onPracticeModule(practiceModuleId) }
+      : {};
+  };
 
   return (
     <section className="mock-hub" aria-labelledby="mock-hub-title">
@@ -426,6 +468,34 @@ export function ModuleMockTests({
             <Maximize size={16} />Return to the test
           </button>
         </div>
+      )}
+      {!loading && thisWeek && weekEntries.length > 0 && (
+        <section className="mock-week" aria-labelledby="mock-week-title">
+          <div className="mock-week__head">
+            <p className="mock-week__eyebrow"><CalendarRange size={14} aria-hidden="true" />Week {thisWeek.week} of the plan</p>
+            <h3 id="mock-week-title">This week's tests</h3>
+            {weekPublished > 0 && <span className="mock-week__count">{isTutor ? "Hamad: " : ""}{weekDone} of {weekPublished} done</span>}
+          </div>
+          <ul className="mock-week__list">
+            {weekEntries.map(entry => {
+              const status = cardStatus(entry, rowFor.get(entry.module.id), isTutor);
+              const body = (
+                <>
+                  <span className="mock-week__code">{mockModuleCode(entry.module)}</span>
+                  <span className="mock-week__title">{entry.module.title}</span>
+                  <span className={`mock-status mock-status--${status.tone}`}>{entry.meta ? status.label : "Not published yet"}</span>
+                </>
+              );
+              return (
+                <li key={entry.module.id}>
+                  {isTutor || !entry.meta
+                    ? <div className="mock-week__item">{body}</div>
+                    : <button type="button" className="mock-week__item" disabled={busy} onClick={() => openEntry(entry)}>{body}</button>}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
 
       {loading ? (
@@ -473,6 +543,8 @@ export function ModuleMockTests({
                     onResume={() => void resume(entry)}
                     onResults={() => setScreen({ kind: "results", moduleId: entry.module.id })}
                     onRehearse={() => void rehearse(entry)}
+                    thisWeek={weekIds.has(entry.module.id)}
+                    {...practiseProps(entry)}
                   />
                 ))}
                 settled={group.settled.map(entry => (
@@ -484,6 +556,7 @@ export function ModuleMockTests({
                     busy={busy}
                     onResults={() => setScreen({ kind: "results", moduleId: entry.module.id })}
                     onRehearse={() => void rehearse(entry)}
+                    thisWeek={weekIds.has(entry.module.id)}
                   />
                 ))}
               />
@@ -507,6 +580,9 @@ function ModuleCard({
   onResume,
   onResults,
   onRehearse,
+  thisWeek = false,
+  practiceModuleId,
+  onPractise,
 }: {
   entry: ModuleState;
   row?: BoardRow;
@@ -519,6 +595,11 @@ function ModuleCard({
   onResume: () => void;
   onResults: () => void;
   onRehearse: () => void;
+  /** Belongs to the current study-plan week. */
+  thisWeek?: boolean;
+  /** Student: the practice set that covers this test's curriculum module, if one is assigned. */
+  practiceModuleId?: string;
+  onPractise?: () => void;
 }) {
   const { module, attempt } = entry;
   const view = mockAttemptView(attempt, Date.now());
@@ -528,7 +609,7 @@ function ModuleCard({
     <li className={`mock-card mock-card--${status.tone}`}>
       <span className="mock-card__number" aria-hidden="true">{String(module.number).padStart(2, "0")}</span>
       <div className="mock-card__body">
-        <p className="mock-card__module">Module {module.number}</p>
+        <p className="mock-card__module">Module {module.number}{thisWeek && <span className="mock-week-tag">This week</span>}</p>
         <h4>{module.title}</h4>
         <span className={`mock-status mock-status--${status.tone}`}>
           {status.tone === "done" ? <CircleCheckBig size={14} /> : status.tone === "forfeit" ? <Flag size={14} /> : null}
@@ -548,7 +629,10 @@ function ModuleCard({
         {!isTutor && row?.weak && (
           <div className="mock-card__repair">
             <span>Below {WEAK_SCORE}/{MOCK_QUESTION_COUNT}: repair before moving on.</span>
-            {onOpenMistakes && <button type="button" className="mock-button mock-button--ghost" onClick={onOpenMistakes}><Archive size={15} />Mistake Review</button>}
+            {practiceModuleId && onPractise && (
+              <button type="button" className="mock-button mock-button--primary" onClick={onPractise}><Dumbbell size={15} />Practise {module.title}</button>
+            )}
+            {onOpenMistakes &&<button type="button" className="mock-button mock-button--ghost" onClick={onOpenMistakes}><Archive size={15} />Mistake Review</button>}
             {onOpenRepair && <button type="button" className="mock-button mock-button--ghost" onClick={onOpenRepair}><RotateCcw size={15} />Repair queue</button>}
           </div>
         )}
@@ -634,6 +718,7 @@ function SettledRow({
   busy,
   onResults,
   onRehearse,
+  thisWeek = false,
 }: {
   entry: ModuleState;
   row?: BoardRow;
@@ -641,12 +726,13 @@ function SettledRow({
   busy: boolean;
   onResults: () => void;
   onRehearse: () => void;
+  thisWeek?: boolean;
 }) {
   const status = cardStatus(entry, row, isTutor);
   return (
     <li className={`mock-done__row mock-done__row--${status.tone}`}>
       <span className="mock-done__code">{mockModuleCode(entry.module)}</span>
-      <span className="mock-done__title">{entry.module.title}</span>
+      <span className="mock-done__title">{entry.module.title}{thisWeek && <span className="mock-week-tag">This week</span>}</span>
       <span className={`mock-status mock-status--${status.tone}`}>
         {status.tone === "done" ? <CircleCheckBig size={14} /> : status.tone === "forfeit" ? <Flag size={14} /> : null}
         {status.label}
