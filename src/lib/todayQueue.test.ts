@@ -87,6 +87,20 @@ describe("buildTodayQueue", () => {
     expect(items[3].detail).toBe("Start with a set of 10");
   });
 
+  it("leads with this week's test when no test has a deadline", () => {
+    const items = buildTodayQueue({
+      tracker: createDefaultState(),
+      week: 5,
+      today: "2026-10-05",
+      pendingModuleTests: [
+        { moduleId: "e01-firm-and-market-structures", title: "The Firm and Market Structures", deadline: null },
+        { moduleId: "e07-capital-flows-fx-market", title: "Capital Flows and the FX Market", deadline: null },
+      ],
+    });
+    expect(items[0]).toMatchObject({ kind: "moduleTest", action: { moduleId: "e07-capital-flows-fx-market" } });
+    expect(items[0].detail).toContain("This week's topic");
+  });
+
   it("puts a test in progress ahead of one with an earlier deadline", () => {
     const items = buildTodayQueue({
       tracker: createDefaultState(),

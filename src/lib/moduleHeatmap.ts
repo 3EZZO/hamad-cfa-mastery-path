@@ -3,6 +3,7 @@ import { getPlanTasks, getSessionTaskId, getWeekSessions, PLAN, TOPICS } from ".
 import { READING_CATALOG } from "../data/readings";
 import type { TrackerState } from "../types";
 import type { PracticeModuleInsight } from "./practiceInsights";
+import { catalogIdForPracticeModule } from "./practiceLinks";
 import { isTaskComplete } from "./taskStatus";
 
 /**
@@ -55,12 +56,7 @@ export interface ModuleHeatmap {
 
 export const STALE_DAYS = 14;
 const DAY_MS = 86_400_000;
-const CATALOG_PREFIX = "cfa-2027-outline-m";
-
-export function catalogIdForPracticeModule(moduleId: string): string | null {
-  const match = /^m(\d{3})(?:-|$)/i.exec(moduleId);
-  return match ? `${CATALOG_PREFIX}${match[1]}` : null;
-}
+export { catalogIdForPracticeModule };
 
 export function heatmapState(questionCount: number, attempted: number, accuracy: number | null): HeatmapState {
   if (!questionCount) return "none";

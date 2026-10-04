@@ -4,10 +4,12 @@ import {
   MOCK_TOPICS,
   mockModuleById,
   mockModuleCode,
+  mockModulesForCatalog,
   mockModuleLabel,
   mockModuleOrder,
   mockModulesInTopic,
 } from "./mockModules";
+import { READING_CATALOG } from "./readings";
 
 describe("MOCK_MODULES", () => {
   it("covers Quantitative Methods modules 1 to 11 in order", () => {
@@ -64,6 +66,31 @@ describe("MOCK_MODULES", () => {
     expect(mockModuleLabel(econ1)).toBe("Economics · Module 1");
     expect(mockModuleCode(quant1)).toBe("QM1");
     expect(mockModuleCode(econ1)).toBe("EC1");
+  });
+
+  it("maps every test to curriculum modules that exist", () => {
+    const catalog = new Set(READING_CATALOG.readings.map(reading => reading.id));
+    for (const module of MOCK_MODULES) {
+      expect(module.catalogIds.length).toBeGreaterThan(0);
+      for (const id of module.catalogIds) expect(catalog.has(id)).toBe(true);
+    }
+    // Economics follows the 2027 outline one to one: EC1 = Module 012 … EC8 = Module 019.
+    expect(mockModulesInTopic("Economics").map(module => module.catalogIds)).toEqual(
+      [12, 13, 14, 15, 16, 17, 18, 19].map(number => [`cfa-2027-outline-m0${number}`]),
+    );
+    // Each catalog module stays within its own topic.
+    for (const module of MOCK_MODULES) {
+      for (const id of module.catalogIds) {
+        expect(READING_CATALOG.readings.find(reading => reading.id === id)?.topic).toBe(module.topic);
+      }
+    }
+  });
+
+  it("finds the tests for a set of curriculum modules", () => {
+    expect(mockModulesForCatalog(["cfa-2027-outline-m007"]).map(module => mockModuleCode(module))).toEqual(["QM7", "QM8", "QM9"]);
+    expect(mockModulesForCatalog(["cfa-2027-outline-m018", "cfa-2027-outline-m020"]).map(module => module.id)).toEqual([
+      "e07-capital-flows-fx-market",
+    ]);
   });
 
   it("orders ids by topic, then number, with unknown ids last", () => {

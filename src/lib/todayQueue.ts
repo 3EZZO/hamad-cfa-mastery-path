@@ -5,6 +5,7 @@ import { PRACTICE_INTENTS } from "./practiceIntents";
 import { isRetestDue } from "./retests";
 import { listOverdueWork } from "./risk";
 import { getTaskStatus } from "./taskStatus";
+import { testsForWeek } from "./weekTests";
 
 /**
  * Today: one ordered list of the day's work, built from what is already
@@ -89,12 +90,15 @@ function taskItem(task: PlanTask, week: number, kind: "overdue" | "task", detail
   };
 }
 
-function byDeadline(left: TodayPendingModuleTest, right: TodayPendingModuleTest): number {
-  if (Boolean(left.inProgress) !== Boolean(right.inProgress)) return left.inProgress ? -1 : 1;
-  if (left.deadline && right.deadline) return left.deadline.localeCompare(right.deadline);
-  if (left.deadline) return -1;
-  if (right.deadline) return 1;
-  return 0;
+/** In progress first, then the soonest deadline, then this week's tests, then the rest. */
+function byDeadline(weekIds: ReadonlySet<string>) {
+  return (left: TodayPendingModuleTest, right: TodayPendingModuleTest): number => {
+    if (Boolean(left.inProgress) !== Boolean(right.inProgress)) return left.inProgress ? -1 : 1;
+    if (left.deadline && right.deadline) return left.deadline.localeCompare(right.deadline);
+    if (left.deadline) return -1;
+    if (right.deadline) return 1;
+    return Number(weekIds.has(right.moduleId)) - Number(weekIds.has(left.moduleId));
+  };
 }
 
 export function buildTodayQueue({
@@ -108,7 +112,8 @@ export function buildTodayQueue({
   const items: TodayItem[] = [];
 
   // Module tests always lead: they are compulsory, timed and single-attempt.
-  const pending = [...(pendingModuleTests ?? [])].sort(byDeadline);
+  const weekIds = new Set(testsForWeek(week).map((module) => module.id));
+  const pending = [...(pendingModuleTests ?? [])].sort(byDeadline(weekIds));
   if (pending.length) {
     const next = pending[0];
     const more = pending.length - 1;
@@ -118,6 +123,7 @@ export function buildTodayQueue({
       title: `Module test: ${next.title}`,
       detail: [
         next.inProgress ? "In progress · resume now" : next.deadline ? `Due ${next.deadline.slice(0, 10)}` : "One attempt · 12 minutes",
+        !next.inProgress && weekIds.has(next.moduleId) ? "This week's topic" : "",
         more ? `${more} more ${plural(more, "test")} waiting` : "",
       ].filter(Boolean).join(" · "),
       minutes: TODAY_MINUTES.moduleTest,

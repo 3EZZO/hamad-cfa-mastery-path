@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, CircleAlert, Clock3, Flag, LockKeyhole, X } from "lucide-react";
+import { Archive, ArrowLeft, Check, CircleAlert, Clock3, Dumbbell, Flag, LockKeyhole, RotateCcw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Crest } from "../../components/Crest";
 import {
@@ -32,6 +32,33 @@ export interface LocalReview {
   pkg: MockTestPackage;
 }
 
+/**
+ * Student review only: where a wrong answer leads. `practiceModuleId` is the
+ * assigned practice set for this test's curriculum module (null when none
+ * covers it yet, in which case Mistake Review and the repair queue are offered).
+ */
+export interface ReviewPractice {
+  moduleTitle: string;
+  practiceModuleId: string | null;
+  onPractise: (practiceModuleId: string) => void;
+  onOpenMistakes?: () => void;
+  onOpenRepair?: () => void;
+}
+
+function reviewItemId(index: number): string {
+  return `mock-review-q${index + 1}`;
+}
+
+/** Bring a question's explanation into view and move focus there for keyboard users. */
+function showReviewItem(index: number): void {
+  if (typeof document === "undefined") return;
+  const target = document.getElementById(reviewItemId(index));
+  if (!target) return;
+  const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  target.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+  target.focus({ preventScroll: true });
+}
+
 interface ReviewData {
   questions: MockQuestion[];
   key: MockOption[];
@@ -50,17 +77,27 @@ export function MockResults({
   attempt: initialAttempt,
   local,
   onBack,
+  practice,
 }: {
   moduleLabel: string;
   attempt?: MockAttempt;
   local?: LocalReview;
   onBack: () => void;
+  practice?: ReviewPractice;
 }) {
   const [attempt, setAttempt] = useState(initialAttempt);
   const [review, setReview] = useState<ReviewData | null>(
     local ? { questions: local.pkg.questions.questions, key: local.pkg.key.correct, items: local.pkg.review.items } : null,
   );
   const [error, setError] = useState("");
+  const [onlyMistakes, setOnlyMistakes] = useState(false);
+  // A question chosen in the grid while the filter hides it: show everything, then scroll once rendered.
+  const [pendingJump, setPendingJump] = useState<number | null>(null);
+  useEffect(() => {
+    if (pendingJump === null) return;
+    showReviewItem(pendingJump);
+    setPendingJump(null);
+  }, [pendingJump, onlyMistakes]);
 
   useEffect(() => {
     if (!attempt || attempt.score !== null) return;
@@ -86,6 +123,22 @@ export function MockResults({
   const strong = !forfeited && score !== null && score >= Math.ceil(MOCK_QUESTION_COUNT * 0.75);
   // Until the tutor releases the review the student sees the final score only.
   const reviewOpen = Boolean(local) || attempt?.reviewReleased === true;
+  // Unanswered counts as a mistake.
+  const isMistake = (index: number) => review ? answers[index] !== review.key[index] : correct?.[index] === false;
+  const mistakes = Array.from({ length: MOCK_QUESTION_COUNT }, (_, index) => index).filter(isMistake);
+  const jumpTo = (index: number) => {
+    if (onlyMistakes && !isMistake(index)) {
+      setOnlyMistakes(false);
+      setPendingJump(index);
+    } else {
+      showReviewItem(index);
+    }
+  };
+  const practiseButton = (compact: boolean) => practice?.practiceModuleId ? (
+    <button type="button" className={`mock-button ${compact ? "mock-button--ghost" : "mock-button--primary"}`} onClick={() => practice.onPractise(practice.practiceModuleId!)}>
+      <Dumbbell size={16} />Practise {practice.moduleTitle}
+    </button>
+  ) : null;
 
   return (
     <section className="mock-results" aria-labelledby="mock-results-title">
@@ -116,25 +169,56 @@ export function MockResults({
             const right = correct?.[index];
             return (
               <li key={index} className={right === undefined ? "" : right ? "is-right" : "is-wrong"}>
-                <span>Q{index + 1}</span>
-                {right === undefined ? null : right ? <Check size={16} aria-label="correct" /> : <X size={16} aria-label="wrong" />}
-                <small>{answers[index] === null ? "No answer" : `You chose ${optionLetter(answers[index])}`}</small>
-                {flags[index] && <Flag size={12} aria-label="flagged" />}
+                <button type="button" className="mock-results__jump" disabled={!review} onClick={() => jumpTo(index)}>
+                  <span>Q{index + 1}</span>
+                  {right === undefined ? null : right ? <Check size={16} aria-label="correct" /> : <X size={16} aria-label="wrong" />}
+                  <small>{answers[index] === null ? "No answer" : `You chose ${optionLetter(answers[index])}`}</small>
+                  {flags[index] && <Flag size={12} aria-label="flagged" />}
+                </button>
               </li>
             );
           })}
         </ol>
       )}
 
+      {reviewOpen && practice && review && mistakes.length > 0 && (
+        <div className="mock-practice" role="group" aria-label="Repair this module">
+          {practice.practiceModuleId ? (
+            <>
+              <p><strong>{mistakes.length} to repair.</strong> Practise {practice.moduleTitle} with a focused set from your practice questions.</p>
+              {practiseButton(false)}
+            </>
+          ) : (
+            <>
+              <p>No practice set for {practice.moduleTitle} yet. Repair the misses in Mistake Review or the repair queue.</p>
+              {practice.onOpenMistakes && <button type="button" className="mock-button mock-button--ghost" onClick={practice.onOpenMistakes}><Archive size={16} />Mistake Review</button>}
+              {practice.onOpenRepair && <button type="button" className="mock-button mock-button--ghost" onClick={practice.onOpenRepair}><RotateCcw size={16} />Repair queue</button>}
+            </>
+          )}
+        </div>
+      )}
+
       {reviewOpen && review ? (
         <div className="mock-review">
-          <h3>Answers and explanations</h3>
+          <div className="mock-review__head">
+            <h3>Answers and explanations</h3>
+            <div className="mock-review__filter" role="group" aria-label="Show">
+              <button type="button" className="mock-switch__option" aria-pressed={!onlyMistakes} onClick={() => setOnlyMistakes(false)}>
+                All questions
+              </button>
+              <button type="button" className="mock-switch__option" aria-pressed={onlyMistakes} disabled={mistakes.length === 0} onClick={() => setOnlyMistakes(true)}>
+                Only my mistakes <span className="mock-switch__count">{mistakes.length}</span>
+              </button>
+            </div>
+          </div>
+          {onlyMistakes && mistakes.length === 0 && <p className="mock-results__pending">No mistakes in this test.</p>}
           {review.questions.map((question, index) => {
             const item = review.items[index];
             const right = review.key[index];
             const chosen = answers[index];
+            if (onlyMistakes && chosen === right) return null;
             return (
-              <article key={question.id} className="mock-review__item">
+              <article key={question.id} id={reviewItemId(index)} tabIndex={-1} className="mock-review__item">
                 <header>
                   <span className={chosen === right ? "is-right" : "is-wrong"}>Q{index + 1}</span>
                   {item && <small>{item.concept}</small>}
@@ -159,6 +243,7 @@ export function MockResults({
                     </ul>
                   </>
                 )}
+                {chosen !== right && practice?.practiceModuleId && <div className="mock-review__practice">{practiseButton(true)}</div>}
               </article>
             );
           })}
