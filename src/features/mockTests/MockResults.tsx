@@ -21,6 +21,7 @@ import {
   type MockQuestion,
   type MockReviewItem,
 } from "../../lib/mockTestContent";
+import { MockExhibits } from "./MockExhibits";
 
 /** A tutor rehearsal is graded locally and never written anywhere. */
 export interface LocalReview {
@@ -224,6 +225,7 @@ export function MockResults({
                   {item && <small>{item.concept}</small>}
                 </header>
                 <p className="mock-review__stem">{question.stem}</p>
+                <MockExhibits question={question} />
                 <ul className="mock-review__options">
                   {question.options.map((text, option) => (
                     <li key={option} className={[option === right && "is-key", option === chosen && option !== right && "is-chosen-wrong"].filter(Boolean).join(" ")}>

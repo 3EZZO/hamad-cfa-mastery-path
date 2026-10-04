@@ -38,11 +38,66 @@ export interface MockTable {
   rows: Array<{ cells: string[] }>;
 }
 
+/**
+ * A chart drawn by the app from data (never an uploaded image), so it follows
+ * the theme and stays light. Points are {x, y} objects because Firestore
+ * cannot store nested arrays.
+ */
+export interface MockFigurePoint {
+  x: number;
+  y: number;
+}
+
+export type MockFigureSeriesKind = "line" | "scatter" | "bar";
+export type MockFigureTone = "primary" | "secondary" | "accent" | "muted";
+
+export interface MockFigureSeries {
+  kind: MockFigureSeriesKind;
+  label: string;
+  points: MockFigurePoint[];
+  tone: MockFigureTone;
+  dashed: boolean;
+}
+
+/** A labelled reference line: vertical at x = value, or horizontal at y = value. */
+export interface MockFigureGuide {
+  axis: "x" | "y";
+  value: number;
+  label: string;
+}
+
+/** A labelled point, e.g. "A" or "Kink". */
+export interface MockFigureMarker {
+  x: number;
+  y: number;
+  label: string;
+}
+
+export interface MockFigure {
+  title: string;
+  /** Text alternative read by screen readers. */
+  description: string;
+  xLabel: string;
+  yLabel: string;
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+  /** Tick values; empty means none (e.g. a conceptual diagram without numbers). */
+  xTicks: number[];
+  yTicks: number[];
+  series: MockFigureSeries[];
+  guides: MockFigureGuide[];
+  markers: MockFigureMarker[];
+}
+
 /** What the student sees. Deliberately has no answer, concept or source. */
 export interface MockQuestion {
   id: string;
   stem: string;
   table: MockTable | null;
+  /** Absent on tests uploaded before figures existed. */
+  figure?: MockFigure | null;
   options: [string, string, string];
 }
 
@@ -205,6 +260,77 @@ function parseTable(value: unknown, field: string): MockTable | null {
   return { caption: text(value.caption ?? "", `${field}.caption`, 300, true), headers, rows };
 }
 
+const FIGURE_LIMITS = { series: 6, points: 200, totalPoints: 600, guides: 8, markers: 12, ticks: 12, label: 80 };
+
+function finite(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new MockContentError(`${field} must be a number.`);
+  return value;
+}
+
+function list(value: unknown, field: string, max: number): unknown[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > max) throw new MockContentError(`${field} must be a list of at most ${max} items.`);
+  return value;
+}
+
+function parseFigure(value: unknown, field: string): MockFigure | null {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) throw new MockContentError(`${field} must be an object or null.`);
+  const xMin = finite(value.xMin, `${field}.xMin`);
+  const xMax = finite(value.xMax, `${field}.xMax`);
+  const yMin = finite(value.yMin, `${field}.yMin`);
+  const yMax = finite(value.yMax, `${field}.yMax`);
+  if (xMin >= xMax || yMin >= yMax) throw new MockContentError(`${field} needs xMin < xMax and yMin < yMax.`);
+  const ticks = (raw: unknown, axis: "x" | "y") => list(raw, `${field}.${axis}Ticks`, FIGURE_LIMITS.ticks)
+    .map((tick, index) => finite(tick, `${field}.${axis}Ticks[${index}]`));
+  const series = list(value.series, `${field}.series`, FIGURE_LIMITS.series).map((raw, index): MockFigureSeries => {
+    const path = `${field}.series[${index}]`;
+    if (!isRecord(raw)) throw new MockContentError(`${path} must be an object.`);
+    if (raw.kind !== "line" && raw.kind !== "scatter" && raw.kind !== "bar") {
+      throw new MockContentError(`${path}.kind must be line, scatter or bar.`);
+    }
+    const tone = raw.tone ?? "primary";
+    if (tone !== "primary" && tone !== "secondary" && tone !== "accent" && tone !== "muted") {
+      throw new MockContentError(`${path}.tone must be primary, secondary, accent or muted.`);
+    }
+    const points = list(raw.points, `${path}.points`, FIGURE_LIMITS.points).map((point, pointIndex) => {
+      if (!isRecord(point)) throw new MockContentError(`${path}.points[${pointIndex}] must be {x, y}.`);
+      return { x: finite(point.x, `${path}.points[${pointIndex}].x`), y: finite(point.y, `${path}.points[${pointIndex}].y`) };
+    });
+    if (!points.length) throw new MockContentError(`${path}.points is empty.`);
+    return { kind: raw.kind, label: text(raw.label, `${path}.label`, FIGURE_LIMITS.label), points, tone, dashed: raw.dashed === true };
+  });
+  if (!series.length) throw new MockContentError(`${field}.series is empty.`);
+  if (series.reduce((sum, entry) => sum + entry.points.length, 0) > FIGURE_LIMITS.totalPoints) {
+    throw new MockContentError(`${field} has more than ${FIGURE_LIMITS.totalPoints} points.`);
+  }
+  const guides = list(value.guides, `${field}.guides`, FIGURE_LIMITS.guides).map((raw, index): MockFigureGuide => {
+    const path = `${field}.guides[${index}]`;
+    if (!isRecord(raw) || (raw.axis !== "x" && raw.axis !== "y")) throw new MockContentError(`${path}.axis must be x or y.`);
+    return { axis: raw.axis, value: finite(raw.value, `${path}.value`), label: text(raw.label, `${path}.label`, FIGURE_LIMITS.label, true) };
+  });
+  const markers = list(value.markers, `${field}.markers`, FIGURE_LIMITS.markers).map((raw, index): MockFigureMarker => {
+    const path = `${field}.markers[${index}]`;
+    if (!isRecord(raw)) throw new MockContentError(`${path} must be an object.`);
+    return { x: finite(raw.x, `${path}.x`), y: finite(raw.y, `${path}.y`), label: text(raw.label, `${path}.label`, FIGURE_LIMITS.label) };
+  });
+  return {
+    title: text(value.title, `${field}.title`, 200),
+    description: text(value.description, `${field}.description`, 1200),
+    xLabel: text(value.xLabel, `${field}.xLabel`, FIGURE_LIMITS.label),
+    yLabel: text(value.yLabel, `${field}.yLabel`, FIGURE_LIMITS.label),
+    xMin,
+    xMax,
+    yMin,
+    yMax,
+    xTicks: ticks(value.xTicks, "x"),
+    yTicks: ticks(value.yTicks, "y"),
+    series,
+    guides,
+    markers,
+  };
+}
+
 function confidence(value: unknown, field: string): MockConfidence {
   if (value !== "High" && value !== "Medium" && value !== "Low") {
     throw new MockContentError(`${field} must be High, Medium or Low.`);
@@ -233,6 +359,7 @@ export function parseMockTestDraft(value: unknown): MockTestDraft {
       id,
       stem: text(raw.stem, `${field}.stem`, 4000),
       table: parseTable(raw.table, `${field}.table`),
+      figure: parseFigure(raw.figure, `${field}.figure`),
       options: triple(raw.options, `${field}.options`, 600),
       correctOption: option(raw.correctOption, `${field}.correctOption`),
       concept: text(raw.concept, `${field}.concept`, 200),
@@ -269,7 +396,7 @@ export function splitMockDraft(draft: MockTestDraft): {
     questions: {
       moduleId,
       version,
-      questions: draft.questions.map(({ id, stem, table, options }) => ({ id, stem, table, options })),
+      questions: draft.questions.map(({ id, stem, table, figure, options }) => ({ id, stem, table, figure, options })),
     },
     key: { moduleId, version, correct: draft.questions.map(question => question.correctOption) },
     review: {

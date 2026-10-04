@@ -18,6 +18,7 @@ import { useDialogFocus } from "../liveSession/useDialogFocus";
 import { BA2Plus, type KeystrokeLog } from "../practice/BA2Plus";
 import { MockTimer } from "./MockTimer";
 import { enterFullscreen, exitFullscreen, fullscreenSupported, useExamLock } from "./useExamLock";
+import { MockExhibits } from "./MockExhibits";
 
 type Confirm = null | "submit" | "leave";
 type SaveState = "saved" | "saving" | "offline";
@@ -251,25 +252,7 @@ export function MockTestRunner({
         <main className="mock-question" key={question.id}>
           <p className="mock-question__count">Question {index + 1} of {questions.length}</p>
           <div className="mock-question__stem">{question.stem}</div>
-          {question.table && (
-            <div className="mock-table-wrap">
-              <table className="mock-table">
-                {question.table.caption && <caption>{question.table.caption}</caption>}
-                <thead>
-                  <tr>{question.table.headers.map((header, column) => <th key={column} scope="col">{header}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {question.table.rows.map((row, rowIndex) => (
-                    <tr key={rowIndex}>
-                      {row.cells.map((cell, column) => column === 0
-                        ? <th key={column} scope="row">{cell}</th>
-                        : <td key={column}>{cell}</td>)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <MockExhibits question={question} />
           <fieldset className="mock-options">
             <legend className="visually-hidden">Choose one answer</legend>
             {question.options.map((text, option) => {

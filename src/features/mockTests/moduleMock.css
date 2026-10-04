@@ -461,6 +461,62 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-table thead th { background: var(--mk-soft); font-weight: 800; }
 .mock-table tbody th { font-weight: 650; }
 .mock-table td { font-family: var(--font-financial, monospace); font-variant-numeric: tabular-nums; }
+
+/* Figures: charts drawn from data, coloured by role so dark mode can retune them. */
+.mock-figure {
+  --fig-primary: var(--mk-blue-deep);
+  --fig-secondary: var(--mk-teal);
+  --fig-accent: #b4540a;
+  --fig-muted: var(--mk-muted);
+  max-width: 640px;
+  margin: 0 0 18px;
+  padding: 12px 12px 10px;
+  border: 1px solid var(--mk-line);
+  border-radius: 14px;
+  background: var(--mk-surface);
+}
+.mock-figure__svg { display: block; width: 100%; height: auto; overflow: visible; }
+.mock-figure__svg text { fill: var(--mk-ink); font-size: 13px; }
+.mock-figure__tick text { fill: var(--mk-muted); font-family: var(--font-financial, monospace); font-size: 12px; }
+.mock-figure__grid { stroke: var(--mk-line); stroke-width: 1; opacity: .7; }
+.mock-figure__axis { stroke: var(--mk-ink); stroke-width: 1.5; }
+.mock-figure__axis-label { font-weight: 700; }
+.mock-figure__guide { stroke: var(--fig-muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.mock-figure__guide-label { fill: var(--fig-muted); font-size: 12px; font-weight: 700; }
+.mock-figure__series { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.mock-figure__series.is-dashed { stroke-dasharray: 7 5; }
+.mock-figure__series--primary { stroke: var(--fig-primary); }
+.mock-figure__series--secondary { stroke: var(--fig-secondary); }
+.mock-figure__series--accent { stroke: var(--fig-accent); }
+.mock-figure__series--muted { stroke: var(--fig-muted); }
+.mock-figure__series circle,
+.mock-figure__series.is-bar rect { stroke: none; }
+.mock-figure__series--primary circle, .mock-figure__series--primary.is-bar rect { fill: var(--fig-primary); }
+.mock-figure__series--secondary circle, .mock-figure__series--secondary.is-bar rect { fill: var(--fig-secondary); }
+.mock-figure__series--accent circle, .mock-figure__series--accent.is-bar rect { fill: var(--fig-accent); }
+.mock-figure__series--muted circle, .mock-figure__series--muted.is-bar rect { fill: var(--fig-muted); }
+.mock-figure__marker circle { fill: var(--mk-surface); stroke: var(--mk-ink); stroke-width: 2; }
+.mock-figure__marker text { font-weight: 800; }
+/* A halo in the panel colour keeps labels readable where they cross a curve. */
+.mock-figure__guide-label,
+.mock-figure__marker text { paint-order: stroke; stroke: var(--mk-surface); stroke-width: 4px; stroke-linejoin: round; }
+.mock-figure figcaption { display: grid; gap: 6px; margin-top: 6px; }
+.mock-figure figcaption strong { font-size: .9rem; }
+.mock-figure__legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; color: var(--mk-muted); font-size: .85rem; }
+.mock-figure__legend li { display: inline-flex; align-items: center; gap: 6px; }
+.mock-figure__swatch { display: inline-block; width: 22px; height: 0; border-top: 3px solid var(--fig-primary); }
+.mock-figure__swatch.is-dashed { border-top-style: dashed; }
+.mock-figure__swatch.is-solid { width: 12px; height: 12px; border: 0; border-radius: 3px; background: var(--fig-primary); }
+.mock-figure__swatch--secondary { border-top-color: var(--fig-secondary); }
+.mock-figure__swatch--secondary.is-solid { background: var(--fig-secondary); }
+.mock-figure__swatch--accent { border-top-color: var(--fig-accent); }
+.mock-figure__swatch--accent.is-solid { background: var(--fig-accent); }
+.mock-figure__swatch--muted { border-top-color: var(--fig-muted); }
+.mock-figure__swatch--muted.is-solid { background: var(--fig-muted); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mock-figure { --fig-primary: #8fb3ff; --fig-secondary: #4fd1c5; --fig-accent: #f0b35a; }
+}
+:root[data-theme="dark"] .mock-figure { --fig-primary: #8fb3ff; --fig-secondary: #4fd1c5; --fig-accent: #f0b35a; }
 .mock-options { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
 .mock-option {
   display: grid;
