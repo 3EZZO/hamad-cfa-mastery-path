@@ -76,9 +76,11 @@ html:root :is(.eyebrow, .mini-label) {
 }
 
 /* ------------------------------------------------------------ app chrome */
+/* The sticky bar is fully opaque: scrolled content must never show through
+   its controls or the gaps between them. (Dark uses --surface via theme.css.) */
 .topbar {
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  background: var(--paper);
 }
 @media (min-width: 1024px) {
   .sidebar {
