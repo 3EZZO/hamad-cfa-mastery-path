@@ -7,6 +7,7 @@ import {
   getWeekDates,
   isValidDateOnly,
   parseDateOnly,
+  planElapsed,
 } from "./dates";
 
 describe("Hamad CFA Mastery calendar", () => {
@@ -45,5 +46,14 @@ describe("Hamad CFA Mastery calendar", () => {
   it("counts calendar days without time-of-day drift", () => {
     expect(daysUntilExam(parseDateOnly("2027-02-20"))).toBe(7);
     expect(daysUntilExam(parseDateOnly("2027-02-27"))).toBe(0);
+  });
+
+  it("measures how much of the plan is behind us, clamped to 0–1", () => {
+    // 6 Sep 2026 to 27 Feb 2027 is 174 days.
+    expect(planElapsed(parseDateOnly("2026-09-06"))).toBe(0);
+    expect(planElapsed(parseDateOnly("2026-10-05"))).toBeCloseTo(29 / 174);
+    expect(planElapsed(parseDateOnly("2027-02-27"))).toBe(1);
+    expect(planElapsed(parseDateOnly("2026-08-01"))).toBe(0);
+    expect(planElapsed(parseDateOnly("2027-03-10"))).toBe(1);
   });
 });

@@ -1,7 +1,7 @@
 import { Box, CalendarPlus, ChevronDown, ChevronRight, CircleAlert, CircleCheckBig, Command, Calculator, Clock3, Download, LogOut, Menu, Moon, MoreHorizontal, PlayCircle, RotateCcw, ShieldCheck, Sparkles, Sun, Upload, UserCog, X } from "lucide-react";
 import { type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { getPlanTasks, PLAN } from "./data/plan";
-import { daysUntilExam, getProgramWeek, TOTAL_WEEKS, todayDateOnly } from "./lib/dates";
+import { daysUntilExam, EXAM_DATE, formatDate, getProgramWeek, planElapsed, TOTAL_WEEKS, todayDateOnly } from "./lib/dates";
 import { downloadBackup, readBackup } from "./lib/storage";
 import { downloadProject202Calendar } from "./lib/calendarExport";
 import { addPracticeMistake, bridgedQuestionIds } from "./lib/practiceMistakeBridge";
@@ -112,6 +112,8 @@ function App() {
   const initialWeek = rawProgramWeek < 1 ? 1 : Math.min(rawProgramWeek, TOTAL_WEEKS);
   // The module tests that belong to this study-plan week (none outside the plan).
   const thisWeekTests = { week: rawProgramWeek, moduleIds: testsForWeek(rawProgramWeek).map((module) => module.id) };
+  const examDays = daysUntilExam();
+  const planDonePercent = Math.round(planElapsed() * 100);
   const nav = NAV;
   const [activeTab, setActiveTab] = useHashTab<TabId>(nav.tabs, nav.home, {
     title: (tab) => `${TAB_COPY[tab].title} · Hamad CFA Mastery`,
@@ -732,14 +734,18 @@ function App() {
           <div>
             <strong>MASTERY PATH</strong>
             <span>Hamad · CFA Level I</span>
-            <small className="creator-credit">Created by Mohamed Ali, CFA</small>
+            <small className="creator-credit">by Mohamed Ali, CFA</small>
           </div>
         </div>
 
-        <div className="sidebar-exam">
-          <span>Exam appointment</span>
-          <strong>27 FEB 2027</strong>
-          <small>{daysUntilExam()} days to prepare</small>
+        <div className="sidebar-exam" data-urgency={examDays <= 7 ? "final" : examDays <= 30 ? "soon" : undefined}>
+          <span className="sidebar-exam__label">Exam countdown</span>
+          <p className="sidebar-exam__count"><strong>{examDays}</strong> <span>{examDays === 1 ? "day" : "days"} to go</span></p>
+          <span className="sidebar-exam__track" aria-hidden="true"><span style={{ width: `${planDonePercent}%` }} /></span>
+          <small className="sidebar-exam__meta">
+            <span>{formatDate(EXAM_DATE, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+            <span>{planDonePercent}% of plan</span>
+          </small>
         </div>
 
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrow-key delegation for the buttons inside */}
