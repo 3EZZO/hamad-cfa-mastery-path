@@ -30,7 +30,7 @@ export function Crest({ size = 40, animated = false, className }: { size?: numbe
       </defs>
       <rect x="3" y="3" width="58" height="58" rx="15" fill="#0f1a33" stroke={gold} strokeWidth="2.2" />
       <rect x="7.5" y="7.5" width="49" height="49" rx="11" fill="none" stroke={gold} strokeWidth=".7" opacity=".75" />
-      <text x="32" y="39.6" textAnchor="middle" fontFamily="'Source Serif 4', Georgia, serif" fontWeight="600" fontSize="22" letterSpacing="-0.4" fill={gold}>MP</text>
+      <text x="32" y="39.6" textAnchor="middle" fontFamily="var(--font-mark)" fontWeight="600" fontSize="22" letterSpacing="-0.4" fill={gold}>MP</text>
       <g clipPath={`url(#${id}c)`}>
         <g transform="skewX(-18)">
           <rect className="crest__sheen" x="-30" y="0" width="22" height="64" fill={`url(#${id}s)`} />

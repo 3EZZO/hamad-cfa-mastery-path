@@ -900,10 +900,10 @@ export function PracticeCoach({
 
         {uniqueDiagnostics.length > 0 && (
           <div style={{ marginTop: '20px', padding: '16px', background: 'var(--warning-bg)', border: '1px solid var(--warning)', borderRadius: '8px', textAlign: 'left' }}>
-            <h3 style={{ color: 'var(--warning)', margin: '0 0 12px 0', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ color: 'var(--warning)', margin: '0 0 12px 0', fontSize: 'var(--text-ui)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <CircleAlert size={16} /> Calculator Diagnostics
             </h3>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--ink-2)', fontSize: '13px' }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--ink-2)', fontSize: 'var(--text-nav)' }}>
               {uniqueDiagnostics.map(diag => (
                 <li key={diag.type} style={{ marginBottom: '8px' }}>{diag.message}</li>
               ))}
@@ -1194,18 +1194,18 @@ function PracticePerformance({
                   
                   {context === "tutor" && miss.calculatorLog && miss.calculatorLog.length > 0 && (
                     <div style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-                      <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--ink-2)' }}>Tutor Telemetry: Calculator Replay</h4>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: 'var(--text-nav)', color: 'var(--ink-2)' }}>Tutor Telemetry: Calculator Replay</h4>
                       {diagnostics.length > 0 && (
                         <div style={{ padding: '12px', background: 'var(--warning-bg)', border: '1px solid var(--warning)', borderRadius: '6px', marginBottom: '16px' }}>
-                          <h5 style={{ color: 'var(--warning)', margin: '0 0 8px 0', fontSize: '12px' }}>Diagnosed Errors</h5>
-                          <ul style={{ margin: 0, paddingLeft: '16px', color: 'var(--ink-2)', fontSize: '12px' }}>
+                          <h5 style={{ color: 'var(--warning)', margin: '0 0 8px 0', fontSize: 'var(--text-caption)' }}>Diagnosed Errors</h5>
+                          <ul style={{ margin: 0, paddingLeft: '16px', color: 'var(--ink-2)', fontSize: 'var(--text-caption)' }}>
                             {diagnostics.map(d => <li key={d.type}>{d.message}</li>)}
                           </ul>
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {miss.calculatorLog.map((log: any, i: number) => (
-                          <div key={i} style={{ padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px', fontSize: '11px', color: 'var(--muted)', fontFamily: 'monospace' }}>
+                          <div key={i} style={{ padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px', fontSize: 'var(--text-label)', color: 'var(--muted)', fontFamily: 'var(--font-financial)' }}>
                             <strong style={{ color: 'var(--ink)' }}>{log.key}</strong> <span style={{ opacity: 0.5 }}>→</span> {log.display}
                           </div>
                         ))}
