@@ -9,6 +9,7 @@ const SHEETS = [
   "./styles.css",
   "./theme.css",
   "./identity.css",
+  "./typography.css",
   "./features/mockTests/moduleMock.css",
   "./features/liveSession/liveSession.css",
   "./features/practice/practiceCoach.css",
@@ -92,9 +93,14 @@ describe("theme tokens", () => {
     expect(palette.filter(name => !dark.has(name))).toEqual([]);
   });
 
-  it("sets headings in the self-hosted serif and keeps question stems in the reading sans", () => {
-    expect(sources["./styles.css"]).toMatch(/--font-heading:\s*"Source Serif 4"/);
+  it("sets text and headings in self-hosted Montserrat and never uppercases question stems", () => {
+    expect(sources["./styles.css"]).toMatch(/--font-ui:\s*"Montserrat", Arial, sans-serif/);
+    expect(sources["./styles.css"]).toMatch(/--font-heading:\s*"Montserrat", Arial, sans-serif/);
+    expect(sources["./styles.css"]).toMatch(/--font-financial:\s*"IBM Plex Mono"/);
     expect(sources["./styles.css"]).toContain(":where(h1, h2):where(:not(.practice-question h2, #ls-candidate-title))");
+    const display = stripComments(sources["./typography.css"]).match(/:root :is\(([^)]*\)[^{]*)\{[^}]*text-transform: uppercase/)?.[1] ?? "";
+    expect(display).toContain(".page-heading h1");
+    expect(display).not.toMatch(/practice-question|ls-candidate|mock-question|\bh3\b/);
     for (const sheet of SHEETS) expect(sources[sheet], sheet).not.toContain('"Sora"');
   });
 

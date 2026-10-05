@@ -9,6 +9,7 @@ import { installGlobalErrorCapture } from "./lib/errorReport";
 import { registerProject202ServiceWorker } from "./lib/pwa";
 import "./styles.css";
 import "./identity.css";
+import "./typography.css";
 
 installGlobalErrorCapture();
 installDepthMotion();

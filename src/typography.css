@@ -1,0 +1,90 @@
+/*
+ * Typography layer (Montserrat). Loaded after styles.css and identity.css so
+ * it settles the many earlier font rules in one place; `:root` raises these
+ * selectors just enough to also win over feature stylesheets that load later
+ * with lazy screens. Visual only: no markup depends on it.
+ *
+ * - Body 400 · navigation and labels 500–600 · panel headings 800 (normal case)
+ * - Display titles (page titles, hero cards) 800–900, UPPERCASE, wide tracking
+ * - Question stems and answers are never uppercase; figures stay in
+ *   --font-financial (IBM Plex Mono).
+ */
+
+body {
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+/* Headings use the same face; panel headings stay in sentence case. */
+:root :where(h1, h2):where(:not(.practice-question h2, #ls-candidate-title)) {
+  letter-spacing: 0;
+}
+
+/* --------------------------------------------------------- display titles */
+
+:root :is(
+  .page-heading h1,
+  .today-focus-copy h1,
+  .week-hero :is(h1, h2),
+  .mastery-overview :is(h1, h2),
+  .access-card h1,
+  .mock-hub__hero h2,
+  .mock-start__card h2,
+  .mock-results__reveal h2,
+  .ls-launch__header h1,
+  .ls-closeout__header h1,
+  .ls-complete h1
+) {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.12;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+/* Second-level display titles are a step lighter. */
+:root :is(.mock-hub__hero h2, .mock-start__card h2, .mock-results__reveal h2, .week-hero h2, .mastery-overview h2) {
+  font-weight: 800;
+}
+
+/* Phone first; uppercase Montserrat runs wide, so sizes sit below the old serif ones. */
+:root .page-heading h1 { font-size: clamp(1.35rem, 6.2vw, 1.75rem); }
+:root .today-focus-copy h1 { font-size: clamp(1.2rem, 5.4vw, 1.55rem); letter-spacing: 0.04em; line-height: 1.2; }
+:root .access-card h1 { font-size: clamp(1.3rem, 6vw, 1.7rem); }
+:root .mock-hub__hero h2 { font-size: clamp(1.1rem, 4.6vw, 1.35rem); }
+:root .mock-start__card h2 { font-size: clamp(1.15rem, 5vw, 1.6rem); }
+
+/* 14-inch laptop (about 1280–1536 CSS px) and up. */
+@media (min-width: 1024px) {
+  :root .page-heading h1 { font-size: clamp(1.75rem, 1.9vw, 2.15rem); }
+  :root .today-focus-copy h1 { font-size: clamp(1.45rem, 1.75vw, 1.85rem); }
+  :root .access-card h1 { font-size: 1.85rem; }
+  :root .mock-hub__hero h2 { font-size: clamp(1.25rem, 1.5vw, 1.5rem); }
+  :root .mock-start__card h2 { font-size: clamp(1.4rem, 1.7vw, 1.75rem); }
+}
+
+/* ------------------------------------------------- navigation and labels */
+
+:root :is(.nav-button, .mobile-nav-button, .section-tabs button, .ls-session-switcher__tabs button) {
+  font-family: var(--font-ui);
+  font-weight: 600;
+}
+:root :is(.nav-button, .mobile-nav-button, .section-tabs button):not(.is-active, [aria-selected="true"]) {
+  font-weight: 500;
+}
+:root :is(.eyebrow, .mini-label, .nav-group-label, .hero-kicker, .mock-hub__eyebrow) {
+  font-weight: 600;
+}
+:root :is(.button, button.button) {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+/* Field captions only: a label's leading <span> (answer choices start with
+   their radio input, and option labels are excluded outright). */
+:root :is(label:not([class*="option"]) > span:first-child, legend, th[scope="col"]) {
+  font-weight: 600;
+}
+:root .panel-heading h3 {
+  letter-spacing: 0;
+}
