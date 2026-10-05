@@ -61,6 +61,13 @@ export function daysUntilExam(today = new Date()): number {
   return Math.max(0, differenceInCalendarDays(parseDateOnly(EXAM_DATE), today));
 }
 
+/** Share of the plan (launch day to exam day) already behind us, 0–1. */
+export function planElapsed(today = new Date()): number {
+  const total = differenceInCalendarDays(parseDateOnly(EXAM_DATE), parseDateOnly(PROGRAM_START));
+  const done = differenceInCalendarDays(today, parseDateOnly(PROGRAM_START));
+  return Math.min(1, Math.max(0, done / total));
+}
+
 /** Returns 0 before launch, 1-25 during the plan, and 26 after exam day. */
 export function getProgramWeek(today = new Date()): number {
   const fromStart = differenceInCalendarDays(today, parseDateOnly(PROGRAM_START));
