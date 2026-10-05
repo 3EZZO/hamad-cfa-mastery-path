@@ -103,7 +103,7 @@ html:root[data-theme="dark"] .live-session {
   padding: 6px 11px;
   color: var(--sp-ink-soft);
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: transparent;
 }
 
@@ -188,7 +188,7 @@ html:root[data-theme="dark"] .live-session {
   padding: 4px 9px;
   color: var(--sp-focus);
   border: 1px solid var(--sp-rule);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--sp-focus-soft);
   font-size: calc(0.78rem * var(--ls-reader-scale, 1));
   font-weight: 650;
@@ -203,7 +203,7 @@ html:root[data-theme="dark"] .live-session {
   padding: 6px 10px;
   color: var(--sp-ink);
   border: 1px solid var(--sp-rule);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--sp-surface-raised);
   font: inherit;
   font-weight: 650;
@@ -221,7 +221,7 @@ html:root[data-theme="dark"] .live-session {
   padding: 1px 5px;
   color: var(--sp-ink-soft);
   border: 1px solid var(--sp-rule);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--sp-surface);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.7rem;
@@ -275,7 +275,7 @@ html:root[data-theme="dark"] .live-session {
 .live-session .ls-reference-shortcut {
   color: var(--sp-ink);
   border-color: var(--sp-rule);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--sp-surface);
   box-shadow: none;
 }
@@ -297,7 +297,7 @@ html:root[data-theme="dark"] .live-session {
 .live-session .ls-linear-control {
   color: var(--sp-ink);
   border: 1px solid var(--sp-rule);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--sp-surface);
   box-shadow: none;
   backdrop-filter: none;
@@ -363,7 +363,7 @@ html:root[data-theme="dark"] .live-session {
 .live-session .ls-stage-card {
   color: var(--sp-ink);
   border: 1px solid var(--sp-rule);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--sp-surface);
   box-shadow: none;
 }
@@ -447,7 +447,7 @@ html:root[data-theme="dark"] .live-session {
   bottom: 3px;
   width: 3px;
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--sp-rule);
   pointer-events: none;
 }
@@ -514,7 +514,7 @@ html:root[data-theme="dark"] .live-session {
 .live-session :is(.ls-script-ribbon, .ls-depth-note, .ls-board-cue, .ls-hints, .ls-answer-detail) {
   color: var(--sp-ink);
   border-color: var(--sp-rule);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--sp-surface-raised);
   box-shadow: none;
 }
@@ -572,7 +572,7 @@ html:root[data-theme="dark"] .live-session {
   color: var(--sp-ink);
   border: 0;
   border-left: 4px solid var(--sp-focus);
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   background: var(--sp-focus-soft);
   font-weight: 580;
 }
@@ -866,7 +866,7 @@ html:root[data-theme="dark"] .live-session {
   }
 
   .live-session .ls-runner[data-focus="true"] .ls-stage-card {
-    border-radius: 10px 10px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 
   .live-session .ls-runner[data-focus="true"] .ls-coaching-drawer {
@@ -967,7 +967,7 @@ html:root[data-theme="dark"] .live-session {
     place-items: center;
     padding: 0;
     border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     color: inherit;
     background: color-mix(in srgb, currentColor 6%, transparent);
     cursor: pointer;
@@ -1000,7 +1000,7 @@ html:root[data-theme="dark"] .live-session {
     margin: 0;
     padding: 12px 14px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     color: var(--ink);
     background: var(--surface);
     box-shadow: var(--shadow);
@@ -1029,7 +1029,7 @@ html:root[data-theme="dark"] .live-session {
     padding: 3px 9px 5px;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     line-height: 1.15;
   }
   .ls-focus-timer small { font-size: 0.66rem; opacity: 0.72; }
@@ -1065,9 +1065,9 @@ html:root[data-theme="dark"] .live-session {
     gap: 8px;
     padding: 0 14px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     color: var(--navy);
-    background: linear-gradient(135deg, #f0dba6, #d2ab55);
+    background: var(--gold-bright);
     font: inherit;
     font-weight: 800;
     white-space: nowrap;
@@ -1144,7 +1144,7 @@ html:root[data-theme="dark"] .live-session {
   }
   .live-session .ls-runner[data-focus="true"] .ls-coaching-drawer > summary { min-height: var(--ls-focus-cues-h); }
   .live-session .ls-runner[data-focus="true"] .ls-coaching-drawer[open] {
-    box-shadow: 0 -12px 32px rgba(10, 17, 32, 0.22);
+    box-shadow: var(--elev-3);
   }
   .live-session .ls-runner[data-focus="true"] .ls-coaching-drawer[open] .ls-coaching-rail {
     max-height: 45dvh;

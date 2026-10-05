@@ -39,7 +39,7 @@ html:root :is(.eyebrow, .mini-label) {
 }
 :is(.brand-lockup, .mobile-brand):hover .brand-mark .crest {
   transform: scale(1.05);
-  filter: drop-shadow(0 2px 4px rgba(10, 17, 32, 0.28)) drop-shadow(0 0 8px rgba(216, 181, 99, 0.4));
+  filter: drop-shadow(0 2px 4px rgba(10, 17, 32, 0.28));
 }
 @media (min-width: 1024px) {
   /* Expanded: the crest lines up with the nav icons below it (8px grid). */
@@ -58,18 +58,19 @@ html:root :is(.eyebrow, .mini-label) {
   box-shadow: none;
 }
 .crest__sheen { opacity: 0; }
+/* Depth preference: one quiet turn and one sheen pass, never a loop. */
 [data-motion="depth"] .crest--animated {
   transform-style: preserve-3d;
-  animation: crest-turn 14s var(--ease-calm) infinite alternate;
-  filter: drop-shadow(0 10px 18px rgba(10, 17, 32, 0.35));
+  animation: crest-turn 1.6s var(--ease-calm) 1 alternate both;
+  filter: drop-shadow(0 4px 8px rgba(10, 17, 32, 0.25));
 }
 [data-motion="depth"] .crest--animated .crest__sheen {
   opacity: 1;
-  animation: crest-sheen 6.5s ease-in-out infinite;
+  animation: crest-sheen 3s ease-in-out 1;
 }
 @keyframes crest-turn {
-  from { transform: perspective(500px) rotateY(-16deg) rotateX(4deg); }
-  to { transform: perspective(500px) rotateY(16deg) rotateX(-3deg); }
+  from { transform: perspective(500px) rotateY(-8deg) rotateX(2deg); }
+  to { transform: perspective(500px) rotateY(0deg) rotateX(0deg); }
 }
 @keyframes crest-sheen {
   0%, 55% { transform: translateX(0); }
@@ -84,9 +85,7 @@ html:root :is(.eyebrow, .mini-label) {
 @media (min-width: 1024px) {
   .sidebar {
     border-right: 1px solid rgba(216, 181, 99, 0.16);
-    background:
-      radial-gradient(ellipse at 0% 0%, rgba(216, 181, 99, 0.1), transparent 55%),
-      linear-gradient(180deg, var(--navy), #0a1226);
+    background: var(--navy);
   }
   .sidebar .brand-lockup strong { color: var(--on-navy); font-size: 0.8rem; letter-spacing: 0.14em; }
   .sidebar .brand-lockup span:not(.brand-mark) { color: var(--on-navy-muted); }
@@ -123,11 +122,29 @@ html:root :is(.eyebrow, .mini-label) {
   .topbar-exam { display: none; }
 }
 .theme-toggle:not(.command-palette-launch) { width: 44px; padding: 8px; }
+/* Very narrow phones: the crest alone stands for the brand so the five 44px
+   utilities fit; the page title below names the screen. */
+@media (max-width: 379px) {
+  .mobile-brand > div { display: none; }
+  .data-actions { gap: 4px; }
+}
+/* Desktop utilities share one height, corner and hairline; phones keep 44px targets. */
+@media (min-width: 1024px) {
+  .data-actions { gap: 8px; }
+  .data-actions :is(.theme-toggle, .sync-chip, .sync-retry, .button),
+  .workspace-actions > summary {
+    min-height: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+  }
+  .data-actions .theme-toggle:not(.command-palette-launch) { width: 40px; }
+  .data-actions .sync-chip { border: 1px solid var(--border); background: var(--surface); }
+}
 .sync-retry {
   min-height: 38px;
   padding: 0 12px;
   border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   color: var(--danger);
   background: var(--danger-pale);
   font: inherit;
@@ -136,28 +153,43 @@ html:root :is(.eyebrow, .mini-label) {
   cursor: pointer;
 }
 
-/* --------------------------------------------------------------- buttons */
+/* ---------------------------------------------------------------- panels
+   Hairline borders carry the structure; elevation stays barely there. */
+.panel { border-color: var(--border); box-shadow: var(--elev-1); }
+
+/* --------------------------------------------------------------- buttons
+   Primary: deep navy. Secondary and icon buttons: neutral surface with a
+   hairline. Destructive keeps its red (.button-danger). No lifts or glows. */
+.button {
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  transition: background-color var(--motion-micro) ease, border-color var(--motion-micro) ease, color var(--motion-micro) ease;
+}
 .button-primary,
 .button-accent {
   color: #fff;
-  background: var(--forest);
-  box-shadow: 0 3px 10px rgba(15, 26, 51, 0.18);
+  border-color: var(--action);
+  background: var(--action);
+  box-shadow: none;
 }
 .button-primary:hover:not(:disabled),
-.button-accent:hover:not(:disabled) { background: var(--navy); }
+.button-accent:hover:not(:disabled) { border-color: var(--navy); background: var(--navy); }
 html:root[data-theme="dark"] :is(.button-primary, .button-accent) { border-color: rgba(220, 187, 114, 0.4); }
 html:root[data-theme="dark"] :is(.button-primary, .button-accent):hover:not(:disabled) { background: var(--navy-2); }
 .button-secondary,
-.button-ghost { border-color: var(--border); background: var(--surface); }
+.button-ghost { border-color: var(--border); color: var(--ink); background: var(--surface); box-shadow: none; }
+.button-secondary:hover:not(:disabled),
+.button-ghost:hover:not(:disabled) { border-color: color-mix(in srgb, var(--ink) 30%, var(--border)); background: var(--surface-2); }
 /* The one gold call to action: the lead step on the Daily Briefing. */
 html:root .today-hero .hero-actions .button-accent {
   color: var(--navy);
   border-color: transparent;
-  background: linear-gradient(135deg, #f0dba6, #d2ab55);
-  box-shadow: 0 6px 18px rgba(210, 171, 85, 0.28);
+  background: var(--gold-bright);
+  box-shadow: none;
 }
 html:root .today-hero .hero-actions .button-accent:hover:not(:disabled) {
-  background: linear-gradient(135deg, #f6e5ba, #dcb863);
+  background: #e4c785;
 }
 
 /* --------------------------------------------------------- progress bars */
@@ -175,10 +207,8 @@ html:root[data-theme="dark"] .progress-fill { background: var(--gold); }
 html:root :is(.week-hero, .mastery-overview).panel.panel {
   color: var(--on-navy);
   border: 1px solid rgba(216, 181, 99, 0.3);
-  background:
-    radial-gradient(ellipse at 100% 0%, rgba(216, 181, 99, 0.16), transparent 60%),
-    linear-gradient(135deg, var(--navy), var(--navy-2));
-  box-shadow: 0 18px 44px rgba(10, 17, 32, 0.2);
+  background: var(--navy);
+  box-shadow: var(--elev-2);
 }
 html:root :is(.week-hero, .mastery-overview).panel .eyebrow { color: var(--gold-bright); }
 html:root :is(.week-hero, .mastery-overview).panel :is(h1, h2) { color: var(--on-navy); }
@@ -217,17 +247,7 @@ html:root :is(.week-hero, .mastery-overview).panel {
   isolation: isolate;
   overflow: hidden;
   border-color: rgba(216, 181, 99, 0.28);
-  background: linear-gradient(135deg, var(--navy), var(--navy-2));
-}
-.today-hero::before {
-  position: absolute;
-  inset: -20%;
-  z-index: -1;
-  content: "";
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 78% 18%, rgba(216, 181, 99, 0.22), transparent 38%),
-    radial-gradient(circle at 18% 92%, rgba(120, 150, 210, 0.16), transparent 42%);
+  background: var(--navy);
 }
 .today-hero h1 { color: var(--on-navy); }
 .today-hero .hero-kicker { color: var(--gold-bright); }
@@ -247,10 +267,7 @@ html:root :is(.week-hero, .mastery-overview).panel {
 
 /* ------------------------------------------------------------------ login */
 .access-shell {
-  background:
-    radial-gradient(circle at 14% 8%, rgba(216, 181, 99, 0.16), transparent 28rem),
-    radial-gradient(circle at 88% 92%, rgba(120, 150, 210, 0.14), transparent 30rem),
-    var(--navy);
+  background: var(--navy);
 }
 .access-shell::before,
 .access-shell::after { border-color: rgba(216, 181, 99, 0.12); }
@@ -259,11 +276,11 @@ html:root :is(.week-hero, .mastery-overview).panel {
 
 /* -------------------------------------------------- depth: parallax light */
 [data-motion="depth"] :is(.today-hero, .access-shell)::before {
-  transform: translate3d(calc(var(--px, 0) * -16px), calc(var(--py, 0) * -12px), 0);
+  transform: translate3d(calc(var(--px, 0) * -6px), calc(var(--py, 0) * -4px), 0);
   transition: transform 0.9s var(--ease-calm);
 }
 [data-motion="depth"] .access-shell::after {
-  transform: translate3d(calc(var(--px, 0) * 12px), calc(var(--py, 0) * 10px), 0);
+  transform: translate3d(calc(var(--px, 0) * 5px), calc(var(--py, 0) * 4px), 0);
   transition: transform 0.9s var(--ease-calm);
 }
 
@@ -273,7 +290,7 @@ html:root :is(.week-hero, .mastery-overview).panel {
   transform: perspective(var(--depth-perspective))
     rotateX(calc(var(--tilt-x, 0) * var(--depth-tilt)))
     rotateY(calc(var(--tilt-y, 0) * var(--depth-tilt)));
-  transition: transform 0.45s var(--ease-calm), box-shadow 0.45s var(--ease-calm);
+  transition: transform var(--motion-standard) var(--ease-calm), box-shadow var(--motion-standard) var(--ease-calm);
 }
 [data-motion="depth"] :is(.metric-card, .mock-card)::after {
   position: absolute;
@@ -281,26 +298,26 @@ html:root :is(.week-hero, .mastery-overview).panel {
   border-radius: inherit;
   content: "";
   pointer-events: none;
-  background: radial-gradient(circle at var(--sheen-x, 50%) 0%, rgba(255, 255, 255, 0.4), transparent 60%);
+  background: radial-gradient(circle at var(--sheen-x, 50%) 0%, rgba(255, 255, 255, 0.16), transparent 60%);
   opacity: 0;
-  transition: opacity 0.35s ease;
+  transition: opacity var(--motion-standard) ease;
 }
 html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card)::after {
-  background: radial-gradient(circle at var(--sheen-x, 50%) 0%, rgba(236, 212, 156, 0.12), transparent 60%);
+  background: radial-gradient(circle at var(--sheen-x, 50%) 0%, rgba(236, 212, 156, 0.06), transparent 60%);
 }
 [data-motion="depth"] :is(.metric-card, .mock-card):hover::after { opacity: 1; }
-[data-motion="depth"] :is(.metric-card, .mock-card):hover { box-shadow: 0 16px 34px rgba(10, 17, 32, 0.14); }
+[data-motion="depth"] :is(.metric-card, .mock-card):hover { box-shadow: var(--elev-2); }
 
 /* ----------------------------------------- depth: page transitions
    Tab switches recede into the page and the next view arrives from depth. */
 [data-motion="depth"]::view-transition-old(root) {
-  animation: depth-out 260ms var(--ease-calm) both;
+  animation: depth-out 160ms var(--ease-calm) both;
 }
 [data-motion="depth"]::view-transition-new(root) {
-  animation: depth-in 340ms var(--ease-calm) both;
+  animation: depth-in 200ms var(--ease-calm) both;
 }
-@keyframes depth-out { to { opacity: 0; transform: perspective(1200px) translateZ(-60px); } }
-@keyframes depth-in { from { opacity: 0; transform: perspective(1200px) translateZ(60px); } }
+@keyframes depth-out { to { opacity: 0; transform: perspective(1200px) translateZ(-20px); } }
+@keyframes depth-in { from { opacity: 0; transform: perspective(1200px) translateZ(20px); } }
 
 /* ------------------------------------ Module Tests: start and results
    Motion is limited to these two screens; the question, timer and
@@ -309,13 +326,13 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
 .mock-start__card h2,
 .mock-results__reveal h2 { font-family: var(--font-heading); }
 [data-motion="depth"] .mock-start__card {
-  animation: depth-rise 0.8s var(--ease-calm) both;
+  animation: depth-rise 0.32s var(--ease-calm) both;
 }
 [data-motion="depth"] .mock-button--start {
-  animation: depth-rise 0.8s 0.25s var(--ease-calm) both;
+  animation: depth-rise 0.32s 0.08s var(--ease-calm) both;
 }
 @keyframes depth-rise {
-  from { opacity: 0; transform: perspective(900px) translateY(26px) rotateX(14deg) scale(0.97); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
 @property --mock-score {
@@ -324,17 +341,17 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
   initial-value: 0;
 }
 [data-motion="depth"] .mock-score {
-  animation: mock-pop 0.6s 0.15s cubic-bezier(0.2, 1.3, 0.3, 1) both, score-sweep 1.4s 0.3s var(--ease-calm) both;
+  animation: mock-pop 0.32s 0.1s var(--ease-calm) both, score-sweep 0.8s 0.2s var(--ease-calm) both;
 }
 @keyframes score-sweep { from { --mock-score: 0; } }
 .mock-results__reveal.is-strong { border-color: rgba(216, 181, 99, 0.5); }
 .mock-results__medal { margin-bottom: 4px; }
 [data-motion="depth"] .mock-results__medal {
-  animation: medal-arrive 1.1s 0.9s var(--ease-calm) both, crest-turn 14s 2s var(--ease-calm) infinite alternate;
+  animation: medal-arrive 0.5s 0.4s var(--ease-calm) both;
 }
 @keyframes medal-arrive {
-  from { opacity: 0; transform: perspective(500px) rotateY(-200deg) scale(0.6); }
-  to { opacity: 1; transform: perspective(500px) rotateY(-16deg) rotateX(4deg); }
+  from { opacity: 0; transform: perspective(500px) rotateY(-40deg) scale(0.9); }
+  to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -396,9 +413,9 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
     padding: 13px 9px 11px;
     overflow: hidden;
     border: 1px solid rgba(216, 181, 99, 0.22);
-    border-radius: 14px;
-    background: linear-gradient(160deg, rgba(244, 239, 227, 0.075), rgba(244, 239, 227, 0.015));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(3, 8, 20, 0.28);
+    border-radius: var(--radius-lg);
+    background: rgba(244, 239, 227, 0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--elev-2);
   }
   .sidebar .sidebar-exam::before {
     content: "";
@@ -407,8 +424,8 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
     right: 16px;
     left: 16px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--gold-bright), transparent);
-    opacity: 0.75;
+    background: var(--gold-bright);
+    opacity: 0.35;
   }
   .sidebar .sidebar-exam .sidebar-exam__label {
     color: #bda97c;
@@ -443,7 +460,7 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
     display: block;
     height: 4px;
     overflow: hidden;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(244, 239, 227, 0.1);
   }
   .sidebar .sidebar-exam .sidebar-exam__track > span {
@@ -451,8 +468,7 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
     height: 100%;
     min-width: 4px;
     border-radius: inherit;
-    background: linear-gradient(90deg, #a8843a, var(--gold-bright));
-    box-shadow: 0 0 8px rgba(216, 181, 99, 0.45);
+    background: var(--gold-bright);
   }
   .sidebar .sidebar-exam .sidebar-exam__meta {
     display: flex;
@@ -499,7 +515,7 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
     /* 1px border + 9px = icons on the 22px content line. */
     padding: 0 9px;
     border: 1px solid transparent;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     color: #c9cdd8;
     font-size: 0.8rem;
     font-weight: 500;
@@ -513,11 +529,11 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
     color: var(--on-navy);
     font-weight: 600;
     border-color: rgba(216, 181, 99, 0.24);
-    background: linear-gradient(160deg, rgba(216, 181, 99, 0.16), rgba(216, 181, 99, 0.05));
+    background: rgba(216, 181, 99, 0.12);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
   .sidebar .nav-button::before { top: 9px; bottom: 9px; left: -1px; width: 3px; }
-  .sidebar .nav-button.is-active::before { background: var(--gold-bright); box-shadow: 0 0 8px rgba(216, 181, 99, 0.55); }
+  .sidebar .nav-button.is-active::before { background: var(--gold-bright); }
   .sidebar .nav-button.is-active svg { color: var(--gold-bright); }
   .sidebar .nav-button:focus-visible {
     outline: 2px solid var(--gold-bright);

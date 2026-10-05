@@ -8,7 +8,7 @@
   padding: 40px;
   max-width: 1200px;
   margin: 0 auto;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
   color: var(--ink);
 }
 
@@ -16,7 +16,7 @@
   --payment-surface: var(--surface, #ffffff);
   --payment-surface-muted: var(--surface-2, #f7f9fc);
   --payment-border: var(--border, #dce4ed);
-  --payment-shadow: 0 12px 30px rgba(19, 44, 68, 0.09);
+  --payment-shadow: var(--elev-1);
 }
 
 .dashboard-header {
@@ -27,11 +27,13 @@
 }
 
 .gradient-text {
-  font-size: 36px;
-  font-weight: 800;
+  font-family: var(--font-heading);
+  font-size: clamp(1.5rem, 2vw, 1.9rem);
+  font-weight: 700;
   margin: 0 0 8px 0;
   color: var(--ink);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .dashboard-header p {
@@ -54,24 +56,23 @@
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--motion-micro) ease, border-color var(--motion-micro) ease, color var(--motion-micro) ease;
   border: none;
   text-decoration: none;
 }
 
 .luxury-btn.primary {
-  background: linear-gradient(135deg, #00b49f 0%, #009382 100%);
+  background: var(--action);
   color: #fff;
-  box-shadow: 0 4px 15px rgba(0, 180, 159, 0.3);
+  box-shadow: none;
 }
 
 .luxury-btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 180, 159, 0.4);
+  background: var(--navy-2);
 }
 
 .luxury-btn.outline {
@@ -113,7 +114,7 @@
   background: var(--payment-surface);
   border: 1px solid var(--payment-border);
   box-shadow: var(--payment-shadow);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 /* ==================
@@ -146,13 +147,13 @@
 .metric-icon {
   width: 56px;
   height: 56px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.metric-icon.teal { background: rgba(0, 180, 159, 0.1); color: #00b49f; }
+.metric-icon.teal { background: var(--success-bg); color: var(--success); }
 .metric-icon.gold { background: rgba(234, 179, 85, 0.1); color: #eab355; }
 
 .metric-data {
@@ -181,7 +182,7 @@
   font-size: 13px;
 }
 
-.text-teal { color: #00b49f; }
+.text-teal { color: var(--success); }
 .text-gold { color: #eab355; }
 .metric-data small.alert-text { color: #ef4444; font-weight: 600; }
 
@@ -207,10 +208,10 @@
   stroke-linecap: round;
   transition: stroke-dasharray 1s ease-out;
 }
-.circular-chart.teal .circle { stroke: #00b49f; }
+.circular-chart.teal .circle { stroke: var(--success); }
 .percentage {
   fill: var(--ink);
-  font-family: sans-serif;
+  font-family: var(--font-financial);
   font-size: 8px;
   font-weight: bold;
   text-anchor: middle;
@@ -256,7 +257,7 @@
 .badge {
   background: var(--payment-surface-muted);
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
@@ -274,7 +275,7 @@
   padding: 20px;
   background: var(--payment-surface-muted);
   border: 1px solid var(--payment-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   transition: all 0.2s ease;
 }
 
@@ -314,14 +315,14 @@
 
 .luxury-badge {
   padding: 6px 12px;
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 
-.luxury-badge.paid { background: rgba(0, 180, 159, 0.15); color: #00b49f; border: 1px solid rgba(0,180,159,0.3); }
+.luxury-badge.paid { background: var(--success-bg); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 35%, transparent); }
 .luxury-badge.pending { background: rgba(234, 179, 85, 0.15); color: #eab355; border: 1px solid rgba(234,179,85,0.3); }
 .luxury-badge.overdue { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
 
@@ -337,8 +338,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(13, 23, 35, 0.8);
-  backdrop-filter: blur(8px);
+  background: rgba(13, 23, 35, 0.72);
 }
 
 .luxury-modal .modal-content {
@@ -371,14 +371,15 @@
   border: 1px solid var(--payment-border);
   color: var(--ink);
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   transition: border-color 0.2s ease;
 }
 
 .glass-inputs input:focus,
 .glass-inputs select:focus {
   outline: none;
-  border-color: #00b49f;
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 28%, transparent);
   background: var(--payment-surface);
 }
 
@@ -424,7 +425,7 @@
   min-height: 1056px; /* A4 aspect roughly at 96dpi */
   position: relative;
   padding: 64px;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  box-shadow: var(--elev-2);
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -471,7 +472,7 @@
   background: #eab355;
   color: #0c1825;
   padding: 8px 16px;
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   font-weight: 800;
   font-size: 11px;
   letter-spacing: 0.1em;
@@ -487,7 +488,7 @@
 
 .r-main-card {
   background: #13263b;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 40px;
   display: flex;
   justify-content: space-between;
@@ -537,7 +538,7 @@
 
 .r-box {
   background: #13263b;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 32px;
 }
 
@@ -657,9 +658,7 @@
   place-items: center;
   padding: 24px;
   color: #f8fafc;
-  background:
-    radial-gradient(circle at 85% 10%, rgba(59, 130, 246, 0.12), transparent 30%),
-    #0f172a;
+  background: var(--navy);
 }
 
 .receipt-verification-card {
@@ -667,9 +666,9 @@
   padding: clamp(28px, 5vw, 48px);
   border: 1px solid #334155;
   border-top: 4px solid #64748b;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: #1e293b;
-  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.42);
+  box-shadow: var(--elev-2);
 }
 
 .receipt-verification-card.is-valid {
@@ -692,7 +691,7 @@
   place-items: center;
   margin-bottom: 24px;
   border: 1px solid #475569;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   color: #cbd5e1;
   background: #0f172a;
 }
@@ -751,7 +750,7 @@
   margin: 28px 0 20px;
   overflow: hidden;
   border: 1px solid #334155;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: #334155;
 }
 
@@ -798,7 +797,7 @@
   gap: 16px;
   margin-bottom: 20px;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
 }
 
 .payment-action-error button {
@@ -813,7 +812,7 @@
 .payment-modal-error {
   margin: 14px 0 0;
   padding: 10px 12px;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   font-size: 13px;
 }
 
@@ -831,7 +830,7 @@
   padding: 0 32px 0 10px;
   color: #f8fafc;
   border: 1px solid #3b5065;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: #13263b;
 }
 
@@ -865,7 +864,7 @@
   margin: 24px 0;
   overflow: hidden;
   border: 1px solid var(--payment-border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--payment-border);
 }
 
@@ -909,3 +908,17 @@
     animation-duration: 0.01ms;
   }
 }
+
+/* Load failure: a restrained error panel (same words, clearer framing). */
+.payments-hub.error {
+  max-width: 72ch;
+  margin: var(--space-4) 0;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border));
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius-lg);
+  background: var(--danger-pale);
+  color: var(--ink);
+}
+.payments-hub.error h3 { margin: 0 0 var(--space-1); color: var(--danger); font-size: 1rem; font-weight: 600; }
+.payments-hub.error p { margin: 0; }

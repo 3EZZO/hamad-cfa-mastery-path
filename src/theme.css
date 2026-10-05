@@ -3,7 +3,7 @@
 .data-actions .theme-toggle,
 .ls-session-switcher button.theme-toggle {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  flex-shrink: 0; min-height: 44px; padding: 8px 12px; border-radius: 10px;
+  flex-shrink: 0; min-height: 44px; padding: 8px 12px; border-radius: var(--radius-lg);
   border: 1px solid var(--border, #dce4ed); background: var(--surface, #fff);
   color: var(--ink, #132c44); font: inherit; font-size: .875rem; cursor: pointer;
 }
@@ -36,26 +36,12 @@ html:root[data-theme="dark"] {
   --navy: #0b1426; --navy-2: #1a2c50; --on-navy: #f4efe3; --on-navy-muted: #b9bfcc;
   --accent-strong: #ecd49c; --on-accent: #0a1120; --action: #2f4d8a;
   --warning: #ecc97f; --warning-bg: #3a3020;
-  --shadow: 0 16px 42px #0005; --shadow-soft: 0 1px 2px #0006;
+  --shadow: 0 2px 10px #0004; --shadow-soft: 0 1px 2px #0006;
+  --elev-1: 0 1px 2px #0006; --elev-2: 0 2px 10px #0005; --elev-3: 0 14px 36px #0008;
   --theme-blue: #aec4ee; --theme-teal: #8fd3b6; --theme-violet: #c9bcff;
   --theme-amber: #e2c27a; --theme-amber-bg: #3a3020;
   --chart-grid: #3a4864; --chart-tick: #aeb1bc;
   --chart-score: #8fd3b6; --chart-target: #dcbb72;
-  
-  /* Glassmorphism Elevation Tokens */
-  --surface-blur: blur(16px);
-
-  --surface-base-bg: rgba(18, 28, 48, 0.7);
-  --surface-base-border: rgba(255, 255, 255, 0.06);
-  --surface-base-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  
-  --surface-raised-bg: rgba(24, 36, 59, 0.74);
-  --surface-raised-border: rgba(255, 255, 255, 0.10);
-  --surface-raised-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
-  
-  --surface-modal-bg: rgba(26, 40, 68, 0.86);
-  --surface-modal-border: rgba(255, 255, 255, 0.15);
-  --surface-modal-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
 }
 html:root[data-theme="dark"] body,
 html:root[data-theme="dark"] :is(.access-screen, .session-mode-loader) {
@@ -129,14 +115,14 @@ html:root[data-theme="dark"] .timeline-week > summary:focus-visible {
   outline: 3px solid #e2c27a; outline-offset: -3px;
 }
 html:root[data-theme="dark"] .timeline-week.is-current {
-  border-color: #b59a5c; box-shadow: 0 0 0 1px #dcbb7255, 0 12px 30px #0005;
+  border-color: #b59a5c; box-shadow: 0 0 0 1px #dcbb7255, var(--elev-2);
 }
 html:root[data-theme="dark"] .timeline-week.is-current > summary { background: #26365a; }
 html:root[data-theme="dark"] .timeline-body {
   color: var(--ink); background: #0e1729; border-top-color: var(--border);
 }
 html:root[data-theme="dark"] .timeline::before {
-  background: linear-gradient(var(--theme-blue), var(--border) 80%, transparent);
+  background: var(--border);
 }
 html:root[data-theme="dark"] .evidence-contract > div {
   color: var(--ink); background: var(--surface-2); border-color: var(--border);
@@ -318,29 +304,4 @@ html:root[data-theme="dark"] .live-session .ls-command-block__body:focus-visible
   html:root[data-theme="dark"] :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
     outline-color: Highlight;
   }
-}
-
-/* Glassmorphism Elevation Utilities */
-html:root[data-theme="dark"] .elevation-base {
-  background: var(--surface-base-bg);
-  border: 1px solid var(--surface-base-border);
-  box-shadow: var(--surface-base-shadow);
-  backdrop-filter: var(--surface-blur);
-  -webkit-backdrop-filter: var(--surface-blur);
-}
-
-html:root[data-theme="dark"] .elevation-raised {
-  background: var(--surface-raised-bg);
-  border: 1px solid var(--surface-raised-border);
-  box-shadow: var(--surface-raised-shadow);
-  backdrop-filter: var(--surface-blur);
-  -webkit-backdrop-filter: var(--surface-blur);
-}
-
-html:root[data-theme="dark"] .elevation-modal {
-  background: var(--surface-modal-bg);
-  border: 1px solid var(--surface-modal-border);
-  box-shadow: var(--surface-modal-shadow);
-  backdrop-filter: var(--surface-blur);
-  -webkit-backdrop-filter: var(--surface-blur);
 }

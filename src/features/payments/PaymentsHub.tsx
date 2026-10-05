@@ -427,25 +427,16 @@ export function PaymentsHub() {
         <div className="chart-wrapper">
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00b49f" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#00b49f" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorExpected" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#eab355" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#eab355" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
               <XAxis dataKey="month" stroke="var(--chart-tick)" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="var(--chart-tick)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
               <Tooltip 
-                contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--ink)' }}
+                contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', boxShadow: 'var(--elev-3)', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}
                 itemStyle={{ color: 'var(--ink)' }}
                 formatter={(value: any) => [formatDualCurrency(Number(value) || 0, config.currency), undefined]}
               />
-              <Area type="monotone" dataKey="Expected" stroke="#eab355" fillOpacity={1} fill="url(#colorExpected)" />
-              <Area type="monotone" dataKey="Actual" stroke="#00b49f" fillOpacity={1} fill="url(#colorActual)" />
+              <Area type="monotone" dataKey="Expected" stroke="var(--chart-target)" strokeWidth={2} strokeDasharray="5 5" fill="var(--chart-target)" fillOpacity={0.06} />
+              <Area type="monotone" dataKey="Actual" stroke="var(--chart-score)" strokeWidth={2.5} fill="var(--chart-score)" fillOpacity={0.12} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
