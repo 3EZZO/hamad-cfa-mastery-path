@@ -3,7 +3,7 @@
  * Mastery Path — one workspace for preparation, teaching, and evidence.
  * Navy #132C44 · Blue #315FCE · Teal #087E83
  * Cloud #F3F6FA · White #FFFFFF · Slate #5B6D80
- * Text and display: Montserrat (--font-ui / --font-heading) · Formulae: IBM Plex Mono
+ * Display: Montserrat (--font-heading) · Body: IBM Plex Sans (--font-ui) · Formulae: IBM Plex Mono
 */
 .ls-session-switcher {
   display: flex;
