@@ -743,7 +743,7 @@ function App() {
           <p className="sidebar-exam__count"><strong>{examDays}</strong> <span>{examDays === 1 ? "day" : "days"} to go</span></p>
           <span className="sidebar-exam__track" aria-hidden="true"><span style={{ width: `${planDonePercent}%` }} /></span>
           <small className="sidebar-exam__meta">
-            <span>{formatDate(EXAM_DATE, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+            <span>{formatDate(EXAM_DATE)}</span>
             <span>{planDonePercent}% of plan</span>
           </small>
         </div>
