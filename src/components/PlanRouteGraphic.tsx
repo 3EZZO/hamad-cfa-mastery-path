@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import cx from "clsx";
+import { cx } from "../views/shared";
 
 export interface RouteNode {
   id: string;
@@ -68,7 +68,7 @@ export function PlanRouteGraphic({ nodes, columns = 5, compact = false }: PlanRo
   const totalHeight = paddingY * 2 + (Math.ceil(nodes.length / columns) - 1) * rowHeight;
 
   return (
-    <div className={cx("plan-route-graphic", { compact })} aria-hidden="true">
+    <div className={cx("plan-route-graphic", compact && "compact")} aria-hidden="true">
       <svg viewBox={`0 0 ${totalWidth} ${totalHeight}`} width="100%" height="100%">
         <path 
           d={pathData} 
@@ -101,10 +101,7 @@ export function PlanRouteGraphic({ nodes, columns = 5, compact = false }: PlanRo
                 fill={isActive ? "var(--theme-blue)" : "var(--surface-2)"} 
                 stroke={isActive ? "none" : "var(--border)"}
                 strokeWidth={compact ? "1" : "1.5"}
-                className={cx("plan-route-node", {
-                  "is-current": node.isCurrent,
-                  "is-complete": node.isComplete
-                })}
+                className={cx("plan-route-node", node.isCurrent && "is-current", node.isComplete && "is-complete")}
               />
             </g>
           );

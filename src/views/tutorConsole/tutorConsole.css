@@ -170,3 +170,42 @@
 .coach-prep__grid p, .coach-prep__grid ul { margin: 0 0 6px; }
 .coach-prep__grid ul { padding-left: 18px; }
 .coach-prep__grid .is-attention { color: var(--danger, #a3343f); font-weight: 700; }
+
+/* Collapsible blocks (Fold). */
+.coach-fold-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-bottom: 12px; }
+.coach-fold-toolbar .coach-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; }
+.coach-fold__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px 12px; }
+.coach-fold:not(.is-open) > .coach-fold__head { margin-bottom: 0; }
+.coach-fold__titles { flex: 1; min-width: 0; }
+.coach-fold__titles :is(h3, h4) { margin: 0; }
+.coach-fold__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.coach-fold__toggle > span { min-width: 0; overflow-wrap: anywhere; }
+.coach-fold__toggle > svg { flex: none; color: var(--muted); transition: transform .15s ease; }
+.coach-fold__toggle[aria-expanded="false"] > svg { transform: rotate(-90deg); }
+.coach-fold__toggle:focus-visible { outline: 3px solid var(--gold-bright, #d8b563); outline-offset: 2px; border-radius: 6px; }
+.coach-fold__meta, .coach-fold__summary { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.4; }
+.coach-fold__body[hidden] { display: none !important; }
+.coach-subfold { display: grid; gap: 8px; min-width: 0; padding-top: 6px; }
+.coach-subfold + .coach-subfold, .panel > .coach-subfold { border-top: 1px solid var(--border); }
+.coach-subfold > .coach-fold__head h4 { font-size: 1rem; }
+.coach-subfold > .coach-fold__body { display: grid; gap: 10px; min-width: 0; }
+.coach-fold__head > .button { min-height: 40px; }
+.coach-fold.danger-zone { display: block; }
+.coach-fold.danger-zone > .coach-fold__body { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+@media (max-width: 699px) {
+  .coach-fold.danger-zone > .coach-fold__body { flex-direction: column; align-items: stretch; }
+}
+@media (prefers-reduced-motion: reduce) { .coach-fold__toggle > svg { transition: none; } }

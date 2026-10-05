@@ -35,6 +35,7 @@ import { deadlineCountdown, deadlinePassed, formatReminderDate, isReminderDate, 
 import { clearDeadlineChanges, composeReminderMessage, daysFromNow, overdueDraft, type ReminderPreset, type ReminderTone } from "../../lib/reminderComposer";
 import { deadlinesByModule } from "../../lib/testBoard";
 import { consoleAnchor } from "../../lib/tutorConsole";
+import { Fold, useReveal } from "../../views/tutorConsole/Fold";
 import { MockAnswerKeyReview } from "./MockAnswerKeyReview";
 import { MockReminderAdmin } from "./MockReminderAdmin";
 import "./moduleMock.css";
@@ -48,18 +49,13 @@ const FINISH: Record<string, string> = {
   leave: "Forfeited (Leave Test)",
 };
 
-/** Scroll a panel element into view (guarded for non-browser renders). */
-function reveal(id: string) {
-  if (typeof document === "undefined") return;
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
 export function MockTestAdmin({ notify, reminderPreset = null }: {
   notify: Notify;
   /** Prefills the reminder composer (e.g. from Tutor Admin's inbox); a new object applies again. */
   reminderPreset?: ReminderPreset | null;
 }) {
   const dialog = useAppDialog();
+  const reveal = useReveal();
   const input = useRef<HTMLInputElement>(null);
   const [metas, setMetas] = useState<MockTestMeta[]>([]);
   const [attempts, setAttempts] = useState<MockAttempt[]>([]);
@@ -382,15 +378,17 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
         <div><p className="eyebrow">Module Mock Tests</p><h3 id="mock-admin-title">Tests, answer keys and results</h3></div>
         <ClipboardCheck size={21} />
       </div>
-      <p className="practice-bank-admin__intro">
-        Upload the private <code>*.mock.json</code> file for a module. It arrives as a <strong>Draft</strong>, invisible to the student,
-        until you review the answer key and choose Approve &amp; Publish.
-      </p>
-      <input ref={input} type="file" accept="application/json,.json" multiple hidden onChange={event => void upload(event.target.files)} />
-      <button type="button" className="button button-primary" disabled={busy} onClick={() => input.current?.click()}>
-        <CloudUpload size={17} />{busy ? "Working…" : "Upload mock test JSON"}
-      </button>
       {error && <p className="form-error" role="alert" style={{ whiteSpace: "pre-line" }}><CircleAlert size={16} />{error}</p>}
+      <Fold id="tests:upload" variant="sub" title="Upload a test" summary="Drafts stay invisible to the student until published">
+        <p className="practice-bank-admin__intro">
+          Upload the private <code>*.mock.json</code> file for a module. It arrives as a <strong>Draft</strong>, invisible to the student,
+          until you review the answer key and choose Approve &amp; Publish.
+        </p>
+        <input ref={input} type="file" accept="application/json,.json" multiple hidden onChange={event => void upload(event.target.files)} />
+        <button type="button" className="button button-primary" disabled={busy} onClick={() => input.current?.click()}>
+          <CloudUpload size={17} />{busy ? "Working…" : "Upload mock test JSON"}
+        </button>
+      </Fold>
 
       {MOCK_TOPICS.map(topic => {
         const topicModules = mockModulesInTopic(topic);
@@ -402,14 +400,15 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
           .filter(module => metas.some(meta => meta.moduleId === module.id && meta.status === "published") && !isDone(module.id))
           .map(module => module.id);
         return (
-          <details key={topic} className="mock-admin__topic" open>
-            <summary>
-              <strong>{topic}</strong>
-              <span>
-                {topicMetas.length} of {topicModules.length} uploaded · {topicMetas.length - drafts.length} published
-                {drafts.length > 0 && ` · ${drafts.length} ${drafts.length === 1 ? "draft" : "drafts"}`}
-              </span>
-            </summary>
+          <Fold
+            key={topic}
+            id={`tests:topic-${topic}`}
+            variant="sub"
+            className="mock-admin__topic"
+            title={topic}
+            meta={`${topicMetas.length} of ${topicModules.length} uploaded · ${topicMetas.length - drafts.length} published${drafts.length > 0 ? ` · ${drafts.length} ${drafts.length === 1 ? "draft" : "drafts"}` : ""}`}
+            summary={pendingInTopic.length ? `${pendingInTopic.length} pending for Hamad` : undefined}
+          >
             <div className="mock-admin__bulk">
               <button type="button" className="button" disabled={busy || drafts.length === 0} onClick={() => void publishDrafts(topic, drafts)}>
                 <BadgeCheck size={16} />Publish all drafts ({drafts.length})
@@ -486,7 +485,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                 );
               })}
             </div>
-          </details>
+          </Fold>
         );
       })}
 
@@ -501,7 +500,12 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
         notify={notify}
       />
 
-      <h4 className="mock-admin__subhead">Student results</h4>
+      <Fold
+        id="tests:results"
+        variant="sub"
+        title="Student results"
+        summary={`${attempts.filter(entry => entry.status !== "active").length} finished · ${attempts.filter(entry => entry.status !== "active" && entry.score === null).length} to grade`}
+      >
       <div className="mock-switch" role="group" aria-label="Show results for">
         {(["all", ...MOCK_TOPICS] as const).map(topic => (
           <button key={topic} type="button" className="mock-switch__option" aria-pressed={resultsTopic === topic} onClick={() => setResultsTopic(topic)}>
@@ -576,6 +580,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
           </table>
         </div>
       )}
+      </Fold>
     </section>
   );
 }

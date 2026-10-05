@@ -1,6 +1,7 @@
 import { Lightbulb } from "lucide-react";
 import type { InsightSuggestion, ModuleStanding, PaceReport } from "../../lib/tutorInsights";
 import "./tutorConsole.css";
+import { Fold } from "./Fold";
 
 const percent = (value: number | null) => (value === null ? "–" : `${Math.round(value * 100)}%`);
 
@@ -21,11 +22,14 @@ export function TutorInsights({
   const weakest = standings.slice(0, 5);
   const practiceExpected = Math.round(pace.practiceTarget * pace.weekElapsed);
   return (
-    <section className="panel coach-insights" aria-labelledby="coach-insights-title">
-      <div className="panel-heading">
-        <div><p className="eyebrow">Student insights</p><h3 id="coach-insights-title">{pace.week > 0 ? `Week ${pace.week} pace` : "Before the plan starts"}</h3></div>
-        <Lightbulb size={21} aria-hidden="true" />
-      </div>
+    <Fold
+      id="overview:insights"
+      className="coach-insights"
+      eyebrow="Student insights"
+      title={pace.week > 0 ? `Week ${pace.week} pace` : "Before the plan starts"}
+      icon={<Lightbulb size={21} aria-hidden="true" />}
+      summary={`Plan tests ${pace.testsDone} of ${pace.testsDue.length} · practice ${pace.practiceThisWeek} of ${pace.practiceTarget} this week${suggestions.length ? ` · ${suggestions.length} suggested ${suggestions.length === 1 ? "action" : "actions"}` : ""}`}
+    >
       {loading ? <p className="fine-print">Loading…</p> : (
         <>
           <dl className="coach-insights__pace">
@@ -61,6 +65,6 @@ export function TutorInsights({
           ) : <p className="fine-print">Module standings appear once Hamad takes a test or answers practice questions.</p>}
         </>
       )}
-    </section>
+    </Fold>
   );
 }

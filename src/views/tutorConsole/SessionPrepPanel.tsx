@@ -3,6 +3,7 @@ import { formatDate } from "../../lib/dates";
 import { sessionPrepText, type SessionPrep } from "../../lib/sessionPrep";
 import { consoleAnchor } from "../../lib/tutorConsole";
 import "./tutorConsole.css";
+import { Fold } from "./Fold";
 
 const percent = (value: number | null) => (value === null ? "–" : `${Math.round(value * 100)}%`);
 
@@ -24,11 +25,16 @@ export function SessionPrepPanel({
   const dateLabel = formatDate(prep.session.date, { weekday: "short", day: "numeric", month: "short" });
   const toTake = prep.tests.filter((test) => test.state === "to-take").map((test) => test.id);
   return (
-    <section className="panel coach-prep" id={consoleAnchor.prep} aria-labelledby="coach-prep-title">
-      <div className="panel-heading">
-        <div><p className="eyebrow">Session prep</p><h3 id="coach-prep-title">Session {String(prep.session.number).padStart(2, "0")} · {dateLabel}</h3><p className="fine-print">{prep.session.title}</p></div>
-        <ClipboardList size={21} aria-hidden="true" />
-      </div>
+    <Fold
+      id="sessions:prep"
+      anchorId={consoleAnchor.prep}
+      className="coach-prep"
+      eyebrow="Session prep"
+      title={`Session ${String(prep.session.number).padStart(2, "0")} · ${dateLabel}`}
+      icon={<ClipboardList size={21} aria-hidden="true" />}
+      summary={prep.session.title}
+    >
+      <p className="fine-print">{prep.session.title}</p>
       {loading ? <p className="fine-print">Loading…</p> : (
         <div className="coach-prep__grid">
           <div>
@@ -53,6 +59,6 @@ export function SessionPrepPanel({
         {toTake.length > 0 && <button type="button" className="button button-secondary" onClick={() => onRemind(toTake)}><BellRing size={16} /> Remind about {toTake.length === 1 ? "its test" : `its ${toTake.length} tests`}</button>}
         {onOpenSessionMode && <button type="button" className="button button-primary" onClick={onOpenSessionMode}><PlayCircle size={16} /> Open Session Mode</button>}
       </div>
-    </section>
+    </Fold>
   );
 }

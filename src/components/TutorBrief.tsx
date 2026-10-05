@@ -95,7 +95,13 @@ export function TutorBriefContent({ brief, practiceStatus, testsStatus }: {
  * logged lesson. Read-only; loads the student's practice runs and module
  * test attempts with the tutor's existing read access.
  */
-export function TutorBriefPanel({ tracker, defaultOpen = true }: { tracker: TrackerState; defaultOpen?: boolean }) {
+export function TutorBriefPanel({ tracker, defaultOpen = true, open, onOpenChange }: {
+  tracker: TrackerState;
+  defaultOpen?: boolean;
+  /** Controlled open state (e.g. Tutor Admin's remembered folds). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const practice = usePracticeSnapshot({ role: "tutor", uid: "tutor", includeRuns: true });
   const [attempts, setAttempts] = useState<MockAttempt[] | null>(null);
   const [testsFailed, setTestsFailed] = useState(false);
@@ -120,7 +126,11 @@ export function TutorBriefPanel({ tracker, defaultOpen = true }: { tracker: Trac
   }), [attempts, practice.questions, practice.runs, practice.studentUid, today, tracker]);
 
   return (
-    <details className="tutor-brief" open={defaultOpen}>
+    <details
+      className="tutor-brief"
+      open={open ?? defaultOpen}
+      onToggle={onOpenChange ? (event) => onOpenChange(event.currentTarget.open) : undefined}
+    >
       <summary>
         <ClipboardList size={18} aria-hidden="true" />
         <span>

@@ -34,6 +34,14 @@ if (!/<link[^>]+rel=["']manifest["']/i.test(html)) {
 if (!/<link[^>]+rel=["']apple-touch-icon["']/i.test(html)) {
   throw new Error("Built index.html does not link the Apple touch icon.");
 }
+if (!/<meta[^>]+name=["']mobile-web-app-capable["']/i.test(html)) {
+  throw new Error("Built index.html is missing the standard mobile-web-app-capable meta tag.");
+}
+// Charts load only with the screens that draw them; a shared helper pulled
+// into the chart chunk would make every start download and run it.
+if (/<link[^>]+rel=["']modulepreload["'][^>]+vendor-charts/i.test(html)) {
+  throw new Error("Built index.html preloads the chart chunk; the start-up code imports something bundled with the charts.");
+}
 
 const manifest = JSON.parse(
   await readFile(`${outputDirectory}/manifest.webmanifest`, "utf8"),

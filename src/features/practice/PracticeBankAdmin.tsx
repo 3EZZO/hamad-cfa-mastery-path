@@ -14,6 +14,7 @@ import {
   type PublishedPracticeBank,
 } from "../../lib/practiceContent";
 import { consoleAnchor } from "../../lib/tutorConsole";
+import { Fold } from "../../views/tutorConsole/Fold";
 
 export function PracticeBankAdmin({ notify, runs = null }: {
   notify: (message: string, tone?: "success" | "warning") => void;
@@ -106,17 +107,24 @@ export function PracticeBankAdmin({ notify, runs = null }: {
         <div><p className="eyebrow">Student Practice Coach</p><h3>Published practice banks</h3></div>
         <BookOpenCheck size={21} />
       </div>
-      <p className="practice-bank-admin__intro">Upload only student-safe, independently authored practice JSON. Published versions are immutable and contain no private tutor fields.</p>
-      <p className="practice-bank-admin__intro">You can select several validated JSON files and publish the entire batch in one operation.</p>
-      <input ref={input} type="file" accept="application/json,.json" multiple hidden onChange={event => void upload(event.target.files)} />
-      <button className="button button-primary" type="button" disabled={busy} onClick={() => input.current?.click()}><CloudUpload size={17} />{busy ? "Publishing…" : "Publish practice JSON"}</button>
       {error && <p className="form-error" role="alert"><CircleAlert size={16} />{error}</p>}
+      <Fold id="practice:upload" variant="sub" title="Publish practice banks" summary="Upload validated practice JSON">
+        <p className="practice-bank-admin__intro">Upload only student-safe, independently authored practice JSON. Published versions are immutable and contain no private tutor fields.</p>
+        <p className="practice-bank-admin__intro">You can select several validated JSON files and publish the entire batch in one operation.</p>
+        <input ref={input} type="file" accept="application/json,.json" multiple hidden onChange={event => void upload(event.target.files)} />
+        <button className="button button-primary" type="button" disabled={busy} onClick={() => input.current?.click()}><CloudUpload size={17} />{busy ? "Publishing…" : "Publish practice JSON"}</button>
+      </Fold>
       {banks.length === 0 ? <p className="practice-bank-admin__intro">No practice banks have been published.</p> : groups.map(group => {
         const allUnlocked = group.unlocked === group.banks.length;
         return (
-          <section key={group.topic} className="practice-bank-admin__topic" aria-label={group.topic}>
-            <header>
-              <div><strong>{group.topic}</strong><small>{group.banks.length} {group.banks.length === 1 ? "bank" : "banks"} · {group.questions} questions · {group.unlocked} unlocked</small></div>
+          <Fold
+            key={group.topic}
+            id={`practice:topic-${group.topic}`}
+            variant="sub"
+            className="practice-bank-admin__topic"
+            title={group.topic}
+            meta={`${group.banks.length} ${group.banks.length === 1 ? "bank" : "banks"} · ${group.questions} questions · ${group.unlocked} unlocked`}
+            aside={(
               <button
                 type="button"
                 className="button"
@@ -128,7 +136,8 @@ export function PracticeBankAdmin({ notify, runs = null }: {
               >
                 {allUnlocked ? <><LockKeyhole size={16} />Lock all</> : <><LockKeyholeOpen size={16} />Unlock all</>}
               </button>
-            </header>
+            )}
+          >
             <div className="practice-bank-admin__list">
               {group.banks.map(bank => {
                 const unlocked = assigned.includes(bank.storageId);
@@ -150,14 +159,19 @@ export function PracticeBankAdmin({ notify, runs = null }: {
                 );
               })}
             </div>
-          </section>
+          </Fold>
         );
       })}
       {gaps.length > 0 && (
-        <details className="practice-bank-admin__gaps">
-          <summary>{gaps.length} {gaps.length === 1 ? "module" : "modules"} taught so far with no practice bank</summary>
+        <Fold
+          id="practice:gaps"
+          variant="sub"
+          defaultOpen={false}
+          className="practice-bank-admin__gaps"
+          title={`${gaps.length} ${gaps.length === 1 ? "module" : "modules"} taught so far with no practice bank`}
+        >
           <ul>{gaps.map(gap => <li key={gap.catalogId}>Module {gap.number} · {gap.title} <small>({gap.topic})</small></li>)}</ul>
-        </details>
+        </Fold>
       )}
     </section>
   );

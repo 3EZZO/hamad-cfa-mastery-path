@@ -159,7 +159,7 @@ describe("Tutor Admin control centre", () => {
 
   it("shows student insights on the overview", async () => {
     const root = await render("overview");
-    const insights = root.find((node) => node.type === "section" && node.props.className === "panel coach-insights");
+    const insights = root.find((node) => node.type === "section" && node.props["data-fold-id"] === "overview:insights");
     expect(textOf(insights)).toContain("Plan tests taken");
     expect(textOf(insights)).toContain("Exam");
     // EC3 scored 7/8: listed, not weak.
@@ -172,7 +172,7 @@ describe("Tutor Admin control centre", () => {
     vi.stubGlobal("navigator", { clipboard: { writeText } });
     const onOpenSessionMode = vi.fn();
     const root = await render("sessions", vi.fn(), vi.fn(), onOpenSessionMode);
-    const prep = root.find((node) => node.type === "section" && node.props.className === "panel coach-prep");
+    const prep = root.find((node) => node.type === "section" && node.props["data-fold-id"] === "sessions:prep");
     expect(textOf(prep.findByType("h3"))).toMatch(/^Session \d{2} · /);
     const button = (label: string) => prep.find((node) => node.type === "button" && textOf(node).includes(label));
     await act(async () => button("Copy agenda").props.onClick());

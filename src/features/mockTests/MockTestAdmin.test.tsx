@@ -80,7 +80,9 @@ async function render(element = <MockTestAdmin notify={vi.fn()} />) {
 }
 
 const topicGroup = (root: ReactTestInstance, topic: string) =>
-  root.find((node) => node.type === "details" && textOf(node.findByType("summary")).startsWith(topic));
+  root.find((node) => node.type === "section" && node.props["data-fold-id"] === `tests:topic-${topic}`);
+const topicCounts = (root: ReactTestInstance, topic: string) =>
+  textOf(topicGroup(root, topic).find((node) => node.props.className === "coach-fold__meta"));
 const button = (root: ReactTestInstance, label: string) =>
   root.find((node) => node.type === "button" && textOf(node).startsWith(label));
 
@@ -113,9 +115,9 @@ describe("Tutor Admin module tests by topic", () => {
 
   it("groups the modules by topic with upload and publish counts", async () => {
     const root = await render();
-    expect(textOf(topicGroup(root, "Quantitative Methods").findByType("summary"))).toBe("Quantitative Methods1 of 11 uploaded · 1 published");
+    expect(topicCounts(root, "Quantitative Methods")).toBe("1 of 11 uploaded · 1 published");
     const econ = topicGroup(root, "Economics");
-    expect(textOf(econ.findByType("summary"))).toBe("Economics3 of 8 uploaded · 1 published · 2 drafts");
+    expect(topicCounts(root, "Economics")).toBe("3 of 8 uploaded · 1 published · 2 drafts");
     expect(econ.findAll((node) => node.props.className === "mock-admin__module")).toHaveLength(8);
   });
 
@@ -153,7 +155,7 @@ describe("Tutor Admin module tests by topic", () => {
     const table = () => root.findByProps({ className: "mock-table mock-admin__results" });
     const headings = () => table().findAll((node) => node.props.className === "mock-admin__topic-row").map(textOf);
     expect(headings()).toEqual(["Quantitative Methods", "Economics"]);
-    await act(async () => button(root, "Economics").props.onClick());
+    await act(async () => button(root.find((node) => node.props["aria-label"] === "Show results for"), "Economics").props.onClick());
     expect(headings()).toEqual(["Economics"]);
     const modules = table().findByType("tbody").findAll((node) => node.type === "tr" && node.props.className === undefined)
       .map((row) => textOf(row.findAllByType("td")[0]));
