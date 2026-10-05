@@ -759,8 +759,13 @@
 .practice-player button:focus-visible,
 .practice-results button:focus-visible,
 .practice-manual summary:focus-visible {
-  outline: 3px solid #8db0f5;
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
+}
+/* Navy hero and player bar: the on-navy ring. */
+.practice-hero button:focus-visible,
+.practice-player__header button:focus-visible {
+  outline-color: var(--focus-ring-on-navy);
 }
 
 html:root[data-theme="dark"] .practice-action > span { color: #87d9c8; background: #193f3c; }

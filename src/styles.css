@@ -34,7 +34,9 @@
   --danger: #a3343f;
   --danger-pale: #f9e8e7;
   --shadow: 0 2px 8px rgba(20, 33, 61, 0.07);
-  --shadow-soft: 0 1px 2px rgba(20, 33, 61, 0.05);
+  /* One subtle resting shadow: the legacy name follows the elevation scale
+     (and so its dark value). */
+  --shadow-soft: var(--elev-1);
   --teal: #17656a;
   --ink-soft: #2b3a5c;
   /* The navy used by the sidebar and hero cards stays navy in both themes. */
@@ -65,6 +67,8 @@
      filled controls. theme.css overrides both for dark mode. */
   --focus-ring: #24427f;
   --focus-ring-halo: #fff;
+  /* On navy surfaces (sidebar, heroes, exam and player bars). */
+  --focus-ring-on-navy: var(--gold-bright);
   --measure-question: 52ch;
   --measure-response: 62ch;
   --measure-explanation: 66ch;
@@ -3078,7 +3082,7 @@ body {
   padding: 7px 7px calc(7px + env(safe-area-inset-bottom));
   border-top: 1px solid rgba(20, 63, 66, 0.12);
   border-bottom: 0;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--surface);
   box-shadow: var(--elev-2);
 }
 
@@ -4411,7 +4415,7 @@ summary:focus-visible {
 
 .topbar {
   min-height: 70px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--surface);
   border-color: var(--border);
   gap: 16px;
 }
@@ -4934,7 +4938,7 @@ summary:focus-visible {
   border-color: var(--border);
 }
 .mobile-nav {
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--surface);
   border-color: var(--border);
 }
 .mobile-nav-button {

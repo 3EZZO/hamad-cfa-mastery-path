@@ -546,7 +546,7 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
   .sidebar .nav-button.is-active::before { background: var(--gold-bright); }
   .sidebar .nav-button.is-active svg { color: var(--gold-bright); }
   html:root .sidebar .nav-button:focus-visible {
-    outline: 2px solid var(--gold-bright);
+    outline: 2px solid var(--focus-ring-on-navy);
     /* Keep the ring visible inside the scrollable navigation bounds. */
     outline-offset: -3px;
   }
