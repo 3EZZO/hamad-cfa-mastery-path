@@ -139,7 +139,7 @@ export function createWeeklyReportHtml(report: WeeklyReport): string {
   ).join("");
   const priorities = report.priorities.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>Hamad CFA Mastery Week ${report.week} Report</title><style>${fontFaces}${typographyTokens}
-  @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:var(--font-ui);line-height:var(--leading-body);letter-spacing:var(--tracking-normal);-webkit-font-smoothing:antialiased;color:#102945;margin:0;font-size:var(--text-caption)}header{background:#0f1a33;color:#f4efe3;padding:22px;border-radius:10px;border-bottom:3px solid #d8b563}header small{color:#d8b563;text-transform:uppercase;letter-spacing:var(--tracking-label);font-weight:var(--weight-bold)}h1{margin:7px 0 3px;font-size:var(--text-section);font-family:var(--font-heading);line-height:var(--leading-heading);font-weight:var(--weight-semibold)}header p{margin:0;color:#c3c8d4}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.metric{border:1px solid #cfdae5;border-radius:8px;padding:11px}.metric strong{font-size:var(--text-section);display:block}.metric span{color:#61758b}.section{margin-top:14px}h2{font-size:var(--text-ui);border-bottom:2px solid #b08a3a;padding-bottom:5px}.signals{list-style:none;padding:0}.signals li{border-left:5px solid #53a879;background:#eff8f2;margin:6px 0;padding:8px}.signals li.amber{border-color:#e4ad3a;background:#fff7e6}.signals li.red{border-color:#c95252;background:#fff0f0}.signals span,.signals em{display:block;margin-top:3px}.signals em{font-style:normal;color:#43586e}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}footer{margin-top:20px;border-top:1px solid #cfdae5;padding-top:8px;color:#61758b}</style></head><body>
+  @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:var(--font-ui);line-height:var(--leading-body);letter-spacing:var(--tracking-normal);-webkit-font-smoothing:antialiased;color:#102945;margin:0;font-size:var(--text-caption)}header{background:#0f1a33;color:#f4efe3;padding:22px;border-radius:10px;border-bottom:3px solid #d8b563}header small{color:#d8b563;text-transform:uppercase;letter-spacing:var(--tracking-label);font-weight:var(--weight-bold)}h1{margin:7px 0 3px;font-size:var(--text-section);font-family:var(--font-editorial);line-height:var(--leading-heading);font-weight:var(--weight-semibold);letter-spacing:var(--tracking-title)}header p{margin:0;color:#c3c8d4}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.metric{border:1px solid #cfdae5;border-radius:8px;padding:11px}.metric strong{font-size:var(--text-section);display:block}.metric span{color:#61758b}.section{margin-top:14px}h2{font-size:var(--text-ui);border-bottom:2px solid #b08a3a;padding-bottom:5px}.signals{list-style:none;padding:0}.signals li{border-left:5px solid #53a879;background:#eff8f2;margin:6px 0;padding:8px}.signals li.amber{border-color:#e4ad3a;background:#fff7e6}.signals li.red{border-color:#c95252;background:#fff0f0}.signals span,.signals em{display:block;margin-top:3px}.signals em{font-style:normal;color:#43586e}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}footer{margin-top:20px;border-top:1px solid #cfdae5;padding-top:8px;color:#61758b}</style></head><body>
   <header><small>HAMAD CFA MASTERY - WEEK ${String(report.week).padStart(2, "0")}</small><h1>${escapeHtml(report.focus)}</h1><p>${escapeHtml(report.period)}</p></header>
   <section class="grid"><div class="metric"><strong>${report.completionPercent}%</strong><span>execution</span></div><div class="metric"><strong>${report.sessionsCompleted}/${report.plannedSessions}</strong><span>sessions</span></div><div class="metric"><strong>${report.practiceAccuracy == null ? "-" : `${report.practiceAccuracy}%`}</strong><span>${report.practiceAttempted} questions</span></div><div class="metric"><strong>${report.openMistakes}</strong><span>open mistakes</span></div></section>
   <div class="two"><section class="section"><h2>Evidence summary</h2><p><strong>Tutor time:</strong> ${report.tutorMinutes} minutes</p><p><strong>Practice:</strong> ${report.practiceCorrect}/${report.practiceAttempted || 0} correct</p><p><strong>Mock:</strong> ${escapeHtml(report.mockSummary)}</p><p><strong>Topic snapshot:</strong> ${escapeHtml(report.topicSnapshot.map((item) => `${item.topic} ${item.mastery}%`).join("; "))}</p></section><section class="section"><h2>Next priorities</h2><ol>${priorities}</ol>${report.nextWeekFocus ? `<p><strong>Next week:</strong> ${escapeHtml(report.nextWeekFocus)}</p>` : ""}</section></div>
@@ -194,7 +194,16 @@ export function printWeeklyReport(report: WeeklyReport): void {
   reportDocument.write(createWeeklyReportHtml(report));
   reportDocument.close();
 
-  // The report has no external assets, so one task is sufficient for the
-  // browser to finish parsing the inline markup and print styles.
-  window.setTimeout(startPrint, 0);
+  // The report uses the app's self-hosted fonts (already cached by the app).
+  // Print once they are ready so the PDF is not set in fallback faces; the cap
+  // means a missing font never blocks printing. Without the Font Loading API,
+  // one task is enough to finish parsing the inline markup and print styles.
+  const fontsReady = reportDocument.fonts?.ready;
+  if (fontsReady) {
+    const cap = window.setTimeout(startPrint, 1_500);
+    const print = () => { window.clearTimeout(cap); startPrint(); };
+    fontsReady.then(print, print);
+  } else {
+    window.setTimeout(startPrint, 0);
+  }
 }

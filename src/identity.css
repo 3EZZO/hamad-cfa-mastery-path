@@ -13,7 +13,7 @@
 html:root :is(.eyebrow, .mini-label) {
   color: var(--gold);
   font-size: var(--text-label);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
@@ -99,7 +99,7 @@ html:root :is(.eyebrow, .mini-label) {
   .nav-group-label {
     color: #bda97c;
     font-size: var(--text-label);
-    font-weight: var(--weight-bold);
+    font-weight: var(--weight-semibold);
     letter-spacing: var(--tracking-caps);
     text-transform: uppercase;
   }
@@ -431,7 +431,7 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
   .sidebar .sidebar-exam .sidebar-exam__label {
     color: #bda97c;
     font-size: var(--text-label);
-    font-weight: var(--weight-bold);
+    font-weight: var(--weight-semibold);
     letter-spacing: var(--tracking-caps);
     text-transform: uppercase;
   }
@@ -510,7 +510,7 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
     padding: 0 var(--nav-inset) 6px calc(var(--nav-inset) + var(--nav-icon-size) + var(--nav-label-gap));
     color: #bda97c;
     font-size: var(--text-label);
-    font-weight: var(--weight-bold);
+    font-weight: var(--weight-semibold);
     line-height: var(--leading-heading);
     letter-spacing: var(--tracking-caps);
     text-transform: uppercase;
@@ -525,13 +525,13 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
     border: 1px solid transparent;
     border-radius: var(--radius-lg);
     color: #c9cdd8;
-    font-size: var(--text-nav);
+    font-size: var(--text-sidebar);
     font-weight: var(--weight-medium);
     line-height: var(--leading-ui);
     letter-spacing: var(--tracking-normal);
     transition: background-color var(--motion-micro, 150ms) ease, color var(--motion-micro, 150ms) ease, border-color var(--motion-micro, 150ms) ease;
   }
-  .sidebar .nav-button > span { min-width: 0; overflow-wrap: anywhere; }
+  .sidebar .nav-button > span { min-width: 0; overflow-wrap: break-word; }
   .sidebar .nav-button svg { flex: none; width: var(--nav-icon-size); height: var(--nav-icon-size); color: #9aa3b5; transition: color var(--motion-micro, 150ms) ease; }
   .sidebar .nav-button:hover { color: var(--on-navy); background: rgba(244, 239, 227, 0.06); }
   .sidebar .nav-button:hover svg { color: var(--on-navy); }

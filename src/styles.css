@@ -189,7 +189,8 @@ blockquote {
   color: var(--ink);
 }
 
-/* Display headings use Montserrat; question stems keep the reading sans. */
+/* Headings share the interface sans (--font-heading); only page titles take
+   the editorial serif (typography.css). Question stems keep the reading sans. */
 :where(h1, h2):where(:not(.practice-question h2, #ls-candidate-title)) {
   font-family: var(--font-heading);
   letter-spacing: var(--tracking-normal);
@@ -444,7 +445,7 @@ code, kbd, pre, samp { font-family: var(--font-financial); }
   margin: 0 0 4px;
   color: var(--gold);
   font-size: var(--text-label);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
@@ -1422,7 +1423,7 @@ textarea:focus {
 .session-plan-card > div:first-child span {
   color: var(--gold);
   font-size: var(--text-label);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
 }
@@ -1764,7 +1765,8 @@ textarea:focus {
 .mock-entry span {
   color: var(--gold);
   font-size: var(--text-label);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
 }
 
@@ -1942,7 +1944,6 @@ textarea:focus {
   border-radius: var(--radius-pill);
   font-size: var(--text-label);
   font-weight: var(--weight-bold);
-  text-transform: uppercase;
 }
 
 .status-positive {
@@ -2415,7 +2416,8 @@ textarea:focus {
   margin: 22px 0;
   color: #89938f;
   font-size: var(--text-label);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
 }
 
@@ -3055,7 +3057,7 @@ body {
   padding: 0 11px 4px;
   color: #6f8b82;
   font-size: var(--text-label);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
@@ -3538,8 +3540,7 @@ body {
   background: rgba(228, 244, 237, 0.72);
   font-size: var(--text-label);
   font-weight: var(--weight-bold);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-display);
+  letter-spacing: var(--tracking-normal);
 }
 
 .button-danger {
@@ -5673,7 +5674,7 @@ summary:focus-visible {
   padding: 10px 10px 4px;
   color: var(--muted);
   font-size: var(--text-label);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }

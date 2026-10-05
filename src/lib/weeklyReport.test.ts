@@ -107,4 +107,39 @@ describe("weekly report generator", () => {
     vi.advanceTimersByTime(60_000);
     expect(remove).toHaveBeenCalledOnce();
   });
+
+  it("waits for the report's fonts before printing, but never longer than the cap", async () => {
+    vi.useFakeTimers();
+    const report = buildWeeklyReport(PLAN[0], createDefaultState(), "2026-08-20");
+    const makeFrame = (ready: Promise<unknown>) => {
+      const print = vi.fn();
+      const reportDocument = { open: vi.fn(), write: vi.fn(), close: vi.fn(), fonts: { ready } } as unknown as Document;
+      const reportWindow = { document: reportDocument, focus: vi.fn(), print, addEventListener: vi.fn() } as unknown as Window;
+      const frame = {
+        title: "", setAttribute: vi.fn(), style: { cssText: "" }, contentWindow: reportWindow, contentDocument: reportDocument, remove: vi.fn(),
+      } as unknown as HTMLIFrameElement;
+      vi.stubGlobal("document", { createElement: vi.fn(() => frame), body: { appendChild: vi.fn() } });
+      vi.stubGlobal("window", { setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout });
+      return print;
+    };
+
+    let loaded: () => void = () => undefined;
+    const print = makeFrame(new Promise<void>((resolve) => { loaded = resolve; }));
+    printWeeklyReport(report);
+    vi.advanceTimersByTime(0);
+    expect(print).not.toHaveBeenCalled();
+    loaded();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(print).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(1_500);
+    expect(print).toHaveBeenCalledOnce();
+
+    const stalled = makeFrame(new Promise(() => undefined));
+    printWeeklyReport(report);
+    vi.advanceTimersByTime(1_499);
+    expect(stalled).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(stalled).toHaveBeenCalledOnce();
+  });
 });

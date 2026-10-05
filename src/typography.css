@@ -1,25 +1,37 @@
 /*
- * Display titles. Loaded after styles.css and identity.css. Headings use
- * Montserrat (--font-heading); body text stays in IBM Plex Sans (--font-ui).
+ * Text roles. Loaded after styles.css and identity.css; sizes, weights and
+ * families come from typographyTokens.css.
  *
- * Only the page titles and the Today hero headline are UPPERCASE with wide
- * tracking; their weights and the rest of the type come from styles.css.
- * Question stems and answers are never uppercase.
+ * Quiet editorial authority: Source Sans 3 for work and reading, Source Serif
+ * 4 only for the main page title and the Today title, both in source case.
+ * Uppercase is reserved for short eyebrows and group labels.
  */
 
-:root :is(.page-heading h1, .today-focus-copy h1) {
-  letter-spacing: var(--tracking-display);
-  text-transform: uppercase;
-  overflow-wrap: anywhere;
+body {
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-normal);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Fluid roles use rem bounds so browser text scaling remains effective. */
+/* Editorial titles: serif 600, source case, slight negative tracking. Only
+   each screen's main title: page headings, Today, sign-in, the Module Tests
+   hub and the Session launch. Fluid roles use rem bounds so browser text
+   scaling remains effective. */
+:root :is(.page-heading h1, .today-focus-copy h1, .access-card h1, .mock-hub__hero h2, .ls-launch__header h1) {
+  font-family: var(--font-editorial);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-title);
+  text-transform: none;
+  overflow-wrap: break-word;
+}
 :root .page-heading h1 { font-size: var(--text-page); }
-:root .today-focus-copy h1 { font-size: var(--text-section-fluid); letter-spacing: var(--tracking-display); }
+:root .today-focus-copy h1 { font-size: var(--text-today); line-height: var(--leading-heading); }
 
-/* 14-inch laptop (about 1280–1536 CSS px) and up. */
-@media (min-width: 1024px) {
-  :root .today-focus-copy h1 { font-size: var(--text-page); }
+/* Phones: editable text at 16px or more so browsers do not zoom into fields. */
+@media (max-width: 699px) {
+  html:root :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea) {
+    font-size: max(var(--text-body), 16px);
+  }
 }
 
 /* ------------------------------------------------ institutional hierarchy
@@ -27,7 +39,7 @@
    small caps; figures aligned. Question stems and answers keep the reading
    face and normal case. */
 :root .page-heading { margin-bottom: var(--space-5); }
-:root .page-heading h1 { margin: var(--space-1) 0 var(--space-2); line-height: var(--leading-display); }
+:root .page-heading h1 { margin: var(--space-1) 0 var(--space-3); line-height: var(--leading-display); }
 :root .page-heading > p:last-child {
   max-width: 68ch;
   color: var(--muted);
@@ -35,7 +47,8 @@
   line-height: var(--leading-reading);
 }
 :root :is(.eyebrow, .mini-label) {
-  font-weight: var(--weight-bold);
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
 }
 :root .panel-heading h3 {
