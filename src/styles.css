@@ -3,7 +3,8 @@
 
 :root {
   color-scheme: only light;
-  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-ui);
+  font-weight: 400;
   color: #14213d;
   background: #f5f1e8;
   font-synthesis: none;
@@ -58,17 +59,20 @@
      filled controls. theme.css overrides both for dark mode. */
   --focus-ring: #24427f;
   --focus-ring-halo: #fff;
-  --font-heading: "Source Serif 4", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-ui: "Montserrat", Arial, sans-serif;
+  --font-heading: "Montserrat", Arial, sans-serif;
   --font-financial: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
   --measure-question: 52ch;
   --measure-response: 62ch;
   --measure-explanation: 66ch;
 
-  /* Typography: Fluid Headline Weights */
-  --weight-h1: clamp(600, 400 + 4vw, 800);
-  --weight-h2: clamp(550, 400 + 3vw, 700);
-  --weight-h3: clamp(500, 400 + 2vw, 650);
-  --weight-h4: clamp(500, 400 + 1vw, 600);
+  /* Typography: Montserrat display 800–900, labels 500–600, body 400.
+     Display titles are uppercase with --tracking-display (typography.css). */
+  --weight-h1: 900;
+  --weight-h2: 800;
+  --weight-h3: 800;
+  --weight-h4: 700;
+  --tracking-display: 0.06em;
 
   /* Motion Tokens */
   --motion-micro: 150ms;
@@ -4914,7 +4918,7 @@ summary:focus-visible {
   padding: 17px;
 }
 .principle-strip strong {
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
   font-size: 0.95rem;
 }
 .principle-strip span {

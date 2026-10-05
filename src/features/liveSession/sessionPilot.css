@@ -68,7 +68,7 @@ html:root[data-theme="dark"] .live-session {
   --ls-shadow-soft: 0 5px 16px rgb(15 23 42 / 7%);
   color: var(--sp-ink);
   background: var(--sp-canvas);
-  font-family: "IBM Plex Sans", "Aptos", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-ui);
 }
 
 .ls-session-hub {
@@ -386,7 +386,7 @@ html:root[data-theme="dark"] .live-session {
 
 .live-session .ls-stage-card__identity h2 {
   color: var(--sp-ink);
-  font-family: "IBM Plex Sans", "Aptos", sans-serif;
+  font-family: var(--font-ui);
   font-weight: 720;
   letter-spacing: -0.025em;
 }
@@ -540,7 +540,7 @@ html:root[data-theme="dark"] .live-session {
 
 .live-session .ls-question-copy h3 {
   color: var(--sp-ink);
-  font-family: "IBM Plex Sans", "Aptos", sans-serif;
+  font-family: var(--font-ui);
   font-weight: 720;
 }
 
@@ -1120,7 +1120,7 @@ html:root[data-theme="dark"] .live-session {
 
   /* Formulas in focus: clean formatted text, not the code grid. */
   .live-session .ls-runner[data-focus="true"] :is(.ls-formula-stack, .ls-formula-line code, .financial-working) {
-    font-family: "IBM Plex Sans", "Segoe UI", sans-serif !important;
+    font-family: var(--font-ui) !important;
     font-size: calc(1.08rem * var(--ls-reader-scale, 1));
     font-variant-numeric: tabular-nums lining-nums;
     letter-spacing: 0.01em;
