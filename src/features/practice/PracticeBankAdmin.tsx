@@ -1,4 +1,4 @@
-import { BookOpenCheck, Check, CircleAlert, CloudUpload, LockKeyhole } from "lucide-react";
+import { BookOpenCheck, Check, CircleAlert, CloudUpload, LockKeyhole, LockKeyholeOpen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   listPublishedPracticeBanks,
@@ -6,14 +6,19 @@ import {
   publishPracticeBank,
   savePracticeAssignment,
 } from "../../lib/cloud";
+import { getProgramWeek } from "../../lib/dates";
+import { bankAccuracy, bankModules, bankTopicGroups, coverageGaps, moduleRangeText, setTopicUnlocked } from "../../lib/practiceBankControls";
 import {
   parsePracticeBankDraft,
+  type PracticeRun,
   type PublishedPracticeBank,
 } from "../../lib/practiceContent";
 import { consoleAnchor } from "../../lib/tutorConsole";
 
-export function PracticeBankAdmin({ notify }: {
+export function PracticeBankAdmin({ notify, runs = null }: {
   notify: (message: string, tone?: "success" | "warning") => void;
+  /** Hamad's practice sets, for accuracy per bank (optional). */
+  runs?: PracticeRun[] | null;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [banks, setBanks] = useState<PublishedPracticeBank[]>([]);
@@ -71,21 +76,29 @@ export function PracticeBankAdmin({ notify }: {
     }
   };
 
-  const toggle = async (storageId: string) => {
+  const saveAssignment = async (next: string[], message: string) => {
     setBusy(true);
     try {
-      const next = assigned.includes(storageId)
-        ? assigned.filter(id => id !== storageId)
-        : [...assigned, storageId];
       await savePracticeAssignment(next);
       setAssigned(next);
-      notify(assigned.includes(storageId) ? "Practice module locked." : "Practice module unlocked for Hamad.");
+      notify(message);
     } catch (cause) {
       notify(cause instanceof Error ? cause.message : "Unable to update the assignment.", "warning");
     } finally {
       setBusy(false);
     }
   };
+
+  const toggle = (storageId: string) => {
+    const unlocking = !assigned.includes(storageId);
+    return saveAssignment(
+      unlocking ? [...assigned, storageId] : assigned.filter(id => id !== storageId),
+      unlocking ? "Practice module unlocked for Hamad." : "Practice module locked.",
+    );
+  };
+
+  const groups = bankTopicGroups(banks, assigned);
+  const gaps = coverageGaps(banks, getProgramWeek());
 
   return (
     <section className="panel practice-bank-admin">
@@ -98,12 +111,54 @@ export function PracticeBankAdmin({ notify }: {
       <input ref={input} type="file" accept="application/json,.json" multiple hidden onChange={event => void upload(event.target.files)} />
       <button className="button button-primary" type="button" disabled={busy} onClick={() => input.current?.click()}><CloudUpload size={17} />{busy ? "Publishing…" : "Publish practice JSON"}</button>
       {error && <p className="form-error" role="alert"><CircleAlert size={16} />{error}</p>}
-      <div className="practice-bank-admin__list">
-        {banks.length ? banks.map(bank => {
-          const unlocked = assigned.includes(bank.storageId);
-          return <article key={bank.storageId} id={consoleAnchor.bank(bank.storageId)}><div><span>{bank.topic} · {bank.questions.length} questions</span><strong>{bank.title}</strong><small>{bank.version}</small></div><button type="button" disabled={busy} className={unlocked ? "is-unlocked" : ""} onClick={() => void toggle(bank.storageId)}>{unlocked ? <><Check size={16} />Unlocked</> : <><LockKeyhole size={16} />Locked</>}</button></article>;
-        }) : <p>No practice banks have been published.</p>}
-      </div>
+      {banks.length === 0 ? <p className="practice-bank-admin__intro">No practice banks have been published.</p> : groups.map(group => {
+        const allUnlocked = group.unlocked === group.banks.length;
+        return (
+          <section key={group.topic} className="practice-bank-admin__topic" aria-label={group.topic}>
+            <header>
+              <div><strong>{group.topic}</strong><small>{group.banks.length} {group.banks.length === 1 ? "bank" : "banks"} · {group.questions} questions · {group.unlocked} unlocked</small></div>
+              <button
+                type="button"
+                className="button"
+                disabled={busy}
+                onClick={() => void saveAssignment(
+                  setTopicUnlocked(assigned, group.banks, !allUnlocked),
+                  allUnlocked ? `${group.topic} practice locked.` : `${group.topic} practice unlocked for Hamad.`,
+                )}
+              >
+                {allUnlocked ? <><LockKeyhole size={16} />Lock all</> : <><LockKeyholeOpen size={16} />Unlock all</>}
+              </button>
+            </header>
+            <div className="practice-bank-admin__list">
+              {group.banks.map(bank => {
+                const unlocked = assigned.includes(bank.storageId);
+                const result = runs ? bankAccuracy(bank, runs) : null;
+                return (
+                  <article key={bank.storageId} id={consoleAnchor.bank(bank.storageId)}>
+                    <div>
+                      <span>{moduleRangeText(bankModules(bank))} · {bank.questions.length} questions</span>
+                      <strong>{bank.title}</strong>
+                      <small>
+                        {bank.version}
+                        {result && (result.answered ? ` · Hamad: ${Math.round(result.accuracy! * 100)}% of ${result.answered} answered` : " · not practised yet")}
+                      </small>
+                    </div>
+                    <button type="button" disabled={busy} className={unlocked ? "is-unlocked" : ""} aria-pressed={unlocked} onClick={() => void toggle(bank.storageId)}>
+                      {unlocked ? <><Check size={16} />Unlocked</> : <><LockKeyhole size={16} />Locked</>}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+      {gaps.length > 0 && (
+        <details className="practice-bank-admin__gaps">
+          <summary>{gaps.length} {gaps.length === 1 ? "module" : "modules"} taught so far with no practice bank</summary>
+          <ul>{gaps.map(gap => <li key={gap.catalogId}>Module {gap.number} · {gap.title} <small>({gap.topic})</small></li>)}</ul>
+        </details>
+      )}
     </section>
   );
 }
