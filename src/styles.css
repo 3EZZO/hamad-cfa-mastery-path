@@ -413,10 +413,13 @@ code, kbd, pre, samp { font-family: var(--font-financial); }
 }
 
 .page-shell {
+  /* The inline gutter is a token so full-bleed regions (the Practice player)
+     can extend to the shell edge exactly, without overflowing it. */
+  --page-gutter: 16px;
   width: 100%;
   max-width: 1420px;
   margin: 0 auto;
-  padding: 26px 16px 70px;
+  padding: 26px var(--page-gutter) 70px;
 }
 
 .page-heading {
@@ -2571,8 +2574,9 @@ textarea:focus {
   }
 
   .page-shell {
-    padding-right: 24px;
-    padding-left: 24px;
+    --page-gutter: 24px;
+    padding-right: var(--page-gutter);
+    padding-left: var(--page-gutter);
   }
 
   .command-copy {
@@ -2950,7 +2954,8 @@ textarea:focus {
   }
 
   .page-shell {
-    padding: 32px 30px 80px;
+    --page-gutter: 30px;
+    padding: 32px var(--page-gutter) 80px;
   }
 
   .page-heading {
@@ -4193,7 +4198,8 @@ body {
   }
 
   .page-shell {
-    padding: 28px 28px 70px;
+    --page-gutter: 28px;
+    padding: 28px var(--page-gutter) 70px;
   }
 
   .page-heading h1 {
@@ -5113,7 +5119,8 @@ summary:focus-visible {
     padding: 12px 26px;
   }
   .page-shell {
-    padding: 25px 26px 55px;
+    --page-gutter: 26px;
+    padding: 25px var(--page-gutter) 55px;
   }
   .today-focus {
     grid-template-columns: minmax(0, 1fr) 185px;
@@ -5123,7 +5130,8 @@ summary:focus-visible {
 
 @media (min-width: 1380px) {
   .page-shell {
-    padding: 30px 34px 60px;
+    --page-gutter: 34px;
+    padding: 30px var(--page-gutter) 60px;
   }
   .today-focus {
     grid-template-columns: minmax(0, 1fr) 205px;
@@ -5186,7 +5194,8 @@ summary:focus-visible {
     display: none;
   }
   .page-shell {
-    padding: 17px 13px 105px;
+    --page-gutter: 13px;
+    padding: 17px var(--page-gutter) 105px;
   }
   .view-stack {
     gap: 14px;
@@ -5570,20 +5579,23 @@ summary:focus-visible {
 }
 
 @media (min-width: 1024px) {
+  /* Collapsed (Practice): a 68px rail of 44×44 targets. */
+  .app-shell.sidebar-collapsed {
+    --sidebar-width: 68px;
+  }
   .app-shell.sidebar-collapsed .sidebar {
-    width: 80px;
+    width: var(--sidebar-width);
     padding-left: 12px;
     padding-right: 12px;
   }
   .app-shell.sidebar-collapsed .sidebar-exam,
   .app-shell.sidebar-collapsed .nav-group-label,
   .app-shell.sidebar-collapsed .brand-lockup > div,
-  .app-shell.sidebar-collapsed .nav-button span,
   .app-shell.sidebar-collapsed .sidebar-local > div {
     display: none;
   }
   .app-shell.sidebar-collapsed .main-shell {
-    margin-left: 80px;
+    margin-left: var(--sidebar-width);
     padding-left: 0;
   }
   .app-shell.sidebar-collapsed .nav-button { justify-content: center; padding-left: 0; padding-right: 0; }
