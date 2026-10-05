@@ -96,14 +96,24 @@ describe("theme tokens", () => {
     expect(palette.filter(name => !dark.has(name))).toEqual([]);
   });
 
-  it("sets headings in Montserrat, body in IBM Plex Sans, and uppercases only page titles and the Today hero", () => {
-    expect(sources["./typographyTokens.css"]).toMatch(/--font-ui:\s*"IBM Plex Sans"/);
-    expect(sources["./typographyTokens.css"]).toMatch(/--font-heading:\s*"Montserrat", Arial, sans-serif/);
-    expect(sources["./typographyTokens.css"]).toMatch(/--font-financial:\s*"IBM Plex Mono"/);
+  it("uses Source Sans 3 for the interface and a serif only for the main and Today titles, in source case", () => {
+    const tokens = sources["./typographyTokens.css"];
+    expect(tokens).toMatch(/--font-ui:\s*"Source Sans 3"/);
+    expect(tokens).toMatch(/--font-heading:\s*var\(--font-ui\)/);
+    expect(tokens).toMatch(/--font-editorial:\s*"Source Serif 4"/);
+    expect(tokens).toMatch(/--font-financial:\s*"IBM Plex Mono"/);
+    // Retired faces must not come back through any sheet.
+    for (const sheet of SHEETS) {
+      expect(sources[sheet], sheet).not.toMatch(/"IBM Plex Sans"|"Montserrat"/);
+    }
     expect(sources["./styles.css"]).toContain(":where(h1, h2):where(:not(.practice-question h2, #ls-candidate-title))");
     const css = stripComments(sources["./typography.css"]);
-    const uppercased = [...css.matchAll(/([^{}]+)\{[^}]*text-transform: uppercase/g)].map(match => match[1]!.trim());
-    expect(uppercased).toEqual([":root :is(.page-heading h1, .today-focus-copy h1)"]);
+    // The editorial serif is applied only to the page and Today titles.
+    const editorial = [...css.matchAll(/([^{}]+)\{[^}]*font-family: var\(--font-editorial\)/g)].map(match => match[1]!.trim());
+    expect(editorial).toEqual([":root :is(.page-heading h1, .today-focus-copy h1, .access-card h1, .mock-hub__hero h2, .ls-launch__header h1)"]);
+    // Titles keep their source case; nothing in the role sheet uppercases text.
+    expect(css).not.toMatch(/text-transform:\s*uppercase/);
+    expect(css).toMatch(/:root :is\(\.page-heading h1, \.today-focus-copy h1, [^)]*\) \{[^}]*text-transform: none/);
     for (const sheet of SHEETS) expect(sources[sheet], sheet).not.toContain('"Sora"');
   });
 

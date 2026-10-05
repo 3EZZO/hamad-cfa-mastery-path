@@ -140,7 +140,7 @@
 .coach-chip[aria-pressed="true"] { border-color: var(--action); color: var(--ink); background: var(--surface-2); font-weight: var(--weight-bold); }
 .coach-chip:focus-visible, .coach-inbox__snooze:focus-visible { outline: 3px solid var(--gold-bright, #d8b563); outline-offset: 2px; }
 .coach-activity__days { display: grid; gap: 14px; }
-.coach-activity__days h4 { margin: 0 0 6px; color: var(--muted); font-size: var(--text-nav); letter-spacing: var(--tracking-display); text-transform: uppercase; }
+.coach-activity__days h4 { margin: 0 0 6px; color: var(--muted); font-size: var(--text-nav); letter-spacing: var(--tracking-normal); }
 .coach-activity__days ol { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .coach-activity__days li { display: grid; grid-template-columns: 3.4rem minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .coach-activity__days li:last-child { border-bottom: 0; }
@@ -160,14 +160,14 @@
 .coach-insights__modules { width: 100%; border-collapse: collapse; font-size: var(--text-ui); }
 .coach-insights__modules caption { margin-bottom: 6px; color: var(--muted); font-size: var(--text-nav); text-align: left; }
 .coach-insights__modules th, .coach-insights__modules td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-.coach-insights__modules thead th { color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase; }
+.coach-insights__modules thead th { color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-normal); }
 .coach-insights__modules td { font-variant-numeric: tabular-nums; }
 .coach-insights__modules tbody th { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .coach-insights__modules tr.is-weak th { color: var(--danger, #a3343f); }
 
 /* Session prep. */
 .coach-prep__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; margin-bottom: 12px; }
-.coach-prep__grid h4 { margin: 0 0 6px; color: var(--muted); font-size: var(--text-nav); letter-spacing: var(--tracking-display); text-transform: uppercase; }
+.coach-prep__grid h4 { margin: 0 0 6px; color: var(--muted); font-size: var(--text-nav); letter-spacing: var(--tracking-normal); }
 .coach-prep__grid p, .coach-prep__grid ul { margin: 0 0 6px; }
 .coach-prep__grid ul { padding-left: 18px; }
 .coach-prep__grid .is-attention { color: var(--danger, #a3343f); font-weight: var(--weight-bold); }
