@@ -17,13 +17,17 @@ export interface MockChartPoint {
 }
 
 const tooltipStyle = {
-  borderRadius: 12,
+  borderRadius: 6,
   border: "1px solid var(--border, #d9ddd7)",
   backgroundColor: "var(--surface, #fff)",
+  boxShadow: "var(--elev-3)",
   color: "var(--ink, #132c44)",
   fontSize: 12,
+  fontVariantNumeric: "tabular-nums",
   padding: "8px 10px",
 } as const;
+
+const tick = { fontSize: 11, fill: "var(--chart-tick, #61706d)", fontFamily: "var(--font-ui)" } as const;
 
 /** Score, target and, when the tutor tallied them, the section results. */
 function MockTooltip({
@@ -64,14 +68,14 @@ export default function MockScoreChart({ data }: { data: MockChartPoint[] }) {
         />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 11, fill: "var(--chart-tick, #61706d)" }}
+          tick={tick}
           axisLine={false}
           tickLine={false}
         />
         <YAxis
           domain={[0, 100]}
           ticks={[0, 20, 40, 60, 80, 100]}
-          tick={{ fontSize: 11, fill: "var(--chart-tick, #61706d)" }}
+          tick={tick}
           axisLine={false}
           tickLine={false}
         />
@@ -90,9 +94,9 @@ export default function MockScoreChart({ data }: { data: MockChartPoint[] }) {
           dataKey="score"
           name="Actual score"
           stroke="var(--chart-score, #153f42)"
-          strokeWidth={3}
-          dot={{ r: 5, fill: "var(--chart-target, #d1a950)", stroke: "var(--chart-score, #153f42)", strokeWidth: 2 }}
-          activeDot={{ r: 7 }}
+          strokeWidth={2.5}
+          dot={{ r: 4.5, fill: "var(--surface, #fff)", stroke: "var(--chart-score, #153f42)", strokeWidth: 2 }}
+          activeDot={{ r: 6 }}
         />
       </LineChart>
     </ResponsiveContainer>
