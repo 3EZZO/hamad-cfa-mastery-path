@@ -80,7 +80,7 @@ describe("Smart reminder composer", () => {
     const onChanged = vi.fn();
     const root = await render({ moduleIds: ["e07-capital-flows-fx-market"], tone: "firm", deadline: daysFromNow(Date.now(), 2) }, onChanged);
     expect(checked(root)).toBe(1);
-    await act(async () => chip(root, "Send reminder").props.onClick());
+    await act(async () => root.find((node) => node.type === "button" && node.props.className === "button button-primary").props.onClick());
     expect(sendMockReminder).toHaveBeenCalledWith(expect.objectContaining({
       studentUid: "student-1",
       moduleIds: ["e07-capital-flows-fx-market"],

@@ -4,6 +4,7 @@ import {
 import { consoleAnchor } from "../../lib/tutorConsole";
 import type { InboxItem, InboxKind } from "../../lib/tutorInbox";
 import "./tutorConsole.css";
+import { Fold } from "./Fold";
 
 const KIND_ICON: Record<InboxKind, typeof Inbox> = {
   live: PlayCircle,
@@ -38,11 +39,15 @@ export function TutorInbox({
   onShowHidden: () => void;
 }) {
   return (
-    <section className="panel coach-inbox" id={consoleAnchor.inbox} aria-labelledby="coach-inbox-title">
-      <div className="panel-heading">
-        <div><p className="eyebrow">Action inbox</p><h3 id="coach-inbox-title">{loading ? "Checking…" : items.length ? `${items.length} waiting on you` : "Nothing waiting on you"}</h3></div>
-        <Inbox size={21} aria-hidden="true" />
-      </div>
+    <Fold
+      id="overview:inbox"
+      anchorId={consoleAnchor.inbox}
+      className="coach-inbox"
+      eyebrow="Action inbox"
+      title={loading ? "Checking…" : items.length ? `${items.length} waiting on you` : "Nothing waiting on you"}
+      icon={<Inbox size={21} aria-hidden="true" />}
+      summary={items[0] ? `Top: ${items[0].title}` : undefined}
+    >
       {items.length > 0 && (
         <ul className="coach-inbox__list">
           {items.map((item) => {
@@ -70,6 +75,6 @@ export function TutorInbox({
       {hiddenCount > 0 && (
         <button type="button" className="coach-tile__action" onClick={onShowHidden}>Show {hiddenCount} hidden</button>
       )}
-    </section>
+    </Fold>
   );
 }

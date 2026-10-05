@@ -4,6 +4,7 @@ import { formatDate } from "../../lib/dates";
 import { summarizePayments, type ConsoleGlance, type TutorSection } from "../../lib/tutorConsole";
 import type { TutorConsoleData } from "../../hooks/useTutorConsole";
 import "./tutorConsole.css";
+import { Fold } from "./Fold";
 
 function Tile({ icon: Icon, title, children, action, onAction, tone }: {
   icon: typeof Wallet;
@@ -52,7 +53,8 @@ export function TutorOverview({
   return (
     <div className="view-stack">
       {inbox}
-      <section className="coach-glance" aria-label="At a glance">
+      <Fold id="overview:glance" variant="sub" title="At a glance" summary={`${tests.published} tests published · ${reminders.active} active reminders · ${practice.unlocked} of ${practice.banks} banks unlocked`}>
+      <div className="coach-glance">
         <Tile
           icon={ClipboardCheck}
           title="Module tests"
@@ -116,7 +118,8 @@ export function TutorOverview({
             </>
           )}
         </Tile>
-      </section>
+      </div>
+      </Fold>
       {insights}
       {brief}
     </div>

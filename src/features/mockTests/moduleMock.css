@@ -952,6 +952,8 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-reminder-admin__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .mock-reminder-admin__history-title { margin: 8px 0 0; }
 .mock-reminder-admin__empty { margin: 0; color: var(--mk-muted); }
+.mock-reminder-admin__intro { margin: 0; color: var(--mk-muted); }
+.mock-admin__topic.coach-subfold { padding-top: 10px; border-top: 1px solid var(--mk-line); }
 .mock-reminder-admin__presets, .mock-reminder-admin__tone, .mock-reminder-admin__preview { grid-column: 1 / -1; }
 .mock-reminder-admin__presets, .mock-reminder-admin__quick, .mock-reminder-admin__tone > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .mock-reminder-admin__tone { display: grid; gap: 6px; }

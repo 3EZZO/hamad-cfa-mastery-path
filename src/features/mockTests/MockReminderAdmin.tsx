@@ -21,6 +21,7 @@ import { REMINDER_TONES, composeReminderMessage, daysFromNow, type ReminderPrese
 import { deadlinesByModule } from "../../lib/testBoard";
 import { consoleAnchor } from "../../lib/tutorConsole";
 import { testsForWeek } from "../../lib/weekTests";
+import { Fold, useReveal } from "../../views/tutorConsole/Fold";
 
 type Notify = (message: string, tone?: "success" | "warning") => void;
 
@@ -76,6 +77,7 @@ export function MockReminderAdmin({
   preset?: ReminderPreset | null;
 }) {
   const dialog = useAppDialog();
+  const reveal = useReveal();
   const [studentUid, setStudentUid] = useState("");
   const [tone, setTone] = useState<ReminderTone>(preset?.tone ?? "friendly");
   const [deadline, setDeadline] = useState(preset?.deadline ?? "");
@@ -180,6 +182,7 @@ export function MockReminderAdmin({
     setDeadline(reminder.deadline ?? "");
     setModuleIds(reminder.moduleIds);
     setError("");
+    reveal(consoleAnchor.reminders);
   };
 
   const cancel = async (reminder: MockReminder) => {
@@ -199,14 +202,16 @@ export function MockReminderAdmin({
   };
 
   return (
-    <section className="mock-reminder-admin" id={consoleAnchor.reminders} aria-labelledby="mock-reminder-admin-title">
-      <div className="mock-reminder-admin__head">
-        <BellRing size={19} aria-hidden="true" />
-        <div>
-          <h4 id="mock-reminder-admin-title">{editing ? "Edit reminder" : "Send reminder"}</h4>
-          <p>Opens as a window on the student's app until they press “Got it”. It never interrupts a test in progress.</p>
-        </div>
-      </div>
+    <section className="mock-reminder-admin">
+      <Fold
+        id="tests:compose"
+        anchorId={consoleAnchor.reminders}
+        variant="sub"
+        title={editing ? "Edit reminder" : "Send reminder"}
+        icon={<BellRing size={19} aria-hidden="true" />}
+        summary={pending.length ? `${pending.length} published ${pending.length === 1 ? "test" : "tests"} pending` : "Nothing pending"}
+      >
+      <p className="mock-reminder-admin__intro">Opens as a window on the student's app until they press “Got it”. It never interrupts a test in progress.</p>
 
       {students.length === 0 ? <p>No active student accounts.</p> : (
         <div className="mock-reminder-admin__form">
@@ -287,7 +292,14 @@ export function MockReminderAdmin({
         </div>
       )}
 
-      <h5 className="mock-reminder-admin__history-title">Reminder history</h5>
+      </Fold>
+
+      <Fold
+        id="tests:history"
+        variant="sub"
+        title="Reminder history"
+        summary={`${reminders.length} sent · ${reminders.filter(entry => entry.status === "active").length} active`}
+      >
       {reminders.length === 0 ? <p className="mock-reminder-admin__empty">No reminders sent yet.</p> : (
         <div className="mock-table-wrap">
           <table className="mock-table mock-reminder-admin__history">
@@ -337,6 +349,7 @@ export function MockReminderAdmin({
           </table>
         </div>
       )}
+      </Fold>
     </section>
   );
 }

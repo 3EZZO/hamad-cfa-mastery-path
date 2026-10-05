@@ -3,6 +3,7 @@ import { useState } from "react";
 import { activityDayLabel, filterActivity, type ActivityEvent, type ActivityKind, type ActivityRange } from "../../lib/tutorActivity";
 import { EmptyState } from "../shared";
 import "./tutorConsole.css";
+import { Fold } from "./Fold";
 
 const KINDS: ReadonlyArray<{ id: ActivityKind; label: string }> = [
   { id: "test", label: "Tests" },
@@ -45,8 +46,14 @@ export function TutorActivity({ events, nowMs, loading }: { events: readonly Act
   }
 
   return (
-    <section className="panel coach-activity" aria-labelledby="coach-activity-title">
-      <div className="panel-heading"><div><p className="eyebrow">Activity</p><h3 id="coach-activity-title">What happened</h3></div><History size={21} aria-hidden="true" /></div>
+    <Fold
+      id="activity:feed"
+      className="coach-activity"
+      eyebrow="Activity"
+      title="What happened"
+      icon={<History size={21} aria-hidden="true" />}
+      summary={`${visible.length} ${visible.length === 1 ? "event" : "events"} in this period`}
+    >
       <div className="coach-activity__filters">
         <div role="group" aria-label="Show">
           {KINDS.map((kind) => (
@@ -64,8 +71,7 @@ export function TutorActivity({ events, nowMs, loading }: { events: readonly Act
       ) : (
         <div className="coach-activity__days">
           {groups.map((group) => (
-            <section key={group.label} aria-label={group.label}>
-              <h4>{group.label}</h4>
+            <Fold key={group.label} id={`activity:day-${group.label}`} variant="sub" title={group.label} summary={`${group.events.length} ${group.events.length === 1 ? "event" : "events"}`}>
               <ol>
                 {group.events.map((event) => (
                   <li key={event.id} className={`is-${event.kind}`}>
@@ -74,13 +80,13 @@ export function TutorActivity({ events, nowMs, loading }: { events: readonly Act
                   </li>
                 ))}
               </ol>
-            </section>
+            </Fold>
           ))}
         </div>
       )}
       {visible.length > shown && (
         <button type="button" className="coach-tile__action" onClick={() => setShown((value) => value + PAGE)}>Show more ({visible.length - shown} left)</button>
       )}
-    </section>
+    </Fold>
   );
 }

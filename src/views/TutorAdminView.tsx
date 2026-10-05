@@ -29,6 +29,7 @@ import { TutorInsights } from "./tutorConsole/TutorInsights";
 import { SessionPrepPanel } from "./tutorConsole/SessionPrepPanel";
 import { TutorOverview } from "./tutorConsole/TutorOverview";
 import { TutorQuickFind } from "./tutorConsole/TutorQuickFind";
+import { Fold, FoldProvider, FoldToolbar, useFoldOpen, useOpenFoldsAround } from "./tutorConsole/Fold";
 import { createDefaultState, downloadBackup } from "../lib/storage";
 import { isStateMeaningfullyEmpty } from "../lib/stateMerge";
 import { getTaskStatus } from "../lib/taskStatus";
@@ -50,8 +51,11 @@ const SECTION_ICON: Record<TutorSection, typeof LayoutDashboard> = {
   records: Archive,
 };
 
-/** Bring a row into view after its section renders (panels load their data asynchronously). */
-function revealAnchor(anchor: string): () => void {
+/**
+ * Bring a row into view after its section renders (panels load their data
+ * asynchronously), opening any folds around it first.
+ */
+function revealAnchor(anchor: string, openAround: (target: Element) => void): () => void {
   if (typeof document === "undefined") return () => undefined;
   let tries = 0;
   const timer = window.setInterval(() => {
@@ -59,9 +63,12 @@ function revealAnchor(anchor: string): () => void {
     tries += 1;
     if (target) {
       window.clearInterval(timer);
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
-      target.classList.add("is-located");
-      window.setTimeout(() => target.classList.remove("is-located"), 2400);
+      openAround(target);
+      window.setTimeout(() => {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.classList.add("is-located");
+        window.setTimeout(() => target.classList.remove("is-located"), 2400);
+      }, 30);
     } else if (tries > 30) {
       window.clearInterval(timer);
     }
@@ -69,7 +76,14 @@ function revealAnchor(anchor: string): () => void {
   return () => window.clearInterval(timer);
 }
 
-export function TutorAdminView({
+type TutorAdminProps = Parameters<typeof TutorAdminConsole>[0];
+
+/** Tutor Admin with its collapsible blocks remembered on this device. */
+export function TutorAdminView(props: TutorAdminProps) {
+  return <FoldProvider><TutorAdminConsole {...props} /></FoldProvider>;
+}
+
+function TutorAdminConsole({
   tracker,
   updateTracker,
   replaceTrackerAuthoritatively,
@@ -99,7 +113,9 @@ export function TutorAdminView({
   const [busyItem, setBusyItem] = useState<string | null>(null);
   // Prefills the reminder composer on the Tests tab; cleared when leaving it.
   const [reminderPreset, setReminderPreset] = useState<ReminderPreset | null>(null);
-  useEffect(() => (pendingAnchor ? revealAnchor(pendingAnchor) : undefined), [pendingAnchor, section]);
+  const openAround = useOpenFoldsAround();
+  useEffect(() => (pendingAnchor ? revealAnchor(pendingAnchor, openAround) : undefined), [pendingAnchor, section, openAround]);
+  const briefFold = useFoldOpen("overview:brief");
   const effectiveSessions = getEffectiveSessions(tracker.sessionOverrides);
   const [selectedSession, setSelectedSession] = useState(1);
   const selected = effectiveSessions.find(
@@ -423,10 +439,17 @@ export function TutorAdminView({
   };
 
   const approvalQueue = (
-    <section className="panel approval-queue" id={consoleAnchor.approvals}>
-      <div className="panel-heading"><div><p className="eyebrow">Tutor approval</p><h3>Session completion queue</h3></div><CircleCheckBig size={21} /></div>
+    <Fold
+      id="sessions:approvals"
+      anchorId={consoleAnchor.approvals}
+      className="approval-queue"
+      eyebrow="Tutor approval"
+      title="Session completion queue"
+      icon={<CircleCheckBig size={21} />}
+      summary={pendingSessionRequests.length ? `${pendingSessionRequests.length} waiting` : "Nothing waiting"}
+    >
       {pendingSessionRequests.length ? <div className="entry-list">{pendingSessionRequests.map(({ task, request }) => <article className="approval-entry" key={task.id}><div><strong>{task.label}</strong><span>Requested {request ? new Date(request.requestedAt).toLocaleString() : ""}</span></div><div className="inline-actions"><button className="button button-primary" type="button" onClick={() => reviewSessionRequest(task.id, "approved")}><Check size={16} /> Approve</button><button className="button button-secondary" type="button" onClick={() => reviewSessionRequest(task.id, "returned")}><RotateCcw size={16} /> Return</button></div></article>)}</div> : <EmptyState icon={CircleCheckBig} title="No approvals waiting">Hamad&apos;s session-completion requests will appear here.</EmptyState>}
-    </section>
+    </Fold>
   );
 
   return (
@@ -440,6 +463,7 @@ export function TutorAdminView({
         onSelect={selectSection}
       />
       <SectionPanel idPrefix="coach" active={section}>
+        <FoldToolbar section={section} />
         {section === "overview" && (
           <TutorOverview
             glance={glance}
@@ -448,7 +472,7 @@ export function TutorAdminView({
             today={new Date()}
             onSection={selectSection}
             onOpenPayments={onOpenPayments}
-            brief={<TutorBriefPanel tracker={tracker} />}
+            brief={<TutorBriefPanel tracker={tracker} open={briefFold.open} onOpenChange={briefFold.setOpen} />}
             inbox={(
               <TutorInbox
                 items={visibleInbox}
@@ -476,8 +500,15 @@ export function TutorAdminView({
             />
             {approvalQueue}
             <section className="form-and-list tutor-tool-grid">
-              <form className="panel entry-form" id={consoleAnchor.reschedule} onSubmit={submitReschedule}>
-                <div className="panel-heading"><div><p className="eyebrow">Safe rescheduling</p><h3>Use a same-week Friday exception</h3></div><CalendarClock size={21} /></div>
+              <Fold
+                id="sessions:reschedule"
+                anchorId={consoleAnchor.reschedule}
+                eyebrow="Safe rescheduling"
+                title="Use a same-week Friday exception"
+                icon={<CalendarClock size={21} />}
+                summary={`Selected S${String(selectedSession).padStart(2, "0")} · ${formatDate(selected.effectiveDate, { day: "numeric", month: "short" })}`}
+              >
+              <form className="entry-form" onSubmit={submitReschedule}>
                 <label><span>Session</span><select value={selectedSession} onChange={(event) => chooseSession(Number(event.target.value))}>{effectiveSessions.map((entry) => <option value={entry.session.number} key={entry.session.number}>S{String(entry.session.number).padStart(2, "0")} · {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })} · {entry.session.title}</option>)}</select></label>
                 <div className="form-grid form-grid-2">
                   <label><span>New date</span><input type="date" min={program.programStart} max={PLANNED_SESSIONS.at(-1)!.session.date} required value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
@@ -490,21 +521,33 @@ export function TutorAdminView({
                 </div>
                 <p className="fine-print">Each checkpoint stays on its planned Saturday unless Mohamed approves the immediately preceding Friday. The 09:00 Riyadh time, weekly sequence, and exam buffer remain fixed.</p>
               </form>
+              </Fold>
 
-              <article className="panel override-panel">
-                <div className="panel-heading"><div><p className="eyebrow">Live schedule record</p><h3>{Object.keys(tracker.sessionOverrides).length} changed dates</h3></div><CalendarDays size={21} /></div>
+              <Fold
+                id="sessions:record"
+                className="override-panel"
+                eyebrow="Live schedule record"
+                title={`${Object.keys(tracker.sessionOverrides).length} changed dates`}
+                icon={<CalendarDays size={21} />}
+              >
                 {Object.keys(tracker.sessionOverrides).length ? (
                   <div className="override-list">{effectiveSessions.filter((entry) => entry.rescheduled).map((entry) => <div key={entry.session.number}><strong>S{String(entry.session.number).padStart(2, "0")}</strong><span>{formatDate(entry.session.date, { day: "numeric", month: "short" })} → {formatDate(entry.effectiveDate, { day: "numeric", month: "short" })}</span><small>{entry.reason}</small></div>)}</div>
                 ) : <EmptyState icon={CalendarDays} title="Canonical schedule active">No session date has been overridden.</EmptyState>}
-              </article>
+              </Fold>
             </section>
           </div>
         )}
         {section === "activity" && <TutorActivity events={activity} nowMs={nowMs} loading={consoleData.loading} />}
         {section === "records" && (
           <div className="view-stack">
-            <section className="panel launch-control-panel">
-              <div className="panel-heading"><div><p className="eyebrow">Pre-launch control</p><h3>Four live checks before the first session</h3></div><ShieldCheck size={21} /></div>
+            <Fold
+              id="records:launch"
+              className="launch-control-panel"
+              eyebrow="Pre-launch control"
+              title="Four live checks before the first session"
+              icon={<ShieldCheck size={21} />}
+              summary={`${launchChecks.filter((check) => check.complete).length} of ${launchChecks.length} complete`}
+            >
               <div className="launch-check-grid">
                 {launchChecks.map((check) => (
                   <article className={cx("launch-check", check.complete && "is-complete")} key={check.label}>
@@ -520,12 +563,12 @@ export function TutorAdminView({
                   </div>
                 </article>
               </div>
-            </section>
+            </Fold>
 
-            <section className="panel danger-zone">
-              <div><p className="eyebrow">Protected recovery control</p><h3>Export, then reset all shared progress</h3><p>Use only before genuine course work begins. This creates a local JSON recovery copy before replacing the synchronized tracker on every device.</p></div>
+            <Fold id="records:danger" className="danger-zone" eyebrow="Protected recovery control" title="Export, then reset all shared progress" summary="Export a recovery copy, then reset">
+              <p>Use only before genuine course work begins. This creates a local JSON recovery copy before replacing the synchronized tracker on every device.</p>
               <button className="button button-danger" type="button" disabled={authoritativeReplaceBusy || syncStatus !== "synced"} onClick={() => void resetSharedProgress()}><Trash2 size={16} />{authoritativeReplaceBusy ? "Resetting..." : "Export and reset"}</button>
-            </section>
+            </Fold>
           </div>
         )}
       </SectionPanel>
