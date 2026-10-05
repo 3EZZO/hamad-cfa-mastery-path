@@ -10,11 +10,14 @@ const SHEETS = [
   "./theme.css",
   "./identity.css",
   "./typography.css",
+  "./typographyTokens.css",
   "./features/mockTests/moduleMock.css",
   "./features/liveSession/liveSession.css",
+  "./features/liveSession/sessionPilot.css",
   "./features/practice/practiceCoach.css",
   "./features/practice/ba2plus.css",
   "./features/payments/payments.css",
+  "./views/tutorConsole/tutorConsole.css",
 ] as const;
 
 /** Set from inline `style` in a component, never from a stylesheet. */
@@ -94,9 +97,9 @@ describe("theme tokens", () => {
   });
 
   it("sets headings in Montserrat, body in IBM Plex Sans, and uppercases only page titles and the Today hero", () => {
-    expect(sources["./styles.css"]).toMatch(/--font-ui:\s*"IBM Plex Sans"/);
-    expect(sources["./styles.css"]).toMatch(/--font-heading:\s*"Montserrat", Arial, sans-serif/);
-    expect(sources["./styles.css"]).toMatch(/--font-financial:\s*"IBM Plex Mono"/);
+    expect(sources["./typographyTokens.css"]).toMatch(/--font-ui:\s*"IBM Plex Sans"/);
+    expect(sources["./typographyTokens.css"]).toMatch(/--font-heading:\s*"Montserrat", Arial, sans-serif/);
+    expect(sources["./typographyTokens.css"]).toMatch(/--font-financial:\s*"IBM Plex Mono"/);
     expect(sources["./styles.css"]).toContain(":where(h1, h2):where(:not(.practice-question h2, #ls-candidate-title))");
     const css = stripComments(sources["./typography.css"]);
     const uppercased = [...css.matchAll(/([^{}]+)\{[^}]*text-transform: uppercase/g)].map(match => match[1]!.trim());

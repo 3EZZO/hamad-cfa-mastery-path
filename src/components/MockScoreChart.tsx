@@ -22,12 +22,12 @@ const tooltipStyle = {
   backgroundColor: "var(--surface, #fff)",
   boxShadow: "var(--elev-3)",
   color: "var(--ink, #132c44)",
-  fontSize: 12,
+  fontSize: "var(--text-caption)",
   fontVariantNumeric: "tabular-nums",
   padding: "8px 10px",
 } as const;
 
-const tick = { fontSize: 11, fill: "var(--chart-tick, #61706d)", fontFamily: "var(--font-ui)" } as const;
+const tick = { fontSize: "var(--text-label)", fill: "var(--chart-tick, #61706d)", fontFamily: "var(--font-ui)" } as const;
 
 /** Score, target and, when the tutor tallied them, the section results. */
 function MockTooltip({

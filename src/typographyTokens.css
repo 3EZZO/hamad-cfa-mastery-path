@@ -1,0 +1,54 @@
+/* Shared by the application and its self-contained print report.
+   Font-face assets stay in fonts.css; component roles stay in typography.css. */
+:root {
+  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-heading: "Montserrat", Arial, sans-serif;
+  --font-financial: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+  /* Typography tokens: change roles here, not in individual components.
+     rem values follow browser text size; reader-scale remains owned by Session Mode.
+     Micro text is reserved for branding and calculator legends. */
+  --font-calculator: "Courier New", Courier, monospace;
+  --font-mark: "Source Serif 4", Georgia, serif;
+  --text-micro: 0.625rem;
+  --text-label: 0.6875rem;
+  --text-caption: 0.75rem;
+  --text-nav: 0.8125rem;
+  --text-ui: 0.875rem;
+  --text-body: 1rem;
+  --text-lead: 1.125rem;
+  --text-heading: 1.25rem;
+  --text-section: 1.5rem;
+  --text-title-small: 1.75rem;
+  --text-title: 2rem;
+  --text-metric: 2.25rem;
+  --text-display: 2.5rem;
+  --text-hero: 3rem;
+  --text-score: 4rem;
+  --text-result: 6rem;
+  --text-section-fluid: clamp(1.125rem, 1rem + 0.5vw, 1.5rem);
+  --text-page: clamp(1.5rem, 1.25rem + 1vw, 2rem);
+  --text-hero-fluid: clamp(1.75rem, 1.25rem + 2vw, 3rem);
+  --text-score-fluid: clamp(3rem, 2rem + 5vw, 6rem);
+  --text-relative-small: 0.875em;
+  --text-relative-code: 0.9375em;
+  --text-reading-step: 0.0625rem;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-h1: var(--weight-semibold);
+  --weight-h2: var(--weight-semibold);
+  --weight-h3: var(--weight-semibold);
+  --weight-h4: var(--weight-semibold);
+  --leading-none: 1;
+  --leading-display: 1.15;
+  --leading-heading: 1.25;
+  --leading-ui: 1.4;
+  --leading-body: 1.5;
+  --leading-reading: 1.6;
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-display: 0.04em;
+  --tracking-label: 0.08em;
+  --tracking-caps: 0.12em;
+}

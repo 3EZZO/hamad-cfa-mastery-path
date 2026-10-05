@@ -28,19 +28,19 @@
 
 .gradient-text {
   font-family: var(--font-heading);
-  font-size: clamp(1.5rem, 2vw, 1.9rem);
-  font-weight: 700;
+  font-size: var(--text-page);
+  font-weight: var(--weight-bold);
   margin: 0 0 8px 0;
   color: var(--ink);
-  letter-spacing: -0.01em;
-  line-height: 1.2;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-display);
 }
 
 .dashboard-header p {
   margin: 0;
   color: var(--muted);
-  font-size: 16px;
-  letter-spacing: 0.02em;
+  font-size: var(--text-body);
+  letter-spacing: var(--tracking-normal);
 }
 
 .header-actions {
@@ -57,8 +57,8 @@
   gap: 8px;
   padding: 12px 24px;
   border-radius: var(--radius-lg);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   transition: background-color var(--motion-micro) ease, border-color var(--motion-micro) ease, color var(--motion-micro) ease;
   border: none;
@@ -88,7 +88,7 @@
 
 .luxury-btn.sm {
   padding: 8px 16px;
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 
 .luxury-btn.icon-only {
@@ -164,27 +164,27 @@
 }
 
 .metric-data span {
-  font-size: 13px;
+  font-size: var(--text-nav);
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  font-weight: var(--weight-semibold);
 }
 
 .metric-data strong {
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: var(--text-title);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
 }
 
 .metric-data small {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-nav);
 }
 
 .text-teal { color: var(--success); }
 .text-gold { color: #eab355; }
-.metric-data small.alert-text { color: #ef4444; font-weight: 600; }
+.metric-data small.alert-text { color: #ef4444; font-weight: var(--weight-semibold); }
 
 /* Progress Ring */
 .progress-ring-container {
@@ -212,7 +212,7 @@
 .percentage {
   fill: var(--ink);
   font-family: var(--font-financial);
-  font-size: 8px;
+  font-size: var(--text-label);
   font-weight: bold;
   text-anchor: middle;
 }
@@ -226,9 +226,9 @@
 }
 .chart-card h3 {
   margin: 0 0 24px 0;
-  font-size: 20px;
+  font-size: var(--text-heading);
   color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 .chart-wrapper {
   margin-left: -20px;
@@ -250,16 +250,16 @@
 
 .transactions-header h3 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--text-heading);
+  font-weight: var(--weight-semibold);
 }
 
 .badge {
   background: var(--payment-surface-muted);
   padding: 4px 12px;
   border-radius: var(--radius-lg);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
   color: var(--muted);
 }
 
@@ -300,13 +300,13 @@
 
 .t-details h4 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
 }
 
 .t-details small {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-nav);
 }
 
 .t-status {
@@ -316,10 +316,10 @@
 .luxury-badge {
   padding: 6px 12px;
   border-radius: var(--radius-lg);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-caps);
 }
 
 .luxury-badge.paid { background: var(--success-bg); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 35%, transparent); }
@@ -354,14 +354,14 @@
 }
 
 .luxury-modal .modal-header h3 {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: var(--text-section);
+  font-weight: var(--weight-semibold);
 }
 
 .glass-inputs label span {
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-nav);
+  font-weight: var(--weight-semibold);
   margin-bottom: 8px;
 }
 
@@ -427,7 +427,7 @@
   padding: 64px;
   box-shadow: var(--elev-2);
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
 }
 
 .receipt-top-accent {
@@ -449,22 +449,22 @@
 
 .r-project {
   color: #00b49f;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  font-size: 12px;
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-caps);
+  font-size: var(--text-caption);
   display: block;
   margin-bottom: 16px;
 }
 
 .r-title {
-  font-size: 42px;
-  font-weight: 400;
+  font-size: var(--text-display);
+  font-weight: var(--weight-regular);
   margin: 0;
 }
 
 .r-subtitle {
-  font-size: 48px;
-  font-weight: 800;
+  font-size: var(--text-hero);
+  font-weight: var(--weight-bold);
   margin: 0;
 }
 
@@ -473,15 +473,15 @@
   color: #0c1825;
   padding: 8px 16px;
   border-radius: var(--radius-lg);
-  font-weight: 800;
-  font-size: 11px;
-  letter-spacing: 0.1em;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-label);
+  letter-spacing: var(--tracking-caps);
 }
 
 .r-desc {
   color: #a9bacd;
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: var(--text-body);
+  line-height: var(--leading-reading);
   max-width: 600px;
   margin-bottom: 48px;
 }
@@ -498,16 +498,16 @@
 
 .r-mc-left .r-caption {
   color: #00b49f;
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-caps);
   display: block;
   margin-bottom: 8px;
 }
 
 .r-amount {
-  font-size: 56px;
-  font-weight: 800;
+  font-size: var(--text-hero);
+  font-weight: var(--weight-bold);
   color: #fff;
 }
 
@@ -517,15 +517,15 @@
 
 .r-status-large {
   color: #eab355;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-size: var(--text-section);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
   margin-bottom: 16px;
 }
 
 .r-meta {
   color: #a9bacd;
-  font-size: 13px;
+  font-size: var(--text-nav);
   margin-bottom: 4px;
 }
 
@@ -544,16 +544,16 @@
 
 .r-box-val {
   color: #00b49f;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--text-section);
+  font-weight: var(--weight-bold);
   margin-bottom: 8px;
 }
 
 .r-box-lbl {
   color: #a9bacd;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-caps);
 }
 
 .r-footer-details {
@@ -564,16 +564,16 @@
 
 .r-party .r-caption {
   color: #a9bacd;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-caps);
   display: block;
   margin-bottom: 8px;
 }
 
 .r-party strong {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-lead);
+  font-weight: var(--weight-bold);
 }
 
 .r-separator {
@@ -584,8 +584,8 @@
 
 .r-notes {
   color: #a9bacd;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--text-ui);
+  line-height: var(--leading-reading);
 }
 
 /* NATIVE PRINT STYLES */
@@ -636,15 +636,15 @@
   width: 100%; 
   border-collapse: collapse; 
   text-align: left; 
-  font-size: 13px; 
+  font-size: var(--text-nav);
   color: #fff; 
 }
 .ledger-table th { 
   padding: 12px; 
   border-bottom: 2px solid #3b5065; 
   color: #a9bacd; 
-  font-weight: 600; 
-  letter-spacing: 1px; 
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
 }
 .ledger-table td { 
   padding: 12px; 
@@ -724,23 +724,23 @@
   gap: 8px;
   margin: 0 0 14px;
   color: #94a3b8;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-nav);
+  font-weight: var(--weight-bold);
 }
 
 .receipt-verification-card h1 {
   margin: 0 0 12px;
   color: #f8fafc;
-  font-size: clamp(28px, 5vw, 40px);
-  line-height: 1.1;
+  font-size: var(--text-page);
+  line-height: var(--leading-display);
 }
 
 .receipt-verification-card > p:not(.receipt-verification-brand) {
   max-width: 52ch;
   margin: 0;
   color: #cbd5e1;
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: var(--text-body);
+  line-height: var(--leading-reading);
 }
 
 .receipt-verification-facts {
@@ -762,16 +762,16 @@
 .receipt-verification-facts dt {
   margin-bottom: 5px;
   color: #94a3b8;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
 }
 
 .receipt-verification-facts dd {
   margin: 0;
   overflow-wrap: anywhere;
   color: #f8fafc;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-bold);
 }
 
 .receipt-verification-note {
@@ -779,8 +779,8 @@
   padding-top: 18px;
   border-top: 1px solid #334155;
   color: #94a3b8;
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: var(--text-caption);
+  line-height: var(--leading-body);
 }
 
 .payment-action-error,
@@ -805,7 +805,7 @@
   border: 0;
   background: transparent;
   font: inherit;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
@@ -813,15 +813,15 @@
   margin: 14px 0 0;
   padding: 10px 12px;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: var(--text-nav);
 }
 
 .payment-student-picker {
   display: grid;
   gap: 4px;
   color: #a9bacd;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-label);
+  font-weight: var(--weight-bold);
 }
 
 .payment-student-picker select {
@@ -855,7 +855,7 @@
 .payment-setup-card > p {
   max-width: 54ch;
   color: var(--muted, #64748b);
-  line-height: 1.6;
+  line-height: var(--leading-reading);
 }
 
 .payment-setup-card dl {
@@ -875,13 +875,13 @@
 
 .payment-setup-card dt {
   color: var(--muted, #64748b);
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 
 .payment-setup-card dd {
   margin: 4px 0 0;
   overflow-wrap: anywhere;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 
@@ -893,7 +893,7 @@
   .r-grid { grid-template-columns: 1fr; }
   .r-main-card { flex-direction: column; align-items: flex-start; gap: 20px; }
   .r-mc-right { text-align: left; }
-  .r-amount { font-size: 36px; }
+  .r-amount { font-size: var(--text-metric); }
   .r-ledger-verification, .r-party { flex-direction: column; align-items: flex-start; }
   .receipt-document { padding: 20px; }
   .transaction-row { flex-wrap: wrap; }
@@ -920,5 +920,5 @@
   background: var(--danger-pale);
   color: var(--ink);
 }
-.payments-hub.error h3 { margin: 0 0 var(--space-1); color: var(--danger); font-size: 1rem; font-weight: 600; }
+.payments-hub.error h3 { margin: 0 0 var(--space-1); color: var(--danger); font-size: var(--text-body); font-weight: var(--weight-semibold); }
 .payments-hub.error p { margin: 0; }

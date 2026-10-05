@@ -428,8 +428,8 @@ export function PaymentsHub() {
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
-              <XAxis dataKey="month" stroke="var(--chart-tick)" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="var(--chart-tick)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+              <XAxis dataKey="month" stroke="var(--chart-tick)" fontSize="var(--text-caption)" tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--chart-tick)" fontSize="var(--text-caption)" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
               <Tooltip 
                 contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', boxShadow: 'var(--elev-3)', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}
                 itemStyle={{ color: 'var(--ink)' }}
@@ -524,7 +524,7 @@ function ReceiptPrintView({ tutorName, config, payment, verification, onClose }:
       <div className="receipt-document" style={{ position: 'relative', overflow: 'hidden' }}>
         <div className="receipt-watermark" style={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-45deg)',
-          fontSize: '48px', fontWeight: 800, color: '#00b49f', opacity: 0.08, whiteSpace: 'nowrap',
+          fontSize: 'var(--text-hero)', fontWeight: 'var(--weight-bold)', color: '#00b49f', opacity: 0.08, whiteSpace: 'nowrap',
           pointerEvents: 'none', zIndex: 0, textAlign: 'center'
         }}>
           CONFIDENTIAL &bull; PREPARED EXCLUSIVELY FOR {verification.studentName.toUpperCase()}
@@ -549,7 +549,7 @@ function ReceiptPrintView({ tutorName, config, payment, verification, onClose }:
         <div className="r-main-card" style={{ position: 'relative', zIndex: 1 }}>
           <div className="r-mc-left">
             <span className="r-caption">AMOUNT PAID</span>
-            <div className="r-amount" style={{fontSize: '32px'}}>{formatDualCurrency(payment.amount, verification.currency)}</div>
+            <div className="r-amount" style={{fontSize: 'var(--text-title)'}}>{formatDualCurrency(payment.amount, verification.currency)}</div>
           </div>
           <div className="r-mc-right">
             <div className="r-status-large">{payment.status === "paid" ? "PAID IN FULL" : payment.status.toUpperCase()}</div>
@@ -605,8 +605,8 @@ function ReceiptPrintView({ tutorName, config, payment, verification, onClose }:
               size={80} 
             />
           </div>
-          <div style={{ color: '#a9bacd', fontSize: '10px', fontFamily: 'monospace', lineHeight: '1.4' }}>
-            <strong style={{ color: '#00b49f', fontSize: '12px', display: 'block', marginBottom: '4px' }}>ACTIVE OFFICIAL LEDGER RECORD</strong>
+          <div style={{ color: '#a9bacd', fontSize: 'var(--text-label)', fontFamily: 'var(--font-financial)', lineHeight: 'var(--leading-ui)' }}>
+            <strong style={{ color: '#00b49f', fontSize: 'var(--text-caption)', display: 'block', marginBottom: '4px' }}>ACTIVE OFFICIAL LEDGER RECORD</strong>
             REFERENCE: {verification.reference}<br />
             ISSUED: {new Date(verification.issuedAtClient).toLocaleString()}<br />
             SCAN TO CHECK CURRENT STATUS
@@ -669,16 +669,16 @@ function StatementPrintView({ tutorName, config, records, expectedTotal, onClose
 
         <div className="r-main-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #3b5065', paddingBottom: '10px' }}>
-            <span style={{ color: '#a9bacd', fontSize: '12px', fontWeight: 600, letterSpacing: '1px' }}>TOTAL TARGET</span>
-            <strong style={{ color: '#fff', fontSize: '16px' }}>{formatDualCurrency(expectedTotal, config.currency)}</strong>
+            <span style={{ color: '#a9bacd', fontSize: 'var(--text-caption)', fontWeight: 'var(--weight-semibold)', letterSpacing: 'var(--tracking-label)' }}>TOTAL TARGET</span>
+            <strong style={{ color: '#fff', fontSize: 'var(--text-body)' }}>{formatDualCurrency(expectedTotal, config.currency)}</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #3b5065', paddingBottom: '10px' }}>
-            <span style={{ color: '#a9bacd', fontSize: '12px', fontWeight: 600, letterSpacing: '1px' }}>TOTAL CLEARED</span>
-            <strong style={{ color: '#00b49f', fontSize: '16px' }}>{formatDualCurrency(totalPaid, config.currency)}</strong>
+            <span style={{ color: '#a9bacd', fontSize: 'var(--text-caption)', fontWeight: 'var(--weight-semibold)', letterSpacing: 'var(--tracking-label)' }}>TOTAL CLEARED</span>
+            <strong style={{ color: '#00b49f', fontSize: 'var(--text-body)' }}>{formatDualCurrency(totalPaid, config.currency)}</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#a9bacd', fontSize: '12px', fontWeight: 600, letterSpacing: '1px' }}>OUTSTANDING BALANCE</span>
-            <strong style={{ color: '#eab355', fontSize: '16px' }}>{formatDualCurrency(totalPending, config.currency)}</strong>
+            <span style={{ color: '#a9bacd', fontSize: 'var(--text-caption)', fontWeight: 'var(--weight-semibold)', letterSpacing: 'var(--tracking-label)' }}>OUTSTANDING BALANCE</span>
+            <strong style={{ color: '#eab355', fontSize: 'var(--text-body)' }}>{formatDualCurrency(totalPending, config.currency)}</strong>
           </div>
         </div>
 

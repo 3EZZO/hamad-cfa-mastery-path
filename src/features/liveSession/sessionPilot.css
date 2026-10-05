@@ -84,18 +84,18 @@ html:root[data-theme="dark"] .live-session {
   color: var(--sp-ink);
   border-bottom: 1px solid var(--sp-rule);
   background: var(--sp-surface);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .ls-session-switcher > span {
   margin-right: 10px;
   color: var(--sp-ink);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .ls-session-switcher > small {
   color: var(--sp-ink-soft);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .ls-session-switcher button {
@@ -144,7 +144,7 @@ html:root[data-theme="dark"] .live-session {
 .live-session .ls-livebar__identity span,
 .live-session .ls-clock span {
   color: var(--sp-ink-soft);
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-normal);
   text-transform: none;
 }
 
@@ -190,8 +190,8 @@ html:root[data-theme="dark"] .live-session {
   border: 1px solid var(--sp-rule);
   border-radius: var(--radius-lg);
   background: var(--sp-focus-soft);
-  font-size: calc(0.78rem * var(--ls-reader-scale, 1));
-  font-weight: 650;
+  font-size: calc(var(--text-caption) * var(--ls-reader-scale, 1));
+  font-weight: var(--weight-semibold);
 }
 
 .live-session .ls-focus-toggle {
@@ -206,7 +206,7 @@ html:root[data-theme="dark"] .live-session {
   border-radius: var(--radius-lg);
   background: var(--sp-surface-raised);
   font: inherit;
-  font-weight: 650;
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 
@@ -223,8 +223,8 @@ html:root[data-theme="dark"] .live-session {
   border: 1px solid var(--sp-rule);
   border-radius: var(--radius-md);
   background: var(--sp-surface);
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.7rem;
+  font-family: var(--font-financial);
+  font-size: var(--text-label);
 }
 
 .live-session .ls-sync {
@@ -378,17 +378,17 @@ html:root[data-theme="dark"] .live-session {
 .live-session .ls-stage-card__identity .ls-eyebrow {
   margin: 0 0 2px;
   color: var(--sp-verified);
-  font-size: calc(0.76rem * var(--ls-reader-scale, 1));
-  font-weight: 650;
-  letter-spacing: 0;
+  font-size: calc(var(--text-caption) * var(--ls-reader-scale, 1));
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-normal);
   text-transform: none;
 }
 
 .live-session .ls-stage-card__identity h2 {
   color: var(--sp-ink);
   font-family: var(--font-ui);
-  font-weight: 720;
-  letter-spacing: -0.025em;
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
 }
 
 .live-session .ls-deck-objective > summary {
@@ -507,8 +507,8 @@ html:root[data-theme="dark"] .live-session {
 }
 
 .live-session .ls-command-lead {
-  font-size: calc(1rem * var(--ls-reader-scale, 1));
-  line-height: 1.58;
+  font-size: calc(var(--text-body) * var(--ls-reader-scale, 1));
+  line-height: var(--leading-reading);
 }
 
 .live-session :is(.ls-script-ribbon, .ls-depth-note, .ls-board-cue, .ls-hints, .ls-answer-detail) {
@@ -529,7 +529,7 @@ html:root[data-theme="dark"] .live-session {
 .live-session .ls-hints > span,
 .live-session .ls-answer-detail > span {
   color: var(--sp-ink-soft);
-  letter-spacing: 0;
+  letter-spacing: var(--tracking-normal);
   text-transform: none;
 }
 
@@ -541,7 +541,7 @@ html:root[data-theme="dark"] .live-session {
 .live-session .ls-question-copy h3 {
   color: var(--sp-ink);
   font-family: var(--font-ui);
-  font-weight: 720;
+  font-weight: var(--weight-bold);
 }
 
 .live-session .ls-question-options li {
@@ -574,7 +574,7 @@ html:root[data-theme="dark"] .live-session {
   border-left: 4px solid var(--sp-focus);
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   background: var(--sp-focus-soft);
-  font-weight: 580;
+  font-weight: var(--weight-semibold);
 }
 
 .live-session .ls-formula-line,
@@ -711,8 +711,8 @@ html:root[data-theme="dark"] .live-session {
   .live-session--running .ls-stage-card__identity h2 {
     display: -webkit-box;
     overflow: hidden;
-    font-size: calc(1.12rem * var(--ls-reader-scale, 1));
-    line-height: 1.22;
+    font-size: calc(var(--text-lead) * var(--ls-reader-scale, 1));
+    line-height: var(--leading-heading);
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
@@ -736,7 +736,7 @@ html:root[data-theme="dark"] .live-session {
 
   .live-session--running .ls-command-lead,
   .live-session--running .ls-command-block__body :is(p, li, blockquote) {
-    line-height: 1.52;
+    line-height: var(--leading-body);
   }
 }
 
@@ -983,8 +983,8 @@ html:root[data-theme="dark"] .live-session {
   .ls-focus-bar__title > strong {
     overflow: hidden;
     font-family: var(--font-heading);
-    font-size: 1.02rem;
-    font-weight: 600;
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1004,22 +1004,22 @@ html:root[data-theme="dark"] .live-session {
     color: var(--ink);
     background: var(--surface);
     box-shadow: var(--shadow);
-    line-height: 1.5;
+    line-height: var(--leading-body);
   }
   .ls-focus-bar__step {
     display: grid;
     flex: 0 1 auto;
     min-width: 0;
-    line-height: 1.25;
+    line-height: var(--leading-heading);
   }
   .ls-focus-bar__step > strong {
     overflow: hidden;
     max-width: 280px;
-    font-size: 0.8rem;
+    font-size: var(--text-nav);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .ls-focus-bar__step .ls-pacing-status--focus { font-size: 0.72rem; opacity: 0.85; }
+  .ls-focus-bar__step .ls-pacing-status--focus { font-size: var(--text-caption); opacity: 0.85; }
   .ls-focus-bar__step .ls-pacing-status--focus * { font-family: inherit; }
   .ls-focus-bar__timers { display: flex; align-items: center; gap: 6px; }
   .ls-focus-timer {
@@ -1030,10 +1030,10 @@ html:root[data-theme="dark"] .live-session {
     overflow: hidden;
     border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
     border-radius: var(--radius-lg);
-    line-height: 1.15;
+    line-height: var(--leading-display);
   }
-  .ls-focus-timer small { font-size: 0.66rem; opacity: 0.72; }
-  .ls-focus-timer time { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .ls-focus-timer small { font-size: var(--text-label); opacity: 0.72; }
+  .ls-focus-timer time { font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
   .ls-focus-timer i {
     position: absolute;
     bottom: 0;
@@ -1069,7 +1069,7 @@ html:root[data-theme="dark"] .live-session {
     color: var(--navy);
     background: var(--gold-bright);
     font: inherit;
-    font-weight: 800;
+    font-weight: var(--weight-bold);
     white-space: nowrap;
     cursor: pointer;
   }
@@ -1107,13 +1107,13 @@ html:root[data-theme="dark"] .live-session {
 
   /* Presenting text: larger, the Ask question most prominent. */
   .live-session .ls-runner[data-focus="true"] .ls-command-block__body :is(p, li) {
-    font-size: calc(1.08rem * var(--ls-reader-scale, 1));
-    line-height: 1.6;
+    font-size: calc(var(--text-lead) * var(--ls-reader-scale, 1));
+    line-height: var(--leading-reading);
   }
   .live-session .ls-runner[data-focus="true"] .ls-question-copy h3 {
-    font-size: calc(1.45rem * var(--ls-reader-scale, 1));
-    font-weight: 650;
-    line-height: 1.35;
+    font-size: calc(var(--text-section) * var(--ls-reader-scale, 1));
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-ui);
   }
   .live-session .ls-rich-list { margin: 4px 0 0; padding-left: 1.2em; }
   .live-session .ls-rich-list li + li { margin-top: 4px; }
@@ -1121,9 +1121,9 @@ html:root[data-theme="dark"] .live-session {
   /* Formulas in focus: clean formatted text, not the code grid. */
   .live-session .ls-runner[data-focus="true"] :is(.ls-formula-stack, .ls-formula-line code, .financial-working) {
     font-family: var(--font-ui) !important;
-    font-size: calc(1.08rem * var(--ls-reader-scale, 1));
+    font-size: calc(var(--text-lead) * var(--ls-reader-scale, 1));
     font-variant-numeric: tabular-nums lining-nums;
-    letter-spacing: 0.01em;
+    letter-spacing: var(--tracking-normal);
     word-spacing: 0.12em;
     background-image: none !important;
   }
