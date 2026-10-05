@@ -364,7 +364,8 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
 /* Desktop sidebar (navy in both themes). Name > student > a quiet credit;
    the countdown leads the exam card, with the plan's progress as a gold line.
    182px wide. One grid: boxes (exam card, nav rows) start 12px in; their
-   content (crest, labels, icons, card text) starts on the 22px line. */
+   icons and card text start on the 22px line; navigation headings and link
+   text share the 50px guide after the fixed icon column. */
 @media (min-width: 1024px) {
   .sidebar { width: 182px; padding: 20px 12px 16px; }
   .main-shell { margin-left: 182px; }
@@ -489,40 +490,49 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
 /* ------------------------------------------------ sidebar navigation */
 @media (min-width: 1024px) {
   .sidebar .sidebar-nav {
+    --nav-inset: 10px;
+    --nav-icon-size: 18px;
+    --nav-label-gap: 10px;
     display: grid;
     align-content: start;
-    gap: 20px;
+    gap: 18px;
     /* No scrollbar track eating the row width; the fade marks more below. */
     padding: 0 0 28px;
     scrollbar-width: none;
     mask-image: linear-gradient(180deg, #000 calc(100% - 24px), transparent);
   }
   .sidebar .sidebar-nav::-webkit-scrollbar { display: none; }
-  .sidebar .nav-group { display: grid; gap: 2px; }
+  .sidebar .nav-group { display: grid; min-width: 0; gap: 4px; }
   .sidebar .nav-group + .nav-group { margin-top: 0; }
   .sidebar .nav-group-label {
     display: block;
-    padding: 0 10px 6px;
+    /* Group names and link text share a guide; icons occupy their own column. */
+    padding: 0 var(--nav-inset) 6px calc(var(--nav-inset) + var(--nav-icon-size) + var(--nav-label-gap));
     color: #bda97c;
-    font-size: 0.62rem;
+    font-size: 0.6875rem;
     font-weight: 700;
-    letter-spacing: 0.16em;
+    line-height: 1.3;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
   }
   .sidebar .nav-button {
+    width: 100%;
+    min-width: 0;
     min-height: 40px;
-    gap: 10px;
-    /* 1px border + 9px = icons on the 22px content line. */
-    padding: 0 9px;
+    gap: var(--nav-label-gap);
+    /* Include the border in the shared inset so active rows never shift. */
+    padding: 6px calc(var(--nav-inset) - 1px);
     border: 1px solid transparent;
     border-radius: var(--radius-lg);
     color: #c9cdd8;
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     font-weight: 500;
+    line-height: 1.4;
     letter-spacing: 0.005em;
     transition: background-color var(--motion-micro, 150ms) ease, color var(--motion-micro, 150ms) ease, border-color var(--motion-micro, 150ms) ease;
   }
-  .sidebar .nav-button svg { flex: none; width: 18px; height: 18px; color: #9aa3b5; transition: color var(--motion-micro, 150ms) ease; }
+  .sidebar .nav-button > span { min-width: 0; }
+  .sidebar .nav-button svg { flex: none; width: var(--nav-icon-size); height: var(--nav-icon-size); color: #9aa3b5; transition: color var(--motion-micro, 150ms) ease; }
   .sidebar .nav-button:hover { color: var(--on-navy); background: rgba(244, 239, 227, 0.06); }
   .sidebar .nav-button:hover svg { color: var(--on-navy); }
   .sidebar .nav-button.is-active {
@@ -532,12 +542,13 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
     background: rgba(216, 181, 99, 0.12);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
-  .sidebar .nav-button::before { top: 9px; bottom: 9px; left: -1px; width: 3px; }
+  .sidebar .nav-button::before { top: 10px; bottom: 10px; left: 3px; width: 2px; }
   .sidebar .nav-button.is-active::before { background: var(--gold-bright); }
   .sidebar .nav-button.is-active svg { color: var(--gold-bright); }
-  .sidebar .nav-button:focus-visible {
+  html:root .sidebar .nav-button:focus-visible {
     outline: 2px solid var(--gold-bright);
-    outline-offset: 2px;
+    /* Keep the ring visible inside the scrollable navigation bounds. */
+    outline-offset: -3px;
   }
 
   /* Collapsed (80px): crest and icons centred on the same rhythm. */
@@ -552,9 +563,12 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
   .sidebar { padding-top: 18px; }
   .sidebar .sidebar-exam { gap: 7px; margin: 16px 0 16px; padding-top: 12px; padding-bottom: 10px; }
   .sidebar .sidebar-exam .sidebar-exam__count strong { font-size: 1.6rem; }
-  .sidebar .sidebar-nav { gap: 14px; }
+  .sidebar .sidebar-nav { gap: 16px; }
   .sidebar .nav-group-label { padding-bottom: 4px; }
-  .sidebar .nav-button { min-height: 35px; }
+  .sidebar .nav-button { min-height: 38px; }
+}
+@media (min-width: 1024px) and (pointer: coarse) {
+  .sidebar .nav-button { min-height: 44px; }
 }
 @media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
   .sidebar .nav-button, .sidebar .nav-button svg { transition: none; }
