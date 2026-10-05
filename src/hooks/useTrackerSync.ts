@@ -132,7 +132,10 @@ export function useTrackerSync(): TrackerSyncController {
   const trackerRef = useRef(tracker);
   const userRef = useRef<CloudUser | null>(null);
   const baseRef = useRef<CloudRevisionBase | null>(null);
-  const pendingRef = useRef<PendingSync | null>(loadPendingSync());
+  // Read the queued change once: an argument to useRef would be re-evaluated
+  // (parsing two tracker copies from storage) on every render.
+  const [initialPending] = useState<PendingSync | null>(loadPendingSync);
+  const pendingRef = useRef<PendingSync | null>(initialPending);
   const flushInFlightRef = useRef(false);
   const initializingRef = useRef(false);
   const canFlushScheduleRef = useRef(false);
