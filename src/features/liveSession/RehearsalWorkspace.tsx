@@ -18,7 +18,8 @@ export function RehearsalWorkspace({ session, playbook, route, onExit }: {
   const [position, setPosition] = useState({ stage: 0, question: 0 });
   const wasRunning = useRef(false);
   const timer = useSessionTimer({ durationMinutes: route.minutes });
-  useEffect(() => { timer.start(route.minutes); }, [route.minutes, timer.start]);
+  const { start: startTimer } = timer;
+  useEffect(() => { startTimer(route.minutes); }, [route.minutes, startTimer]);
   const stages = playbook.stagesByRoute[route.id] ?? [];
 
   return <section className={`live-session ls-rehearsal${phase === "running" ? " live-session--running" : ""}`} aria-label="Rehearsal workspace">

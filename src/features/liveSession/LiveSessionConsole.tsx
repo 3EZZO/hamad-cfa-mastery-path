@@ -380,9 +380,10 @@ function LiveSessionWorkspace({
     onSnapshotChange: handleTimerSnapshot,
   });
 
+  const { status: timerStatus, pause: pauseTimer } = timer;
   useEffect(() => {
-    if (!active && timer.status === "running") timer.pause();
-  }, [active, timer.status, timer.pause]);
+    if (!active && timerStatus === "running") pauseTimer();
+  }, [active, timerStatus, pauseTimer]);
 
   useEffect(() => {
     if (!preflightProbe?.checkedAt) return;

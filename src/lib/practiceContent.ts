@@ -1,3 +1,5 @@
+import type { KeystrokeLog } from "../features/practice/BA2Plus";
+
 export const PRACTICE_BANK_SCHEMA_VERSION = 1 as const;
 
 export type PracticeQuestionType =
@@ -67,7 +69,7 @@ export interface PracticeAnswerRecord {
   confidence: number;
   responseMs: number;
   answeredAt: string;
-  calculatorLog?: any[];
+  calculatorLog?: KeystrokeLog[];
 }
 
 export type PracticeRunMode = "quick" | "module" | "exam" | "repair" | "mixed";

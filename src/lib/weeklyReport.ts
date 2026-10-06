@@ -1,6 +1,6 @@
 import typographyTokens from "../typographyTokens.css?inline";
 import fontFaces from "../fonts.css?inline";
-import { getPlanTasks, getWeekSessions, PLAN, TOPICS } from "../data/plan";
+import { getPlanTasks, getWeekSessions, PLAN } from "../data/plan";
 import type { PlanWeek, TrackerState } from "../types";
 import { formatDate } from "./dates";
 import { isRetestDue } from "./retests";

@@ -40,8 +40,8 @@ import {
   selectPracticeQuestions,
   updatePracticeQuestionState,
 } from "../../lib/practiceEngine";
-import { BA2Plus } from "./BA2Plus";
-import { defaultTVMState, type TVMState } from "../../lib/calculator";
+import { BA2Plus, type KeystrokeLog } from "./BA2Plus";
+import { defaultTVMState } from "../../lib/calculator";
 import { analyzeKeystrokes } from "../../lib/calculatorDiagnostics";
 import {
   buildPracticeInsights,
@@ -176,7 +176,7 @@ export function PracticeCoach({
   const [submitted, setSubmitted] = useState(false);
   const [modulePickerOpen, setModulePickerOpen] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
-  const [calculatorLog, setCalculatorLog] = useState<any[]>([]);
+  const [calculatorLog, setCalculatorLog] = useState<KeystrokeLog[]>([]);
   // Exam Drill clock: ticks once a second while a timed run is on screen.
   const [nowMs, setNowMs] = useState(() => Date.now());
   const examExpiring = useRef(false);
@@ -253,9 +253,6 @@ export function PracticeCoach({
   );
   const currentQuestion = activeRun
     ? currentQuestions[activeRun.currentIndex]
-    : undefined;
-  const currentAnswer = activeRun && currentQuestion
-    ? activeRun.answers.find(answer => answer.questionId === currentQuestion.id)
     : undefined;
 
   const writeCloud = useCallback(async (
@@ -377,6 +374,8 @@ export function PracticeCoach({
     setConfidence(answer?.confidence ?? 3);
     setSubmitted(Boolean(answer));
     answerStartedAt.current = Date.now();
+    // Restores the saved answer when the question changes only; re-running when an answer is saved would reset the response clock.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the question, not on the answers array.
   }, [activeRun?.currentIndex, currentQuestion?.id]);
 
   // Escape is intercepted in the document capture phase so it closes the
@@ -612,6 +611,7 @@ export function PracticeCoach({
     }
     onIntentHandled?.();
     // `begin`/`setMessage` are stable enough for a one-shot; re-running on their identity would repeat the action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot per intent.
   }, [intent, assignmentLoaded]);
 
   const resume = () => {
@@ -648,6 +648,7 @@ export function PracticeCoach({
       }
     })();
     // Runs only on the transition to zero; the handlers read current state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- must not re-fire when the run or answer state changes.
   }, [examRemaining]);
 
   const completedAnswers = lastCompletedRun?.answers ?? [];
@@ -1204,7 +1205,7 @@ function PracticePerformance({
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {miss.calculatorLog.map((log: any, i: number) => (
+                        {miss.calculatorLog.map((log, i) => (
                           <div key={i} style={{ padding: '4px 8px', background: 'var(--surface-2)', borderRadius: '4px', fontSize: 'var(--text-label)', color: 'var(--muted)', fontFamily: 'var(--font-financial)' }}>
                             <strong style={{ color: 'var(--ink)' }}>{log.key}</strong> <span style={{ opacity: 0.5 }}>→</span> {log.display}
                           </div>

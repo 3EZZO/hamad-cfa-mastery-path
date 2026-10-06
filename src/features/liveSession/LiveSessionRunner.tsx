@@ -13,7 +13,6 @@ import {
   Map,
   Maximize2,
   Minimize2,
-  MonitorUp,
   Minus,
   Pause,
   Play,
