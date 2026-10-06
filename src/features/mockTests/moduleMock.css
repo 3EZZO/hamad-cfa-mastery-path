@@ -364,12 +364,15 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-save--offline { color: #ffd08a; }
 
 /* The clock. */
+/* The digits are sized from the ring (container units), so "10:24" always
+   sits inside the stroke; the ring is in rem, so both grow with text size. */
 .mock-timer {
   position: relative;
   display: grid;
-  width: 76px;
-  height: 76px;
+  width: 5rem;
+  height: 5rem;
   place-items: center;
+  container-type: size;
 }
 .mock-timer svg { position: absolute; inset: 0; transform: rotate(-90deg); }
 .mock-timer__track { fill: none; stroke: #ffffff1c; stroke-width: 5; }
@@ -378,7 +381,9 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
   position: relative;
   color: #fff;
   font-family: var(--font-financial, monospace);
-  font-size: var(--text-heading);
+  font-size: var(--text-body);
+  font-size: 21cqi;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-normal);
@@ -777,12 +782,12 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
   .mock-exam__tools { grid-column: 1 / -1; justify-content: space-between; }
   .mock-tool span { display: none; }
   .mock-tool { min-width: 44px; justify-content: center; }
-  .mock-timer { grid-row: 1; grid-column: 2; width: 64px; height: 64px; }
-  .mock-timer__digits { font-size: var(--text-body); }
+  .mock-timer { grid-row: 1; grid-column: 2; width: 4.25rem; height: 4.25rem; }
   .mock-exam__layout { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px 16px 24px; }
   .mock-nav { position: static; min-width: 0; padding: 10px; }
   .mock-question { min-width: 0; }
-  .mock-nav ol { display: flex; gap: 6px; overflow-x: auto; }
+  /* Room inside the scroll strip for the current chip's 5px ring. */
+  .mock-nav ol { display: flex; gap: 6px; margin: -5px; padding: 5px; overflow-x: auto; scroll-padding-inline: 5px; }
   .mock-nav ol li { flex: 0 0 44px; }
   .mock-nav__legend { display: none; }
   .mock-question__actions .mock-button { flex: 1 1 auto; }

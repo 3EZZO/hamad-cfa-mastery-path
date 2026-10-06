@@ -112,7 +112,7 @@ html:root[data-theme="dark"] .timeline-week > summary:hover,
 html:root[data-theme="dark"] .timeline-week > summary:focus-visible,
 html:root[data-theme="dark"] .timeline-week[open] > summary { background: #1a2742; }
 html:root[data-theme="dark"] .timeline-week > summary:focus-visible {
-  outline: 3px solid #e2c27a; outline-offset: -3px;
+  outline: 3px solid var(--focus-ring); outline-offset: -3px;
 }
 html:root[data-theme="dark"] .timeline-week.is-current {
   border-color: #b59a5c; box-shadow: 0 0 0 1px #dcbb7255, var(--elev-2);

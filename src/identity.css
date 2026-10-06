@@ -44,8 +44,6 @@ html:root :is(.eyebrow, .mini-label) {
 @media (min-width: 1024px) {
   /* Expanded: the crest lines up with the nav icons below it (8px grid). */
   .sidebar .brand-lockup { padding-left: 8px; }
-  .sidebar,
-  .main-shell { transition: width 0.3s ease-in-out, padding 0.3s ease-in-out, margin-left 0.3s ease-in-out; }
   /* Collapsed: the name is hidden, so the crest alone sits centred. */
   .app-shell.sidebar-collapsed .brand-lockup { justify-content: center; padding-left: 0; }
 }
@@ -78,9 +76,11 @@ html:root :is(.eyebrow, .mini-label) {
 }
 
 /* ------------------------------------------------------------ app chrome */
+/* The sticky bar is fully opaque: scrolled content must never show through
+   its controls or the gaps between them. (Dark uses --surface via theme.css.) */
 .topbar {
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  background: var(--paper);
 }
 @media (min-width: 1024px) {
   .sidebar {
@@ -546,16 +546,60 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
   .sidebar .nav-button.is-active::before { background: var(--gold-bright); }
   .sidebar .nav-button.is-active svg { color: var(--gold-bright); }
   html:root .sidebar .nav-button:focus-visible {
-    outline: 2px solid var(--gold-bright);
+    outline: 2px solid var(--focus-ring-on-navy);
     /* Keep the ring visible inside the scrollable navigation bounds. */
     outline-offset: -3px;
   }
 
-  /* Collapsed (80px): crest and icons centred on the same rhythm. */
-  .app-shell.sidebar-collapsed .sidebar { padding: 22px 12px 16px; }
+  /* Collapsed (68px): crest and 20px icons centred in 44×44 targets on the
+     same rhythm. The width changes immediately (never animated). */
+  /* 11px on the right: the 1px gold edge rule completes the 12px inset. */
+  .app-shell.sidebar-collapsed .sidebar { padding: 22px 11px 16px 12px; }
   .app-shell.sidebar-collapsed .sidebar .brand-lockup { justify-content: center; padding-left: 0; }
   .app-shell.sidebar-collapsed .sidebar .sidebar-nav { gap: 12px; margin-top: 22px; }
-  .app-shell.sidebar-collapsed .sidebar .nav-button { justify-content: center; padding: 0; }
+  .app-shell.sidebar-collapsed .sidebar .nav-button { justify-content: center; min-height: 44px; padding: 0; }
+  .app-shell.sidebar-collapsed .sidebar .nav-button svg { width: 20px; height: 20px; }
+  /* The label stays in the accessibility tree (the button's name) and appears
+     beside the rail on hover and keyboard focus, next to the native hint. */
+  .app-shell.sidebar-collapsed .sidebar .nav-button > span {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    left: calc(100% + 10px);
+    width: max-content;
+    max-width: 220px;
+    padding: 5px 10px;
+    border: 1px solid rgba(216, 181, 99, 0.3);
+    border-radius: var(--radius-sm);
+    color: var(--on-navy);
+    background: var(--navy);
+    box-shadow: var(--elev-2);
+    font-size: var(--text-nav);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-ui);
+    white-space: normal;
+    pointer-events: none;
+    opacity: 0;
+    clip-path: inset(50%);
+    transform: translate(-4px, -50%);
+    transition: opacity var(--motion-micro, 150ms) ease, transform var(--motion-micro, 150ms) ease;
+  }
+  .app-shell.sidebar-collapsed .sidebar .nav-button:is(:hover, :focus-visible) > span {
+    opacity: 1;
+    clip-path: none;
+    transform: translate(0, -50%);
+  }
+  /* The rail fits without scrolling, so the navigation drops its scroll box
+     and edge fade (a mask clips to the box): tooltips and focus rings show. */
+  .app-shell.sidebar-collapsed .sidebar .sidebar-nav { overflow: visible; padding-right: 0; mask-image: none; }
+}
+/* A window too short for the whole rail keeps it scrollable; the native hint
+   remains the tooltip there. */
+@media (min-width: 1024px) and (max-height: 559px) {
+  .app-shell.sidebar-collapsed .sidebar .sidebar-nav {
+    overflow-y: auto;
+    mask-image: linear-gradient(180deg, #000 calc(100% - 24px), transparent);
+  }
 }
 /* Short laptop windows (e.g. 1366×768 at 125%): a tighter rhythm keeps the
    whole navigation in view; the grid lines stay the same. */
@@ -571,5 +615,5 @@ html:root[data-theme="dark"][data-motion="depth"] :is(.metric-card, .mock-card):
   .sidebar .nav-button { min-height: 44px; }
 }
 @media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
-  .sidebar .nav-button, .sidebar .nav-button svg { transition: none; }
+  .sidebar .nav-button, .sidebar .nav-button svg, .sidebar .nav-button > span { transition: none; }
 }
