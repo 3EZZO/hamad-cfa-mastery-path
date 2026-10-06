@@ -1,7 +1,7 @@
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MockFigure } from "../../lib/mockTestContent";
-import { MockExhibits, formatTick } from "./MockExhibits";
+import { MockExhibits, formatTick, numericColumns } from "./MockExhibits";
 
 const figure: MockFigure = {
   title: "Regression of fund returns on market returns",
@@ -62,6 +62,22 @@ describe("MockExhibits", () => {
     expect(tree!.root.findAllByType("table")).toHaveLength(1);
     await act(async () => { tree!.update(<MockExhibits question={{ table: null }} />); });
     expect(tree!.toJSON()).toBeNull();
+  });
+
+  it("right-aligns only columns whose filled cells are all figures", async () => {
+    const table = {
+      caption: "Exhibit 1",
+      headers: ["Portfolio", "Value ($)", "Return (%)", "Rating", "Change"],
+      rows: [
+        { cells: ["Alpha", "1,000,000", "7.40%", "AA", "(2.5)"] },
+        { cells: ["Beta", "$2,500,000", "−3.1", "A", "—"] },
+      ],
+    };
+    expect(numericColumns(table)).toEqual([false, true, true, false, true]);
+    await act(async () => { tree = create(<MockExhibits question={{ table, figure: null }} />); });
+    const headerClasses = tree!.root.findAllByProps({ scope: "col" }).map((th) => th.props.className);
+    expect(headerClasses).toEqual([undefined, "is-num", "is-num", undefined, "is-num"]);
+    expect(tree!.root.findAllByType("td").filter((td) => td.props.className === "is-num")).toHaveLength(6);
   });
 
   it("formats tick values compactly", () => {

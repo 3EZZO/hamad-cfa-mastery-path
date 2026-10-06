@@ -319,23 +319,34 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-start .mock-button--ghost { color: #eef6ff; border-color: #ffffff38; background: transparent; }
 
 /* -------------------------------------------------------------- exam layer */
+/* The whole exam layer scrolls (scrollbar at the viewport edge) under a sticky
+   header. Header and body share one edge: a 24–32px gutter, widening on very
+   wide screens so the palette + question (max 1500px) stay centred. */
 .mock-exam {
+  --mk-gutter: clamp(24px, 2vw, 32px);
+  --mk-palette: 248px;
+  --mk-content-max: calc(var(--mk-palette) + 24px + 1500px);
+  --mk-edge: max(var(--mk-gutter), (100% - var(--mk-content-max)) / 2);
+  --mk-bar-h: max(84px, calc(5rem + 20px));
   position: fixed;
   z-index: 2147483000;
   inset: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
   background: var(--paper, #eef2f6);
   animation: mock-fade .3s ease both;
 }
 .mock-exam__bar {
+  position: sticky;
+  z-index: 2;
+  top: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 14px;
-  min-height: 84px;
-  padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+  min-height: var(--mk-bar-h);
+  padding: 10px max(var(--mk-edge), env(safe-area-inset-right)) 10px max(var(--mk-edge), env(safe-area-inset-left));
   color: #eef6ff;
   background: var(--mk-navy);
   box-shadow: var(--elev-2);
@@ -362,6 +373,8 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-tool--leave:hover:not(:disabled) { border-color: #ff9ba0; background: #e5484d33; }
 .mock-save { display: inline-flex; align-items: center; gap: 5px; color: #9fc0dc; font-size: var(--text-caption); font-weight: var(--weight-bold); }
 .mock-save--offline { color: #ffd08a; }
+/* Rehearsal: matches Practice's "Not saved" badge. */
+.mock-save--rehearsal { min-height: 32px; padding: 5px 10px; border: 1px solid #72dfbf; border-radius: var(--radius-pill); color: #72dfbf; white-space: nowrap; }
 
 /* The clock. */
 /* The digits are sized from the ring (container units), so "10:24" always
@@ -402,18 +415,15 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 
 .mock-exam__layout {
   display: grid;
-  flex: 1;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 20px;
-  width: min(1120px, 100%);
-  min-height: 0;
-  margin: 0 auto;
-  padding: 20px 16px 24px;
-  overflow: auto;
+  flex: 1 0 auto;
+  grid-template-columns: var(--mk-palette) minmax(0, 1fr);
+  align-content: start;
+  gap: 24px;
+  padding: 24px var(--mk-edge) 32px;
 }
-.mock-nav { position: sticky; top: 0; align-self: start; padding: 16px; border: 1px solid var(--mk-line); border-radius: var(--radius-lg); background: var(--mk-surface); }
+.mock-nav { position: sticky; top: calc(var(--mk-bar-h) + 24px); align-self: start; min-width: 0; padding: 16px; border: 1px solid var(--mk-line); border-radius: var(--radius-lg); background: var(--mk-surface); }
 .mock-nav__summary { margin: 0 0 12px; color: var(--mk-muted); font-size: var(--text-ui); font-weight: var(--weight-bold); }
-.mock-nav ol { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.mock-nav ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
 .mock-nav__chip {
   position: relative;
   display: grid;
@@ -435,7 +445,9 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-nav__chip.is-answered { color: #fff; border-color: var(--mk-blue); background: var(--mk-blue); }
 .mock-nav__chip.is-flagged { box-shadow: inset 0 -4px 0 var(--mk-gold); }
 .mock-nav__chip svg { position: absolute; top: 4px; right: 4px; color: var(--mk-gold); }
-.mock-nav__chip.is-current { outline: 3px solid var(--mk-gold); outline-offset: 2px; }
+/* The current ring is drawn inside the chip (no edge shift; focus keeps its outline). */
+.mock-nav__chip.is-current { box-shadow: inset 0 0 0 3px var(--mk-gold); }
+.mock-nav__chip.is-current.is-flagged { box-shadow: inset 0 0 0 3px var(--mk-gold), inset 0 -6px 0 var(--mk-gold); }
 .mock-nav__legend { display: grid; gap: 6px; margin-top: 14px; color: var(--mk-muted); font-size: var(--text-caption); }
 .mock-nav__legend span { display: flex; align-items: center; gap: 7px; }
 .mock-nav__legend i { width: 14px; height: 14px; border: 1.5px solid var(--mk-line); border-radius: var(--radius-sm); background: var(--mk-soft); }
@@ -452,7 +464,7 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
   animation: mock-slide .28s cubic-bezier(.2, .8, .2, 1) both;
 }
 .mock-question__count { margin: 0 0 10px; color: var(--mk-blue-deep); font-size: var(--text-label); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
-.mock-question__stem { margin-bottom: 18px; font-size: var(--text-question); line-height: var(--leading-reading); white-space: pre-line; }
+.mock-question__stem { max-width: 80ch; margin-bottom: 18px; font-size: var(--text-question); line-height: var(--leading-reading); white-space: pre-line; }
 .mock-table-wrap { max-width: 100%; margin: 0 0 18px; overflow-x: auto; }
 .mock-table { width: 100%; border-collapse: collapse; font-size: var(--text-ui); }
 .mock-table caption { padding-bottom: 8px; font-weight: var(--weight-bold); text-align: left; }
@@ -463,6 +475,7 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-table tbody th { font-weight: var(--weight-semibold); }
 .mock-table tbody tr:hover > * { background: var(--mk-soft); }
 .mock-table td { font-variant-numeric: tabular-nums; }
+.mock-table .is-num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Figures: charts drawn from data, coloured by role so dark mode can retune them. */
 .mock-figure {
@@ -777,19 +790,23 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 :root[data-theme="dark"] .mock-switch__count { color: #a8c5ff; background: #203958; }
 
 /* ------------------------------------------------------------ small screens */
+/* Below ~900px the palette sits above the question as a compact row. */
+@media (max-width: 899px) {
+  .mock-exam__layout { grid-template-columns: minmax(0, 1fr); gap: 12px; padding-block: 12px 24px; }
+  .mock-nav { position: static; padding: 10px; }
+  .mock-question { min-width: 0; }
+  /* Room inside the scroll strip for the focus ring. */
+  .mock-nav ol { display: flex; gap: 6px; margin: -5px; padding: 5px; overflow-x: auto; scroll-padding-inline: 5px; }
+  .mock-nav ol li { flex: 0 0 44px; }
+  .mock-nav__legend { display: none; }
+}
 @media (max-width: 760px) {
   .mock-exam__bar { grid-template-columns: minmax(0, 1fr) auto; min-height: 72px; padding-block: 8px; }
   .mock-exam__tools { grid-column: 1 / -1; justify-content: space-between; }
   .mock-tool span { display: none; }
   .mock-tool { min-width: 44px; justify-content: center; }
   .mock-timer { grid-row: 1; grid-column: 2; width: 4.25rem; height: 4.25rem; }
-  .mock-exam__layout { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px 16px 24px; }
-  .mock-nav { position: static; min-width: 0; padding: 10px; }
-  .mock-question { min-width: 0; }
-  /* Room inside the scroll strip for the current chip's 5px ring. */
-  .mock-nav ol { display: flex; gap: 6px; margin: -5px; padding: 5px; overflow-x: auto; scroll-padding-inline: 5px; }
-  .mock-nav ol li { flex: 0 0 44px; }
-  .mock-nav__legend { display: none; }
+  .mock-exam { --mk-gutter: 16px; }
   .mock-question__actions .mock-button { flex: 1 1 auto; }
   .mock-card { grid-template-columns: 48px minmax(0, 1fr); }
   .mock-card__number { width: 44px; height: 44px; font-size: var(--text-body); }

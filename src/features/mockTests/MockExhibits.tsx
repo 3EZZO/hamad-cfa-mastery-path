@@ -15,20 +15,35 @@ export function MockExhibits({ question }: { question: Pick<MockQuestion, "table
   );
 }
 
+/** A figure cell: optional sign/bracket/currency, digits, optional decimals and unit. */
+const NUMERIC_CELL = /^[(+\-\u2212]?\s*[$€£¥]?\s*\d[\d,]*(\.\d+)?\s*(%|x|×|bps?)?\)?$/i;
+const BLANK_CELL = /^(|-|\u2013|\u2014|n\/a)$/i;
+
+/** Data columns (not the row-label column) whose every filled cell is a figure. */
+export function numericColumns(table: MockTable): boolean[] {
+  return table.headers.map((_, column) => {
+    if (column === 0) return false;
+    const cells = table.rows.map(row => (row.cells[column] ?? "").trim()).filter(cell => !BLANK_CELL.test(cell));
+    return cells.length > 0 && cells.every(cell => NUMERIC_CELL.test(cell));
+  });
+}
+
 export function MockTableView({ table }: { table: MockTable }) {
+  const numeric = numericColumns(table);
+  const num = (column: number) => (numeric[column] ? "is-num" : undefined);
   return (
     <div className="mock-table-wrap">
       <table className="mock-table">
         {table.caption && <caption>{table.caption}</caption>}
         <thead>
-          <tr>{table.headers.map((header, column) => <th key={column} scope="col">{header}</th>)}</tr>
+          <tr>{table.headers.map((header, column) => <th key={column} scope="col" className={num(column)}>{header}</th>)}</tr>
         </thead>
         <tbody>
           {table.rows.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {row.cells.map((cell, column) => column === 0
                 ? <th key={column} scope="row">{cell}</th>
-                : <td key={column}>{cell}</td>)}
+                : <td key={column} className={num(column)}>{cell}</td>)}
             </tr>
           ))}
         </tbody>
