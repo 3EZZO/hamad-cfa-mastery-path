@@ -177,16 +177,33 @@ export function computeIRR(cashFlows: readonly number[]): number {
   throw new Error("Error 5: No IRR solution");
 }
 
+/**
+ * Interest rate per payment period, as the BA II Plus derives it from I/Y
+ * (nominal annual %), P/Y (payments per year) and C/Y (compounding periods
+ * per year): i = (1 + I/Y / (100 × C/Y))^(C/Y / P/Y) − 1. When C/Y = P/Y
+ * this equals I/Y / (100 × P/Y); that exact expression is kept so default
+ * results are unchanged.
+ */
+export function periodicRate(IY: number, PY: number, CY: number): number {
+  if (CY === PY) return IY / 100 / PY;
+  return Math.pow(1 + IY / (100 * CY), CY / PY) - 1;
+}
+
+/** Inverse of periodicRate: I/Y = 100 × C/Y × ((1 + i)^(P/Y / C/Y) − 1). */
+export function annualRateFromPeriodic(i: number, PY: number, CY: number): number {
+  if (CY === PY) return i * 100 * PY;
+  return 100 * CY * (Math.pow(1 + i, PY / CY) - 1);
+}
+
 export function computeTVM(
   target: "N" | "IY" | "PV" | "PMT" | "FV",
   state: TVMState
 ): number {
-  const { N, IY, PV, PMT, FV, PY, isBGN } = state;
+  const { N, IY, PV, PMT, FV, PY, CY, isBGN } = state;
   const mode = isBGN ? 1 : 0;
-  
-  // Actually BA II uses I = (1 + IY/100/CY)^(CY/PY) - 1
-  // But since we assume CY = PY for now, I = IY / 100 / PY
-  const i = IY / 100 / PY;
+
+  // N counts payments; the rate is per payment period (C/Y-aware).
+  const i = periodicRate(IY, PY, CY);
 
   if (target === "PV") {
     if (i === 0) return -(FV + PMT * N);
@@ -236,14 +253,36 @@ export function computeTVM(
       const i2 = i1 - f1 * (i1 - i0) / (f1 - f0);
       const f2 = f(i2);
       if (Math.abs(f2) < 1e-9) {
-        return i2 * 100 * PY;
+        return annualRateFromPeriodic(i2, PY, CY);
       }
       i0 = i1;
       f0 = f1;
       i1 = i2;
       f1 = f2;
     }
-    // If secant fails, try a simple bisection as fallback (simplified)
+    // Secant can diverge from its ±10% start when N is large (e.g. 300
+    // monthly payments). Fall back to bisection on the first sign change
+    // across typical per-period rates; results the secant finds are unchanged.
+    const grid = [-0.99, -0.5, -0.2, -0.1, -0.05, -0.01, -0.001, 1e-9, 0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5];
+    for (let k = 0; k < grid.length - 1; k++) {
+      let lo = grid[k];
+      let hi = grid[k + 1];
+      let fLo = f(lo);
+      const fHi = f(hi);
+      if (!Number.isFinite(fLo) || !Number.isFinite(fHi) || Math.sign(fLo) === Math.sign(fHi)) continue;
+      for (let iter = 0; iter < 200; iter++) {
+        const mid = (lo + hi) / 2;
+        const fMid = f(mid);
+        if (Math.abs(fMid) < 1e-9 || hi - lo < 1e-15) return annualRateFromPeriodic(mid, PY, CY);
+        if (Math.sign(fMid) === Math.sign(fLo)) {
+          lo = mid;
+          fLo = fMid;
+        } else {
+          hi = mid;
+        }
+      }
+      return annualRateFromPeriodic((lo + hi) / 2, PY, CY);
+    }
     throw new Error("Error 5: No solution");
   }
 

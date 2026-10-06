@@ -29,7 +29,10 @@ interface BA2PlusProps {
 }
 
 type TVMRegister = "N" | "IY" | "PV" | "PMT" | "FV";
-type Worksheet = "TVM" | "CF";
+type Worksheet = "TVM" | "CF" | "PY";
+/** The P/Y worksheet has two settings: P/Y, then C/Y. */
+type RateSetting = "PY" | "CY";
+const RATE_LABEL: Record<RateSetting, string> = { PY: "P/Y", CY: "C/Y" };
 
 interface ArithmeticFrame {
   accumulator: number | null;
@@ -62,6 +65,7 @@ export function BA2Plus({
     defaultCashFlowState,
   );
   const [cashFlowIndex, setCashFlowIndex] = useState(0);
+  const [rateSetting, setRateSetting] = useState<RateSetting>("PY");
   const [arithmeticAccumulator, setArithmeticAccumulator] = useState<number | null>(null);
   const [pendingOperator, setPendingOperator] = useState<ArithmeticOperator | null>(null);
   const [arithmeticStack, setArithmeticStack] = useState<ArithmeticFrame[]>([]);
@@ -107,6 +111,15 @@ export function BA2Plus({
   );
 
   const handleClear = useCallback(() => {
+    if (worksheet === "PY" && inputState === "INPUT" && !is2nd) {
+      updateDisplay(formatDisplay(tvmState[rateSetting]), tvmState, "CE/C");
+      setInputState("READY");
+      return;
+    }
+    if (worksheet === "PY") {
+      setWorksheet("TVM");
+      setScreenLabel("TVM");
+    }
     if (is2nd && worksheet === "CF") {
       const cleared = defaultCashFlowState();
       setCashFlows(cleared);
@@ -123,7 +136,7 @@ export function BA2Plus({
       }
     }
     setInputState("READY");
-  }, [is2nd, pendingOperator, tvmState, updateDisplay, worksheet]);
+  }, [inputState, is2nd, pendingOperator, rateSetting, tvmState, updateDisplay, worksheet]);
 
   const handleSign = useCallback(() => {
     if (display === "0.00" || display === "0") return;
@@ -317,6 +330,25 @@ export function BA2Plus({
   }, [cashFlowIndex, display, inputState, logStroke, worksheet]);
 
   const handleEnter = useCallback(() => {
+    if (worksheet === "PY") {
+      if (inputState === "INPUT") {
+        const value = Number(display);
+        const key = `ENTER ${RATE_LABEL[rateSetting]}`;
+        if (!Number.isFinite(value) || value <= 0) {
+          // P/Y and C/Y must be positive: the calculator rejects the entry.
+          updateDisplay("Error 6", tvmState, key);
+        } else {
+          const nextState = rateSetting === "PY"
+            ? { ...tvmState, PY: value, CY: value }
+            : { ...tvmState, CY: value };
+          updateDisplay(formatDisplay(value), nextState, key);
+        }
+      } else {
+        logStroke("ENTER", display);
+      }
+      setInputState("READY");
+      return;
+    }
     if (worksheet === "CF") {
       commitCashFlow();
       logStroke("ENTER", display);
@@ -329,7 +361,27 @@ export function BA2Plus({
     }
     logStroke("ENTER", display);
     setInputState("READY");
-  }, [commitCashFlow, display, handleEquals, logStroke, pendingOperator, worksheet]);
+  }, [commitCashFlow, display, handleEquals, inputState, logStroke, pendingOperator, rateSetting, tvmState, updateDisplay, worksheet]);
+
+  /** 2ND P/Y: open the P/Y worksheet on P/Y. */
+  const openRateWorksheet = useCallback(() => {
+    setWorksheet("PY");
+    setRateSetting("PY");
+    setScreenLabel(RATE_LABEL.PY);
+    setIs2nd(false);
+    setIsCpt(false);
+    setInputState("READY");
+    updateDisplay(formatDisplay(tvmState.PY), tvmState, "P/Y");
+  }, [tvmState, updateDisplay]);
+
+  /** ↑/↓ in the P/Y worksheet: switch between P/Y and C/Y (an unentered value is discarded). */
+  const moveRateSetting = useCallback(() => {
+    const next: RateSetting = rateSetting === "PY" ? "CY" : "PY";
+    setRateSetting(next);
+    setScreenLabel(RATE_LABEL[next]);
+    setInputState("READY");
+    updateDisplay(formatDisplay(tvmState[next]), tvmState, RATE_LABEL[next]);
+  }, [rateSetting, tvmState, updateDisplay]);
 
   const handleCPT = useCallback(
     (register: TVMRegister) => {
@@ -377,11 +429,20 @@ export function BA2Plus({
   }, [tvmState, updateDisplay]);
 
   const handleCPTMode = useCallback(() => {
+    if (is2nd) {
+      setIs2nd(false);
+      setIsCpt(false);
+      setWorksheet("TVM");
+      setScreenLabel("TVM");
+      setInputState("READY");
+      updateDisplay("0.00", tvmState, "QUIT");
+      return;
+    }
     setIsCpt(true);
     setIs2nd(false);
     setWorksheet("TVM");
     logStroke("CPT", display);
-  }, [display, logStroke]);
+  }, [display, is2nd, logStroke, tvmState, updateDisplay]);
 
   const handleTVM = useCallback(
     (register: TVMRegister) => {
@@ -560,16 +621,18 @@ export function BA2Plus({
             Cash-flow worksheet · {cashFlowLabel(cashFlowIndex)} ·{" "}
             {cashFlows.values.length} saved · NPV rate {tvmState.IY.toFixed(2)}%
           </>
+        ) : worksheet === "PY" ? (
+          <>P/Y worksheet · P/Y {formatDisplay(tvmState.PY)} · C/Y {formatDisplay(tvmState.CY)} · ↓ switches · 2ND QUIT leaves</>
         ) : (
           <>TVM worksheet · cash-flow tools use I/Y as the NPV rate</>
         )}
       </div>
 
       <div className="ba2-grid">
-        <div className="ba-key-group">{secondary("QUIT")}<button type="button" className={`ba-key ${isCpt ? "active" : ""}`} onClick={handleCPTMode}>CPT</button></div>
+        <div className="ba-key-group">{secondary("QUIT", true)}<button type="button" className={`ba-key ${isCpt ? "active" : ""}`} onClick={handleCPTMode}>CPT</button></div>
         <div className="ba-key-group">{secondary("SET")}<button type="button" className="ba-key" onClick={handleEnter}>ENTER</button></div>
-        <div className="ba-key-group">{secondary("DEL")}<button type="button" className="ba-key" disabled={worksheet !== "CF"} onClick={() => moveCashFlow(-1)} aria-label="Previous cash flow">↑</button></div>
-        <div className="ba-key-group">{secondary("INS")}<button type="button" className="ba-key" disabled={worksheet !== "CF"} onClick={() => moveCashFlow(1)} aria-label="Next cash flow">↓</button></div>
+        <div className="ba-key-group">{secondary("DEL")}<button type="button" className="ba-key" disabled={worksheet === "TVM"} onClick={() => worksheet === "PY" ? moveRateSetting() : moveCashFlow(-1)} aria-label={worksheet === "PY" ? "Previous setting" : "Previous cash flow"}>↑</button></div>
+        <div className="ba-key-group">{secondary("INS")}<button type="button" className="ba-key" disabled={worksheet === "TVM"} onClick={() => worksheet === "PY" ? moveRateSetting() : moveCashFlow(1)} aria-label={worksheet === "PY" ? "Next setting" : "Next cash flow"}>↓</button></div>
         <div className="ba-key-group">{secondary("")}<button type="button" className="ba-key" {...unavailable("Power control")}>ON/OFF</button></div>
 
         <div className="ba-key-group">{secondary("")}<button type="button" className={`ba-key ba-key--second ${is2nd ? "active" : ""}`} onClick={handle2nd}>2ND</button></div>
@@ -579,7 +642,7 @@ export function BA2Plus({
         <div className="ba-key-group">{secondary("CLR WORK", true)}<button type="button" className="ba-key" onClick={handleClear}>CE/C</button></div>
 
         <div className="ba-key-group">{secondary("xP/Y")}<button type="button" className="ba-key tvm" onClick={() => handleTVM("N")}>N</button></div>
-        <div className="ba-key-group">{secondary("P/Y")}<button type="button" className="ba-key tvm" onClick={() => handleTVM("IY")}>I/Y</button></div>
+        <div className="ba-key-group">{secondary("P/Y", true)}<button type="button" className="ba-key tvm" onClick={() => is2nd ? openRateWorksheet() : handleTVM("IY")}>I/Y</button></div>
         <div className="ba-key-group">{secondary("AMORT")}<button type="button" className="ba-key tvm" onClick={() => handleTVM("PV")}>PV</button></div>
         <div className="ba-key-group">{secondary("BGN", true)}<button type="button" className="ba-key tvm" onClick={() => is2nd ? handleBGN() : handleTVM("PMT")}>PMT</button></div>
         <div className="ba-key-group">{secondary("CLR TVM", true)}<button type="button" className="ba-key tvm" onClick={() => is2nd ? handleClrTVM() : handleTVM("FV")}>FV</button></div>

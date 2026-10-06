@@ -6,8 +6,9 @@ import {
 } from "react-test-renderer";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defaultTVMState } from "../../lib/calculator";
-import { BA2Plus } from "./BA2Plus";
+import { useState } from "react";
+import { computeTVM, defaultTVMState, type TVMState } from "../../lib/calculator";
+import { BA2Plus, type KeystrokeLog } from "./BA2Plus";
 
 let renderer: ReactTestRenderer | null = null;
 
@@ -102,6 +103,49 @@ describe("BA II Plus worksheet controls", () => {
     pressLabel(root, "Close parenthesis");
     pressLabel(root, "Equals");
     expect(displayValue(root)).toBe("14.00");
+  });
+
+  it("sets P/Y (with C/Y following) and C/Y independently in the P/Y worksheet", () => {
+    let latest = defaultTVMState();
+    const logs: KeystrokeLog[] = [];
+    function Controlled() {
+      const [state, setState] = useState<TVMState>(defaultTVMState);
+      latest = state;
+      return <BA2Plus onLog={(log) => logs.push(log)} startTime={0} tvmState={state} onStateChange={setState} />;
+    }
+    act(() => { renderer = create(<Controlled />); });
+    const root = renderer!.root;
+
+    pressText(root, "2ND");
+    pressText(root, "I/Y");
+    expect(displayValue(root)).toBe("1.00");
+    pressText(root, "1");
+    pressText(root, "2");
+    pressText(root, "ENTER");
+    expect(latest.PY).toBe(12);
+    expect(latest.CY).toBe(12);
+
+    pressLabel(root, "Next setting");
+    expect(displayValue(root)).toBe("12.00");
+    pressText(root, "2");
+    pressText(root, "ENTER");
+    expect(latest.PY).toBe(12);
+    expect(latest.CY).toBe(2);
+
+    pressText(root, "0");
+    pressText(root, "ENTER");
+    expect(displayValue(root)).toBe("Error 6");
+    expect(latest.CY).toBe(2);
+
+    pressText(root, "2ND");
+    pressText(root, "CPT");
+    expect(displayValue(root)).toBe("0.00");
+    expect(logs.map((log) => log.key)).toEqual(expect.arrayContaining(["P/Y", "ENTER P/Y", "C/Y", "ENTER C/Y", "QUIT"]));
+    expect(logs.find((log) => log.key === "ENTER C/Y")?.registers).toMatchObject({ PY: 12, CY: 2 });
+
+    // The worksheet values feed the solver: 25 years monthly, compounded semi-annually.
+    const pmt = computeTVM("PMT", { ...latest, N: 300, IY: 6, PV: 100000, FV: 0 });
+    expect(Math.abs(pmt - -639.81)).toBeLessThanOrEqual(0.01);
   });
 
   it("stores and recalls calculator memory", () => {

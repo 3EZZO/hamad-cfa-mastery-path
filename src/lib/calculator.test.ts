@@ -6,6 +6,8 @@ import {
   computeTVM,
   computeUnary,
   defaultTVMState,
+  periodicRate,
+  type TVMState,
 } from "./calculator";
 
 describe("BA II Plus arithmetic engine", () => {
@@ -52,7 +54,8 @@ describe("BA II Plus TVM Engine", () => {
   });
 
   it("calculates PMT of a loan", () => {
-    const state = { ...defaultTVMState(), N: 360, IY: 6, PV: 200000, FV: 0, PY: 12 };
+    // Entering P/Y = 12 also sets C/Y = 12 on the calculator.
+    const state = { ...defaultTVMState(), N: 360, IY: 6, PV: 200000, FV: 0, PY: 12, CY: 12 };
     const pmt = computeTVM("PMT", state);
     expect(pmt).toBeCloseTo(-1199.1011, 4);
   });
@@ -84,6 +87,37 @@ describe("BA II Plus TVM Engine", () => {
   it("throws error for mathematically impossible N", () => {
     const state = { ...defaultTVMState(), IY: 10, PV: -100, PMT: 5, FV: 0 };
     expect(() => computeTVM("N", state)).toThrow();
+  });
+});
+
+describe("BA II Plus TVM with P/Y and C/Y", () => {
+  const within = (actual: number, expected: number) => expect(Math.abs(actual - expected)).toBeLessThanOrEqual(0.01);
+  const mortgage = (PY: number, CY: number): TVMState => ({ ...defaultTVMState(), N: 300, IY: 6, PV: 100000, FV: 0, PY, CY });
+
+  it("uses the effective rate per payment when compounding differs (P/Y 12, C/Y 2)", () => {
+    within(computeTVM("PMT", mortgage(12, 2)), -639.81);
+  });
+
+  it("matches the simple monthly rate when P/Y = C/Y = 12", () => {
+    within(computeTVM("PMT", mortgage(12, 12)), -644.30);
+  });
+
+  it("compounds monthly within an annual payment period (P/Y 1, C/Y 12)", () => {
+    const state = { ...defaultTVMState(), N: 1, IY: 12, PV: -100, PMT: 0, PY: 1, CY: 12 };
+    within(computeTVM("FV", state), 112.68);
+  });
+
+  it("solves I/Y back to the nominal annual rate (P/Y 12, C/Y 2)", () => {
+    within(computeTVM("IY", { ...mortgage(12, 2), IY: 0, PMT: -639.81 }), 6.0);
+  });
+
+  it("solves I/Y for long monthly schedules where the secant start diverges", () => {
+    within(computeTVM("IY", { ...mortgage(12, 12), IY: 0, PMT: -644.30 }), 6.0);
+  });
+
+  it("keeps the default P/Y = C/Y = 1 results identical", () => {
+    for (const iy of [0, 4.5, 10, 37.25]) expect(periodicRate(iy, 1, 1)).toBe(iy / 100);
+    within(computeTVM("PV", { ...defaultTVMState(), N: 5, IY: 10, PMT: 100, FV: 0 }), -379.08);
   });
 });
 
