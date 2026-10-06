@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { getWeekSessions, getWeekProgressForState, PHASES, PLAN } from "../data/plan";
 import program from "../data/program.json";
 import { READING_CATALOG } from "../data/readings";
-import { formatDate, TOTAL_WEEKS } from "../lib/dates";
+import { formatDate } from "../lib/dates";
 import { effectiveSessionDate, sessionDayLabel } from "../lib/schedule";
 import type { TrackerState } from "../types";
 import { CHECKPOINT_TIME, ProgressBar, ReadingCoverage, cx, phaseShort } from "./shared";

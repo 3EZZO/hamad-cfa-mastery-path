@@ -446,6 +446,7 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
     const linked = sessionFromSegment(segment);
     if (linked !== null && linked !== selected) selectSession(linked);
     // Follows back/forward or pasted links only; `selected` is read, not tracked.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tracking `selected`/`selectSession` would re-run on every tab click.
   }, [segment]);
   // One compact row: the tab strip scrolls (arrows, no visible bar) and keeps
   // the chosen session in view.
@@ -588,7 +589,7 @@ function SessionWorkspace({
       candidateName: "Hamad Al Sagheer",
       topic: catalog.topic,
     }),
-    [catalog.topic, runId, session.date, session.deliveryDates, session.number, session.title, sessionDate]
+    [catalog.topic, runId, session.deliveryDates, session.number, session.title, sessionDate]
   );
 
   const loadWorkspace = useCallback(async () => {
@@ -1333,6 +1334,7 @@ function SessionWorkspace({
       );
     },
     [
+      catalog.topic,
       firstWeek.week,
       sessionLabel,
       sessionNumber,
@@ -1408,6 +1410,7 @@ function SessionWorkspace({
       );
     },
     [
+      catalog.topic,
       notify,
       resetSyncScope,
       runId,

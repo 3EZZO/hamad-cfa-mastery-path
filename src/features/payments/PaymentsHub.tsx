@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Plus, Download, Search, Settings, FileText, CheckCircle2, CircleDashed, Clock, ChevronLeft, X, Printer, MessageCircle } from "lucide-react";
+import { Plus, Settings, FileText, CheckCircle2, CircleDashed, Clock, ChevronLeft, X, Printer, MessageCircle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   getPaymentConfig,
@@ -116,9 +116,9 @@ export function PaymentsHub() {
         const recs = await listPaymentRecords(selectedStudentUid);
         if (!active) return;
         setRecords(recs.sort((a, b) => b.dateRecorded.localeCompare(a.dateRecorded)));
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to load payment data:", err);
-        if (active) setError(err.message || "Failed to load");
+        if (active) setError((err instanceof Error ? err.message : "") || "Failed to load");
       } finally {
         if (active) setLoading(false);
       }
@@ -433,7 +433,7 @@ export function PaymentsHub() {
               <Tooltip 
                 contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', boxShadow: 'var(--elev-3)', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}
                 itemStyle={{ color: 'var(--ink)' }}
-                formatter={(value: any) => [formatDualCurrency(Number(value) || 0, config.currency), undefined]}
+                formatter={(value) => [formatDualCurrency(Number(value) || 0, config.currency), undefined]}
               />
               <Area type="monotone" dataKey="Expected" stroke="var(--chart-target)" strokeWidth={2} strokeDasharray="5 5" fill="var(--chart-target)" fillOpacity={0.06} />
               <Area type="monotone" dataKey="Actual" stroke="var(--chart-score)" strokeWidth={2.5} fill="var(--chart-score)" fillOpacity={0.12} />
@@ -699,7 +699,7 @@ function StatementPrintView({ tutorName, config, records, expectedTotal, onClose
                   <td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#a9bacd' }}>No transactions recorded yet.</td>
                 </tr>
               ) : (
-                sortedRecords.map((r, idx) => (
+                sortedRecords.map((r) => (
                   <tr key={r.id}>
                     <td>{formatDate(r.dateRecorded, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                     <td>{r.id.slice(0, 8).toUpperCase()}</td>
@@ -792,7 +792,7 @@ function PaymentModal({ record, onClose, onSave }: { record: PaymentRecord, onCl
           </label>
           <label>
             <span>Status</span>
-            <select value={data.status} onChange={e => setData({...data, status: e.target.value as any})} disabled={saving}>
+            <select value={data.status} onChange={e => setData({...data, status: e.target.value as PaymentRecord["status"]})} disabled={saving}>
               <option value="paid">Paid</option>
               <option value="pending">Pending</option>
               <option value="overdue">Overdue</option>

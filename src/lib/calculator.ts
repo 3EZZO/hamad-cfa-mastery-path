@@ -181,7 +181,7 @@ export function computeTVM(
   target: "N" | "IY" | "PV" | "PMT" | "FV",
   state: TVMState
 ): number {
-  const { N, IY, PV, PMT, FV, PY, CY, isBGN } = state;
+  const { N, IY, PV, PMT, FV, PY, isBGN } = state;
   const mode = isBGN ? 1 : 0;
   
   // Actually BA II uses I = (1 + IY/100/CY)^(CY/PY) - 1

@@ -1,3 +1,5 @@
+import type { KeystrokeLog } from "../features/practice/BA2Plus";
+import type { DiagnosticWarning } from "./calculatorDiagnostics";
 import type {
   PracticeQuestion,
   PracticeQuestionState,
@@ -26,8 +28,8 @@ export interface PracticeMissInsight {
   answeredAt: string;
   missCount: number;
   recovered: boolean;
-  calculatorLog?: any[];
-  diagnostics?: any[];
+  calculatorLog?: KeystrokeLog[];
+  diagnostics?: DiagnosticWarning[];
 }
 
 export interface PracticeRunInsight {

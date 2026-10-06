@@ -2,7 +2,6 @@
 import { CircleAlert, Cloud, LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { Crest } from "../components/Crest";
 import { type FormEvent, useState } from "react";
-import program from "../data/program.json";
 
 export function CloudLoadingScreen() {
   return (

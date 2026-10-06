@@ -42,6 +42,7 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
 export function useAppDialog(scope: unknown = null) {
   const service = useContext(DialogContext);
   if (!service) throw new Error("AppDialogProvider is required");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `scope` is the key: a new scope gets a new owner, so its pending decision is cancelled.
   const owner = useMemo<Owner>(() => ({ active: false }), [scope]);
   useEffect(() => {
     owner.active = true;

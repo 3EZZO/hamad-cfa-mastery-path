@@ -13,7 +13,6 @@ export function analyzeKeystrokes(logs: KeystrokeLog[]): DiagnosticWarning[] {
   const inputtedRegisters = new Set<string>();
   
   // Track computations
-  let lastComputation: string | null = null;
   let computations = 0;
 
   for (let i = 0; i < logs.length; i++) {
@@ -31,12 +30,11 @@ export function analyzeKeystrokes(logs: KeystrokeLog[]): DiagnosticWarning[] {
     if (log.key.startsWith("CPT ")) {
       const target = log.key.split(" ")[1];
       computations++;
-      lastComputation = target;
 
       // Rule 1: Stale Data
       // If they compute something, check if the other 4 registers were either inputted or are 0.
-      const required = ["N", "IY", "PV", "PMT", "FV"].filter(r => r !== target);
-      const stale = required.filter(r => !inputtedRegisters.has(r) && (log.registers as any)[r] !== 0);
+      const required = (["N", "IY", "PV", "PMT", "FV"] as const).filter(r => r !== target);
+      const stale = required.filter(r => !inputtedRegisters.has(r) && log.registers[r] !== 0);
       
       if (stale.length > 0) {
         warnings.push({
