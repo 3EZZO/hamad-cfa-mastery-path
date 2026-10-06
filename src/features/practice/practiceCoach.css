@@ -297,7 +297,7 @@
 .practice-feedback aside { display: flex; gap: 9px; margin-top: 14px; padding: 12px; border-radius: var(--radius-lg); color: #71470a; background: #fff4dc; }
 .practice-feedback aside p { display: grid; gap: 3px; margin: 0; }
 
-.practice-player__dock { position: fixed; z-index: 8; right: 0; bottom: 0; left: 0; padding: 10px 14px max(10px, env(safe-area-inset-bottom)); border-top: 1px solid var(--pc-line); background: color-mix(in srgb, var(--pc-surface) 94%, transparent); backdrop-filter: blur(12px); }
+.practice-player__dock { position: fixed; z-index: 8; right: 0; bottom: 0; left: 0; padding: 10px 14px max(10px, env(safe-area-inset-bottom)); border-top: 1px solid var(--pc-line); background: var(--pc-surface); }
 .practice-player__dock button { display: flex; align-items: center; justify-content: center; gap: 9px; width: min(730px, 100%); min-height: 54px; margin: 0 auto; border: 0; border-radius: var(--radius-lg); color: #fff; background: var(--pc-blue); font: inherit; font-weight: var(--weight-bold); cursor: pointer; }
 .practice-player__dock button:disabled { color: #8595a4; background: #dce4ed; cursor: not-allowed; }
 
@@ -777,7 +777,7 @@ html:root[data-theme="dark"] .practice-feedback aside { color: #f1ce88; border-c
 html:root[data-theme="dark"] .practice-options button.is-correct { color: #e5edf5; border-color: #4c947d; background: #193f3c; }
 html:root[data-theme="dark"] .practice-options button.is-incorrect { color: #e5edf5; border-color: #9c6474; background: #492d3c; }
 html:root[data-theme="dark"] .practice-formulae code { color: #c9e1ff; background: #142333; }
-html:root[data-theme="dark"] .practice-player__dock { background: #192b3df2; }
+html:root[data-theme="dark"] .practice-player__dock { background: #192b3d; }
 html:root[data-theme="dark"] .practice-player__dock button:disabled { color: #71859a; background: #293d50; }
 html:root[data-theme="dark"] .practice-bank-admin__list button.is-unlocked { color: #87d9c8; border-color: #497d72; background: #193f3c; }
 html:root[data-theme="dark"] .practice-mistake-review__status .is-due { color: #f0b6bf; background: #4a2c36; }
