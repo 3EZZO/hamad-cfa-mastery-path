@@ -1,4 +1,4 @@
-import { Calculator, ChevronLeft, ChevronRight, CircleAlert, CloudOff, Flag, LogOut, Maximize, Send, X } from "lucide-react";
+import { Calculator, ChevronLeft, ChevronRight, CircleAlert, CloudOff, Flag, LogOut, Maximize, Send, ShieldCheck, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { defaultTVMState } from "../../lib/calculator";
@@ -202,9 +202,14 @@ export function MockTestRunner({
         </div>
         <MockTimer remainingMs={remainingMs} />
         <div className="mock-exam__tools">
-          <span className={`mock-save mock-save--${saveState}`} role="status">
-            {saveState === "offline" ? <><CloudOff size={15} />Reconnecting…</> : saveState === "saving" ? "Saving…" : "Saved"}
-          </span>
+          {rehearsal ? (
+            // Display only: a rehearsal saves nothing, so it never claims "Saved".
+            <span className="mock-save mock-save--rehearsal" role="status"><ShieldCheck size={15} />Not saved</span>
+          ) : (
+            <span className={`mock-save mock-save--${saveState}`} role="status">
+              {saveState === "offline" ? <><CloudOff size={15} />Reconnecting…</> : saveState === "saving" ? "Saving…" : "Saved"}
+            </span>
+          )}
           <button type="button" className="mock-tool" onClick={() => setCalculatorOpen(open => !open)} aria-pressed={calculatorOpen}>
             <Calculator size={18} /><span>Calculator</span>
           </button>
