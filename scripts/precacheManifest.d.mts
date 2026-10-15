@@ -3,3 +3,5 @@ export const VERSION_PLACEHOLDER: "__BUILD_VERSION__";
 export function collectPrecacheFiles(root: string): Promise<string[]>;
 export function manifestVersion(files: readonly string[], indexHtml: string): string;
 export function writePrecacheManifest(root: string): Promise<{ version: string; files: string[] }>;
+export const EXCLUDED_PATTERNS: readonly RegExp[];
+export function isLazyOnlyAsset(file: string): boolean;

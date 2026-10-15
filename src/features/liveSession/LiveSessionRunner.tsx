@@ -98,6 +98,12 @@ export interface LiveSessionRunnerProps {
   onSyncRetry?: () => void;
   onRequestCloseout: () => void;
   onExit?: () => void;
+  /**
+   * False while the Teach-from-PDF surface is visible. The runner keeps its
+   * drafts, route and position mounted but registers no global shortcuts,
+   * runs no desk timer and shows no candidate/reference dialog.
+   */
+  surfaceActive?: boolean;
 }
 
 type ResultFilter =
@@ -260,6 +266,7 @@ export function LiveSessionRunner({
   onExit,
   mode = "live",
   persistPreferences = true,
+  surfaceActive = true,
 }: LiveSessionRunnerProps) {
   const safeInitialStage = Math.min(
     Math.max(0, initialStageIndex),
@@ -483,6 +490,7 @@ export function LiveSessionRunner({
   }, [questionIndex, safeQuestionIndex]);
 
   useEffect(() => {
+    if (!surfaceActive) return;
     const closeDeckToolsOnOutsidePress = (event: PointerEvent) => {
       const tools = toolsRef.current;
       if (!tools?.open || tools.contains(event.target as Node)) return;
@@ -491,7 +499,7 @@ export function LiveSessionRunner({
     document.addEventListener("pointerdown", closeDeckToolsOnOutsidePress);
     return () =>
       document.removeEventListener("pointerdown", closeDeckToolsOnOutsidePress);
-  }, []);
+  }, [surfaceActive]);
 
   useEffect(() => {
     onPositionChange?.(stageIndex, safeQuestionIndex);
@@ -659,13 +667,13 @@ export function LiveSessionRunner({
   }, [currentDeskKey]);
 
   useEffect(() => {
-    if (!deskTimerRunning || timer.status !== "running") return;
+    if (!surfaceActive || !deskTimerRunning || timer.status !== "running") return;
     const interval = window.setInterval(
       () => setDeskElapsedSeconds(value => value + 1),
       1_000
     );
     return () => window.clearInterval(interval);
-  }, [deskTimerRunning, timer.status]);
+  }, [deskTimerRunning, surfaceActive, timer.status]);
 
   const selectFlowStep = useCallback(
     (step: TeachingFlowStep) => {
@@ -780,6 +788,8 @@ export function LiveSessionRunner({
   }, [hasUnrecordedDraft, onRequestCloseout]);
 
   useEffect(() => {
+    // A hidden guided deck must never react to keys meant for the PDF reader.
+    if (!surfaceActive) return;
     const handleShortcut = (event: KeyboardEvent) => {
       if (candidateOpen || referenceOpen) return;
       if (event.key === "Escape" && focusMode) {
@@ -877,6 +887,7 @@ export function LiveSessionRunner({
     referenceOpen,
     selectFlowStep,
     selectVerdict,
+    surfaceActive,
     timer,
   ]);
   const commandDeskResults = useMemo<CommandDeskResult[]>(() => {
@@ -1155,10 +1166,10 @@ export function LiveSessionRunner({
     <SessionReadingContext.Provider value={readerSize}>
     <section
       className="ls-runner"
-      data-reader-size={readerSize}
+      data-reader-size={surfaceActive ? readerSize : 1}
       data-density={density}
       data-contrast={highContrast ? "high" : "standard"}
-      data-focus={focusMode ? "true" : "false"}
+      data-focus={focusMode && surfaceActive ? "true" : "false"}
       data-flow-step={flowStep}
       data-equal-columns={equalColumns ? "true" : "false"}
       aria-label={`Live ${session.title}`}
@@ -2055,7 +2066,7 @@ export function LiveSessionRunner({
       </nav>
 
       <CandidatePromptView
-        open={candidateOpen}
+        open={candidateOpen && surfaceActive}
         sessionLabel={`Session ${String(session.number).padStart(2, "0")}`}
         stageLabel={stage.title}
         prompt={question?.prompt || stage.ask?.[0] || ""}
@@ -2078,7 +2089,7 @@ export function LiveSessionRunner({
         }}
       />
       <ReferenceDrawer
-        open={referenceOpen}
+        open={referenceOpen && surfaceActive}
         references={references}
         activeReferenceIds={
           stage.referenceIds?.length ? stage.referenceIds : activeReferenceIds

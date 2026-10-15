@@ -36,6 +36,10 @@ export interface SessionTimerController {
   toggle: () => void;
   finish: () => void;
   reset: (durationMinutes?: number) => void;
+  /** Latest published snapshot, readable synchronously inside handlers. */
+  current: () => SessionTimerSnapshot;
+  /** Publish a reconciled snapshot (session host adoption/attachment only). */
+  replace: (next: SessionTimerSnapshot) => void;
 }
 
 export function useSessionTimer({
@@ -164,11 +168,20 @@ export function useSessionTimer({
     publish(recoverSessionTimer(null, override ?? durationMinutes));
   }, [durationMinutes, publish]);
 
+  const current = useCallback(() => snapshotRef.current, []);
+
+  const replace = useCallback((next: SessionTimerSnapshot) => {
+    const nowMs = Date.now();
+    lastObservedRef.current = nowMs;
+    setClockMs(nowMs);
+    publish(next);
+  }, [publish]);
+
   return useMemo(() => ({
     snapshot, status: snapshot.status, elapsedMs, remainingMs, overtimeMs,
     progress: Math.min(100, (elapsedMs / snapshot.durationMs) * 100), expired,
     display: expired ? "+" + formatSessionTime(overtimeMs) : formatSessionTime(remainingMs),
-    start, pause, resume, toggle, finish, reset,
-  }), [elapsedMs, expired, finish, overtimeMs, pause, remainingMs, reset,
-    resume, snapshot, start, toggle]);
+    start, pause, resume, toggle, finish, reset, current, replace,
+  }), [current, elapsedMs, expired, finish, overtimeMs, pause, remainingMs,
+    replace, reset, resume, snapshot, start, toggle]);
 }

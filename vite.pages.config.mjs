@@ -27,6 +27,13 @@ export default defineConfig({
               test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
               priority: 30,
             },
+            // PDF teaching only: pdf.js loads on first use and stays out of
+            // the app-shell precache (see scripts/precacheManifest.mjs).
+            {
+              name: "vendor-pdf",
+              test: /node_modules[\\/]pdfjs-dist[\\/]/,
+              priority: 25,
+            },
             {
               name: "vendor-firebase",
               test: /node_modules[\\/](firebase|@firebase)[\\/]/,

@@ -24,3 +24,9 @@ __pycache__/
 *.mock.json
 answer-key.md
 mock-test-questions/
+
+# Branded teaching PDFs and their private import inventory reach students
+# only through the authenticated tutor upload and per-student grants.
+output/pdf/
+output/pdf-import/
+.firebase-emulator-data/

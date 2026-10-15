@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  loadMaterialsTodayCard,
   loadMockScoreChart,
   loadPaymentsHub,
   loadPracticeBankAdmin,
   loadPracticeCoach,
   loadReceiptVerificationScreen,
+  loadStudentSessionMaterials,
   loadTutorSessionWorkspace,
   warmUpPracticeView,
   warmUpViews,
@@ -19,6 +21,8 @@ describe("lazy view entry points", () => {
       loadReceiptVerificationScreen,
       loadMockScoreChart,
       loadTutorSessionWorkspace,
+      loadStudentSessionMaterials,
+      loadMaterialsTodayCard,
     };
     for (const [name, load] of Object.entries(loaders)) {
       const module = await load();

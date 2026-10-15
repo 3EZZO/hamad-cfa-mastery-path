@@ -41,6 +41,7 @@ async function renderRunner() {
       status: "paused", elapsedMs: 0, remainingMs: 9_000_000, overtimeMs: 0,
       progress: 0, expired: false, display: "02:30:00",
       start: vi.fn(), pause: vi.fn(), resume: vi.fn(), toggle: vi.fn(), finish: vi.fn(), reset: vi.fn(),
+      current: vi.fn(), replace: vi.fn(),
     },
     onEvidence: vi.fn(), onDeskCompletionChange: vi.fn(),
     onPositionChange: vi.fn(), onRequestCloseout: vi.fn(),

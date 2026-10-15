@@ -50,6 +50,13 @@ export const loadMockReminderHost = () => import("./features/mockTests/MockRemin
 export const loadTutorSessionWorkspace = () =>
   import("./components/TutorSessionWorkspace");
 
+/** Student-only: PDFs the tutor shared (Plan › Session materials, Today card). */
+export const loadStudentSessionMaterials = () =>
+  import("./features/teachingMaterials/StudentSessionMaterials");
+
+export const loadMaterialsTodayCard = () =>
+  import("./features/teachingMaterials/MaterialsTodayCard");
+
 export const PracticeCoach = lazy(loadPracticeCoach);
 export const PracticeBankAdmin = lazy(loadPracticeBankAdmin);
 export const PaymentsHub = lazy(loadPaymentsHub);
@@ -60,6 +67,8 @@ export const MockTestAdmin = lazy(loadMockTestAdmin);
 export const ModuleMockScores = lazy(loadModuleMockScores);
 export const MockReminderHost = lazy(loadMockReminderHost);
 export const TutorSessionWorkspace = lazy(loadTutorSessionWorkspace);
+export const StudentSessionMaterials = lazy(loadStudentSessionMaterials);
+export const MaterialsTodayCard = lazy(loadMaterialsTodayCard);
 
 type IdleScheduler = Pick<typeof globalThis, "setTimeout"> & {
   requestIdleCallback?: typeof globalThis.requestIdleCallback;

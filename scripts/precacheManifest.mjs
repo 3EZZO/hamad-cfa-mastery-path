@@ -25,6 +25,14 @@ const SHELL_FILES = [
 const PRECACHED_DIRECTORIES = ["assets", "fonts", "icons"];
 
 const EXCLUDED = new Set(["404.html", "service-worker.js", MANIFEST_FILE, "fonts/NOTICE.txt"]);
+// PDF teaching code (pdf.js and its worker) is loaded only when a PDF is
+// opened; precaching it would put ~1.7 MB on every device.
+/** True for lazily loaded assets that are deliberately not precached. */
+export function isLazyOnlyAsset(file) {
+  return EXCLUDED_PATTERNS.some((pattern) => pattern.test(file));
+}
+
+export const EXCLUDED_PATTERNS = [/^assets\/vendor-pdf-/, /^assets\/pdf\.worker/];
 
 async function listFiles(root, directory) {
   const entries = await readdir(join(root, directory), { withFileTypes: true });
@@ -48,7 +56,7 @@ export async function collectPrecacheFiles(root) {
     }
     files.push(...(await listFiles(root, directory)));
   }
-  const unique = [...new Set(files)].filter((file) => !EXCLUDED.has(file));
+  const unique = [...new Set(files)].filter((file) => !EXCLUDED.has(file) && !isLazyOnlyAsset(file));
   for (const file of unique) await stat(join(root, file)); // every listed file must exist
   return unique.sort();
 }

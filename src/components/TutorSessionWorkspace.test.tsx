@@ -72,6 +72,9 @@ beforeEach(async () => {
     clearTimeout,
   });
   vi.stubGlobal("navigator", { onLine: true });
+  // The session host clock (owned by the workspace since PDF teaching) listens
+  // for page visibility like the guided console clock did.
+  vi.stubGlobal("document", { hidden: false, addEventListener: vi.fn(), removeEventListener: vi.fn() });
   [s1, s2, s3, s4] = await Promise.all([
     syntheticPlaybook(1),
     syntheticPlaybook(2),
@@ -110,10 +113,14 @@ async function mount() {
     );
   });
 }
-async function choose(number: number) {
-  const buttons = tree!.root
+function sessionTabs() {
+  return tree!.root
+    .findByProps({ className: "ls-session-switcher__tabs" })
     .findAllByType("button")
     .filter(button => "aria-pressed" in button.props);
+}
+async function choose(number: number) {
+  const buttons = sessionTabs();
   await act(async () => buttons[number - 1]!.props.onClick());
 }
 function consoleFor(number: number) {
@@ -172,7 +179,7 @@ describe("Session Mode workspace isolation", () => {
 
   it("lists every plan session and opens an unauthored one on the private import screen", async () => {
     await mount();
-    const switcher = tree!.root.findAllByType("button").filter(button => "aria-pressed" in button.props);
+    const switcher = sessionTabs();
     expect(switcher).toHaveLength(23);
     expect(switcher.map(button => button.props.children[0])).toEqual(TUTOR_SESSION_NUMBERS.map(number => `Session ${String(number).padStart(2, "0")}`));
     await choose(5);
@@ -294,5 +301,45 @@ describe("Session Mode workspace isolation", () => {
     await choose(1);
     expect(consoleFor(1).props.session.id).toBe(request.runId);
     expect(mocks.removeRun).not.toHaveBeenCalled();
+  });
+
+  it("records a pause right after start when the guided run attaches to a paused session clock", async () => {
+    const saved: TutorLiveRunSaveRequest[] = [];
+    let run: TutorLiveRun | null = null;
+    mocks.save.mockImplementation(async (request: TutorLiveRunSaveRequest) => {
+      saved.push(request);
+      // The real contract rejects an invalid transition, so this proves validity.
+      run = applyTutorLiveRunAction(run, request, "fixture-tutor");
+      return run;
+    });
+    await mount();
+    const console = consoleFor(1);
+    const now = new Date().toISOString();
+    const paused: LiveSessionRunSnapshot = {
+      phase: "running",
+      routeId: console.props.playbook.routes[0].id,
+      stageIndex: 0,
+      questionIndex: 0,
+      evidence: [],
+      completedDeskIds: [],
+      // 40 seconds of PDF teaching already on the shared session clock.
+      timer: { status: "paused", durationMs: 9_000_000, runningSince: null, elapsedBeforeRunMs: 40_000, updatedAt: now },
+      updatedAt: now,
+    };
+    await act(async () => console.props.onRunChange(paused));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(saved.map(request => request.action.type)).toEqual(["start", "pause"]);
+    expect(saved[0]!.action.elapsedSeconds).toBe(0);
+    expect(saved[1]!.action.elapsedSeconds).toBe(40);
+    const later = new Date(Date.now() + 1_000).toISOString();
+    await act(async () => console.props.onRunChange({
+      ...paused,
+      timer: { status: "running", durationMs: 9_000_000, runningSince: later, elapsedBeforeRunMs: 40_000, updatedAt: later },
+      updatedAt: later,
+    }));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    expect(saved.map(request => request.action.type)).toEqual(["start", "pause", "resume"]);
+    expect(run!.status).toBe("running");
+    expect(consoleFor(1).props.syncState).toBe("synced");
   });
 });
