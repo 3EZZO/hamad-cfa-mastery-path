@@ -27,7 +27,7 @@ import type { PaletteCommand } from "./lib/commandPalette";
 import { AppDialogProvider, useAppDialog } from "./components/AppDialog";
 import { SyncRecoveryNotice } from "./components/SyncRecoveryNotice";
 import { useDialogFocus } from "./features/liveSession/useDialogFocus";
-import { MockReminderHost, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
+import { MaterialsTodayCard, MockReminderHost, ModuleMockTests, PaymentsHub, PracticeCoach, ReceiptVerificationScreen, StudentSessionMaterials, TutorSessionWorkspace, warmUpPracticeView, warmUpTutorViews } from "./lazyViews";
 import { ViewSkeleton } from "./components/ViewSkeleton";
 import type { CalendarExportPreferences } from "./lib/calendarExport";
 import { NAV, TAB_COPY, TUTOR_TAB_IDS, navItem, navigationTarget, shortcutTabs, visibleNavItems } from "./lib/navigation";
@@ -42,7 +42,7 @@ import { SessionLogView } from "./views/SessionLogView";
 import { PracticeLogView } from "./views/PracticeLogView";
 import { ProgressView, parseProgressSection } from "./views/ProgressView";
 import { PracticeHubView, practiceSectionFor } from "./views/PracticeHubView";
-import { PlanView, parsePlanSegment, planSegment } from "./views/PlanView";
+import { PlanView, materialSegment, parsePlanSegment, planSegment } from "./views/PlanView";
 import { isRetestDue } from "./lib/retests";
 import { ErrorVaultView } from "./views/ErrorVaultView";
 import { TutorAdminView } from "./views/TutorAdminView";
@@ -503,6 +503,18 @@ function App() {
             studentUid={role === "student" ? user.uid : null}
             role={role!}
             loading={syncStatus === "loading"}
+            materialsCard={role === "student" ? (
+              <Suspense fallback={null}>
+                <ErrorBoundary scope="materials-card" variant="view" resetKey={user.uid}>
+                  <MaterialsTodayCard
+                    key={user.uid}
+                    uid={user.uid}
+                    onOpen={(versionId) => { window.location.hash = buildHash("plan", materialSegment(versionId)); }}
+                    onOpenAll={() => { window.location.hash = buildHash("plan", materialSegment(null)); }}
+                  />
+                </ErrorBoundary>
+              </Suspense>
+            ) : undefined}
           />
         );
       case "plan":
@@ -542,6 +554,19 @@ function App() {
                 canManage={capabilities.canManageTutorSessions}
               />
             )}
+            materials={role === "student" ? (
+              <Suspense fallback={<ViewSkeleton label="Loading session materials" />}>
+                <StudentSessionMaterials
+                  key={user.uid}
+                  uid={user.uid}
+                  versionId={planRoute.materialVersionId ?? null}
+                  invalidRoute={planRoute.invalidMaterial === true}
+                  // Opening a PDF adds a history entry so Back returns to the list.
+                  onOpen={(versionId) => { window.location.hash = buildHash("plan", materialSegment(versionId)); }}
+                  onClose={() => { window.location.hash = buildHash("plan", materialSegment(null)); }}
+                />
+              </Suspense>
+            ) : undefined}
           />
         );
       case "practice":

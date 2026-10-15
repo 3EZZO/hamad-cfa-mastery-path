@@ -1,7 +1,9 @@
 import {
+  BookOpenText,
   ChevronLeft,
   ChevronRight,
   CloudAlert,
+  FileText,
   LockKeyhole,
   RefreshCw,
   ShieldCheck,
@@ -47,6 +49,9 @@ import {
 } from "../lib/liveSessionCloseout";
 import { effectiveSessionDate } from "../lib/schedule";
 import { recordedSessionElapsedMs, recoverLiveSessionClock } from "../features/liveSession/sessionClock";
+import { useTeachingHostClock, type TeachingSurface } from "../features/liveSession/teachingHost";
+import { PdfTeachingWorkspace } from "../features/teachingMaterials/PdfTeachingWorkspace";
+import { useTeachingSessionRecord } from "../features/teachingMaterials/useTeachingSessionRecord";
 import {
   cacheTutorPlaybookOffline,
   cacheTutorRunOffline,
@@ -437,6 +442,14 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
   const [segment, setSegment] = useHashSegment("live", "live");
   const [selected, setSelected] = useState<TutorSessionNumber>(() => sessionFromSegment(segment) ?? 1);
   const [visited, setVisited] = useState<TutorSessionNumber[]>(() => [sessionFromSegment(segment) ?? 1]);
+  // Visible teaching surface per session; each session keeps its own.
+  const [surfaces, setSurfaces] = useState<Partial<Record<TutorSessionNumber, TeachingSurface>>>({});
+  const surfaceFor = (number: TutorSessionNumber): TeachingSurface => surfaces[number] ?? "guided";
+  const chooseSurface = (number: TutorSessionNumber, surface: TeachingSurface) =>
+    setSurfaces(current => ({ ...current, [number]: surface }));
+  // A recovered record may reopen the PDF surface, but never overrides a choice.
+  const restoreSurface = useCallback((number: TutorSessionNumber, surface: TeachingSurface) =>
+    setSurfaces(current => (current[number] ? current : { ...current, [number]: surface })), []);
   const selectSession = (number: TutorSessionNumber) => {
     setVisited(current => current.includes(number) ? current : [...current, number]);
     setSelected(number);
@@ -481,6 +494,14 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
         <button type="button" className="ls-session-switcher__arrow" aria-label="Later sessions" onClick={() => scrollTabs(1)}>
           <ChevronRight size={18} aria-hidden="true" />
         </button>
+        <div className="tm-surface-switch" role="group" aria-label="Teaching surface">
+          <button type="button" aria-pressed={surfaceFor(selected) === "guided"} onClick={() => chooseSurface(selected, "guided")}>
+            <BookOpenText size={16} aria-hidden="true" /><span>Guided Session</span>
+          </button>
+          <button type="button" aria-pressed={surfaceFor(selected) === "pdf"} onClick={() => chooseSurface(selected, "pdf")}>
+            <FileText size={16} aria-hidden="true" /><span>Teach from PDF</span>
+          </button>
+        </div>
         <small title="Switching pauses the timer. Each session keeps its own progress.">Switching pauses the timer. Each session keeps its own progress.</small>
         <ThemeToggle />
       </nav>
@@ -488,7 +509,8 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
         <section key={`${props.userUid}:${number}`} hidden={selected !== number}>
           {/* Keep visited workspaces mounted so pending cloud journals can drain.
               Their runners unmount and clocks pause when inactive. */}
-          <SessionWorkspace {...props} sessionNumber={number} active={selected === number} />
+          <SessionWorkspace {...props} sessionNumber={number} active={selected === number}
+            surface={surfaceFor(number)} onRestoreSurface={restoreSurface} />
         </section>
       ))}
     </div>
@@ -504,7 +526,14 @@ function SessionWorkspace({
   updatePrivateTutorNotes,
   notify,
   onExit,
-}: TutorSessionWorkspaceProps & { sessionNumber: TutorSessionNumber; active: boolean }) {
+  surface,
+  onRestoreSurface,
+}: TutorSessionWorkspaceProps & {
+  sessionNumber: TutorSessionNumber;
+  active: boolean;
+  surface: TeachingSurface;
+  onRestoreSurface: (number: TutorSessionNumber, surface: TeachingSurface) => void;
+}) {
   const catalog = useMemo(() => getTutorSession(sessionNumber), [sessionNumber]);
   const PLAYBOOK_ID = catalog.playbookId;
   const sessionLabel = catalog.label;
@@ -526,6 +555,11 @@ function SessionWorkspace({
     null
   );
   const [workspaceEpoch, setWorkspaceEpoch] = useState(0);
+  // One canonical session clock shared by Guided Session and Teach from PDF.
+  const hostClock = useTeachingHostClock({ durationMinutes: 150, active });
+  const { adopt: adoptHostClock, reset: resetHostClock } = hostClock;
+  const [pdfRehearsal, setPdfRehearsal] = useState(false);
+  const [pdfVisited, setPdfVisited] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const loadSequenceRef = useRef(0);
   const cloudRunRef = useRef<TutorLiveRun | null>(null);
@@ -591,6 +625,22 @@ function SessionWorkspace({
     }),
     [catalog.topic, runId, session.deliveryDates, session.number, session.title, sessionDate]
   );
+
+  const teachingRecord = useTeachingSessionRecord({
+    tutorUid: userUid,
+    sessionNumber,
+    hostClock,
+    surface,
+    guidedRunId: privatePackage ? runId : null,
+    rehearsal: pdfRehearsal,
+  });
+  const { restoredSurface } = teachingRecord;
+  useEffect(() => {
+    if (restoredSurface) onRestoreSurface(sessionNumber, restoredSurface);
+  }, [onRestoreSurface, restoredSurface, sessionNumber]);
+  useEffect(() => {
+    if (surface === "pdf") setPdfVisited(true);
+  }, [surface]);
 
   const loadWorkspace = useCallback(async () => {
     const sequence = ++loadSequenceRef.current;
@@ -668,6 +718,10 @@ function SessionWorkspace({
     previousSnapshotRef.current = cachedJournal.length
       ? restored
       : cloudSnapshot;
+    // The recovered guided run is a checkpoint of the session clock.
+    if (recovered && recovered.phase !== "launch") {
+      adoptHostClock(recovered.timer, recovered.updatedAt);
+    }
     setPrivatePackage(selectedPackage);
     setInitialRun(recovered);
     setWorkspaceEpoch(value => value + 1);
@@ -693,7 +747,7 @@ function SessionWorkspace({
       setSyncState("offline");
       setSyncMessage("Using the private device-local offline recovery copy.");
     }
-  }, [resetSyncScope, userUid, PLAYBOOK_ID, liveRunId]);
+  }, [resetSyncScope, userUid, PLAYBOOK_ID, liveRunId, adoptHostClock]);
 
   useEffect(() => {
     disposedRef.current = false;
@@ -1061,6 +1115,13 @@ function SessionWorkspace({
         ).catch(() => {
           startQueuedRef.current = false;
         });
+        // A guided run attached to a session clock that PDF teaching left
+        // paused starts paused. The cloud contract creates every run as
+        // "running", so record the pause right after the start; the next
+        // resume is then a valid paused → running event.
+        if (snapshot.timer?.status === "paused") {
+          void enqueueAction({ type: "pause" }, snapshot).catch(() => undefined);
+        }
       }
 
       const priorTimerStatus = previous?.timer?.status;
@@ -1402,6 +1463,7 @@ function SessionWorkspace({
       }
 
       setInitialRun(null);
+      resetHostClock();
       setWorkspaceEpoch(value => value + 1);
       setSyncState("synced");
       setSyncMessage(`Fresh ${sessionLabel} launch is ready on this device.`);
@@ -1412,6 +1474,7 @@ function SessionWorkspace({
     [
       catalog.topic,
       notify,
+      resetHostClock,
       resetSyncScope,
       runId,
       sessionDate,
@@ -1457,8 +1520,10 @@ function SessionWorkspace({
     [loadWorkspace, notify, userUid, sessionNumber, privatePackage]
   );
 
+  const guidedVisible = surface === "guided";
   return (
     <>
+      <div className="tm-surface-host" hidden={!guidedVisible}>
       {loadState === "loading" ? (
         <LiveSessionConsole
           session={descriptor}
@@ -1499,7 +1564,32 @@ function SessionWorkspace({
           onDiscardRehearsal={discardPreSessionRehearsal}
           onExit={onExit}
           brief={active ? <TutorBriefPanel tracker={tracker} /> : null}
+          hostClock={hostClock}
+          surfaceActive={guidedVisible}
         />
+      )}
+      </div>
+      {(pdfVisited || surface === "pdf") && (
+        <div className="tm-surface-host" hidden={surface !== "pdf"}>
+          <PdfTeachingWorkspace
+            active={active && surface === "pdf"}
+            tutorUid={userUid}
+            runId={teachingRecord.runId}
+            sessionNumber={sessionNumber}
+            sessionLabel={sessionLabel}
+            sessionTitle={session.title}
+            hostClock={hostClock}
+            clockReady={teachingRecord.ready}
+            selectedVersionId={teachingRecord.selectedVersionId}
+            onSelectVersion={teachingRecord.selectVersion}
+            onOpenedForTeaching={teachingRecord.recordOpened}
+            rehearsal={pdfRehearsal}
+            onRehearsalChange={setPdfRehearsal}
+            finished={teachingRecord.finished}
+            onFinish={teachingRecord.finish}
+            onExit={onExit}
+          />
+        </div>
       )}
       <input
         className="visually-hidden"

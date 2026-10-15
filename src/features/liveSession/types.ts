@@ -1,3 +1,4 @@
+import type { TeachingHostClock } from "./teachingHost";
 import type { ReactNode } from "react";
 export type LiveSessionPhase = "launch" | "running" | "closeout" | "complete";
 
@@ -229,6 +230,18 @@ export interface LiveSessionConsoleProps {
   onExit?: () => void;
   /** Tutor's pre-session brief, shown on the launch screen of the live session only. */
   brief?: ReactNode;
+  /**
+   * The session teaching host's canonical clock (see teachingHost.ts). When
+   * absent the console hosts its own, so the guided workspace still has
+   * exactly one clock owner.
+   */
+  hostClock?: TeachingHostClock;
+  /**
+   * False while another teaching surface (Teach from PDF) is visible. The
+   * guided subtree stays mounted with its drafts, but its global shortcuts,
+   * desk timer and dialogs stand down.
+   */
+  surfaceActive?: boolean;
 }
 
 export const ERROR_CODE_COPY: Record<

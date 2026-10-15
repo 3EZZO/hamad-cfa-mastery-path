@@ -35,8 +35,8 @@ import type {
   LiveSessionRoute,
   SessionTimerSnapshot,
 } from "./types";
-import { useSessionTimer } from "./useSessionTimer";
 import { recoverSessionTimer } from "./sessionClock";
+import { useTeachingHostClock, type TeachingHostClock } from "./teachingHost";
 import { TeachingLibrary } from "./TeachingLibrary";
 import { libraryDeckCount, SESSION_TERMS } from "./sessionGlossary";
 import { RehearsalWorkspace } from "./RehearsalWorkspace";
@@ -272,18 +272,50 @@ export function LiveSessionConsole(props: LiveSessionConsoleProps) {
 function SessionWorkspaceHost(props: LiveSessionConsoleProps & { playbook: LiveSessionPlaybook }) {
   const [practiceRoute, setPracticeRoute] = useState<LiveSessionRoute | null>(null);
   const active = props.active !== false;
-  useEffect(() => { if (!active) setPracticeRoute(null); }, [active]);
+  const surfaceActive = props.surfaceActive !== false;
+  // A practice rehearsal is a guided-surface overlay: leaving the surface (or
+  // the session) discards it, exactly like its Exit button.
+  useEffect(() => { if (!active || !surfaceActive) setPracticeRoute(null); }, [active, surfaceActive]);
+  const workspaceProps = { ...props, active: active && !practiceRoute, surfaceActive, onOpenRehearsal: setPracticeRoute };
   return <>
-    <LiveSessionWorkspace {...props} active={active && !practiceRoute} onOpenRehearsal={setPracticeRoute} />
-    {active && practiceRoute && <RehearsalWorkspace
+    {props.hostClock
+      ? <LiveSessionWorkspace {...workspaceProps} hostClock={props.hostClock} />
+      : <StandaloneClockWorkspace {...workspaceProps} />}
+    {active && surfaceActive && practiceRoute && <RehearsalWorkspace
       key={`${props.session.id}:${practiceRoute.id}`} session={props.session}
       playbook={props.playbook} route={practiceRoute} onExit={() => setPracticeRoute(null)}
     />}
   </>;
 }
 
+type WorkspaceProps = LiveSessionConsoleProps & {
+  playbook: LiveSessionPlaybook;
+  onOpenRehearsal: (route: LiveSessionRoute) => void;
+};
+
+/**
+ * Without a session teaching host (tests, embedded use) the console still
+ * has exactly one clock owner: this wrapper creates the host clock and seeds
+ * it with the recovered guided run, as the guided workspace once did itself.
+ */
+function StandaloneClockWorkspace(props: WorkspaceProps) {
+  const routeId = preferredRouteId(props.playbook, props.initialRun?.routeId);
+  const minutes = props.playbook.routes.find(route => route.id === routeId)?.minutes ?? 150;
+  const initialRun = props.initialRun;
+  const hostClock = useTeachingHostClock({
+    durationMinutes: minutes,
+    active: props.active !== false,
+    initialSnapshot: initialRun && initialRun.phase !== "launch"
+      ? recoverSessionTimer(initialRun.timer, minutes, initialRun.updatedAt)
+      : null,
+  });
+  return <LiveSessionWorkspace {...props} hostClock={hostClock} />;
+}
+
 function LiveSessionWorkspace({
   active = true,
+  surfaceActive = true,
+  hostClock,
   session,
   playbook,
   initialRun,
@@ -302,7 +334,7 @@ function LiveSessionWorkspace({
   onDiscardRehearsal,
   onExit,
   onOpenRehearsal,
-}: LiveSessionConsoleProps & { playbook: LiveSessionPlaybook; onOpenRehearsal: (route: LiveSessionRoute) => void }) {
+}: WorkspaceProps & { hostClock: TeachingHostClock }) {
   const initialRouteId = preferredRouteId(playbook, initialRun?.routeId);
   const [phase, setPhase] = useState<LiveSessionPhase>(
     initialRun?.phase ?? "launch"
@@ -321,10 +353,14 @@ function LiveSessionWorkspace({
         sessionDeckKey(entry.stageId, entry.targetId)
       )
   );
+  // The guided run's timer is a checkpoint of the host clock once a guided
+  // run is attached (phase past launch); before that it stays as recorded.
   const [timerSnapshot, setTimerSnapshot] = useState<SessionTimerSnapshot>(() =>
-    recoverSessionTimer(initialRun?.timer,
-      playbook.routes.find(route => route.id === initialRouteId)?.minutes ?? 150,
-      initialRun?.updatedAt),
+    initialRun && initialRun.phase !== "launch"
+      ? hostClock.timer.current()
+      : recoverSessionTimer(initialRun?.timer,
+        playbook.routes.find(route => route.id === initialRouteId)?.minutes ?? 150,
+        initialRun?.updatedAt),
   );
   const [completion, setCompletion] =
     useState<LiveSessionCloseoutResult | null>(initialRun?.closeout ?? null);
@@ -374,11 +410,16 @@ function LiveSessionWorkspace({
     onRunChange?.({ ...recoveryRef.current, timer: snapshot, updatedAt: snapshot.updatedAt });
   }, [onRunChange]);
 
-  const timer = useSessionTimer({
-    durationMinutes: selectedRoute?.minutes ?? 120,
-    initialSnapshot: timerSnapshot,
-    onSnapshotChange: handleTimerSnapshot,
-  });
+  const timer = hostClock.timer;
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  // `hostClock` itself changes on every tick; its callbacks are stable.
+  const { subscribe: subscribeClock } = hostClock;
+  useEffect(() => subscribeClock(snapshot => {
+    // PDF-only teaching before a guided start is not part of the guided
+    // record; the guided run attaches to the host clock when it starts.
+    if (phaseRef.current !== "launch") handleTimerSnapshot(snapshot);
+  }), [handleTimerSnapshot, subscribeClock]);
 
   const { status: timerStatus, pause: pauseTimer } = timer;
   useEffect(() => {
@@ -539,8 +580,12 @@ function LiveSessionWorkspace({
     setEvidence([]);
     setCompletedDeskIds([]);
     setCompletion(null);
+    phaseRef.current = "running";
     setPhase("running");
-    timer.start(route.minutes);
+    // Attach to the session clock: an idle clock starts; time already taught
+    // from a PDF and its running/paused state are kept.
+    hostClock.attachGuided(route.minutes);
+    setTimerSnapshot(hostClock.timer.current());
   };
 
   const requestCloseout = () => {
@@ -845,6 +890,7 @@ function LiveSessionWorkspace({
       running
     >
       <LiveSessionRunner
+        surfaceActive={surfaceActive}
         session={session}
         route={selectedRoute}
         stages={stages}

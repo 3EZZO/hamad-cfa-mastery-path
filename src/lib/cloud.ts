@@ -6,6 +6,7 @@ import {
 } from "firebase/app";
 import {
   GoogleAuthProvider,
+  connectAuthEmulator,
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -16,6 +17,7 @@ import {
 } from "firebase/auth";
 import {
   collection,
+  connectFirestoreEmulator,
   deleteDoc,
   doc,
   getDoc,
@@ -230,6 +232,33 @@ interface FirebaseServices {
   firestore: Firestore;
 }
 
+/** Fixed local emulator ports; they match `emulators` in firebase.json. */
+export const CLOUD_EMULATOR_PORTS = { auth: 9099, firestore: 8080 } as const;
+
+export interface CloudEmulatorTarget {
+  host: string;
+  ports: typeof CLOUD_EMULATOR_PORTS;
+}
+
+/**
+ * Local-only redirection to the Firebase emulators. It is honoured only for a
+ * `demo-` project (which has no live backend) on a loopback host, and fails
+ * closed otherwise, so a misconfigured build can never send emulator-test
+ * traffic to — or mistake test data for — the live project.
+ */
+export function getCloudEmulatorTarget(): CloudEmulatorTarget | null {
+  const raw = import.meta.env.VITE_FIREBASE_EMULATOR_HOST;
+  const host = typeof raw === "string" ? raw.trim() : "";
+  if (!host) return null;
+  if (
+    !readEnvironmentValue("VITE_FIREBASE_PROJECT_ID").startsWith("demo-") ||
+    !/^(127\.0\.0\.1|localhost)$/.test(host)
+  ) {
+    throw new CloudClientError("configuration-missing");
+  }
+  return { host, ports: CLOUD_EMULATOR_PORTS };
+}
+
 let cachedServices: FirebaseServices | null = null;
 
 function readEnvironmentValue(key: FirebaseEnvironmentKey): string {
@@ -283,12 +312,18 @@ function getFirebaseServices(): FirebaseServices {
   if (cachedServices) return cachedServices;
 
   const existingApp = getApps().find(app => app.name === FIREBASE_APP_NAME);
+  const emulator = getCloudEmulatorTarget();
   const app =
     existingApp ?? initializeApp(buildFirebaseOptions(), FIREBASE_APP_NAME);
-  cachedServices = {
-    auth: getAuth(app),
-    firestore: getFirestore(app),
-  };
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
+  if (emulator && !existingApp) {
+    connectAuthEmulator(auth, `http://${emulator.host}:${emulator.ports.auth}`, {
+      disableWarnings: true,
+    });
+    connectFirestoreEmulator(firestore, emulator.host, emulator.ports.firestore);
+  }
+  cachedServices = { auth, firestore };
   return cachedServices;
 }
 

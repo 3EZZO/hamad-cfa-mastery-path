@@ -81,7 +81,12 @@ if (!/^[0-9a-f]{16}$/.test(String(precache.version)) || !Array.isArray(precache.
 }
 const { readdir } = await import("node:fs/promises");
 const assetFiles = (await readdir(`${outputDirectory}/assets`)).map((file) => `assets/${file}`);
-const missingAssets = assetFiles.filter((file) => !precache.files.includes(file));
+const { isLazyOnlyAsset } = await import("./precacheManifest.mjs");
+const missingAssets = assetFiles.filter((file) => !precache.files.includes(file) && !isLazyOnlyAsset(file));
+const precachedLazyAssets = precache.files.filter((file) => isLazyOnlyAsset(file));
+if (precachedLazyAssets.length) {
+  throw new Error(`PDF teaching assets must not be precached: ${precachedLazyAssets.join(", ")}`);
+}
 if (missingAssets.length) {
   throw new Error(`precache-manifest.json does not list: ${missingAssets.join(", ")}`);
 }

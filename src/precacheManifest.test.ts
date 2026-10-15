@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   collectPrecacheFiles,
+  isLazyOnlyAsset,
   manifestVersion,
   VERSION_PLACEHOLDER,
   writePrecacheManifest,
@@ -46,6 +47,15 @@ describe("precache manifest", () => {
       "project-202-mark.svg",
       "theme-init.js",
     ]);
+  });
+
+  it("keeps PDF teaching code out of the precache so it loads only when used", async () => {
+    await put("assets/vendor-pdf-abc.js");
+    await put("assets/pdf.worker.min-abc.mjs");
+    const files = await collectPrecacheFiles(root);
+    expect(files.some(file => isLazyOnlyAsset(file))).toBe(false);
+    expect(files).toContain("assets/index-abc.js");
+    expect(isLazyOnlyAsset("assets/PdfReader-abc.js")).toBe(false);
   });
 
   it("versions by content: stable on a rebuild, new when a chunk or the html changes", () => {

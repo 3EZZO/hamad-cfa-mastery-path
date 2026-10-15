@@ -1288,6 +1288,397 @@ service cloud.firestore {
       allow read, write: if activeProject202Role('tutor');
     }
 
+    // ---------------------------------------------------------------------
+    // Teaching materials (PDF teaching and selective student sharing).
+    // The tutor catalogue, immutable version manifests and private teaching
+    // records are tutor-only. PDF bytes are immutable chunk documents under
+    // their version (free plan; no Storage bucket). A student reaches a PDF
+    // only through their own active per-version grant; opening it is recorded
+    // as a receipt for the grant's current share revision and never changes
+    // access or progress.
+    function teachingVersionIdOk(versionId) {
+      return versionId is string
+        && versionId.matches('^[a-z0-9]([a-z0-9-]{0,58}[a-z0-9])?-[0-9a-f]{64}$');
+    }
+
+    // 900 KiB chunks keep every chunk document below Firestore's 1 MiB limit.
+    function teachingChunkCount(byteSize) {
+      return math.ceil(byteSize / 921600.0);
+    }
+
+    function teachingChunkDoc(versionId, chunkId) {
+      return /databases/$(database)/documents/programs/project-202/teachingMaterialVersions/$(versionId)/chunks/$(chunkId);
+    }
+
+    function teachingVersionDoc(versionId) {
+      return /databases/$(database)/documents/programs/project-202/teachingMaterialVersions/$(versionId);
+    }
+
+    function teachingGrantDoc(uid, versionId) {
+      return /databases/$(database)/documents/programs/project-202/materialRecipients/$(uid)/grants/$(versionId);
+    }
+
+    function teachingMemberDoc(uid) {
+      return /databases/$(database)/documents/programs/project-202/members/$(uid);
+    }
+
+    function activeStudentRecipient(uid) {
+      return exists(teachingMemberDoc(uid))
+        && get(teachingMemberDoc(uid)).data.active == true
+        && get(teachingMemberDoc(uid)).data.role == 'student';
+    }
+
+    function validReadingNumber(value) {
+      return value == null || (value is int && value >= 1 && value <= 99);
+    }
+
+    function validTeachingVersion(versionId) {
+      let data = request.resource.data;
+      return teachingVersionIdOk(versionId)
+        && data.keys().hasOnly([
+          'versionId', 'materialId', 'chunkCount', 'sha256', 'byteSize',
+          'pageCount', 'contentType', 'title', 'readingNumber',
+          'sourceEdition', 'createdBy', 'createdAt'
+        ])
+        && data.keys().hasAll([
+          'versionId', 'materialId', 'chunkCount', 'sha256', 'byteSize',
+          'pageCount', 'contentType', 'title', 'readingNumber',
+          'sourceEdition', 'createdBy', 'createdAt'
+        ])
+        && data.versionId == versionId
+        && data.sha256 is string
+        && data.sha256.matches('^[0-9a-f]{64}$')
+        && data.materialId is string
+        && versionId == data.materialId + '-' + data.sha256
+        && data.byteSize is int && data.byteSize > 0 && data.byteSize <= 5242880
+        && data.chunkCount is int
+        && data.chunkCount == teachingChunkCount(data.byteSize)
+        && data.pageCount is int && data.pageCount >= 1 && data.pageCount <= 100
+        && data.contentType == 'application/pdf'
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 160
+        && validReadingNumber(data.readingNumber)
+        && data.sourceEdition is int
+        && data.createdBy == request.auth.uid
+        && data.createdAt == request.time
+        // Every chunk must exist after this atomic write (at most six).
+        && existsAfter(teachingChunkDoc(versionId, '0'))
+        && (data.chunkCount < 2 || existsAfter(teachingChunkDoc(versionId, '1')))
+        && (data.chunkCount < 3 || existsAfter(teachingChunkDoc(versionId, '2')))
+        && (data.chunkCount < 4 || existsAfter(teachingChunkDoc(versionId, '3')))
+        && (data.chunkCount < 5 || existsAfter(teachingChunkDoc(versionId, '4')))
+        && (data.chunkCount < 6 || existsAfter(teachingChunkDoc(versionId, '5')));
+    }
+
+    function validTeachingChunk(versionId, chunkId) {
+      let data = request.resource.data;
+      let manifest = getAfter(teachingVersionDoc(versionId)).data;
+      return teachingVersionIdOk(versionId)
+        && data.keys().hasOnly(['versionId', 'index', 'bytes'])
+        && data.keys().hasAll(['versionId', 'index', 'bytes'])
+        && data.versionId == versionId
+        && data.index is int
+        && data.index >= 0
+        && data.index < manifest.chunkCount
+        && chunkId == string(data.index)
+        && data.bytes is bytes
+        && data.bytes.size() == (data.index == manifest.chunkCount - 1
+          ? manifest.byteSize - (data.index * 921600) : 921600);
+    }
+
+    // Ready manifests and their byte chunks are created together, once, and
+    // never changed or deleted by a client.
+    match /programs/project-202/teachingMaterialVersions/{versionId} {
+      allow get, list: if activeProject202Role('tutor');
+      allow create: if activeProject202Role('tutor') && validTeachingVersion(versionId);
+      allow update, delete: if false;
+
+      // A chunk is readable by the tutor or by a student holding an active
+      // grant for exactly this version (membership + own grant lookups).
+      match /chunks/{chunkId} {
+        allow get: if activeProject202Role('tutor')
+          || (signedIn() && recipientHoldsCurrentGrant(request.auth.uid, versionId));
+        allow create: if activeProject202Role('tutor')
+          && !exists(teachingVersionDoc(versionId))
+          && existsAfter(teachingVersionDoc(versionId))
+          && validTeachingChunk(versionId, chunkId);
+        allow list, update, delete: if false;
+      }
+    }
+
+    function validTeachingMaterial(materialId) {
+      let data = request.resource.data;
+      return materialId.matches('^[a-z0-9]([a-z0-9-]{0,58}[a-z0-9])?$')
+        && data.keys().hasOnly([
+          'materialId', 'title', 'topic', 'readingNumber', 'sourceEdition',
+          'currentVersionId', 'moduleLinks', 'createdBy', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll([
+          'materialId', 'title', 'topic', 'readingNumber', 'sourceEdition',
+          'currentVersionId', 'moduleLinks', 'createdBy', 'createdAt', 'updatedAt'
+        ])
+        && data.materialId == materialId
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 160
+        && data.topic is string && data.topic.size() <= 80
+        && validReadingNumber(data.readingNumber)
+        && data.sourceEdition is int
+        && teachingVersionIdOk(data.currentVersionId)
+        && data.moduleLinks is list && data.moduleLinks.size() <= 20
+        && data.updatedAt == request.time
+        // The pointer names a ready manifest of this material, existing or
+        // created in the same transaction.
+        && existsAfter(teachingVersionDoc(data.currentVersionId))
+        && getAfter(teachingVersionDoc(data.currentVersionId)).data.materialId == materialId;
+    }
+
+    match /programs/project-202/teachingMaterials/{materialId} {
+      allow get, list: if activeProject202Role('tutor');
+      allow create: if activeProject202Role('tutor')
+        && validTeachingMaterial(materialId)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update: if activeProject202Role('tutor')
+        && validTeachingMaterial(materialId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentVersionId', 'title', 'readingNumber', 'topic', 'moduleLinks', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    function validGrantShape(uid, versionId) {
+      let data = request.resource.data;
+      return teachingVersionIdOk(versionId)
+        && data.keys().hasOnly([
+          'versionId', 'materialId', 'recipientUid', 'status', 'shareRevision',
+          'sessionNumbers', 'message', 'title', 'readingNumber', 'sourceEdition',
+          'pageCount', 'byteSize', 'sha256', 'chunkCount', 'sharedBy',
+          'sharedAt', 'revokedAt'
+        ])
+        && data.keys().hasAll([
+          'versionId', 'materialId', 'recipientUid', 'status', 'shareRevision',
+          'sessionNumbers', 'message', 'title', 'readingNumber', 'sourceEdition',
+          'pageCount', 'byteSize', 'sha256', 'chunkCount', 'sharedBy',
+          'sharedAt', 'revokedAt'
+        ])
+        && data.versionId == versionId
+        && data.recipientUid == uid
+        && data.status in ['active', 'revoked']
+        && data.shareRevision is int && data.shareRevision >= 1
+        && data.sessionNumbers is list && data.sessionNumbers.size() <= 25
+        && data.message is string && data.message.size() <= 500;
+    }
+
+    // Copied student-facing fields must agree with the immutable manifest.
+    function grantCopiesManifest(versionId) {
+      let data = request.resource.data;
+      let manifest = get(teachingVersionDoc(versionId)).data;
+      return data.materialId == manifest.materialId
+        && data.title == manifest.title
+        && data.readingNumber == manifest.readingNumber
+        && data.sourceEdition == manifest.sourceEdition
+        && data.pageCount == manifest.pageCount
+        && data.byteSize == manifest.byteSize
+        && data.sha256 == manifest.sha256
+        && data.chunkCount == manifest.chunkCount;
+    }
+
+    function grantActivation(uid, versionId) {
+      let data = request.resource.data;
+      return validGrantShape(uid, versionId)
+        && exists(teachingVersionDoc(versionId))
+        && grantCopiesManifest(versionId)
+        && activeStudentRecipient(uid)
+        && data.status == 'active'
+        && data.sharedBy == request.auth.uid
+        && data.sharedAt == request.time
+        && data.revokedAt == null;
+    }
+
+    match /programs/project-202/materialRecipients/{uid}/grants/{versionId} {
+      // Rules are not filters: a student's list query must itself be limited
+      // to their own namespace and status == 'active'.
+      allow get, list: if activeProject202Role('tutor')
+        || (activeProject202Role('student')
+          && request.auth.uid == uid
+          && resource.data.status == 'active');
+      allow create: if activeProject202Role('tutor')
+        && grantActivation(uid, versionId)
+        && request.resource.data.shareRevision == 1;
+      allow update: if activeProject202Role('tutor') && (
+          // Revoke; allowed even after the recipient became inactive.
+          (
+            resource.data.status == 'active'
+            && request.resource.data.status == 'revoked'
+            && request.resource.data.revokedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'revokedAt'])
+          )
+          // Re-share a revoked version as a new share revision.
+          || (
+            resource.data.status == 'revoked'
+            && grantActivation(uid, versionId)
+            && request.resource.data.shareRevision == resource.data.shareRevision + 1
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'shareRevision', 'sessionNumbers', 'message',
+              'sharedBy', 'sharedAt', 'revokedAt'
+            ])
+          )
+          // Session/message metadata on an active share; never a new opening.
+          || (
+            resource.data.status == 'active'
+            && validGrantShape(uid, versionId)
+            && request.resource.data.status == 'active'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['sessionNumbers', 'message'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    function receiptFieldsOk(versionId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['versionId', 'shareRevision', 'firstOpenedAt', 'lastOpenedAt'])
+        && data.keys().hasAll(['versionId', 'shareRevision', 'firstOpenedAt', 'lastOpenedAt'])
+        && data.versionId == versionId
+        && data.shareRevision is int
+        && data.lastOpenedAt == request.time;
+    }
+
+    function recipientHoldsCurrentGrant(uid, versionId) {
+      return activeProject202Role('student')
+        && request.auth.uid == uid
+        && get(teachingGrantDoc(uid, versionId)).data.status == 'active';
+    }
+
+    match /programs/project-202/materialRecipients/{uid}/receipts/{versionId} {
+      allow get: if activeProject202Role('tutor')
+        || recipientHoldsCurrentGrant(uid, versionId);
+      allow list: if activeProject202Role('tutor');
+      allow create: if recipientHoldsCurrentGrant(uid, versionId)
+        && receiptFieldsOk(versionId)
+        && request.resource.data.shareRevision
+          == get(teachingGrantDoc(uid, versionId)).data.shareRevision
+        && request.resource.data.firstOpenedAt == request.time;
+      allow update: if recipientHoldsCurrentGrant(uid, versionId)
+        && receiptFieldsOk(versionId)
+        && request.resource.data.shareRevision
+          == get(teachingGrantDoc(uid, versionId)).data.shareRevision
+        && (
+          (
+            request.resource.data.shareRevision == resource.data.shareRevision
+            && request.resource.data.firstOpenedAt == resource.data.firstOpenedAt
+          )
+          || (
+            request.resource.data.shareRevision > resource.data.shareRevision
+            && request.resource.data.firstOpenedAt == request.time
+          )
+        );
+      allow delete: if false;
+    }
+
+    function readerStateEntitled(uid, versionId) {
+      return request.auth.uid == uid
+        && (
+          activeProject202Role('tutor')
+          || (
+            activeProject202Role('student')
+            && get(teachingGrantDoc(uid, versionId)).data.status == 'active'
+          )
+        );
+    }
+
+    match /programs/project-202/materialReaderStates/{uid}/versions/{versionId} {
+      allow get: if signedIn() && readerStateEntitled(uid, versionId);
+      allow create, update: if signedIn()
+        && teachingVersionIdOk(versionId)
+        && readerStateEntitled(uid, versionId)
+        && request.resource.data.keys().hasOnly(['versionId', 'page', 'zoom', 'fitMode', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['versionId', 'page', 'zoom', 'fitMode', 'updatedAt'])
+        && request.resource.data.versionId == versionId
+        && request.resource.data.page is int
+        && request.resource.data.page >= 1
+        && request.resource.data.page <= 100
+        && request.resource.data.zoom is number
+        && request.resource.data.zoom >= 0.5
+        && request.resource.data.zoom <= 3
+        && request.resource.data.fitMode in ['width', 'page', 'custom']
+        && request.resource.data.updatedAt == request.time;
+      allow list, delete: if false;
+    }
+
+    function validTeachingClock(clock) {
+      return clock is map
+        && clock.keys().hasOnly(['status', 'durationMs', 'elapsedBeforeRunMs', 'runningSince', 'updatedAt'])
+        && clock.keys().hasAll(['status', 'durationMs', 'elapsedBeforeRunMs', 'runningSince', 'updatedAt'])
+        && clock.status in ['idle', 'running', 'paused', 'complete']
+        && clock.durationMs is int && clock.durationMs >= 60000 && clock.durationMs <= 28800000
+        && clock.elapsedBeforeRunMs is int
+        && clock.elapsedBeforeRunMs >= 0
+        && clock.elapsedBeforeRunMs <= 28800000
+        && (clock.runningSince == null || (clock.runningSince is string && clock.runningSince.size() <= 40))
+        && clock.updatedAt is string && clock.updatedAt.size() <= 40;
+    }
+
+    function validTeachingEnvelope(uid, runId) {
+      let data = request.resource.data;
+      return runId.matches('^session-[0-9]{2}$')
+        && data.keys().hasOnly([
+          'schemaVersion', 'ownerUid', 'runId', 'sessionNumber', 'rehearsal',
+          'status', 'clock', 'surface', 'selectedVersionId', 'guidedRunId',
+          'history', 'revision', 'updatedAtClient'
+        ])
+        && data.keys().hasAll([
+          'schemaVersion', 'ownerUid', 'runId', 'sessionNumber', 'rehearsal',
+          'status', 'clock', 'surface', 'selectedVersionId', 'guidedRunId',
+          'history', 'revision', 'updatedAtClient'
+        ])
+        && data.schemaVersion == 1
+        && data.ownerUid == uid
+        && data.runId == runId
+        && data.sessionNumber is int && data.sessionNumber >= 1 && data.sessionNumber <= 25
+        // Rehearsal is device-local only; it is never written.
+        && data.rehearsal == false
+        && data.status in ['idle', 'teaching', 'paused', 'finished']
+        && validTeachingClock(data.clock)
+        && data.surface in ['guided', 'pdf']
+        && (data.selectedVersionId == null || teachingVersionIdOk(data.selectedVersionId))
+        && (data.guidedRunId == null || (data.guidedRunId is string && data.guidedRunId.size() <= 200))
+        && data.history is list && data.history.size() <= 50
+        && data.revision is int
+        && data.updatedAtClient is string && data.updatedAtClient.size() <= 40;
+    }
+
+    // Private teaching-session envelope (host clock checkpoint, surface,
+    // selected PDF, teaching history) and private notes: owning tutor only.
+    match /programs/project-202/tutorTeachingSessions/{uid}/runs/{runId} {
+      allow get, list: if activeProject202Role('tutor') && request.auth.uid == uid;
+      allow create: if activeProject202Role('tutor')
+        && request.auth.uid == uid
+        && validTeachingEnvelope(uid, runId)
+        && request.resource.data.revision == 1;
+      allow update: if activeProject202Role('tutor')
+        && request.auth.uid == uid
+        && validTeachingEnvelope(uid, runId)
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+
+      match /notes/{versionId} {
+        allow get: if activeProject202Role('tutor') && request.auth.uid == uid;
+        allow create, update: if activeProject202Role('tutor')
+          && request.auth.uid == uid
+          && teachingVersionIdOk(versionId)
+          && request.resource.data.keys().hasOnly(['versionId', 'text', 'revision', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['versionId', 'text', 'revision', 'updatedAt'])
+          && request.resource.data.versionId == versionId
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 20000
+          && request.resource.data.revision is int
+          && request.resource.data.revision
+            == (resource == null ? 1 : resource.data.revision + 1)
+          && request.resource.data.updatedAt == request.time;
+        allow list, delete: if false;
+      }
+    }
+
     // Everything not explicitly listed above is denied.
     match /{document=**} {
       allow read, write: if false;

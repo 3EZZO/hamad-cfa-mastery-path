@@ -48,7 +48,9 @@ describe("private tutor Firestore rule boundary", () => {
   it("allows only tutor live-run access and enforces one meaningful appended event", () => {
     const runs = blockBetween(
       "match /programs/project-202/tutorRuns/{runId}",
-      "match /{document=**}"
+      // Ends before the teaching-materials section, which deliberately lets
+      // a student read their own grants (tested by the emulator suite).
+      "// Teaching materials (PDF teaching and selective student sharing)."
     );
 
     expect(runs).toContain("allow get: if activeProject202Role('tutor')");
@@ -202,5 +204,22 @@ describe("module mock test Firestore rule boundary", () => {
     const student = blockBetween("function mockReminderStudentStamp()", "match /programs/project-202/mockReminders/{reminderId}");
     expect(student).toContain(".hasOnly(['seenAt', 'acknowledgedAt'])");
     expect(student).toContain("after.acknowledgedAt == request.time");
+  });
+
+  it("adds teaching-material rules without student access to tutor-only paths", () => {
+    const teaching = rules.slice(rules.indexOf("// Teaching materials (PDF teaching"), rules.indexOf("match /{document=**}"));
+    const block = (start: string, end: string) => teaching.slice(teaching.indexOf(start), teaching.indexOf(end, teaching.indexOf(start) + 1));
+    for (const [start, end] of [
+      ["match /programs/project-202/teachingMaterialVersions/{versionId}", "function validTeachingMaterial("],
+      ["match /programs/project-202/teachingMaterials/{materialId}", "function validGrantShape("],
+      ["match /programs/project-202/tutorTeachingSessions/{uid}/runs/{runId}", "// Everything not explicitly listed"],
+    ]) {
+      const text = block(start, end);
+      expect(text.length, start).toBeGreaterThan(0);
+      expect(text, start).not.toContain("activeProject202Role('student')");
+      expect(text, start).toMatch(/allow (update, )?delete: if false|allow delete: if false|allow list, delete: if false/);
+    }
+    expect(teaching).toContain("data.rehearsal == false");
+    expect(teaching).toMatch(/allow create: if activeProject202Role\('tutor'\)\s+&& grantActivation\(uid, versionId\)/);
   });
 });

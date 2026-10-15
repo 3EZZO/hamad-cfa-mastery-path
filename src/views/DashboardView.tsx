@@ -1,6 +1,7 @@
 // Moved out of App.tsx unchanged (P3.9 split); see git history for origin.
 import { Archive, BookOpenCheck, CalendarClock, Check, ChevronDown, ChevronRight, CircleCheckBig, ClipboardCheck, Gauge, GraduationCap, ListChecks, PlayCircle, RotateCcw, ShieldCheck, Sparkles, TimerReset, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { Crest } from "../components/Crest";
 import { getOverallProgressForState, getPlanTasks, getRequiredTasks, getWeekProgressForState, PLAN, TOPICS } from "../data/plan";
 import program from "../data/program.json";
@@ -145,6 +146,7 @@ export function DashboardView({
   studentUid = null,
   role,
   loading,
+  materialsCard,
 }: {
   tracker: TrackerState;
   currentWeek: number;
@@ -159,6 +161,8 @@ export function DashboardView({
   studentUid?: string | null;
   role: "tutor" | "student";
   loading?: boolean;
+  /** Student only: "Materials from your tutor" (renders nothing when empty). */
+  materialsCard?: ReactNode;
 }) {
   const week = PLAN[currentWeek - 1]!;
   const days = daysUntilExam();
@@ -423,6 +427,7 @@ export function DashboardView({
           </button>
         </article>
         <div className="home-side-stack">
+          {materialsCard}
           <article className="panel milestone-panel">
             <div className="panel-heading">
               <div><p className="eyebrow">Next important date</p><h3>{nextMilestone?.label ?? "All dates cleared"}</h3></div>
