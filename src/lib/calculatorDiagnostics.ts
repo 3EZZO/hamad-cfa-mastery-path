@@ -29,6 +29,9 @@ export function analyzeKeystrokes(logs: KeystrokeLog[]): DiagnosticWarning[] {
 
     if (log.key.startsWith("CPT ")) {
       const target = log.key.split(" ")[1];
+      // Other worksheets have their own registers and must not be diagnosed
+      // against an unrelated TVM balance left in memory.
+      if (!["N", "IY", "PV", "PMT", "FV"].includes(target)) continue;
       computations++;
 
       // Rule 1: Stale Data

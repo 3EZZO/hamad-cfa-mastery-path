@@ -1,9 +1,4 @@
-import {
-  act,
-  create,
-  type ReactTestInstance,
-  type ReactTestRenderer,
-} from "react-test-renderer";
+import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
@@ -23,6 +18,7 @@ beforeEach(() => {
 afterEach(() => {
   if (renderer) act(() => renderer?.unmount());
   renderer = null;
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -41,9 +37,7 @@ function renderCalculator() {
 }
 
 function pressText(root: ReactTestInstance, text: string) {
-  const button = root
-    .findAllByType("button")
-    .find(node => node.children.join("") === text);
+  const button = root.findAllByType("button").find((node) => node.children.join("") === text);
   if (!button) throw new Error(`Button ${text} not found`);
   act(() => button.props.onClick());
 }
@@ -58,7 +52,7 @@ function displayValue(root: ReactTestInstance): string {
 }
 
 describe("BA II Plus worksheet controls", () => {
-  it("exposes working cash-flow controls and marks unfinished worksheets", () => {
+  it("exposes the full physical key layout without unavailable worksheets", () => {
     const markup = renderToStaticMarkup(
       <BA2Plus
         onLog={() => {}}
@@ -76,9 +70,12 @@ describe("BA II Plus worksheet controls", () => {
     expect(markup).toContain('aria-label="Add"');
     expect(markup).toContain('aria-label="Equals"');
     expect(markup).toContain('aria-label="Store in memory"');
-    expect(markup).toContain("AMORT · N/A");
-    expect(markup).toContain("STAT · N/A");
-    expect(markup).toContain("BOND · N/A");
+    expect(markup).not.toContain("N/A");
+    expect(markup).toContain("AMORT");
+    expect(markup).toContain("STAT");
+    expect(markup).toContain("BOND");
+    expect(markup).toContain("ICONV");
+    expect(markup).toContain("BRKEVN");
   });
 
   it("executes arithmetic, unary functions, and grouped expressions", () => {
@@ -111,9 +108,18 @@ describe("BA II Plus worksheet controls", () => {
     function Controlled() {
       const [state, setState] = useState<TVMState>(defaultTVMState);
       latest = state;
-      return <BA2Plus onLog={(log) => logs.push(log)} startTime={0} tvmState={state} onStateChange={setState} />;
+      return (
+        <BA2Plus
+          onLog={(log) => logs.push(log)}
+          startTime={0}
+          tvmState={state}
+          onStateChange={setState}
+        />
+      );
     }
-    act(() => { renderer = create(<Controlled />); });
+    act(() => {
+      renderer = create(<Controlled />);
+    });
     const root = renderer!.root;
 
     pressText(root, "2ND");
@@ -134,13 +140,15 @@ describe("BA II Plus worksheet controls", () => {
 
     pressText(root, "0");
     pressText(root, "ENTER");
-    expect(displayValue(root)).toBe("Error 6");
+    expect(displayValue(root)).toBe("Error 4");
     expect(latest.CY).toBe(2);
 
     pressText(root, "2ND");
     pressText(root, "CPT");
     expect(displayValue(root)).toBe("0.00");
-    expect(logs.map((log) => log.key)).toEqual(expect.arrayContaining(["P/Y", "ENTER P/Y", "C/Y", "ENTER C/Y", "QUIT"]));
+    expect(logs.map((log) => log.key)).toEqual(
+      expect.arrayContaining(["P/Y", "ENTER P/Y", "C/Y", "ENTER C/Y", "QUIT"]),
+    );
     expect(logs.find((log) => log.key === "ENTER C/Y")?.registers).toMatchObject({ PY: 12, CY: 2 });
 
     // The worksheet values feed the solver: 25 years monthly, compounded semi-annually.
@@ -155,9 +163,80 @@ describe("BA II Plus worksheet controls", () => {
     pressLabel(root, "Store in memory");
     pressText(root, "7");
     pressLabel(root, "Recall memory");
+    pressText(root, "7");
     expect(displayValue(root)).toBe("42.00");
-    pressLabel(root, "Reset calculator");
+    pressText(root, "2ND");
+    pressText(root, "+/-");
+    pressText(root, "ENTER");
     pressLabel(root, "Recall memory");
+    pressText(root, "7");
     expect(displayValue(root)).toBe("0.00");
+  });
+  it("keeps cash-flow data after closing and reopening, with separate hosts isolated", () => {
+    const setHostState = vi.fn();
+    const props = {
+      onLog: vi.fn(),
+      startTime: 0,
+      tvmState: defaultTVMState(),
+      onStateChange: setHostState,
+    };
+    act(() => {
+      renderer = create(<BA2Plus {...props} />);
+    });
+    let root = renderer!.root;
+    pressText(root, "CF");
+    pressText(root, "4");
+    pressText(root, "2");
+    pressText(root, "ENTER");
+    act(() => {
+      renderer!.unmount();
+      renderer = create(<BA2Plus {...props} />);
+    });
+    root = renderer!.root;
+    expect(displayValue(root)).toBe("42.00");
+    act(() => {
+      renderer!.unmount();
+      renderer = create(<BA2Plus {...props} onStateChange={vi.fn()} />);
+    });
+    root = renderer!.root;
+    pressText(root, "CF");
+    expect(displayValue(root)).toBe("0.00");
+  });
+  it("powers down after inactivity and restores a pending calculation", () => {
+    vi.useFakeTimers();
+    const root = renderCalculator();
+    pressText(root, "1");
+    pressText(root, "2");
+    pressLabel(root, "Add");
+    pressText(root, "3");
+    act(() => {
+      vi.advanceTimersByTime(5 * 60 * 1000);
+    });
+    expect(displayValue(root)).toBe("");
+    pressLabel(root, "Power on or off");
+    pressLabel(root, "Equals");
+    expect(displayValue(root)).toBe("15.00");
+  });
+  it("does not restart inactivity timing when the host refreshes its logging callback", () => {
+    vi.useFakeTimers();
+    const props = {
+      onLog: vi.fn(),
+      startTime: 0,
+      tvmState: defaultTVMState(),
+      onStateChange: vi.fn(),
+    };
+    act(() => {
+      renderer = create(<BA2Plus {...props} />);
+    });
+    act(() => {
+      vi.advanceTimersByTime(4 * 60 * 1000);
+    });
+    act(() => {
+      renderer!.update(<BA2Plus {...props} onLog={vi.fn()} />);
+    });
+    act(() => {
+      vi.advanceTimersByTime(60 * 1000);
+    });
+    expect(displayValue(renderer!.root)).toBe("");
   });
 });

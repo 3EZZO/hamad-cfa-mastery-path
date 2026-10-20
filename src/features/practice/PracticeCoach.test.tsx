@@ -644,10 +644,11 @@ describe("UI/UX behaviors", () => {
     expect(keys).toEqual(["7"]);
   });
 
-  it("keeps the calculator's own clear shortcut while the drawer is open", async () => {
+  it("keeps the calculator's digit-editing shortcut while the drawer is open", async () => {
     await renderStudent();
     await openCalculator();
     await act(async () => button(tree!, "7")!.props.onClick());
+    await act(async () => button(tree!, "8")!.props.onClick());
     // Backspace is not a dialog key, so it reaches the calculator's listener.
     await act(async () => { dispatchKey("Backspace"); });
     expect(hasCalc()).toBe(true);
@@ -657,7 +658,8 @@ describe("UI/UX behaviors", () => {
     await act(async () => button(tree!, "Submit answer")!.props.onClick());
 
     const savedRun = harness.saveRun.mock.calls.at(-1)?.[0] as PracticeRun;
-    expect(savedRun.answers[0].calculatorLog?.map((entry: { key: string }) => entry.key)).toEqual(["7", "CE/C"]);
+    expect(savedRun.answers[0].calculatorLog?.map((entry: { key: string }) => entry.key)).toEqual(["7", "8", "backspace"]);
+    expect(savedRun.answers[0].calculatorLog?.at(-1)?.display).toBe("7");
   });
 
   it("focuses the Close button on open and restores the toggle on close", async () => {
