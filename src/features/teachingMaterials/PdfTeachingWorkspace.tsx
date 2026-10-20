@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, FlaskConical, LogOut, NotebookPen, Pause, Play, Send } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FlaskConical, LogOut, MapPinPlus, NotebookPen, Pause, Play, Send, SkipBack, SkipForward } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { listActiveStudentMembers } from "../../lib/cloud";
 import {
@@ -14,6 +14,9 @@ import { shareSummary, TutorMaterialLibrary, type LibraryEntry } from "./TutorMa
 import { PdfNotesPanel } from "./PdfNotesPanel";
 import { usePdfNotes } from "./usePdfNotes";
 import { noteForPage, type KeyPage } from "./pdfNotesModel";
+import { LessonPathPanel } from "./LessonPathPanel";
+import { useLessonPath } from "./useLessonPath";
+import { stopIndexAt, withCopiedStops, withStop } from "./lessonPathModel";
 import { buildLibraryEntries } from "./libraryModel";
 import { materialTopicForSession } from "./topicDisclosure";
 import { TeachingDesk } from "./TeachingDesk";
@@ -119,6 +122,11 @@ export function PdfTeachingWorkspace({
   const [jumpTo, setJumpTo] = useState<{ page: number } | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [resumeKeys, setResumeKeys] = useState<{ versionId: string; keyPages: KeyPage[] } | null>(null);
+  const [stopIndex, setStopIndex] = useState(-1);
+  const [reachedStops, setReachedStops] = useState<ReadonlySet<string>>(new Set());
+  const [pathNotice, setPathNotice] = useState("");
+  // Moving to a stop in another PDF keeps keyboard focus and any presentation.
+  const [carry, setCarry] = useState({ focus: false, present: false });
 
   // A hidden PDF surface must release its modal's global focus trap.
   useEffect(() => { if (!active) { setShareTarget(null); setSummaryOpen(false); } }, [active]);
@@ -261,8 +269,12 @@ export function PdfTeachingWorkspace({
   // ----------------------------------------------------------- coverage
   const selectedId = selected?.version.versionId ?? null;
   const pdfNotes = usePdfNotes(service, tutorUid, selectedId, rehearsal);
+  const lessonPath = useLessonPath(service, tutorUid, runId, rehearsal);
+  const stops = lessonPath.value;
   const currentPage = readerPage && readerPage.versionId === selectedId ? readerPage.page : 1;
-  const pageHasNote = !!noteForPage(pdfNotes.notes, currentPage) || pdfNotes.notes.keyPages.some(entry => entry.page === currentPage);
+  const stopHere = stopIndexAt(stops, selectedId, currentPage, stopIndex);
+  const pageHasNote = !!noteForPage(pdfNotes.notes, currentPage) || pdfNotes.notes.keyPages.some(entry => entry.page === currentPage)
+    || (stopHere >= 0 && !!stops[stopHere]!.prompt);
   const earlierVersions = useMemo(() => (selected ? entries
     .filter(entry => entry.material.materialId === selected.material.materialId && entry.version.versionId !== selected.version.versionId)
     .sort((a, b) => (b.version.createdAtMs ?? 0) - (a.version.createdAtMs ?? 0))
@@ -303,6 +315,73 @@ export function PdfTeachingWorkspace({
     setJumpTo({ page });
   };
 
+  // ------------------------------------------------------- lesson path
+  useEffect(() => {
+    if (!pathNotice) return;
+    const handle = window.setTimeout(() => setPathNotice(""), 5_000);
+    return () => window.clearTimeout(handle);
+  }, [pathNotice]);
+
+  const goToStop = (index: number) => {
+    const stop = stops[index];
+    if (!stop) return;
+    setStopIndex(index);
+    setReachedStops(current => (current.has(stop.id) ? current : new Set(current).add(stop.id)));
+    const entry = entries.find(item => item.version.versionId === stop.versionId);
+    if (!entry) {
+      setPathNotice(`Stop ${index + 1}: this PDF is no longer in the library.`);
+      return;
+    }
+    setPathNotice("");
+    if (mode === "reader" && selectedId === stop.versionId) {
+      setJumpTo({ page: stop.page });
+      return;
+    }
+    openAt(entry, stop.page);
+    setCarry({ focus: true, present: presenting });
+  };
+
+  const stepStop = (delta: 1 | -1) => {
+    if (!stops.length) return;
+    const from = stopIndex < 0 ? (delta > 0 ? -1 : 0) : stopIndex;
+    goToStop(Math.min(stops.length - 1, Math.max(0, from + delta)));
+  };
+
+  const addStop = () => {
+    if (!selectedId) return;
+    const next = withStop(stops, { versionId: selectedId, page: currentPage, prompt: "" }, stopIndex >= 0 ? stopIndex : undefined);
+    if (!next) {
+      setPathNotice("The lesson path already has 40 stops. Remove one first.");
+      return;
+    }
+    setPathNotice(`Page ${currentPage} added as stop ${stopIndex >= 0 ? stopIndex + 2 : next.length}.`);
+    setStopIndex(stopIndex >= 0 ? stopIndex + 1 : next.length - 1);
+    lessonPath.update(next);
+  };
+
+  const copyStopsFrom = async (number: number) => {
+    const source = await service.loadLessonPath(teachingRunIdFor(number));
+    const label = `Session ${String(number).padStart(2, "0")}`;
+    if (!source.stops.length) return `${label} has no lesson path.`;
+    const next = withCopiedStops(stops, source.stops);
+    lessonPath.update(next);
+    return next.length > stops.length ? `Copied ${next.length - stops.length} stops from ${label}.` : "The lesson path is full; nothing was copied.";
+  };
+
+  // Shift+arrows (or ] and [) move between stops, even while presenting;
+  // captured before the reader so they never also turn the page.
+  const onPathKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (mode !== "reader" || !stops.length || event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("input, textarea, select, [contenteditable='true']")) return;
+    const delta = (event.shiftKey && event.key === "ArrowRight") || event.key === "]" ? 1
+      : (event.shiftKey && event.key === "ArrowLeft") || event.key === "[" ? -1 : 0;
+    if (!delta) return;
+    event.preventDefault();
+    event.stopPropagation();
+    stepStop(delta);
+  };
+
   // N toggles the private notes unless typing in a field.
   const onTeachKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key.toLowerCase() !== "n" || event.ctrlKey || event.metaKey || event.altKey || presenting || mode !== "reader") return;
@@ -314,6 +393,7 @@ export function PdfTeachingWorkspace({
 
   const openEntry = (entry: LibraryEntry) => {
     setJumpTo(null);
+    setCarry({ focus: false, present: false });
     onSelectVersion(entry.version.versionId);
     setMode("reader");
     if (!rehearsal) onOpenedForTeaching(entry.version.versionId);
@@ -392,8 +472,9 @@ export function PdfTeachingWorkspace({
           <span>PDF teaching history and private notes are saved. Sharing, the session log and task approval remain separate actions.</span>
         </div>
       )}
+      {pathNotice && !presenting && <p className="tm-path-notice" role="status">{pathNotice}</p>}
       {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- keyboard delegation from the focusable reader */}
-      <div className="tm-teach__main" onKeyDown={onTeachKey}>
+      <div className="tm-teach__main" onKeyDown={onTeachKey} onKeyDownCapture={onPathKey}>
         {mode === "reader" && selected ? (
           initialView?.versionId === selected.version.versionId ? (
             <Suspense fallback={<p className="tm-state" role="status">Loading the reader…</p>}>
@@ -416,6 +497,20 @@ export function PdfTeachingWorkspace({
                 )}
                 toolbarEnd={(
                   <>
+                    {stops.length > 0 && (
+                      <div className="tm-path-nav" role="group" aria-label="Lesson path">
+                        <button type="button" className="tm-icon" aria-label="Previous stop" aria-keyshortcuts="Shift+ArrowLeft" disabled={stopIndex <= 0} onClick={() => stepStop(-1)}>
+                          <SkipBack size={16} aria-hidden="true" />
+                        </button>
+                        <span>{stopIndex >= 0 ? `Stop ${stopIndex + 1} of ${stops.length}` : `${stops.length} stops`}</span>
+                        <button type="button" className="tm-icon" aria-label="Next stop" aria-keyshortcuts="Shift+ArrowRight" disabled={stopIndex >= stops.length - 1} onClick={() => stepStop(1)}>
+                          <SkipForward size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    )}
+                    <button type="button" className="tm-button" onClick={addStop} aria-label={`Add page ${currentPage} to the lesson path`}>
+                      <MapPinPlus size={16} aria-hidden="true" /> Add stop
+                    </button>
                     {shareState && <span className={`tm-badge tm-badge--${shareState.tone}`}>{shareState.label}</span>}
                     <button type="button" className="tm-button" disabled={rehearsal} onClick={() => setShareTarget(selected)}>
                       <Send size={16} aria-hidden="true" /> Share
@@ -428,6 +523,8 @@ export function PdfTeachingWorkspace({
                   </>
                 )}
                 jumpTo={jumpTo}
+                focusOnLoad={carry.focus}
+                startPresenting={carry.present}
                 belowToolbar={!rehearsal ? (
                   <CoverageStrip pageCount={selected.version.pageCount} page={readerPage?.versionId === selectedId ? readerPage.page : 1}
                     thisSession={thisSessionPages} earlier={earlierPages.get(selected.version.versionId) ?? new Set()}
@@ -437,7 +534,8 @@ export function PdfTeachingWorkspace({
                   <PdfNotesPanel service={service} tutorUid={tutorUid} runId={runId} sessionNumber={sessionNumber}
                     versionId={selected.version.versionId} page={currentPage} rehearsal={rehearsal}
                     notes={pdfNotes.notes} state={pdfNotes.state} error={pdfNotes.error} onUpdate={pdfNotes.update}
-                    onFlush={pdfNotes.flush} onRetry={pdfNotes.retry} onJump={page => setJumpTo({ page })} earlierVersions={earlierVersions} />
+                    onFlush={pdfNotes.flush} onRetry={pdfNotes.retry} onJump={page => setJumpTo({ page })} earlierVersions={earlierVersions}
+                    stopPrompt={stopHere >= 0 ? { number: stopHere + 1, prompt: stops[stopHere]!.prompt } : null} />
                 ) : null}
               />
             </Suspense>
@@ -452,6 +550,11 @@ export function PdfTeachingWorkspace({
                 resume={resume} resumePage={resumePageFor(resume, resumePage)}
                 resumeKeyPages={resumeKeys && resumeKeys.versionId === resumeId ? resumeKeys.keyPages : []}
                 loading={earlier === null} onOpen={openEntry} onOpenAt={openAt} />
+            )}
+            {entries.length > 0 && (
+              <LessonPathPanel sessionLabel={sessionLabel} sessionNumber={sessionNumber} stops={stops} entries={entries}
+                state={lessonPath.state} error={lessonPath.error} currentStop={stopIndex} rehearsal={rehearsal}
+                onChange={lessonPath.update} onStart={goToStop} onRetry={lessonPath.retry} onCopyFrom={copyStopsFrom} />
             )}
             <TutorMaterialLibrary
               service={service}
@@ -501,6 +604,7 @@ export function PdfTeachingWorkspace({
           sessionLabel={sessionLabel}
           clockMinutes={Math.round(timer.elapsedMs / 60_000)}
           rows={summaryRows}
+          pathLine={stops.length ? `Lesson path: ${stops.filter(stop => reachedStops.has(stop.id)).length} of ${stops.length} stops reached.` : undefined}
           recorded={sessionRecorded}
           finished={finished}
           onFinishOnly={() => { onFinish(); setSummaryOpen(false); }}

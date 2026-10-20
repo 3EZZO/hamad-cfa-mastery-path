@@ -54,6 +54,7 @@ import {
 } from "../features/teachingMaterials/materialTypes";
 import { getCloudFirestore, getCurrentCloudUser } from "./cloud";
 import { sanitizePdfNotes, type PdfNotes } from "../features/teachingMaterials/pdfNotesModel";
+import { sanitizeLessonPath, type LessonStop } from "../features/teachingMaterials/lessonPathModel";
 import {
   labelGrant, normalizeMaterialTopic, parseMaterialDetails,
   type LabeledMaterialGrant, type MaterialDetails, type MaterialLabels,
@@ -181,6 +182,11 @@ export const materialRefs = {
   /** Page notes and key pages for one PDF version, across sessions. */
   pdfNotes: (fs: Firestore, uid: string, versionId: string) =>
     doc(fs, ...PROGRAM, "tutorTeachingSessions", requireUid(uid), "pdfNotes", requireVersion(versionId)),
+  /** The lesson path prepared for one scheduled session. */
+  lessonPath: (fs: Firestore, uid: string, runId: string) => {
+    if (!RUN_ID_PATTERN.test(runId)) throw new MaterialServiceError("invalid-material");
+    return doc(fs, ...PROGRAM, "tutorTeachingSessions", requireUid(uid), "lessonPaths", runId);
+  },
 };
 
 export interface TeachingMaterialBackend {
@@ -659,6 +665,32 @@ export function createTeachingMaterialService(backend: TeachingMaterialBackend) 
           revision,
           updatedAt: serverTimestamp(),
         });
+        return revision;
+      });
+    }),
+
+    loadLessonPath: (runId: string) => guard(async () => {
+      const snapshot = await getDoc(materialRefs.lessonPath(fs, me(), runId));
+      if (!snapshot.exists()) return { stops: [] as LessonStop[], revision: 0 };
+      const data = snapshot.data();
+      return {
+        stops: sanitizeLessonPath(data.stops),
+        revision: Number.isSafeInteger(data.revision) ? Number(data.revision) : 0,
+      };
+    }),
+
+    /** Compare-and-set: a save against an older revision is a `conflict`. */
+    saveLessonPath: (runId: string, stops: readonly LessonStop[], expectedRevision: number, expectedOwnerUid?: string) => guard(async () => {
+      const uid = me(expectedOwnerUid);
+      const reference = materialRefs.lessonPath(fs, uid, runId);
+      const clean = sanitizeLessonPath(stops);
+      return runTransaction(fs, async transaction => {
+        me(uid);
+        const snapshot = await transaction.get(reference);
+        const current = snapshot.exists() ? Number(snapshot.data().revision) : 0;
+        if (current !== expectedRevision) throw new MaterialServiceError("conflict");
+        const revision = expectedRevision + 1;
+        transaction.set(reference, { runId, stops: clean, revision, updatedAt: serverTimestamp() });
         return revision;
       });
     }),

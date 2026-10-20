@@ -1732,6 +1732,25 @@ service cloud.firestore {
       allow list, delete: if false;
     }
 
+    // Private lesson path (ordered PDF stops) prepared for one session:
+    // owning tutor only, compare-and-set revisions.
+    match /programs/project-202/tutorTeachingSessions/{uid}/lessonPaths/{runId} {
+      allow get: if activeProject202Role('tutor') && request.auth.uid == uid;
+      allow create, update: if activeProject202Role('tutor')
+        && request.auth.uid == uid
+        && runId.matches('^session-[0-9]{2}$')
+        && request.resource.data.keys().hasOnly(['runId', 'stops', 'revision', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['runId', 'stops', 'revision', 'updatedAt'])
+        && request.resource.data.runId == runId
+        && request.resource.data.stops is list
+        && request.resource.data.stops.size() <= 40
+        && request.resource.data.revision is int
+        && request.resource.data.revision
+          == (resource == null ? 1 : resource.data.revision + 1)
+        && request.resource.data.updatedAt == request.time;
+      allow list, delete: if false;
+    }
+
     // Everything not explicitly listed above is denied.
     match /{document=**} {
       allow read, write: if false;

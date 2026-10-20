@@ -495,6 +495,30 @@ describe("teaching materials: private tutor records and independent reader state
     expect(await tutor.service.loadPdfNotes(versionA.versionId)).toEqual({ notes: { pages: [], keyPages: [] }, revision: 2 });
   });
 
+  it("keeps lesson paths owner-tutor only, per session, revisioned and bounded", async () => {
+    const stops = [{ id: "s1", versionId: versionA.versionId, page: 2, prompt: "Ask why" }, { id: "s2", versionId: versionB.versionId, page: 1, prompt: "" }];
+    expect(await tutor.service.saveLessonPath(runId, stops, 0)).toBe(1);
+    expect(await tutor.service.loadLessonPath(runId)).toEqual({ stops, revision: 1 });
+    await expect(tutor.service.saveLessonPath(runId, stops, 0)).rejects.toMatchObject({ code: "conflict" });
+    expect(await tutor.service.loadLessonPath(teachingRunIdFor(9))).toEqual({ stops: [], revision: 0 });
+
+    const reference = materialRefs.lessonPath(tutor.firestore, tutor.uid, runId);
+    await expectDenied(getDoc(materialRefs.lessonPath(student.firestore, tutor.uid, runId)));
+    await expectDenied(getDocs(collection(student.firestore, `${ROOT}/tutorTeachingSessions/${tutor.uid}/lessonPaths`)));
+    await expectDenied(setDoc(materialRefs.lessonPath(student.firestore, student.uid, runId), {
+      runId, stops: [], revision: 1, updatedAt: serverTimestamp(),
+    }));
+    const valid = { runId, stops: [], revision: 2, updatedAt: serverTimestamp() };
+    await expectDenied(setDoc(reference, { ...valid, revision: 4 }));
+    await expectDenied(setDoc(reference, { ...valid, runId: teachingRunIdFor(4) }));
+    await expectDenied(setDoc(reference, { ...valid, stops: Array.from({ length: 41 }, (_, index) => ({ id: `s${index}`, versionId: versionA.versionId, page: 1, prompt: "" })) }));
+    await expectDenied(setDoc(reference, { ...valid, extra: 1 }));
+    await expectDenied(setDoc(doc(tutor.firestore, `${ROOT}/tutorTeachingSessions/${tutor.uid}/lessonPaths/not-a-session`), { ...valid, runId: "not-a-session", revision: 1 }));
+    await expectDenied(deleteDoc(reference));
+    await setDoc(reference, valid);
+    expect(await tutor.service.loadLessonPath(runId)).toEqual({ stops: [], revision: 2 });
+  });
+
   it("keeps reader state per user; nobody reads another user's state", async () => {
     await tutor.service.saveReaderPreference({ versionId: versionA.versionId, page: 1, zoom: 2, fitMode: "custom" }, 2);
     expect(await tutor.service.loadReaderPreference(versionA.versionId, 2)).toMatchObject({ page: 1, zoom: 2 });
