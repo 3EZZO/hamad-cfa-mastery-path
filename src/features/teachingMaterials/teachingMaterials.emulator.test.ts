@@ -470,6 +470,31 @@ describe("teaching materials: private tutor records and independent reader state
     await setDoc(reference, { ...legacy, coverage: tooMany.slice(0, 50), revision: 2 });
   });
 
+  it("keeps page notes and key pages owner-tutor only, revisioned and bounded", async () => {
+    const notes = { pages: [{ page: 2, text: "Ask why duration falls" }], keyPages: [{ page: 4, label: "Duration formula" }] };
+    expect(await tutor.service.savePdfNotes(versionA.versionId, notes, 0)).toBe(1);
+    expect(await tutor.service.loadPdfNotes(versionA.versionId)).toEqual({ notes, revision: 1 });
+    await expect(tutor.service.savePdfNotes(versionA.versionId, notes, 0)).rejects.toMatchObject({ code: "conflict" });
+    await expect(tutor.service.savePdfNotes(versionA.versionId, notes, 1, "different-owner"))
+      .rejects.toMatchObject({ code: "authentication-required" });
+
+    const reference = materialRefs.pdfNotes(tutor.firestore, tutor.uid, versionA.versionId);
+    await expectDenied(getDoc(materialRefs.pdfNotes(student.firestore, tutor.uid, versionA.versionId)));
+    await expectDenied(getDocs(collection(student.firestore, `${ROOT}/tutorTeachingSessions/${tutor.uid}/pdfNotes`)));
+    await expectDenied(setDoc(materialRefs.pdfNotes(student.firestore, student.uid, versionA.versionId), {
+      versionId: versionA.versionId, pages: [], keyPages: [], revision: 1, updatedAt: serverTimestamp(),
+    }));
+    const valid = { versionId: versionA.versionId, pages: [], keyPages: [], revision: 2, updatedAt: serverTimestamp() };
+    await expectDenied(setDoc(reference, { ...valid, revision: 5 }));
+    await expectDenied(setDoc(reference, { ...valid, pages: Array.from({ length: 101 }, (_, index) => ({ page: index + 1, text: "n" })) }));
+    await expectDenied(setDoc(reference, { ...valid, keyPages: Array.from({ length: 51 }, (_, index) => ({ page: index + 1, label: "" })) }));
+    await expectDenied(setDoc(reference, { ...valid, extra: true }));
+    await expectDenied(setDoc(reference, { ...valid, versionId: versionB.versionId }));
+    await expectDenied(deleteDoc(reference));
+    await setDoc(reference, valid);
+    expect(await tutor.service.loadPdfNotes(versionA.versionId)).toEqual({ notes: { pages: [], keyPages: [] }, revision: 2 });
+  });
+
   it("keeps reader state per user; nobody reads another user's state", async () => {
     await tutor.service.saveReaderPreference({ versionId: versionA.versionId, page: 1, zoom: 2, fitMode: "custom" }, 2);
     expect(await tutor.service.loadReaderPreference(versionA.versionId, 2)).toMatchObject({ page: 1, zoom: 2 });

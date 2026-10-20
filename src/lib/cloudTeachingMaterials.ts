@@ -53,6 +53,7 @@ import {
   type TeachingMaterialVersion,
 } from "../features/teachingMaterials/materialTypes";
 import { getCloudFirestore, getCurrentCloudUser } from "./cloud";
+import { sanitizePdfNotes, type PdfNotes } from "../features/teachingMaterials/pdfNotesModel";
 import {
   labelGrant, normalizeMaterialTopic, parseMaterialDetails,
   type LabeledMaterialGrant, type MaterialDetails, type MaterialLabels,
@@ -177,6 +178,9 @@ export const materialRefs = {
   },
   teachingNote: (fs: Firestore, uid: string, runId: string, versionId: string) =>
     doc(materialRefs.teachingRun(fs, uid, runId), "notes", requireVersion(versionId)),
+  /** Page notes and key pages for one PDF version, across sessions. */
+  pdfNotes: (fs: Firestore, uid: string, versionId: string) =>
+    doc(fs, ...PROGRAM, "tutorTeachingSessions", requireUid(uid), "pdfNotes", requireVersion(versionId)),
 };
 
 export interface TeachingMaterialBackend {
@@ -624,6 +628,38 @@ export function createTeachingMaterialService(backend: TeachingMaterialBackend) 
         };
         transaction.set(reference, envelope);
         return envelope;
+      });
+    }),
+
+    loadPdfNotes: (versionId: string) => guard(async () => {
+      const snapshot = await getDoc(materialRefs.pdfNotes(fs, me(), versionId));
+      if (!snapshot.exists()) return { notes: sanitizePdfNotes(null), revision: 0 };
+      const data = snapshot.data();
+      return {
+        notes: sanitizePdfNotes(data),
+        revision: Number.isSafeInteger(data.revision) ? Number(data.revision) : 0,
+      };
+    }),
+
+    /** Compare-and-set: a save against an older revision is a `conflict`. */
+    savePdfNotes: (versionId: string, notes: PdfNotes, expectedRevision: number, expectedOwnerUid?: string) => guard(async () => {
+      const uid = me(expectedOwnerUid);
+      const reference = materialRefs.pdfNotes(fs, uid, versionId);
+      const clean = sanitizePdfNotes(notes);
+      return runTransaction(fs, async transaction => {
+        me(uid);
+        const snapshot = await transaction.get(reference);
+        const current = snapshot.exists() ? Number(snapshot.data().revision) : 0;
+        if (current !== expectedRevision) throw new MaterialServiceError("conflict");
+        const revision = expectedRevision + 1;
+        transaction.set(reference, {
+          versionId,
+          pages: clean.pages,
+          keyPages: clean.keyPages,
+          revision,
+          updatedAt: serverTimestamp(),
+        });
+        return revision;
       });
     }),
 

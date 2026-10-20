@@ -576,3 +576,41 @@
 .tm-summary__table td:last-child, .tm-summary__table th:last-child { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tm-dialog label.tm-summary__check { display: flex; align-items: center; gap: 8px; }
 .tm-dialog label.tm-summary__check input { width: auto; min-height: 0; }
+
+/* Page notes and key pages (private; hidden while presenting). */
+.tm-pagenotes { overflow-y: auto; overscroll-behavior: contain; }
+.tm-pagenotes__field { display: grid; gap: 4px; font-weight: var(--weight-semibold, 600); font-size: var(--text-caption, 0.85rem); }
+.tm-pagenotes__field textarea { min-height: 110px; flex: none; font-weight: normal; }
+.tm-pagenotes__pin { display: flex; flex-wrap: wrap; gap: 6px; }
+.tm-pagenotes__pin input {
+  flex: 1;
+  min-width: 120px;
+  min-height: 36px;
+  padding: 4px 8px;
+  color: var(--ink);
+  font: inherit;
+  background: var(--surface-2, #f7f9fc);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+}
+.tm-pagenotes h3 { margin: 4px 0; font-size: var(--text-caption, 0.8rem); color: var(--muted); font-weight: var(--weight-semibold, 600); }
+.tm-pagenotes__list ul, .tm-desk__keys ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tm-chip.is-current { border-color: var(--action, #1f4f8f); color: var(--action, #1f4f8f); }
+.tm-pagenotes .tm-notes { flex: none; padding: 8px 0 0; border-top: 1px solid var(--border); }
+.tm-pagenotes .tm-notes textarea { min-height: 90px; flex: none; }
+.tm-pagenotes__earlier { border-top: 1px solid var(--border); padding-top: 8px; }
+.tm-pagenotes__earlier summary { cursor: pointer; font-weight: var(--weight-semibold, 600); font-size: var(--text-caption, 0.85rem); }
+.tm-pagenotes__earlier article { margin-top: 8px; }
+.tm-pagenotes__earlier article p { color: var(--ink); white-space: pre-wrap; }
+.tm-notes-toggle { position: relative; }
+.tm-notes-toggle__dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  background: var(--action, #1f4f8f);
+  border-radius: 50%;
+}
+.tm-desk__keys { display: grid; gap: 6px; }
+.tm-desk__keys > span { color: var(--muted); font-size: var(--text-caption, 0.8rem); }

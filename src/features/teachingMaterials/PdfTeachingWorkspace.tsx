@@ -1,5 +1,5 @@
 import { ArrowLeft, CheckCircle2, FlaskConical, LogOut, NotebookPen, Pause, Play, Send } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { listActiveStudentMembers } from "../../lib/cloud";
 import {
   MaterialServiceError, teachingMaterialService, type RecipientShares,
@@ -11,7 +11,9 @@ import { PdfOpenError } from "./pdfErrors";
 import type { ReaderErrorCopy, ReaderView } from "./PdfReader";
 import { ShareMaterialDialog, type ShareRecipient } from "./ShareMaterialDialog";
 import { shareSummary, TutorMaterialLibrary, type LibraryEntry } from "./TutorMaterialLibrary";
-import { TutorNotesPanel } from "./TutorNotesPanel";
+import { PdfNotesPanel } from "./PdfNotesPanel";
+import { usePdfNotes } from "./usePdfNotes";
+import { noteForPage, type KeyPage } from "./pdfNotesModel";
 import { buildLibraryEntries } from "./libraryModel";
 import { materialTopicForSession } from "./topicDisclosure";
 import { TeachingDesk } from "./TeachingDesk";
@@ -102,7 +104,8 @@ export function PdfTeachingWorkspace({
   const [recipientUid, setRecipientUid] = useState<string | null>(null);
   const [shares, setShares] = useState<RecipientShares>({ grants: [], receipts: [] });
   const [mode, setMode] = useState<"library" | "reader">(selectedVersionId ? "reader" : "library");
-  const [notesOpen, setNotesOpen] = useState(true);
+  // On one shared screen private notes start hidden; N or the toolbar shows them.
+  const [notesOpen, setNotesOpen] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const [shareTarget, setShareTarget] = useState<LibraryEntry | null>(null);
   const [initialView, setInitialView] = useState<{ versionId: string; view: ReaderView } | null>(null);
@@ -115,6 +118,7 @@ export function PdfTeachingWorkspace({
   const [readerPage, setReaderPage] = useState<{ versionId: string; page: number } | null>(null);
   const [jumpTo, setJumpTo] = useState<{ page: number } | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [resumeKeys, setResumeKeys] = useState<{ versionId: string; keyPages: KeyPage[] } | null>(null);
 
   // A hidden PDF surface must release its modal's global focus trap.
   useEffect(() => { if (!active) { setShareTarget(null); setSummaryOpen(false); } }, [active]);
@@ -256,6 +260,24 @@ export function PdfTeachingWorkspace({
 
   // ----------------------------------------------------------- coverage
   const selectedId = selected?.version.versionId ?? null;
+  const pdfNotes = usePdfNotes(service, tutorUid, selectedId, rehearsal);
+  const currentPage = readerPage && readerPage.versionId === selectedId ? readerPage.page : 1;
+  const pageHasNote = !!noteForPage(pdfNotes.notes, currentPage) || pdfNotes.notes.keyPages.some(entry => entry.page === currentPage);
+  const earlierVersions = useMemo(() => (selected ? entries
+    .filter(entry => entry.material.materialId === selected.material.materialId && entry.version.versionId !== selected.version.versionId)
+    .sort((a, b) => (b.version.createdAtMs ?? 0) - (a.version.createdAtMs ?? 0))
+    .map(entry => ({ versionId: entry.version.versionId, label: entry.version.sha256.slice(0, 8) })) : []), [entries, selected]);
+
+  // Key pages of the PDF to continue with, shown on the teaching desk.
+  const resumeId = resume?.version.versionId ?? null;
+  useEffect(() => {
+    if (!resumeId || rehearsal) return;
+    let cancelled = false;
+    void service.loadPdfNotes(resumeId).then(result => {
+      if (!cancelled) setResumeKeys({ versionId: resumeId, keyPages: result.notes.keyPages });
+    }, () => undefined);
+    return () => { cancelled = true; };
+  }, [rehearsal, resumeId, service, mode]);
   usePageDwell({
     versionId: selectedId,
     page: readerPage && readerPage.versionId === selectedId ? readerPage.page : null,
@@ -275,6 +297,20 @@ export function PdfTeachingWorkspace({
     const minutes = Math.round(item.seconds / 60);
     return pagesTaught || minutes ? [{ versionId: item.versionId, label: materialLabel(entry.version), pages: item.pages, pagesTaught, pageCount: entry.version.pageCount, minutes }] : [];
   }), [coverage, entries]);
+
+  const openAt = (entry: LibraryEntry, page: number) => {
+    openEntry(entry);
+    setJumpTo({ page });
+  };
+
+  // N toggles the private notes unless typing in a field.
+  const onTeachKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key.toLowerCase() !== "n" || event.ctrlKey || event.metaKey || event.altKey || presenting || mode !== "reader") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("input, textarea, select, [contenteditable='true']")) return;
+    event.preventDefault();
+    setNotesOpen(value => !value);
+  };
 
   const openEntry = (entry: LibraryEntry) => {
     setJumpTo(null);
@@ -356,7 +392,8 @@ export function PdfTeachingWorkspace({
           <span>PDF teaching history and private notes are saved. Sharing, the session log and task approval remain separate actions.</span>
         </div>
       )}
-      <div className="tm-teach__main">
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- keyboard delegation from the focusable reader */}
+      <div className="tm-teach__main" onKeyDown={onTeachKey}>
         {mode === "reader" && selected ? (
           initialView?.versionId === selected.version.versionId ? (
             <Suspense fallback={<p className="tm-state" role="status">Loading the reader…</p>}>
@@ -383,8 +420,10 @@ export function PdfTeachingWorkspace({
                     <button type="button" className="tm-button" disabled={rehearsal} onClick={() => setShareTarget(selected)}>
                       <Send size={16} aria-hidden="true" /> Share
                     </button>
-                    <button type="button" className="tm-icon" aria-pressed={notesOpen} aria-label={notesOpen ? "Hide private notes" : "Show private notes"} onClick={() => setNotesOpen(value => !value)}>
+                    <button type="button" className="tm-icon tm-notes-toggle" aria-pressed={notesOpen} aria-keyshortcuts="N"
+                      aria-label={`${notesOpen ? "Hide" : "Show"} private notes${pageHasNote ? " (this page has a note)" : ""}`} onClick={() => setNotesOpen(value => !value)}>
                       <NotebookPen size={18} aria-hidden="true" />
+                      {pageHasNote && !notesOpen && <span className="tm-notes-toggle__dot" aria-hidden="true" />}
                     </button>
                   </>
                 )}
@@ -395,7 +434,10 @@ export function PdfTeachingWorkspace({
                     onJump={page => setJumpTo({ page })} />
                 ) : null}
                 aside={notesOpen && !presenting ? (
-                  <TutorNotesPanel service={service} tutorUid={tutorUid} runId={runId} versionId={selected.version.versionId} rehearsal={rehearsal} />
+                  <PdfNotesPanel service={service} tutorUid={tutorUid} runId={runId} sessionNumber={sessionNumber}
+                    versionId={selected.version.versionId} page={currentPage} rehearsal={rehearsal}
+                    notes={pdfNotes.notes} state={pdfNotes.state} error={pdfNotes.error} onUpdate={pdfNotes.update}
+                    onFlush={pdfNotes.flush} onRetry={pdfNotes.retry} onJump={page => setJumpTo({ page })} earlierVersions={earlierVersions} />
                 ) : null}
               />
             </Suspense>
@@ -408,7 +450,8 @@ export function PdfTeachingWorkspace({
             {entries.length > 0 && (
               <TeachingDesk sessionLabel={sessionLabel} modules={modules} next={next.items} more={next.more}
                 resume={resume} resumePage={resumePage?.versionId === resume?.version.versionId ? resumePage!.page : null}
-                loading={earlier === null} onOpen={openEntry} />
+                resumeKeyPages={resumeKeys && resumeKeys.versionId === resumeId ? resumeKeys.keyPages : []}
+                loading={earlier === null} onOpen={openEntry} onOpenAt={openAt} />
             )}
             <TutorMaterialLibrary
               service={service}
