@@ -35,14 +35,23 @@ delete env.FIREBASE_TOKEN;
 // The Firebase CLI's DEBUG mode logs its entire child environment.
 delete env.DEBUG;
 env.GCLOUD_PROJECT = PROJECT_ID;
-if (javaBin) env.PATH = `${javaBin}${path.delimiter}${env.PATH ?? ""}`;
+// Windows preserves the inherited key as Path, not necessarily PATH. Adding
+// a second key can hide Node/npm from subprocesses instead of extending PATH.
+const pathKey = Object.keys(env).find(key => key.toUpperCase() === "PATH") ?? "PATH";
+env[pathKey] = [javaBin, path.dirname(process.execPath), env[pathKey]].filter(Boolean).join(path.delimiter);
 
-const command = [
-  "npx", "--yes", `firebase-tools@${FIREBASE_TOOLS_VERSION}`,
+// Resolve npm's launcher beside the running Node executable. A restricted
+// Windows child shell may not inherit a PATH that resolves npx.cmd.
+const npxCli = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npx-cli.js");
+const windows = process.platform === "win32";
+if (windows && !existsSync(npxCli)) throw new Error("The Node installation must include npm's npx-cli.js.");
+const testCommand = `"${process.execPath}" "${path.resolve("node_modules/vitest/vitest.mjs")}" run --config vitest.emulator.config.ts`;
+const args = [
+  ...(windows ? [npxCli] : []), "--yes", `firebase-tools@${FIREBASE_TOOLS_VERSION}`,
   "emulators:exec", "--only", "auth,firestore",
   "--project", PROJECT_ID,
-  JSON.stringify("npx vitest run --config vitest.emulator.config.ts"),
-].join(" ");
+  testCommand,
+];
 
-const child = spawn(command, { stdio: "inherit", shell: true, env });
+const child = spawn(windows ? process.execPath : "npx", args, { stdio: "inherit", env });
 child.on("exit", code => process.exit(code ?? 1));

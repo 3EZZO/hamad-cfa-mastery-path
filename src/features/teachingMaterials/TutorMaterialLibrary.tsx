@@ -1,4 +1,4 @@
-import { BookOpen, FilePlus2, RefreshCw, Send, X } from "lucide-react";
+import { BookOpen, FilePlus2, Pencil, RefreshCw, Send, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { publishMaterialVersion, type TeachingMaterialService } from "../../lib/cloudTeachingMaterials";
 import {
@@ -7,6 +7,8 @@ import {
   type MaterialGrant, type MaterialReceipt,
 } from "./materialTypes";
 import type { LibraryEntry } from "./libraryModel";
+import { EditMaterialDialog } from "./EditMaterialDialog";
+import { compareMaterialLabels, groupMaterialsByTopic, MATERIAL_TOPICS, suggestMaterialTopic, type MaterialDetails, type MaterialTopic } from "./materialDetails";
 export type { LibraryEntry } from "./libraryModel";
 
 interface ImportRow {
@@ -17,6 +19,7 @@ interface ImportRow {
   pageCount: number;
   title: string;
   reading: string;
+  topic: MaterialTopic;
   status: "checking" | "ready" | "invalid" | "uploading" | "done" | "failed" | "cancelled";
   message: string;
   progress: number;
@@ -34,7 +37,7 @@ export function shareSummary(grant: MaterialGrant | undefined, receipt: Material
 
 export function TutorMaterialLibrary({
   service, entries, loading, loadError, onReload, recipientLabel, grants, receipts,
-  selectedVersionId, rehearsal, onOpen, onShare,
+  selectedVersionId, rehearsal, active = true, onOpen, onShare, onDetailsSaved,
 }: {
   service: TeachingMaterialService;
   entries: LibraryEntry[];
@@ -46,25 +49,31 @@ export function TutorMaterialLibrary({
   receipts: Map<string, MaterialReceipt>;
   selectedVersionId: string | null;
   rehearsal: boolean;
+  active?: boolean;
   onOpen: (entry: LibraryEntry) => void;
   onShare: (entry: LibraryEntry) => void;
+  onDetailsSaved: (details: MaterialDetails) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [filter, setFilter] = useState("");
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [editing, setEditing] = useState<LibraryEntry | null>(null);
+  const [savedMessage, setSavedMessage] = useState("");
+  const libraryTitleRef = useRef<HTMLHeadingElement>(null);
 
   const visible = useMemo(() => {
     const needle = filter.trim().toLowerCase().replace(/^r(?:eading)?\s*0?/, "");
     const sorted = [...entries].sort((a, b) =>
-      (a.version.readingNumber ?? 999) - (b.version.readingNumber ?? 999)
+      compareMaterialLabels(a.version, b.version)
       || a.material.materialId.localeCompare(b.material.materialId)
       || Number(b.version.versionId === b.material.currentVersionId) - Number(a.version.versionId === a.material.currentVersionId)
       || (b.version.createdAtMs ?? 0) - (a.version.createdAtMs ?? 0));
     if (!needle) return sorted;
-    return sorted.filter(({ version }) =>
+    return sorted.filter(({ version, topic }) =>
       version.title.toLowerCase().includes(filter.trim().toLowerCase())
+      || topic.toLowerCase().includes(filter.trim().toLowerCase())
       || (version.readingNumber !== null && String(version.readingNumber) === needle.replace(/^0+/, "")));
   }, [entries, filter]);
 
@@ -79,6 +88,7 @@ export function TutorMaterialLibrary({
       return {
         id: `${Date.now()}-${index}-${file.name}`, fileName: file.name, bytes: null, sha256: "", pageCount: 0,
         title: label.title, reading: label.readingNumber === null ? "" : String(label.readingNumber),
+        topic: suggestMaterialTopic(file.name, label.readingNumber !== null && label.readingNumber <= 11 ? "Quantitative Methods" : "Supplementary"),
         status: "checking", message: "Checking…", progress: 0,
       };
     });
@@ -126,7 +136,7 @@ export function TutorMaterialLibrary({
       try {
         const result = await publishMaterialVersion(service, {
           bytes: row.bytes, sha256: row.sha256, byteSize: row.bytes.byteLength, pageCount: row.pageCount,
-          title, readingNumber: normalizeReadingNumber(row.reading),
+          title, readingNumber: normalizeReadingNumber(row.reading), topic: row.topic,
         }, { signal: controller.signal });
         update(row.id, {
           status: "done", progress: 1, bytes: null,
@@ -149,13 +159,13 @@ export function TutorMaterialLibrary({
     <div className="tm-library">
       <div className="tm-library__head">
         <div>
-          <h2>Teaching PDFs</h2>
+          <h2 ref={libraryTitleRef} tabIndex={-1}>Teaching PDFs</h2>
           <p>Any PDF can be used in any session. Opening or teaching a PDF never shares it.</p>
         </div>
         <div className="tm-library__tools">
           <label>
-            <span className="visually-hidden">Search by title or reading number</span>
-            <input type="search" placeholder="Search title or reading no." value={filter} onChange={event => setFilter(event.target.value)} />
+            <span className="visually-hidden">Search by title, topic or reading number</span>
+            <input type="search" placeholder="Search title, topic or reading no." value={filter} onChange={event => setFilter(event.target.value)} />
           </label>
           <button type="button" className="tm-button" disabled={rehearsal} onClick={() => fileRef.current?.click()}>
             <FilePlus2 size={16} aria-hidden="true" /> Add PDFs
@@ -168,12 +178,17 @@ export function TutorMaterialLibrary({
       {rows.length > 0 && (
         <section className="tm-import" aria-labelledby="tm-import-title">
           <h3 id="tm-import-title">Add PDFs to the private library</h3>
-          <table>
-            <thead><tr><th>File</th><th>Reading</th><th>Title</th><th>Result</th></tr></thead>
+          <div className="tm-import__scroll"><table>
+            <thead><tr><th>File</th><th>Topic</th><th>Reading</th><th>Title</th><th>Result</th></tr></thead>
             <tbody>
               {rows.map(row => (
                 <tr key={row.id}>
                   <td>{row.fileName}</td>
+                  <td><select aria-label={`Topic for ${row.fileName}`} value={row.topic}
+                    disabled={row.status !== "ready" && row.status !== "failed"}
+                    onChange={event => update(row.id, { topic: event.target.value as MaterialTopic })}>
+                    {MATERIAL_TOPICS.map(topic => <option key={topic} value={topic}>{topic}</option>)}
+                  </select></td>
                   <td>
                     <input type="number" min={1} max={99} aria-label={`Reading number for ${row.fileName}`} value={row.reading}
                       disabled={row.status !== "ready" && row.status !== "failed"}
@@ -191,7 +206,8 @@ export function TutorMaterialLibrary({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
+          <p className="tm-dialog__hint">Reading is optional. Module numbers can go in the title. You can edit these details after uploading.</p>
           <div className="tm-import__actions">
             <button type="button" className="tm-button tm-button--primary" disabled={uploading || !readyCount} onClick={() => void uploadReady()}>
               {uploading ? <RefreshCw className="tm-spin" size={16} aria-hidden="true" /> : <FilePlus2 size={16} aria-hidden="true" />}
@@ -213,13 +229,19 @@ export function TutorMaterialLibrary({
           <button type="button" className="tm-button" onClick={onReload}><RefreshCw size={15} aria-hidden="true" /> Retry</button>
         </div>
       )}
+      {savedMessage && <p className="tm-notice" role="status">{savedMessage}</p>}
       {loading && !entries.length ? (
         <p className="tm-state" role="status"><RefreshCw className="tm-spin" size={18} aria-hidden="true" /> Loading the private library…</p>
       ) : !entries.length && !loadError ? (
         <p className="tm-state">No PDFs yet. Use “Add PDFs” to import the branded summaries privately.</p>
       ) : (
-        <ul className="tm-library__list" aria-label="Teaching PDFs">
-          {visible.map(entry => {
+        <div className="tm-topic-groups">
+          {!visible.length && <p className="tm-state">No PDFs match this search.</p>}
+          {groupMaterialsByTopic(visible, entry => entry.topic).map(group => (
+          <section className="tm-topic-group" key={group.topic} aria-label={group.topic}>
+            <h3 className="tm-topic-group__title">{group.topic} <span>{group.items.length} {group.items.length === 1 ? "PDF" : "PDFs"}</span></h3>
+            <ul className="tm-library__list" aria-label={`${group.topic} PDFs`}>
+          {group.items.map(entry => {
             const grant = grants.get(entry.version.versionId);
             const summary = shareSummary(grant, receipts.get(entry.version.versionId));
             const olderShared = [...grants.values()].some(item =>
@@ -227,8 +249,8 @@ export function TutorMaterialLibrary({
             return (
               <li key={entry.version.versionId} className={`tm-material${selectedVersionId === entry.version.versionId ? " is-selected" : ""}`}>
                 <p className="tm-material__eyebrow">
-                  {entry.version.readingNumber !== null ? `Reading ${String(entry.version.readingNumber).padStart(2, "0")}` : "Supplementary"}
-                  {" · "}{entry.version.sourceEdition} study notes
+                  {entry.version.readingNumber !== null ? `Reading ${String(entry.version.readingNumber).padStart(2, "0")} · ` : ""}
+                  {entry.version.sourceEdition} study notes
                 </p>
                 <h3>{entry.version.title}</h3>
                 <p className="tm-material__meta">
@@ -245,12 +267,27 @@ export function TutorMaterialLibrary({
                   <button type="button" className="tm-button" disabled={rehearsal} onClick={() => onShare(entry)}>
                     <Send size={16} aria-hidden="true" /> {recipientLabel ? `Share with ${recipientLabel}` : "Share"}
                   </button>
+                  <button type="button" className="tm-button" disabled={rehearsal} onClick={() => { setSavedMessage(""); setEditing(entry); }}>
+                    <Pencil size={16} aria-hidden="true" /> Edit details
+                  </button>
                 </div>
               </li>
             );
           })}
-        </ul>
+            </ul>
+          </section>))}
+        </div>
       )}
+      {editing && !rehearsal && <EditMaterialDialog key={editing.version.versionId} active={active}
+        initial={{ title: editing.version.title, readingNumber: editing.version.readingNumber, topic: editing.topic }}
+        onClose={() => setEditing(null)} onSave={async labels => {
+          if (rehearsal || !active) return;
+          const details = await service.saveDetails(editing.version.versionId, labels, editing.detailsRevision);
+          onDetailsSaved(details);
+          setEditing(null);
+          setSavedMessage("PDF details saved.");
+          libraryTitleRef.current?.focus();
+        }} />}
     </div>
   );
 }

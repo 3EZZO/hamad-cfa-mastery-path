@@ -21,6 +21,8 @@ import { createTeachingMaterialService, materialRefs, publishMaterialVersion, ty
 import { syntheticPdf } from "../../testFixtures/syntheticPdf";
 import { MATERIAL_CHUNK_BYTES, MAX_MATERIAL_BYTES, splitIntoChunks, receiptCountsAsOpened, type TeachingMaterialVersion } from "./materialTypes";
 import { teachingRunIdFor } from "../liveSession/teachingHost";
+import type { LabeledMaterialGrant } from "./materialDetails";
+import { buildLibraryEntries } from "./libraryModel";
 
 const PROJECT = process.env.GCLOUD_PROJECT ?? "";
 const FIRESTORE_HOST = process.env.FIRESTORE_EMULATOR_HOST ?? "";
@@ -148,6 +150,15 @@ afterAll(async () => {
     await deleteApp(app).catch(() => undefined);
   }
 });
+
+async function awaitLabeledGrant(who: Actor, predicate: (items: LabeledMaterialGrant[]) => boolean) {
+  return new Promise<LabeledMaterialGrant[]>((resolve, reject) => {
+    const timeout = setTimeout(() => { stop(); reject(new Error("Timed out waiting for material details")); }, 12_000);
+    const stop = who.service.subscribeMyActiveGrants(items => {
+      if (predicate(items)) { clearTimeout(timeout); stop(); resolve(items); }
+    }, error => { clearTimeout(timeout); stop(); reject(error); });
+  });
+}
 
 describe("teaching materials: upload and publication (tutor)", () => {
   it("atomically publishes binary chunks, manifest and catalogue pointer", async () => {
@@ -458,5 +469,95 @@ describe("teaching materials: private tutor records and independent reader state
     await expectDenied(setDoc(doc(tutor.firestore, `${ROOT}/members/${tutor.uid}`), { active: true, role: "tutor" }));
     await expectDenied(updateDoc(materialRefs.version(tutor.firestore, versionA.versionId), { title: "Rewritten" }));
     await expectDenied(getDocs(collection(student.firestore, `${ROOT}/materialRecipients/${student.uid}/receipts`)));
+  });
+});
+
+describe("teaching materials: editable details and topic boundaries", () => {
+  let version: TeachingMaterialVersion;
+  const labels = { title: "Economics - Module 3 - Fiscal Policy", readingNumber: null, topic: "Economics" as const };
+
+  it("corrects legacy uploads without rewriting PDFs, shares, receipts or private notes", async () => {
+    // Exercise the missing-details case used by uploads made before this feature.
+    const bytes = syntheticPdf({ pages: 2, label: "Legacy label correction fixture" });
+    version = (await publishMaterialVersion(tutor.service, { bytes, sha256: sha256(bytes), byteSize: bytes.length,
+      pageCount: 2, title: "Incorrect title", readingNumber: 99 })).version;
+    const response = await fetch(`http://${FIRESTORE_HOST}/v1/projects/${PROJECT}/databases/(default)/documents/${ROOT}/teachingMaterialDetails/${version.versionId}`,
+      { method: "DELETE", headers: { Authorization: "Bearer owner" } });
+    expect(response.ok).toBe(true);
+    await tutor.service.shareVersion(version, student.uid, { sessionNumber: 3, message: "Keep this message" });
+    await student.service.recordOpened(version.versionId, 1);
+    await student.service.saveReaderPreference({ versionId: version.versionId, page: 2, zoom: 1.5, fitMode: "custom" }, 2);
+    await tutor.service.saveTeachingNote("session-03", version.versionId, "Keep this private note", 0);
+    const grantRef = materialRefs.grant(tutor.firestore, student.uid, version.versionId);
+    const receiptRef = materialRefs.receipt(tutor.firestore, student.uid, version.versionId);
+    const beforeGrant = (await getDoc(grantRef)).data();
+    const beforeReceipt = (await getDoc(receiptRef)).data();
+    const live = awaitLabeledGrant(student, items => items.some(item => item.versionId === version.versionId && item.title === labels.title));
+    expect(await tutor.service.saveDetails(version.versionId, labels, 0)).toMatchObject({ ...labels, revision: 1 });
+    expect((await live).find(item => item.versionId === version.versionId)).toMatchObject({ ...labels, shareRevision: 1, sha256: version.sha256 });
+    expect((await getDoc(grantRef)).data()).toEqual(beforeGrant);
+    expect((await getDoc(receiptRef)).data()).toEqual(beforeReceipt);
+    expect(await tutor.service.getVersion(version.versionId)).toMatchObject({ title: "Incorrect title", readingNumber: 99 });
+    expect(await tutor.service.downloadVersionBytes(version)).toEqual(bytes);
+    expect(await student.service.loadReaderPreference(version.versionId, 2)).toMatchObject({ page: 2, zoom: 1.5 });
+    expect(await tutor.service.loadTeachingNote("session-03", version.versionId)).toMatchObject({ text: "Keep this private note", revision: 1 });
+    expect((await tutor.service.listDetails()).find(item => item.versionId === version.versionId)?.topic).toBe("Economics");
+  });
+
+  it("shares corrected materials using their original immutable source version", async () => {
+    const entry = buildLibraryEntries(await tutor.service.listMaterials(), await tutor.service.listVersions(), await tutor.service.listDetails())
+      .find(item => item.version.versionId === version.versionId)!;
+    expect(entry.version.title).toBe(labels.title);
+    expect(entry.sourceVersion.title).toBe("Incorrect title");
+    expect(await tutor.service.shareVersion(entry.sourceVersion, otherStudent.uid, { sessionNumber: 4, message: "" })).toBe("create");
+    const items = await awaitLabeledGrant(otherStudent, items => items.some(item => item.versionId === version.versionId && item.title === labels.title));
+    expect(items.find(item => item.versionId === version.versionId)).toMatchObject({ topic: "Economics", readingNumber: null });
+    expect(await otherStudent.service.downloadVersionBytes(version)).toEqual(await tutor.service.downloadVersionBytes(version));
+  });
+
+  it("rejects stale and concurrent edits rather than overwriting another device", async () => {
+    const results = await Promise.allSettled([
+      tutor.service.saveDetails(version.versionId, { ...labels, title: "Corrected A" }, 1),
+      tutor.service.saveDetails(version.versionId, { ...labels, title: "Corrected B" }, 1),
+    ]);
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    const failure = results.find(result => result.status === "rejected") as PromiseRejectedResult;
+    expect(failure.reason).toMatchObject({ code: "conflict" });
+  });
+
+  it("denies edits and unshared label reads to students and non-tutors", async () => {
+    for (const who of [student, otherStudent, outsider, anonymous, inactive, unknownRole]) {
+      await expectDenied(setDoc(materialRefs.detail(who.firestore, version.versionId), {
+        versionId: version.versionId, ...labels, revision: 3, updatedBy: who.uid, updatedAt: serverTimestamp(),
+      }));
+      await expectDenied(getDocs(materialRefs.details(who.firestore)));
+    }
+    for (const who of [outsider, anonymous, inactive, unknownRole]) {
+      await expectDenied(getDocFromServer(materialRefs.detail(who.firestore, version.versionId)));
+    }
+    await expectDenied(getDocFromServer(materialRefs.detail(student.firestore, versionB.versionId)));
+    let seenBeforeRevoke = false;
+    let ready!: () => void;
+    const watching = new Promise<void>(resolve => { ready = resolve; });
+    const liveRemoval = awaitLabeledGrant(student, items => {
+      if (items.some(item => item.versionId === version.versionId)) { seenBeforeRevoke = true; ready(); return false; }
+      return seenBeforeRevoke;
+    });
+    await watching;
+    await tutor.service.revokeVersion(version.versionId, student.uid);
+    await liveRemoval;
+    await expectDenied(getDocFromServer(materialRefs.detail(student.firestore, version.versionId)));
+    await expectDenied(chunkRead(student, version));
+  });
+
+  it("enforces allowed fields, bounded labels and monotonic revisions on direct SDK writes", async () => {
+    const reference = materialRefs.detail(tutor.firestore, version.versionId);
+    for (const patch of [{ title: "" }, { title: "a".repeat(161) }, { readingNumber: 100 }, { readingNumber: 1.5 },
+      { topic: "Invented" }, { revision: 1 }, { sha256: "f".repeat(64) }, { versionId: versionB.versionId }]) {
+      await expectDenied(updateDoc(reference, { revision: 3, updatedBy: tutor.uid, updatedAt: serverTimestamp(), ...patch }));
+    }
+    await expectDenied(deleteDoc(reference));
+    await expect(tutor.service.saveDetails(version.versionId, { ...labels, title: " " }, 2)).rejects.toMatchObject({ code: "invalid-material" });
+    await expect(tutor.service.saveDetails(version.versionId, { ...labels, readingNumber: 100 }, 2)).rejects.toMatchObject({ code: "invalid-material" });
   });
 });

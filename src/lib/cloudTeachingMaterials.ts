@@ -54,6 +54,10 @@ import {
 } from "../features/teachingMaterials/materialTypes";
 import { getCloudFirestore, getCurrentCloudUser } from "./cloud";
 import {
+  labelGrant, normalizeMaterialTopic, parseMaterialDetails,
+  type LabeledMaterialGrant, type MaterialDetails, type MaterialLabels,
+} from "../features/teachingMaterials/materialDetails";
+import {
   parseTeachingEnvelope,
   type TeachingSessionEnvelope,
 } from "../features/liveSession/teachingHost";
@@ -151,6 +155,8 @@ export const materialRefs = {
   materials: (fs: Firestore) => collection(fs, ...PROGRAM, "teachingMaterials"),
   material: (fs: Firestore, materialId: string) => doc(fs, ...PROGRAM, "teachingMaterials", materialId),
   versions: (fs: Firestore) => collection(fs, ...PROGRAM, "teachingMaterialVersions"),
+  details: (fs: Firestore) => collection(fs, ...PROGRAM, "teachingMaterialDetails"),
+  detail: (fs: Firestore, versionId: string) => doc(fs, ...PROGRAM, "teachingMaterialDetails", requireVersion(versionId)),
   version: (fs: Firestore, versionId: string) => doc(fs, ...PROGRAM, "teachingMaterialVersions", requireVersion(versionId)),
   /** Immutable PDF byte chunk `index` of a version with `chunkCount` chunks. */
   chunk: (fs: Firestore, versionId: string, index: number, chunkCount: number) =>
@@ -257,6 +263,46 @@ export function createTeachingMaterialService(backend: TeachingMaterialBackend) 
         .filter((item): item is TeachingMaterialVersion => item !== null);
     }),
 
+    listDetails: () => guard(async () => {
+      const snapshot = await getDocs(materialRefs.details(fs));
+      return snapshot.docs.map(item => parseMaterialDetails(item.id, item.data()))
+        .filter((item): item is MaterialDetails => item !== null);
+    }),
+
+    /** Compare-and-set label correction. No PDF, grant, receipt or note is rewritten. */
+    saveDetails: (versionId: string, input: MaterialLabels, expectedRevision: number) => guard(async () => {
+      const uid = me();
+      const title = normalizeMaterialTitle(input.title);
+      if (!title || input.title.length > 160
+        || (input.readingNumber !== null && normalizeReadingNumber(input.readingNumber) !== input.readingNumber)
+        || normalizeMaterialTopic(input.topic) !== input.topic
+        || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new MaterialServiceError("invalid-material");
+      const reference = materialRefs.detail(fs, versionId);
+      return runTransaction(fs, async transaction => {
+        me(uid);
+        const version = await transaction.get(materialRefs.version(fs, versionId));
+        const snapshot = await transaction.get(reference);
+        if (!version.exists()) throw new MaterialServiceError("not-found");
+        const current = snapshot.exists() ? parseMaterialDetails(versionId, snapshot.data()) : null;
+        if (snapshot.exists() && !current) throw new MaterialServiceError("invalid-material");
+        if ((current?.revision ?? 0) !== expectedRevision) throw new MaterialServiceError("conflict");
+        const next: MaterialDetails = { versionId, title, readingNumber: input.readingNumber,
+          topic: input.topic, revision: expectedRevision + 1 };
+        transaction.set(reference, { ...next, updatedBy: uid, updatedAt: serverTimestamp() });
+        return next;
+      }).catch(async error => {
+        // Rules can reject a raced revision before the SDK retries the
+        // transaction. Distinguish that case from a genuine access denial.
+        if (mapMaterialError(error).code === "permission-denied") {
+          me(uid);
+          const latest = await getDocFromServer(reference);
+          const details = latest.exists() ? parseMaterialDetails(versionId, latest.data()) : null;
+          if (details && details.revision !== expectedRevision) throw new MaterialServiceError("conflict");
+        }
+        throw error;
+      });
+    }),
+
     getVersion: (versionId: string) => guard(async () => {
       const snapshot = await getDoc(materialRefs.version(fs, versionId));
       return snapshot.exists() ? parseMaterialVersion(snapshot.id, snapshot.data()) : null;
@@ -275,7 +321,7 @@ export function createTeachingMaterialService(backend: TeachingMaterialBackend) 
      * the catalogue pointer commit together, so a failed or cancelled upload
      * leaves nothing behind and a retry converges on the same version.
      */
-    publishVersion: (planned: TeachingMaterialVersion, bytes: Uint8Array, topic = "Quantitative Methods", signal?: AbortSignal) => guard(async () => {
+    publishVersion: (planned: TeachingMaterialVersion, bytes: Uint8Array, topic = "Supplementary", signal?: AbortSignal) => guard(async () => {
       const uid = me();
       if (bytes.byteLength !== planned.byteSize) throw new MaterialServiceError("invalid-material");
       const digest = toHex(await crypto.subtle.digest("SHA-256", new Uint8Array(bytes)));
@@ -303,6 +349,10 @@ export function createTeachingMaterialService(backend: TeachingMaterialBackend) 
         const manifest = { ...planned, createdBy: uid };
         delete (manifest as { createdAtMs?: unknown }).createdAtMs;
         transaction.set(versionRef, { ...manifest, createdAt: serverTimestamp() });
+        transaction.set(materialRefs.detail(fs, planned.versionId), {
+          versionId: planned.versionId, title: planned.title, readingNumber: planned.readingNumber,
+          topic: normalizeMaterialTopic(topic), revision: 1, updatedBy: uid, updatedAt: serverTimestamp(),
+        });
         if (existingMaterial.exists()) {
           transaction.update(materialRef, {
             currentVersionId: planned.versionId,
@@ -434,15 +484,52 @@ export function createTeachingMaterialService(backend: TeachingMaterialBackend) 
     // ------------------------------------------------------ student side
     /** Active shares for the signed-in student (removals arrive as changes). */
     subscribeMyActiveGrants: (
-      onGrants: (grants: MaterialGrant[]) => void,
+      onGrants: (grants: LabeledMaterialGrant[]) => void,
       onError: (error: MaterialServiceError) => void,
     ) => {
       const uid = me();
-      return onSnapshot(materialRefs.activeGrants(fs, uid), snapshot => {
-        onGrants(snapshot.docs
+      let stopped = false;
+      let grants: MaterialGrant[] = [];
+      const details = new Map<string, MaterialDetails | null>();
+      const watchers = new Map<string, () => void>();
+      const emit = () => {
+        if (!stopped) {
+          onGrants(grants.map(grant => labelGrant(grant, details.get(grant.versionId))));
+        }
+      };
+      const stopGrants = onSnapshot(materialRefs.activeGrants(fs, uid), snapshot => {
+        if (stopped) return;
+        grants = snapshot.docs
           .map(item => parseGrant(item.id, uid, item.data()))
-          .filter((item): item is MaterialGrant => item !== null && item.status === "active"));
-      }, error => onError(mapMaterialError(error)));
+          .filter((item): item is MaterialGrant => item !== null && item.status === "active");
+        const active = new Set(grants.map(grant => grant.versionId));
+        for (const [id, stop] of watchers) if (!active.has(id)) {
+          stop(); watchers.delete(id); details.delete(id);
+        }
+        for (const grant of grants) if (!watchers.has(grant.versionId)) {
+          const id = grant.versionId;
+          watchers.set(id, onSnapshot(materialRefs.detail(fs, id), detail => {
+            if (stopped || !watchers.has(id)) return;
+            details.set(id, detail.exists() ? parseMaterialDetails(id, detail.data()) : null);
+            emit();
+          }, () => {
+            // A revocation can deny this listener before the grants listener
+            // observes it. Close the old reader immediately; never retain access.
+            if (stopped || !watchers.has(id)) return;
+            grants = grants.filter(item => item.versionId !== id);
+            details.delete(id);
+            watchers.get(id)?.(); watchers.delete(id);
+            emit();
+          }));
+        }
+        emit();
+      }, error => {
+        stopped = true;
+        grants = [];
+        watchers.forEach(stop => stop()); watchers.clear(); details.clear();
+        onError(mapMaterialError(error));
+      });
+      return () => { stopped = true; stopGrants(); watchers.forEach(stop => stop()); watchers.clear(); };
     },
 
     /** Watches one grant; a revoked or denied grant reports null. */

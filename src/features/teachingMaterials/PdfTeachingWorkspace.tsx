@@ -99,9 +99,9 @@ export function PdfTeachingWorkspace({
     let cancelled = false;
     setLoading(true);
     setLoadError("");
-    void Promise.all([service.listMaterials(), service.listVersions()]).then(([materials, versions]) => {
+    void Promise.all([service.listMaterials(), service.listVersions(), service.listDetails()]).then(([materials, versions, details]) => {
       if (cancelled) return;
-      setEntries(buildLibraryEntries(materials, versions));
+      setEntries(buildLibraryEntries(materials, versions, details));
       setLoading(false);
     }, error => {
       if (cancelled) return;
@@ -210,7 +210,7 @@ export function PdfTeachingWorkspace({
 
   const send = async (entry: LibraryEntry, message: string): Promise<string> => {
     if (!recipientUid || !recipient) throw new Error("Choose a student first.");
-    const outcome = await service.shareVersion(entry.version, recipientUid, { sessionNumber, message });
+    const outcome = await service.shareVersion(entry.sourceVersion, recipientUid, { sessionNumber, message });
     switch (outcome) {
       case "create": return `Sent. ${recipient.label} can open this version under Plan › Session materials.`;
       case "reactivate": return `Shared again as a new share. ${recipient.label}'s earlier opening no longer counts.`;
@@ -330,8 +330,12 @@ export function PdfTeachingWorkspace({
               receipts={receipts}
               selectedVersionId={selectedVersionId}
               rehearsal={rehearsal}
+              active={active}
               onOpen={openEntry}
               onShare={setShareTarget}
+              onDetailsSaved={details => setEntries(current => current.map(entry => entry.version.versionId === details.versionId
+                ? { ...entry, version: { ...entry.version, title: details.title, readingNumber: details.readingNumber },
+                  topic: details.topic, detailsRevision: details.revision } : entry))}
             />
           </div>
         )}
