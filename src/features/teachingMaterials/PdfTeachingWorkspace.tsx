@@ -4,7 +4,7 @@ import { listActiveStudentMembers } from "../../lib/cloud";
 import {
   MaterialServiceError, teachingMaterialService, type RecipientShares,
 } from "../../lib/cloudTeachingMaterials";
-import type { TeachingHostClock } from "../liveSession/teachingHost";
+import { teachingRunIdFor, type TeachingHostClock, type TeachingSessionEnvelope } from "../liveSession/teachingHost";
 import { formatSessionTime } from "../liveSession/useSessionTimer";
 import { materialLabel, type MaterialGrant, type MaterialReceipt, type ReaderPreference } from "./materialTypes";
 import { PdfOpenError } from "./pdfErrors";
@@ -14,6 +14,8 @@ import { shareSummary, TutorMaterialLibrary, type LibraryEntry } from "./TutorMa
 import { TutorNotesPanel } from "./TutorNotesPanel";
 import { buildLibraryEntries } from "./libraryModel";
 import { materialTopicForSession } from "./topicDisclosure";
+import { TeachingDesk } from "./TeachingDesk";
+import { resumeEntry, sessionModules, sessionTopics, taughtEarlier, upNext } from "./teachingDeskModel";
 import "./teachingMaterials.css";
 
 const PdfReader = lazy(() => import("./PdfReader"));
@@ -93,6 +95,8 @@ export function PdfTeachingWorkspace({
   const prefsCache = useRef(new Map<string, ReaderView>());
   const prefTimers = useRef(new Map<string, number>());
   const timer = hostClock.timer;
+  const [earlier, setEarlier] = useState<(TeachingSessionEnvelope | null)[] | null>(null);
+  const [resumePage, setResumePage] = useState<{ versionId: string; page: number } | null>(null);
 
   // A hidden PDF surface must release its modal's global focus trap.
   useEffect(() => { if (!active) setShareTarget(null); }, [active]);
@@ -140,6 +144,37 @@ export function PdfTeachingWorkspace({
   const grants = useMemo(() => new Map<string, MaterialGrant>(shares.grants.map(item => [item.versionId, item])), [shares.grants]);
   const receipts = useMemo(() => new Map<string, MaterialReceipt>(shares.receipts.map(item => [item.versionId, item])), [shares.receipts]);
   const recipient = recipients.find(item => item.uid === recipientUid) ?? null;
+
+  // ------------------------------------------------------- teaching desk
+  // Earlier sessions' private records say what was already taught and where
+  // teaching stopped; a failed read only hides that information.
+  useEffect(() => {
+    let cancelled = false;
+    const numbers = Array.from({ length: Math.max(0, Math.min(sessionNumber, 26) - 1) }, (_, index) => index + 1);
+    void Promise.all(numbers.map(number => service.loadTeachingEnvelope(teachingRunIdFor(number)).catch(() => null)))
+      .then(envelopes => { if (!cancelled) setEarlier(envelopes); });
+    return () => { cancelled = true; };
+  }, [service, sessionNumber]);
+
+  const topics = useMemo(() => sessionTopics(sessionNumber, materialTopicForSession(sessionTopic)), [sessionNumber, sessionTopic]);
+  const modules = useMemo(() => sessionModules(sessionNumber), [sessionNumber]);
+  const next = useMemo(() => upNext(entries, topics, taughtEarlier(earlier ?? [])), [earlier, entries, topics]);
+  const resume = useMemo(() => resumeEntry(entries, selectedVersionId, earlier ?? []), [earlier, entries, selectedVersionId]);
+
+  useEffect(() => {
+    if (!resume) return;
+    const { versionId, pageCount } = resume.version;
+    const cached = prefsCache.current.get(versionId);
+    if (cached) {
+      setResumePage({ versionId, page: cached.page });
+      return;
+    }
+    let cancelled = false;
+    void service.loadReaderPreference(versionId, pageCount).then(preference => {
+      if (!cancelled && preference) setResumePage({ versionId, page: preference.page });
+    }, () => undefined);
+    return () => { cancelled = true; };
+  }, [resume, service, mode]);
 
   const selected = useMemo(() => {
     if (!selectedVersionId) return null;
@@ -322,6 +357,11 @@ export function PdfTeachingWorkspace({
             {selectedVersionId && !selected && !loading && (
               <p className="tm-notice" role="status">The PDF chosen earlier for this session is no longer in the library.</p>
             )}
+            {entries.length > 0 && (
+              <TeachingDesk sessionLabel={sessionLabel} modules={modules} next={next.items} more={next.more}
+                resume={resume} resumePage={resumePage?.versionId === resume?.version.versionId ? resumePage!.page : null}
+                loading={earlier === null} onOpen={openEntry} />
+            )}
             <TutorMaterialLibrary
               service={service}
               entries={entries}
@@ -335,7 +375,7 @@ export function PdfTeachingWorkspace({
               rehearsal={rehearsal}
               active={active}
               disclosureKey={`tutor:${tutorUid}:session-${sessionNumber}`}
-              sessionTopic={materialTopicForSession(sessionTopic)}
+              sessionTopics={topics}
               onOpen={openEntry}
               onShare={setShareTarget}
               onDetailsSaved={details => setEntries(current => current.map(entry => entry.version.versionId === details.versionId

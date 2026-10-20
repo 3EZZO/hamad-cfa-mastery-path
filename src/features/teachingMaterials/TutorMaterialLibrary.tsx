@@ -40,7 +40,7 @@ export function shareSummary(grant: MaterialGrant | undefined, receipt: Material
 export function TutorMaterialLibrary({
   service, entries, loading, loadError, onReload, recipientLabel, grants, receipts,
   selectedVersionId, rehearsal, active = true, onOpen, onShare, onDetailsSaved,
-  disclosureKey = "tutor", sessionTopic = null,
+  disclosureKey = "tutor", sessionTopics = [],
 }: {
   service: TeachingMaterialService;
   entries: LibraryEntry[];
@@ -58,8 +58,8 @@ export function TutorMaterialLibrary({
   onDetailsSaved: (details: MaterialDetails) => void;
   /** Device-local key for the remembered open topics. */
   disclosureKey?: string;
-  /** The session's topic opens by default; null opens every topic. */
-  sessionTopic?: MaterialTopic | null;
+  /** The session's topics open by default; none opens every topic. */
+  sessionTopics?: readonly MaterialTopic[];
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -86,8 +86,7 @@ export function TutorMaterialLibrary({
 
   const groups = useMemo(() => groupMaterialsByTopic(visible, entry => entry.topic), [visible]);
   const selectedTopic = entries.find(entry => entry.version.versionId === selectedVersionId)?.topic;
-  const defaultOpen = useMemo(() => [sessionTopic, selectedTopic].filter((topic): topic is MaterialTopic => !!topic),
-    [selectedTopic, sessionTopic]);
+  const defaultOpen = useMemo(() => [...sessionTopics, ...(selectedTopic ? [selectedTopic] : [])], [selectedTopic, sessionTopics]);
   const disclosure = useTopicDisclosure(disclosureKey, defaultOpen, filter.trim().length > 0);
   const allOpen = groups.every(group => disclosure.isOpen(group.topic));
 
