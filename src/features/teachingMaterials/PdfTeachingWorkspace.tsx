@@ -5,6 +5,7 @@ import { defaultTVMState } from "../../lib/calculator";
 import type { PublishedPracticeBank } from "../../lib/practiceContent";
 import type { FocusRegion } from "./exhibitFocus";
 import { QuickCheck } from "./QuickCheck";
+import { RecapDialog, type RecapKeyOption } from "./RecapDialog";
 import { quickCheckLine, quickCheckPool, type QuickCheckResult } from "./quickCheckModel";
 import {
   MaterialServiceError, teachingMaterialService, type RecipientShares,
@@ -144,9 +145,11 @@ export function PdfTeachingWorkspace({
   const [banksError, setBanksError] = useState("");
   const [checkResults, setCheckResults] = useState<QuickCheckResult[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
+  const [recapOpen, setRecapOpen] = useState(false);
+  const [recapKeys, setRecapKeys] = useState<RecapKeyOption[] | null>(null);
 
   // A hidden PDF surface must release its modal's global focus trap.
-  useEffect(() => { if (!active) { setShareTarget(null); setSummaryOpen(false); } }, [active]);
+  useEffect(() => { if (!active) { setShareTarget(null); setSummaryOpen(false); setRecapOpen(false); } }, [active]);
 
   // ------------------------------------------------------------ library
   useEffect(() => {
@@ -429,6 +432,25 @@ export function PdfTeachingWorkspace({
     window.setTimeout(() => rootRef.current?.querySelector<HTMLElement>(".tm-viewport")?.focus({ preventScroll: true }), 0);
   };
 
+  // ---------------------------------------------------------- recap
+  const recapChecks = checkResults.length && !rehearsal
+    ? { correct: checkResults.filter(result => result.correct).length, total: Math.min(100, checkResults.length) } : null;
+  const prepareRecap = () => {
+    setSummaryOpen(false);
+    setRecapKeys(null);
+    setRecapOpen(true);
+    const taught = summaryRows.map(row => row.versionId);
+    void Promise.all(taught.map(versionId => service.loadPdfNotes(versionId).then(result => result.notes.keyPages, () => [])))
+      .then(lists => setRecapKeys(lists.flatMap((keyPages, index) => {
+        const versionId = taught[index]!;
+        const row = summaryRows[index]!;
+        return keyPages.map(entry => ({
+          versionId, pdfLabel: row.label, page: entry.page, pinLabel: entry.label,
+          shared: grants.get(versionId)?.status === "active",
+        }));
+      })));
+  };
+
   const openEntry = (entry: LibraryEntry) => {
     setJumpTo(null);
     setFocusTo(null);
@@ -680,6 +702,27 @@ export function PdfTeachingWorkspace({
             setSummaryOpen(false);
           }}
           onClose={() => setSummaryOpen(false)}
+          recapAction={{
+            label: recipient ? `Prepare recap for ${recipient.label}…` : "Prepare recap…",
+            disabledReason: recipient ? undefined : (shareDisabledReason || "Choose a student first."),
+            onOpen: prepareRecap,
+          }}
+        />
+      )}
+      {active && recapOpen && recipient && !rehearsal && (
+        <RecapDialog
+          active={active}
+          service={service}
+          sessionLabel={sessionLabel}
+          sessionNumber={sessionNumber}
+          runId={runId}
+          recipientUid={recipient.uid}
+          recipientLabel={recipient.label}
+          covered={summaryRows.filter(row => row.pagesTaught > 0).map(row => ({ label: row.label, pages: row.pages }))}
+          keyOptions={recapKeys}
+          checks={recapChecks}
+          onClose={() => setRecapOpen(false)}
+          onSent={message => { setRecapOpen(false); setPathNotice(message); }}
         />
       )}
       <span className="visually-hidden" aria-live="polite">{selected ? `Teaching ${materialLabel(selected.version)}` : ""}</span>

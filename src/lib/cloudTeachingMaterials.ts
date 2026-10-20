@@ -26,6 +26,7 @@ import {
   MATERIAL_CHUNK_BYTES,
   MAX_TUTOR_NOTE_CHARS,
   splitIntoChunks,
+  timestampMs,
   toHex,
   materialIdFor,
   normalizeMaterialTitle,
@@ -55,6 +56,7 @@ import {
 import { getCloudFirestore, getCurrentCloudUser } from "./cloud";
 import { sanitizePdfNotes, type PdfNotes } from "../features/teachingMaterials/pdfNotesModel";
 import { sanitizeLessonPath, type LessonStop } from "../features/teachingMaterials/lessonPathModel";
+import { parseRecap, sanitizeRecapInput, type RecapInput, type SessionRecap } from "../features/teachingMaterials/recapModel";
 import {
   labelGrant, normalizeMaterialTopic, parseMaterialDetails,
   type LabeledMaterialGrant, type MaterialDetails, type MaterialLabels,
@@ -182,6 +184,13 @@ export const materialRefs = {
   /** Page notes and key pages for one PDF version, across sessions. */
   pdfNotes: (fs: Firestore, uid: string, versionId: string) =>
     doc(fs, ...PROGRAM, "tutorTeachingSessions", requireUid(uid), "pdfNotes", requireVersion(versionId)),
+  recaps: (fs: Firestore, uid: string) => collection(fs, ...PROGRAM, "materialRecipients", requireUid(uid), "recaps"),
+  recap: (fs: Firestore, uid: string, runId: string) => {
+    if (!RUN_ID_PATTERN.test(runId)) throw new MaterialServiceError("invalid-material");
+    return doc(materialRefs.recaps(fs, uid), runId);
+  },
+  /** The only recap query a student may run: their own active recaps. */
+  activeRecaps: (fs: Firestore, uid: string) => query(materialRefs.recaps(fs, uid), where("status", "==", "active")),
   /** The lesson path prepared for one scheduled session. */
   lessonPath: (fs: Firestore, uid: string, runId: string) => {
     if (!RUN_ID_PATTERN.test(runId)) throw new MaterialServiceError("invalid-material");
@@ -694,6 +703,39 @@ export function createTeachingMaterialService(backend: TeachingMaterialBackend) 
         return revision;
       });
     }),
+
+    // ------------------------------------------------ session recaps
+    loadRecap: (recipientUid: string, runId: string) => guard(async () => {
+      me();
+      const snapshot = await getDoc(materialRefs.recap(fs, recipientUid, runId));
+      return snapshot.exists() ? parseRecap(runId, snapshot.data(), timestampMs(snapshot.data().sentAt)) : null;
+    }),
+
+    /** Send or update (status active), or withdraw; compare-and-set on the revision. */
+    saveRecap: (recipientUid: string, input: RecapInput, status: SessionRecap["status"], expectedRevision: number) => guard(async () => {
+      const uid = me();
+      const clean = sanitizeRecapInput(input);
+      if (!clean) throw new MaterialServiceError("invalid-material");
+      const reference = materialRefs.recap(fs, recipientUid, clean.runId);
+      return runTransaction(fs, async transaction => {
+        me(uid);
+        const snapshot = await transaction.get(reference);
+        const current = snapshot.exists() ? Number(snapshot.data().revision) : 0;
+        if (current !== expectedRevision) throw new MaterialServiceError("conflict");
+        const revision = expectedRevision + 1;
+        transaction.set(reference, { ...clean, status, sentBy: uid, sentAt: serverTimestamp(), revision });
+        return revision;
+      });
+    }),
+
+    subscribeMyRecaps: (onRecaps: (recaps: SessionRecap[]) => void, onError: (error: MaterialServiceError) => void) => {
+      const uid = me();
+      return onSnapshot(materialRefs.activeRecaps(fs, uid), snapshot => {
+        onRecaps(snapshot.docs
+          .map(item => parseRecap(item.id, item.data(), timestampMs(item.data().sentAt)))
+          .filter((item): item is SessionRecap => item !== null && item.status === "active"));
+      }, error => onError(mapMaterialError(error)));
+    },
 
     loadTeachingNote: (runId: string, versionId: string) => guard(async () => {
       const snapshot = await getDoc(materialRefs.teachingNote(fs, me(), runId, versionId));

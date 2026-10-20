@@ -519,6 +519,46 @@ describe("teaching materials: private tutor records and independent reader state
     expect(await tutor.service.loadLessonPath(runId)).toEqual({ stops: [], revision: 2 });
   });
 
+  it("lets the tutor send, update and withdraw a recap that only its student can read while active", async () => {
+    const recapRun = teachingRunIdFor(6);
+    const input = {
+      runId: recapRun, sessionNumber: 6, covered: [{ label: "Synthetic reading", pages: "1-2" }],
+      keyPages: [{ versionId: versionA.versionId, label: "Synthetic reading — Exhibit", page: 2 }], checks: { correct: 1, total: 2 }, nextStep: "Re-read p. 2.",
+    };
+    expect(await tutor.service.saveRecap(student.uid, input, "active", 0)).toBe(1);
+    await expect(tutor.service.saveRecap(student.uid, input, "active", 0)).rejects.toMatchObject({ code: "conflict" });
+    expect(await tutor.service.saveRecap(student.uid, { ...input, nextStep: "Updated." }, "active", 1)).toBe(2);
+
+    expect(await student.service.loadRecap(student.uid, recapRun)).toMatchObject({ status: "active", nextStep: "Updated.", revision: 2 });
+    const seen = await new Promise<number>((resolve, reject) => {
+      const stop = student.service.subscribeMyRecaps(recaps => { stop(); resolve(recaps.length); }, reject);
+    });
+    expect(seen).toBe(1);
+    // Another student can neither read nor list it; the student cannot write or run an unfiltered list.
+    await expectDenied(getDoc(materialRefs.recap(otherStudent.firestore, student.uid, recapRun)));
+    await expectDenied(getDocs(materialRefs.recaps(student.firestore, student.uid)));
+    await expectDenied(setDoc(materialRefs.recap(student.firestore, student.uid, recapRun), {
+      ...input, status: "active", sentBy: student.uid, sentAt: serverTimestamp(), revision: 3,
+    }));
+    // Shape and bounds are enforced on the server.
+    const reference = materialRefs.recap(tutor.firestore, student.uid, recapRun);
+    const valid = { ...input, status: "active", sentBy: tutor.uid, sentAt: serverTimestamp(), revision: 3 };
+    await expectDenied(setDoc(reference, { ...valid, revision: 7 }));
+    await expectDenied(setDoc(reference, { ...valid, checks: { correct: 3, total: 2 } }));
+    await expectDenied(setDoc(reference, { ...valid, nextStep: "x".repeat(501) }));
+    await expectDenied(setDoc(reference, { ...valid, covered: Array.from({ length: 21 }, () => ({ label: "a", pages: "1" })) }));
+    await expectDenied(setDoc(reference, { ...valid, privateNotes: "never" }));
+    await expectDenied(setDoc(reference, { ...valid, sentBy: student.uid }));
+    await expectDenied(deleteDoc(reference));
+    // An inactive student cannot be sent a recap.
+    await expect(tutor.service.saveRecap(inactive.uid, input, "active", 0)).rejects.toMatchObject({ code: "permission-denied" });
+
+    // Withdrawn: the student loses access.
+    expect(await tutor.service.saveRecap(student.uid, input, "withdrawn", 2)).toBe(3);
+    await expect(student.service.loadRecap(student.uid, recapRun)).rejects.toMatchObject({ code: "permission-denied" });
+    expect(await tutor.service.loadRecap(student.uid, recapRun)).toMatchObject({ status: "withdrawn", revision: 3 });
+  });
+
   it("keeps reader state per user; nobody reads another user's state", async () => {
     await tutor.service.saveReaderPreference({ versionId: versionA.versionId, page: 1, zoom: 2, fitMode: "custom" }, 2);
     expect(await tutor.service.loadReaderPreference(versionA.versionId, 2)).toMatchObject({ page: 1, zoom: 2 });
