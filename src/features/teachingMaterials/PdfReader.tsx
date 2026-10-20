@@ -55,8 +55,6 @@ export interface PdfReaderProps {
   startPresenting?: boolean;
   /** Tools that stay in the toolbar while presenting (calculator, quick check). */
   tools?: ReactNode;
-  /** Content beside the page that stays visible while presenting (calculator). */
-  dock?: ReactNode;
   /** Layer over the reader, inside it so it also shows in full screen. */
   overlay?: ReactNode;
   /** Zoom to an exhibit on a page; a new request object applies it again. */
@@ -71,7 +69,7 @@ const DEFAULT_ERROR: ReaderErrorCopy = { message: "The PDF could not be opened."
 export function PdfReader({
   active = true, documentKey, title, subtitle, variant, loadBytes, initialView, onViewChange, onRendered,
   onPresentationChange, describeError, toolbarStart, toolbarEnd, aside, belowToolbar, jumpTo,
-  focusOnLoad = false, startPresenting = false, tools, dock, overlay, focusTo, onFocusChange,
+  focusOnLoad = false, startPresenting = false, tools, overlay, focusTo, onFocusChange,
 }: PdfReaderProps) {
   const rootRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -651,7 +649,6 @@ export function PdfReader({
             </div>
           )}
         </div>
-        {dock && <div className="tm-reader__dock">{dock}</div>}
         {aside && presenting === "off" && <div className="tm-reader__aside">{aside}</div>}
       </div>
       {focusRegion && (

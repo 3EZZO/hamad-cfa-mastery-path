@@ -691,8 +691,6 @@
   transform: translateX(-50%);
 }
 .tm-toolbar__tools { display: inline-flex; align-items: center; gap: 4px; }
-.tm-reader__dock { flex: none; width: min(360px, 42%); overflow: auto; padding: 12px; border-left: 1px solid var(--tm-rule, var(--border)); background: var(--surface, #fff); }
-@media (max-width: 700px) { .tm-reader__dock { width: auto; max-height: 50%; border-top: 1px solid var(--tm-rule, var(--border)); border-left: 0; } }
 @media (prefers-reduced-motion: reduce) { .tm-focus-frame { animation: none; } }
 
 /* Quick check: a question over the reader, readable from across the room. */

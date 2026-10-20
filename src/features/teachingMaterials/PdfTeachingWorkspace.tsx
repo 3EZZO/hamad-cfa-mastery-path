@@ -36,6 +36,7 @@ import "./teachingMaterials.css";
 const PdfReader = lazy(() => import("./PdfReader"));
 // The calculator loads only when the tutor opens it.
 const BA2Plus = lazy(() => import("../practice/BA2Plus").then(module => ({ default: module.BA2Plus })));
+const FloatingCalculator = lazy(() => import("../practice/FloatingCalculator").then(module => ({ default: module.FloatingCalculator })));
 
 const PDF_ONLY_MINUTES = 150;
 const MAX_CACHED_DOCUMENTS = 4;
@@ -147,6 +148,7 @@ export function PdfTeachingWorkspace({
   const rootRef = useRef<HTMLDivElement>(null);
   const [recapOpen, setRecapOpen] = useState(false);
   const [recapKeys, setRecapKeys] = useState<RecapKeyOption[] | null>(null);
+  const calcBodyRef = useRef<HTMLDivElement>(null);
 
   // A hidden PDF surface must release its modal's global focus trap.
   useEffect(() => { if (!active) { setShareTarget(null); setSummaryOpen(false); setRecapOpen(false); } }, [active]);
@@ -598,16 +600,23 @@ export function PdfTeachingWorkspace({
                     </button>
                   </>
                 )}
-                dock={calcOpen ? (
-                  <Suspense fallback={<p className="tm-state" role="status">Loading the calculator…</p>}>
-                    <BA2Plus onLog={() => undefined} startTime={calcStarted} tvmState={tvmState} onStateChange={setTvmState} />
-                  </Suspense>
-                ) : null}
-                overlay={checkOpen ? (
-                  <QuickCheck active={active} loading={!banks && !banksError} error={banksError} pool={checkPool.items} scope={checkPool.scope}
-                    results={checkResults} onResult={result => setCheckResults(current => [...current, result])}
-                    onRetry={loadBanks} onClose={closeQuickCheck} />
-                ) : null}
+                overlay={(
+                  <>
+                    {checkOpen && (
+                      <QuickCheck active={active} loading={!banks && !banksError} error={banksError} pool={checkPool.items} scope={checkPool.scope}
+                        results={checkResults} onResult={result => setCheckResults(current => [...current, result])}
+                        onRetry={loadBanks} onClose={closeQuickCheck} />
+                    )}
+                    {/* Inside the reader so it also floats over a full-screen presentation. */}
+                    {calcOpen && (
+                      <Suspense fallback={null}>
+                        <FloatingCalculator storageKey="pdf-teaching" bodyRef={calcBodyRef} onClose={() => setCalcOpen(false)}>
+                          <BA2Plus onLog={() => undefined} startTime={calcStarted} tvmState={tvmState} onStateChange={setTvmState} keyScope={calcBodyRef} />
+                        </FloatingCalculator>
+                      </Suspense>
+                    )}
+                  </>
+                )}
                 startPresenting={carry.present}
                 belowToolbar={!rehearsal ? (
                   <CoverageStrip pageCount={selected.version.pageCount} page={readerPage?.versionId === selectedId ? readerPage.page : 1}

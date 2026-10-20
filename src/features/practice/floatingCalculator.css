@@ -1,0 +1,69 @@
+/* Floating BA II Plus: dragged by its bar, resized from its corner. */
+.fcalc {
+  position: fixed;
+  z-index: var(--fcalc-z, 40);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 16px);
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #d4dce5);
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: var(--elev-3, 0 12px 32px rgb(15 23 42 / 28%));
+}
+.fcalc__bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 4px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  border-bottom: 1px solid var(--border, #d4dce5);
+}
+.fcalc__bar:active { cursor: grabbing; }
+.fcalc__bar strong { flex: 1; font-size: var(--text-caption, 0.85rem); }
+.fcalc__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+}
+.fcalc__grip { cursor: grab; }
+.fcalc__icon:hover { background: var(--surface-3, #eef2f7); }
+.fcalc__icon:focus-visible, .fcalc__resize:focus-visible { outline: 2px solid var(--action, #1f4f8f); outline-offset: 1px; }
+.fcalc__body { flex: 1; min-height: 0; overflow: auto; }
+.fcalc__body:focus { outline: none; }
+.fcalc__body .ba2plus { max-width: none; margin: 0; border-radius: 0; box-shadow: none; }
+.fcalc__resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #cbd5e1;
+  background: rgb(15 23 42 / 55%);
+  border: 0;
+  border-radius: 6px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.fcalc--compact {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 70dvh;
+  border-radius: var(--radius-lg, 10px) var(--radius-lg, 10px) 0 0;
+}
+.fcalc--compact .fcalc__bar { cursor: default; }
+.fcalc-dragging, .fcalc-dragging * { user-select: none !important; }

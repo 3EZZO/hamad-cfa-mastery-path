@@ -565,22 +565,8 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-submit-early { display: block; margin: 16px 0 0 auto; border: 0; color: var(--mk-muted); background: none; font: inherit; font-size: var(--text-ui); font-weight: var(--weight-bold); text-decoration: underline; cursor: pointer; }
 .mock-error { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; color: var(--mk-wrong); font-weight: var(--weight-bold); }
 
-.mock-calculator {
-  position: fixed;
-  z-index: 3;
-  right: 16px;
-  bottom: 16px;
-  width: min(380px, calc(100vw - 32px));
-  max-height: calc(100dvh - 120px);
-  overflow: auto;
-  padding: 12px;
-  border: 1px solid var(--mk-line);
-  border-radius: var(--radius-lg);
-  background: var(--mk-surface);
-  box-shadow: var(--elev-3);
-  animation: mock-rise .22s ease both;
-}
-.mock-calculator__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+/* The floating calculator stays below the confirm and warning dialogs. */
+.mock-floating-calc { --fcalc-z: 4; animation: mock-rise .22s ease both; }
 .mock-icon { display: grid; width: 40px; height: 40px; place-items: center; border: 1px solid var(--mk-line); border-radius: var(--radius-lg); color: var(--mk-ink); background: var(--mk-soft); cursor: pointer; }
 
 .mock-modal {
@@ -836,7 +822,7 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
   .mock-score,
   .mock-modal,
   .mock-modal__card,
-  .mock-calculator { animation: none; }
+  .mock-floating-calc { animation: none; }
   .mock-timer.is-urgent::before { animation: none; opacity: .6; }
   .mock-card,
   .mock-nav__chip,
