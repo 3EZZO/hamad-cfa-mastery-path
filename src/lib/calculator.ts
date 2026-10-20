@@ -101,33 +101,26 @@ function validateCashFlows(cashFlows: readonly number[]): void {
   if (cashFlows.length < 2) {
     throw new Error("Error 5: Enter CF0 and at least one future cash flow");
   }
-  if (cashFlows.length > 100 || cashFlows.some(value => !Number.isFinite(value))) {
+  if (cashFlows.length > 100 || cashFlows.some((value) => !Number.isFinite(value))) {
     throw new Error("Error 5: Invalid cash-flow worksheet");
   }
 }
 
-export function computeNPV(
-  cashFlows: readonly number[],
-  discountRatePercent: number,
-): number {
+export function computeNPV(cashFlows: readonly number[], discountRatePercent: number): number {
   validateCashFlows(cashFlows);
   if (!Number.isFinite(discountRatePercent) || discountRatePercent <= -100) {
     throw new Error("Error 5: Invalid discount rate");
   }
   const rate = discountRatePercent / 100;
   return cashFlows.reduce(
-    (total, cashFlow, period) =>
-      total + cashFlow / Math.pow(1 + rate, period),
+    (total, cashFlow, period) => total + cashFlow / Math.pow(1 + rate, period),
     0,
   );
 }
 
 export function computeIRR(cashFlows: readonly number[]): number {
   validateCashFlows(cashFlows);
-  if (
-    !cashFlows.some(value => value < 0) ||
-    !cashFlows.some(value => value > 0)
-  ) {
+  if (!cashFlows.some((value) => value < 0) || !cashFlows.some((value) => value > 0)) {
     throw new Error("Error 5: IRR requires positive and negative cash flows");
   }
 
@@ -186,105 +179,93 @@ export function computeIRR(cashFlows: readonly number[]): number {
  */
 export function periodicRate(IY: number, PY: number, CY: number): number {
   if (CY === PY) return IY / 100 / PY;
-  return Math.pow(1 + IY / (100 * CY), CY / PY) - 1;
+  return Math.expm1((CY / PY) * Math.log1p(IY / (100 * CY)));
 }
 
 /** Inverse of periodicRate: I/Y = 100 × C/Y × ((1 + i)^(P/Y / C/Y) − 1). */
 export function annualRateFromPeriodic(i: number, PY: number, CY: number): number {
   if (CY === PY) return i * 100 * PY;
-  return 100 * CY * (Math.pow(1 + i, PY / CY) - 1);
+  return 100 * CY * Math.expm1((PY / CY) * Math.log1p(i));
 }
 
-export function computeTVM(
-  target: "N" | "IY" | "PV" | "PMT" | "FV",
-  state: TVMState
-): number {
+export function computeTVM(target: "N" | "IY" | "PV" | "PMT" | "FV", state: TVMState): number {
   const { N, IY, PV, PMT, FV, PY, CY, isBGN } = state;
-  const mode = isBGN ? 1 : 0;
-
-  // N counts payments; the rate is per payment period (C/Y-aware).
-  const i = periodicRate(IY, PY, CY);
-
-  if (target === "PV") {
-    if (i === 0) return -(FV + PMT * N);
-    const pv = - (PMT * (1 + i * mode) * (1 - Math.pow(1 + i, -N)) / i + FV * Math.pow(1 + i, -N));
-    return pv;
+  const invalid = () => {
+    throw new Error("Error 5: No solution");
+  };
+  for (const [key, value] of Object.entries(state)) {
+    if (key !== target && key !== "isBGN" && !Number.isFinite(value)) invalid();
   }
-
-  if (target === "FV") {
-    if (i === 0) return -(PV + PMT * N);
-    const fv = - (PV * Math.pow(1 + i, N) + PMT * (1 + i * mode) * (Math.pow(1 + i, N) - 1) / i);
-    return fv;
-  }
-
-  if (target === "PMT") {
-    if (i === 0) return -(PV + FV) / N;
-    const pmt = (-PV - FV * Math.pow(1 + i, -N)) / ((1 + i * mode) * (1 - Math.pow(1 + i, -N)) / i);
-    return pmt;
-  }
-
-  if (target === "N") {
-    if (i === 0) return -(PV + FV) / PMT;
-    const t1 = PMT * (1 + i * mode) - FV * i;
-    const t2 = PMT * (1 + i * mode) + PV * i;
-    if (t1 / t2 <= 0) throw new Error("Error 5: No solution"); // Domain error for log
-    const n = Math.log(t1 / t2) / Math.log(1 + i);
-    return n;
-  }
-
+  if (PY <= 0 || CY <= 0 || (target !== "N" && N < 0)) invalid();
+  const finite = (value: number) => {
+    if (!Number.isFinite(value) || Math.abs(value) >= 1e100) return invalid();
+    return value;
+  };
   if (target === "IY") {
-    // We must solve: f(i) = PV + PMT*(1+i*mode)*[1-(1+i)^-N]/i + FV*(1+i)^-N = 0
-    // If N is 0, no interest rate can be found if PV + FV != 0 (or infinite).
-    if (N === 0) throw new Error("Error 5: N is zero");
-    
-    // We use the secant method to solve for i
-    const f = (rate: number) => {
-      if (rate === 0) return PV + PMT * N + FV;
-      return PV + PMT * (1 + rate * mode) * (1 - Math.pow(1 + rate, -N)) / rate + FV * Math.pow(1 + rate, -N);
+    if (N <= 0 || ![PV, PMT, FV].some((v) => v > 0) || ![PV, PMT, FV].some((v) => v < 0)) invalid();
+    if (PMT === 0)
+      return finite(annualRateFromPeriodic(Math.expm1(Math.log(-FV / PV) / N), PY, CY));
+    const scale = Math.max(Math.abs(PV), Math.abs(PMT), Math.abs(FV), 1);
+    // Use present values for positive rates and future values for negative
+    // rates. This prevents overflow on long schedules near -100%.
+    const f = (u: number) => {
+      const rate = Math.expm1(u),
+        mode = isBGN ? Math.exp(u) : 1;
+      if (Math.abs(u) < 1e-16) return (PV + PMT * N + FV) / scale;
+      return u >= 0
+        ? (PV + (PMT * mode * -Math.expm1(-N * u)) / rate + FV * Math.exp(-N * u)) / scale
+        : (PV * Math.exp(N * u) + (PMT * mode * Math.expm1(N * u)) / rate + FV) / scale;
     };
-
-    let i0 = 0.1;
-    let i1 = -0.1;
-    let f0 = f(i0);
-    let f1 = f(i1);
-
-    for (let iter = 0; iter < 100; iter++) {
-      if (Math.abs(f1 - f0) < 1e-12) break;
-      const i2 = i1 - f1 * (i1 - i0) / (f1 - f0);
-      const f2 = f(i2);
-      if (Math.abs(f2) < 1e-9) {
-        return annualRateFromPeriodic(i2, PY, CY);
-      }
-      i0 = i1;
-      f0 = f1;
-      i1 = i2;
-      f1 = f2;
-    }
-    // Secant can diverge from its ±10% start when N is large (e.g. 300
-    // monthly payments). Fall back to bisection on the first sign change
-    // across typical per-period rates; results the secant finds are unchanged.
-    const grid = [-0.99, -0.5, -0.2, -0.1, -0.05, -0.01, -0.001, 1e-9, 0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5];
-    for (let k = 0; k < grid.length - 1; k++) {
-      let lo = grid[k];
-      let hi = grid[k + 1];
-      let fLo = f(lo);
-      const fHi = f(hi);
-      if (!Number.isFinite(fLo) || !Number.isFinite(fHi) || Math.sign(fLo) === Math.sign(fHi)) continue;
-      for (let iter = 0; iter < 200; iter++) {
-        const mid = (lo + hi) / 2;
-        const fMid = f(mid);
-        if (Math.abs(fMid) < 1e-9 || hi - lo < 1e-15) return annualRateFromPeriodic(mid, PY, CY);
-        if (Math.sign(fMid) === Math.sign(fLo)) {
-          lo = mid;
-          fLo = fMid;
-        } else {
-          hi = mid;
+    if (Math.abs(f(0)) < 1e-14) return 0;
+    let low = -20,
+      fl = f(low);
+    for (let k = 1; k <= 2400; k++) {
+      const high = -20 + (40 * k) / 2400,
+        fh = f(high);
+      if (fh === 0) return finite(annualRateFromPeriodic(Math.expm1(high), PY, CY));
+      if (Number.isFinite(fl) && Number.isFinite(fh) && Math.sign(fl) !== Math.sign(fh)) {
+        let a = low,
+          b = high,
+          fa = fl;
+        for (let j = 0; j < 200; j++) {
+          const m = (a + b) / 2,
+            fm = f(m);
+          if (Math.abs(fm) < 1e-13 || b - a < 1e-14)
+            return finite(annualRateFromPeriodic(Math.expm1(m), PY, CY));
+          if (Math.sign(fm) === Math.sign(fa)) {
+            a = m;
+            fa = fm;
+          } else b = m;
         }
       }
-      return annualRateFromPeriodic((lo + hi) / 2, PY, CY);
+      low = high;
+      fl = fh;
     }
-    throw new Error("Error 5: No solution");
+    return invalid();
   }
-
-  return 0;
+  const i = periodicRate(IY, PY, CY);
+  if (!Number.isFinite(i) || i <= -1) invalid();
+  const mode = isBGN ? 1 + i : 1;
+  const log = Math.log1p(i);
+  const discount = Math.exp(-N * log);
+  const annuity = i === 0 ? N : -Math.expm1(-N * log) / i;
+  if (target === "PV") return finite(-(PMT * mode * annuity + FV * discount));
+  if (target === "FV")
+    return finite(-(PV * Math.exp(N * log) + PMT * mode * (i === 0 ? N : Math.expm1(N * log) / i)));
+  if (target === "PMT") {
+    if (N === 0 || annuity === 0) invalid();
+    return finite((-PV - FV * discount) / (mode * annuity));
+  }
+  if (i === 0) {
+    if (PMT === 0) invalid();
+    const periods = -(PV + FV) / PMT;
+    if (periods < 0) invalid();
+    return finite(periods);
+  }
+  const numerator = PMT * mode - FV * i,
+    denominator = PMT * mode + PV * i;
+  if (denominator === 0 || numerator / denominator <= 0) invalid();
+  const periods = Math.log(numerator / denominator) / log;
+  if (periods < 0) invalid();
+  return finite(periods);
 }
