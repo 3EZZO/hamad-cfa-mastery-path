@@ -55,7 +55,7 @@ export function LessonPathPanel({
               <li key={stop.id} className={index === currentStop ? "is-current" : undefined}>
                 <div className="tm-path__stop">
                   <span className="tm-path__number">{index + 1}</span>
-                  <span className="tm-path__label"><strong>{labelFor(stop)}</strong><small>Page {stop.page}</small></span>
+                  <span className="tm-path__label"><strong>{labelFor(stop)}</strong><small>Page {stop.page}{stop.focus ? " · exhibit focus" : ""}</small></span>
                   <span className="tm-path__actions">
                     <button type="button" className="tm-icon" aria-label={`Move stop ${index + 1} up`} disabled={busy || index === 0} onClick={() => onChange(movedStop(stops, stop.id, -1))}><ArrowUp size={16} aria-hidden="true" /></button>
                     <button type="button" className="tm-icon" aria-label={`Move stop ${index + 1} down`} disabled={busy || index === stops.length - 1} onClick={() => onChange(movedStop(stops, stop.id, 1))}><ArrowDown size={16} aria-hidden="true" /></button>

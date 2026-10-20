@@ -1,12 +1,13 @@
 import {
   ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Maximize, Minimize, PanelTopClose,
-  PanelTopOpen, RefreshCw, Search, X, ZoomIn, ZoomOut,
+  PanelTopOpen, RefreshCw, ScanSearch, Search, X, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { TextLayer } from "pdfjs-dist";
 import {
   useCallback, useEffect, useMemo, useRef, useState,
-  type KeyboardEvent as ReactKeyboardEvent, type ReactNode,
+  type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode,
 } from "react";
+import { focusScroll, focusZoom, regionFromDrag, type FocusRegion } from "./exhibitFocus";
 import { clampPage, clampZoom, type FitMode } from "./materialTypes";
 import { openPdf, type OpenedPdf } from "./pdfEngine";
 import {
@@ -52,6 +53,15 @@ export interface PdfReaderProps {
   focusOnLoad?: boolean;
   /** Open already presenting in the full-window layout (continuing a presentation). */
   startPresenting?: boolean;
+  /** Tools that stay in the toolbar while presenting (calculator, quick check). */
+  tools?: ReactNode;
+  /** Content beside the page that stays visible while presenting (calculator). */
+  dock?: ReactNode;
+  /** Layer over the reader, inside it so it also shows in full screen. */
+  overlay?: ReactNode;
+  /** Zoom to an exhibit on a page; a new request object applies it again. */
+  focusTo?: { page: number; region: FocusRegion } | null;
+  onFocusChange?: (region: FocusRegion | null) => void;
 }
 
 type Presenting = "off" | "fullscreen" | "expanded";
@@ -61,7 +71,7 @@ const DEFAULT_ERROR: ReaderErrorCopy = { message: "The PDF could not be opened."
 export function PdfReader({
   active = true, documentKey, title, subtitle, variant, loadBytes, initialView, onViewChange, onRendered,
   onPresentationChange, describeError, toolbarStart, toolbarEnd, aside, belowToolbar, jumpTo,
-  focusOnLoad = false, startPresenting = false,
+  focusOnLoad = false, startPresenting = false, tools, dock, overlay, focusTo, onFocusChange,
 }: PdfReaderProps) {
   const rootRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -268,6 +278,68 @@ export function PdfReader({
     if (jumpTo) goTo(jumpTo.page);
   }, [goTo, jumpTo]);
 
+  // ---------------------------------------------------------- exhibit focus
+  const [selecting, setSelecting] = useState(false);
+  const [drag, setDrag] = useState<{ start: { x: number; y: number }; end: { x: number; y: number } } | null>(null);
+  const [focusRegion, setFocusRegion] = useState<FocusRegion | null>(null);
+  const beforeFocusRef = useRef<{ fitMode: FitMode; zoom: number } | null>(null);
+  const focusChangeRef = useRef(onFocusChange);
+  focusChangeRef.current = onFocusChange;
+
+  const applyFocus = useCallback((region: FocusRegion) => {
+    if (!pageSize || !containerSize) return;
+    if (!beforeFocusRef.current) beforeFocusRef.current = { fitMode, zoom: customZoom };
+    setFitMode("custom");
+    setCustomZoom(focusZoom(region, containerSize, pageSize));
+    setFocusRegion(region);
+    focusChangeRef.current?.(region);
+  }, [containerSize, customZoom, fitMode, pageSize]);
+
+  const clearFocus = useCallback(() => {
+    const before = beforeFocusRef.current;
+    beforeFocusRef.current = null;
+    if (before) {
+      setFitMode(before.fitMode);
+      setCustomZoom(before.zoom);
+    }
+    setFocusRegion(null);
+    focusChangeRef.current?.(null);
+  }, []);
+
+  // A focus belongs to one page; turning the page shows the whole page again.
+  const focusPageRef = useRef(page);
+  useEffect(() => {
+    if (focusPageRef.current !== page && focusRegion) clearFocus();
+    focusPageRef.current = page;
+  }, [clearFocus, focusRegion, page]);
+
+  // Requested focus (a lesson-path stop) once its page is showing.
+  const appliedFocusRef = useRef<object | null>(null);
+  useEffect(() => {
+    if (!focusTo || appliedFocusRef.current === focusTo || page !== focusTo.page || !pageSize || !containerSize) return;
+    appliedFocusRef.current = focusTo;
+    applyFocus(focusTo.region);
+  }, [applyFocus, containerSize, focusTo, page, pageSize]);
+
+  // Centre the exhibit after the zoomed page has rendered.
+  useEffect(() => {
+    if (!focusRegion || renderState !== "ready") return;
+    const frame = window.requestAnimationFrame(() => {
+      const viewport = viewportRef.current;
+      const box = pageBoxRef.current;
+      if (!viewport || !box) return;
+      const target = focusScroll(focusRegion, { left: box.offsetLeft, top: box.offsetTop, width: box.offsetWidth, height: box.offsetHeight },
+        { width: viewport.clientWidth, height: viewport.clientHeight });
+      viewport.scrollTo({ ...target, behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusRegion, renderState, zoom]);
+
+  const pointAt = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return { x: (event.clientX - rect.left) / Math.max(1, rect.width), y: (event.clientY - rect.top) / Math.max(1, rect.height) };
+  };
+
   const changeZoom = useCallback((direction: 1 | -1) => {
     setCustomZoom(nextZoomStep(zoom, direction));
     setFitMode("custom");
@@ -385,6 +457,8 @@ export function PdfReader({
     if (!active) return;
     if (event.key === "Escape") {
       if (searchOpen && event.target === searchInputRef.current) { event.preventDefault(); closeSearch(); return; }
+      if (selecting) { event.preventDefault(); setSelecting(false); setDrag(null); return; }
+      if (focusRegion) { event.preventDefault(); clearFocus(); return; }
       if (presenting === "expanded") { event.preventDefault(); setPresenting("off"); return; }
       return;
     }
@@ -460,6 +534,13 @@ export function PdfReader({
             </button>
           </>
         )}
+        <button type="button" className="tm-icon" aria-pressed={selecting || !!focusRegion} disabled={!pdf}
+          aria-label={focusRegion ? "Show the whole page" : selecting ? "Cancel exhibit focus" : "Focus an exhibit: drag a box on the page"}
+          title="Focus an exhibit (drag a box). Esc shows the whole page."
+          onClick={() => { if (focusRegion) clearFocus(); else { setSelecting(value => !value); setDrag(null); } }}>
+          <ScanSearch size={18} aria-hidden="true" />
+        </button>
+        {tools && <div className="tm-toolbar__tools">{tools}</div>}
         <button type="button" className="tm-icon" aria-label={presenting === "off" ? "Present full screen" : "Exit presentation"} disabled={!pdf} onClick={() => void togglePresentation()}>
           {presenting === "off" ? <Maximize size={18} aria-hidden="true" /> : <Minimize size={18} aria-hidden="true" />}
         </button>
@@ -528,6 +609,36 @@ export function PdfReader({
           {loadState === "ready" && (
             <div className="tm-page" ref={pageBoxRef} role="document" aria-label={`Page ${page} of ${pageCount}`} aria-busy={renderState === "rendering"}>
               <canvas ref={canvasRef} aria-hidden="true" />
+              {focusRegion && (
+                <div className="tm-focus-frame" aria-hidden="true" style={{
+                  left: `${focusRegion.x * 100}%`, top: `${focusRegion.y * 100}%`, width: `${focusRegion.w * 100}%`, height: `${focusRegion.h * 100}%`,
+                }} />
+              )}
+              {selecting && (
+                <div className="tm-select-layer" aria-hidden="true"
+                  onPointerDown={event => {
+                    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* capture is optional */ }
+                    const point = pointAt(event);
+                    setDrag({ start: point, end: point });
+                  }}
+                  onPointerMove={event => { if (drag) setDrag({ start: drag.start, end: pointAt(event) }); }}
+                  onPointerUp={event => {
+                    if (!drag) return;
+                    const region = regionFromDrag(drag.start, pointAt(event));
+                    setDrag(null);
+                    if (!region) return;
+                    setSelecting(false);
+                    applyFocus(region);
+                    viewportRef.current?.focus({ preventScroll: true });
+                  }}>
+                  {drag && (
+                    <div className="tm-select-box" style={{
+                      left: `${Math.min(drag.start.x, drag.end.x) * 100}%`, top: `${Math.min(drag.start.y, drag.end.y) * 100}%`,
+                      width: `${Math.abs(drag.end.x - drag.start.x) * 100}%`, height: `${Math.abs(drag.end.y - drag.start.y) * 100}%`,
+                    }} />
+                  )}
+                </div>
+              )}
               <div ref={textLayerRef} className="textLayer" />
               {renderState === "error" && (
                 <div className="tm-state tm-state--error tm-state--overlay" role="alert">
@@ -540,8 +651,16 @@ export function PdfReader({
             </div>
           )}
         </div>
+        {dock && <div className="tm-reader__dock">{dock}</div>}
         {aside && presenting === "off" && <div className="tm-reader__aside">{aside}</div>}
       </div>
+      {focusRegion && (
+        <button type="button" className="tm-button tm-focus-exit" onClick={clearFocus}>
+          <X size={16} aria-hidden="true" /> Whole page
+        </button>
+      )}
+      {selecting && <p className="tm-select-hint" role="status">Drag a box around the exhibit to focus on it. Esc cancels.</p>}
+      {overlay}
       <p className="visually-hidden" aria-live="polite">{loadState === "ready" ? `Page ${page} of ${pageCount}` : ""}</p>
     </section>
   );
