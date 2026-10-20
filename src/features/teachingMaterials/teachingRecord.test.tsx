@@ -66,6 +66,21 @@ describe("private teaching-session record", () => {
     expect(Object.keys(store)).toEqual([]);
   });
 
+  it("is not created while the default PDF surface is only viewed", async () => {
+    await act(async () => { tree = create(<Harness surface="pdf" rehearsal={false} />); });
+    await settle(5_000);
+    expect(fake.saveTeachingEnvelope).not.toHaveBeenCalled();
+    expect(Object.keys(store)).toEqual([]);
+  });
+
+  it("is created when the session clock starts on the PDF surface", async () => {
+    await act(async () => { tree = create(<Harness surface="pdf" rehearsal={false} />); });
+    await settle();
+    await act(async () => host.timer.start(150));
+    await settle(3_000);
+    expect(fake.saveTeachingEnvelope.mock.calls.at(-1)![0]).toMatchObject({ surface: "pdf", status: "teaching", selectedVersionId: null });
+  });
+
   it("records PDF teaching: clock, selected PDF and history, via compare-and-set", async () => {
     await act(async () => { tree = create(<Harness surface="pdf" rehearsal={false} />); });
     await settle();

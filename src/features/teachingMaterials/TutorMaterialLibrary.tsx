@@ -1,4 +1,4 @@
-import { BookOpen, FilePlus2, Pencil, RefreshCw, Send, X } from "lucide-react";
+import { BookOpen, ChevronsDownUp, ChevronsUpDown, FilePlus2, Pencil, RefreshCw, Send, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { publishMaterialVersion, type TeachingMaterialService } from "../../lib/cloudTeachingMaterials";
 import {
@@ -8,6 +8,8 @@ import {
 } from "./materialTypes";
 import type { LibraryEntry } from "./libraryModel";
 import { EditMaterialDialog } from "./EditMaterialDialog";
+import { TopicGroup } from "./TopicGroup";
+import { useTopicDisclosure } from "./topicDisclosure";
 import { compareMaterialLabels, groupMaterialsByTopic, MATERIAL_TOPICS, suggestMaterialTopic, type MaterialDetails, type MaterialTopic } from "./materialDetails";
 export type { LibraryEntry } from "./libraryModel";
 
@@ -38,6 +40,7 @@ export function shareSummary(grant: MaterialGrant | undefined, receipt: Material
 export function TutorMaterialLibrary({
   service, entries, loading, loadError, onReload, recipientLabel, grants, receipts,
   selectedVersionId, rehearsal, active = true, onOpen, onShare, onDetailsSaved,
+  disclosureKey = "tutor", sessionTopic = null,
 }: {
   service: TeachingMaterialService;
   entries: LibraryEntry[];
@@ -53,6 +56,10 @@ export function TutorMaterialLibrary({
   onOpen: (entry: LibraryEntry) => void;
   onShare: (entry: LibraryEntry) => void;
   onDetailsSaved: (details: MaterialDetails) => void;
+  /** Device-local key for the remembered open topics. */
+  disclosureKey?: string;
+  /** The session's topic opens by default; null opens every topic. */
+  sessionTopic?: MaterialTopic | null;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -76,6 +83,13 @@ export function TutorMaterialLibrary({
       || topic.toLowerCase().includes(filter.trim().toLowerCase())
       || (version.readingNumber !== null && String(version.readingNumber) === needle.replace(/^0+/, "")));
   }, [entries, filter]);
+
+  const groups = useMemo(() => groupMaterialsByTopic(visible, entry => entry.topic), [visible]);
+  const selectedTopic = entries.find(entry => entry.version.versionId === selectedVersionId)?.topic;
+  const defaultOpen = useMemo(() => [sessionTopic, selectedTopic].filter((topic): topic is MaterialTopic => !!topic),
+    [selectedTopic, sessionTopic]);
+  const disclosure = useTopicDisclosure(disclosureKey, defaultOpen, filter.trim().length > 0);
+  const allOpen = groups.every(group => disclosure.isOpen(group.topic));
 
   const update = (id: string, patch: Partial<ImportRow>) =>
     setRows(current => current.map(row => (row.id === id ? { ...row, ...patch } : row)));
@@ -170,6 +184,12 @@ export function TutorMaterialLibrary({
           <button type="button" className="tm-button" disabled={rehearsal} onClick={() => fileRef.current?.click()}>
             <FilePlus2 size={16} aria-hidden="true" /> Add PDFs
           </button>
+          {groups.length > 1 && (
+            <button type="button" className="tm-button" onClick={() => disclosure.setOpen(groups.map(group => group.topic), !allOpen)}>
+              {allOpen ? <ChevronsDownUp size={16} aria-hidden="true" /> : <ChevronsUpDown size={16} aria-hidden="true" />}
+              {allOpen ? "Collapse all" : "Expand all"}
+            </button>
+          )}
           <input ref={fileRef} className="visually-hidden" type="file" accept="application/pdf,.pdf" multiple tabIndex={-1}
             onChange={event => void addFiles(event.target.files)} />
         </div>
@@ -237,9 +257,9 @@ export function TutorMaterialLibrary({
       ) : (
         <div className="tm-topic-groups">
           {!visible.length && <p className="tm-state">No PDFs match this search.</p>}
-          {groupMaterialsByTopic(visible, entry => entry.topic).map(group => (
-          <section className="tm-topic-group" key={group.topic} aria-label={group.topic}>
-            <h3 className="tm-topic-group__title">{group.topic} <span>{group.items.length} {group.items.length === 1 ? "PDF" : "PDFs"}</span></h3>
+          {groups.map(group => (
+          <TopicGroup key={group.topic} topic={group.topic} count={group.items.length} open={disclosure.isOpen(group.topic)}
+            onToggle={() => disclosure.setOpen([group.topic], !disclosure.isOpen(group.topic))}>
             <ul className="tm-library__list" aria-label={`${group.topic} PDFs`}>
           {group.items.map(entry => {
             const grant = grants.get(entry.version.versionId);
@@ -275,7 +295,7 @@ export function TutorMaterialLibrary({
             );
           })}
             </ul>
-          </section>))}
+          </TopicGroup>))}
         </div>
       )}
       {editing && !rehearsal && <EditMaterialDialog key={editing.version.versionId} active={active}

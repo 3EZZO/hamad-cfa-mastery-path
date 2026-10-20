@@ -443,8 +443,9 @@ export default function TutorSessionWorkspace(props: TutorSessionWorkspaceProps)
   const [selected, setSelected] = useState<TutorSessionNumber>(() => sessionFromSegment(segment) ?? 1);
   const [visited, setVisited] = useState<TutorSessionNumber[]>(() => [sessionFromSegment(segment) ?? 1]);
   // Visible teaching surface per session; each session keeps its own.
+  // Teach from PDF is the primary surface; a recorded or chosen surface wins.
   const [surfaces, setSurfaces] = useState<Partial<Record<TutorSessionNumber, TeachingSurface>>>({});
-  const surfaceFor = (number: TutorSessionNumber): TeachingSurface => surfaces[number] ?? "guided";
+  const surfaceFor = (number: TutorSessionNumber): TeachingSurface => surfaces[number] ?? "pdf";
   const chooseSurface = (number: TutorSessionNumber, surface: TeachingSurface) =>
     setSurfaces(current => ({ ...current, [number]: surface }));
   // A recovered record may reopen the PDF surface, but never overrides a choice.
@@ -1578,6 +1579,7 @@ function SessionWorkspace({
             sessionNumber={sessionNumber}
             sessionLabel={sessionLabel}
             sessionTitle={session.title}
+            sessionTopic={catalog.topic}
             hostClock={hostClock}
             clockReady={teachingRecord.ready}
             selectedVersionId={teachingRecord.selectedVersionId}
