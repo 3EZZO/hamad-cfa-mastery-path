@@ -40,7 +40,7 @@ export function shareSummary(grant: MaterialGrant | undefined, receipt: Material
 export function TutorMaterialLibrary({
   service, entries, loading, loadError, onReload, recipientLabel, grants, receipts,
   selectedVersionId, rehearsal, active = true, onOpen, onShare, onDetailsSaved,
-  disclosureKey = "tutor", sessionTopics = [],
+  disclosureKey = "tutor", sessionTopics = [], taughtCounts,
 }: {
   service: TeachingMaterialService;
   entries: LibraryEntry[];
@@ -60,6 +60,8 @@ export function TutorMaterialLibrary({
   disclosureKey?: string;
   /** The session's topics open by default; none opens every topic. */
   sessionTopics?: readonly MaterialTopic[];
+  /** Pages taught per version across all sessions. */
+  taughtCounts?: ReadonlyMap<string, number>;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -275,6 +277,9 @@ export function TutorMaterialLibrary({
                 <p className="tm-material__meta">
                   <span>{entry.version.pageCount} pages</span>
                   <span>{formatSize(entry.version.byteSize)}</span>
+                  {!!taughtCounts?.get(entry.version.versionId) && (
+                    <span>Taught {taughtCounts.get(entry.version.versionId)} of {entry.version.pageCount} pages</span>
+                  )}
                   {entry.version.versionId !== entry.material.currentVersionId && <span>Earlier version · {entry.version.sha256.slice(0, 8)}</span>}
                   {recipientLabel && <span className={`tm-badge tm-badge--${summary.tone}`}>{summary.label}</span>}
                   {olderShared && <span className="tm-badge tm-badge--shared">Older version shared</span>}

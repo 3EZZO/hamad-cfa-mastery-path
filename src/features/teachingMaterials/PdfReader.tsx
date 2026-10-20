@@ -44,6 +44,10 @@ export interface PdfReaderProps {
   toolbarEnd?: ReactNode;
   /** Content beside the page (tutor notes); hidden while presenting. */
   aside?: ReactNode;
+  /** Content under the toolbar (coverage strip); hidden while presenting. */
+  belowToolbar?: ReactNode;
+  /** A page to show; a new request object jumps again to the same page. */
+  jumpTo?: { page: number } | null;
 }
 
 type Presenting = "off" | "fullscreen" | "expanded";
@@ -52,7 +56,7 @@ const DEFAULT_ERROR: ReaderErrorCopy = { message: "The PDF could not be opened."
 
 export function PdfReader({
   active = true, documentKey, title, subtitle, variant, loadBytes, initialView, onViewChange, onRendered,
-  onPresentationChange, describeError, toolbarStart, toolbarEnd, aside,
+  onPresentationChange, describeError, toolbarStart, toolbarEnd, aside, belowToolbar, jumpTo,
 }: PdfReaderProps) {
   const rootRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -251,6 +255,10 @@ export function PdfReader({
     if (!pageCount) return;
     setPage(clampPage(next, pageCount));
   }, [pageCount]);
+
+  useEffect(() => {
+    if (jumpTo) goTo(jumpTo.page);
+  }, [goTo, jumpTo]);
 
   const changeZoom = useCallback((direction: 1 | -1) => {
     setCustomZoom(nextZoomStep(zoom, direction));
@@ -487,6 +495,7 @@ export function PdfReader({
         </div>
       )}
 
+      {belowToolbar && presenting === "off" && belowToolbar}
       <div className="tm-reader__body">
         <div
           ref={viewportRef}

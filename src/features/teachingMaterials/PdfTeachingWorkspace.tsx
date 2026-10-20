@@ -16,6 +16,10 @@ import { buildLibraryEntries } from "./libraryModel";
 import { materialTopicForSession } from "./topicDisclosure";
 import { TeachingDesk } from "./TeachingDesk";
 import { resumeEntry, sessionModules, sessionTopics, taughtEarlier, upNext } from "./teachingDeskModel";
+import { parsePages, taughtPagesByVersion, type PageCoverage } from "./coverageModel";
+import { CoverageStrip } from "./CoverageStrip";
+import { SessionSummaryDialog, type SessionRecordInput, type SummaryRow } from "./SessionSummaryDialog";
+import { usePageDwell } from "./usePageDwell";
 import "./teachingMaterials.css";
 
 const PdfReader = lazy(() => import("./PdfReader"));
@@ -65,7 +69,17 @@ export interface PdfTeachingWorkspaceProps {
   finished: boolean;
   onFinish: () => void;
   onExit: () => void;
+  /** This session's pages taught and time per PDF. */
+  coverage?: readonly PageCoverage[];
+  onPageTaught?: (versionId: string, page: number) => void;
+  onTeachingSeconds?: (versionId: string, seconds: number) => void;
+  /** Tutor-confirmed session log (and optional task approval). */
+  onRecordSession?: (input: SessionRecordInput) => Promise<void>;
+  sessionRecorded?: boolean;
 }
+
+const NO_COVERAGE: readonly PageCoverage[] = [];
+const noop = () => undefined;
 
 /**
  * Teach from PDF: the tutor's private library, reader, notes and sharing,
@@ -75,7 +89,8 @@ export interface PdfTeachingWorkspaceProps {
 export function PdfTeachingWorkspace({
   active, tutorUid, runId, sessionNumber, sessionLabel, sessionTitle, sessionTopic, hostClock, clockReady,
   selectedVersionId, onSelectVersion, onOpenedForTeaching, rehearsal, onRehearsalChange,
-  finished, onFinish, onExit,
+  finished, onFinish, onExit, coverage = NO_COVERAGE, onPageTaught = noop, onTeachingSeconds = noop,
+  onRecordSession, sessionRecorded = false,
 }: PdfTeachingWorkspaceProps) {
   const service = useMemo(() => teachingMaterialService(), []);
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
@@ -97,9 +112,12 @@ export function PdfTeachingWorkspace({
   const timer = hostClock.timer;
   const [earlier, setEarlier] = useState<(TeachingSessionEnvelope | null)[] | null>(null);
   const [resumePage, setResumePage] = useState<{ versionId: string; page: number } | null>(null);
+  const [readerPage, setReaderPage] = useState<{ versionId: string; page: number } | null>(null);
+  const [jumpTo, setJumpTo] = useState<{ page: number } | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   // A hidden PDF surface must release its modal's global focus trap.
-  useEffect(() => { if (!active) setShareTarget(null); }, [active]);
+  useEffect(() => { if (!active) { setShareTarget(null); setSummaryOpen(false); } }, [active]);
 
   // ------------------------------------------------------------ library
   useEffect(() => {
@@ -212,6 +230,7 @@ export function PdfTeachingWorkspace({
 
   const rememberView = useCallback((versionId: string, pageCount: number, view: ReaderView) => {
     prefsCache.current.set(versionId, view);
+    setReaderPage(current => (current?.versionId === versionId && current.page === view.page ? current : { versionId, page: view.page }));
     if (rehearsal) return;
     const existing = prefTimers.current.get(versionId);
     if (existing) window.clearTimeout(existing);
@@ -235,7 +254,30 @@ export function PdfTeachingWorkspace({
     return bytes;
   }, [selected, service]);
 
+  // ----------------------------------------------------------- coverage
+  const selectedId = selected?.version.versionId ?? null;
+  usePageDwell({
+    versionId: selectedId,
+    page: readerPage && readerPage.versionId === selectedId ? readerPage.page : null,
+    counting: active && mode === "reader" && !rehearsal && timer.status === "running",
+    onPageTaught,
+    onSeconds: onTeachingSeconds,
+  });
+  const earlierPages = useMemo(() => taughtPagesByVersion((earlier ?? []).map(envelope => envelope?.coverage ?? [])), [earlier]);
+  const allPages = useMemo(() => taughtPagesByVersion([...(earlier ?? []).map(envelope => envelope?.coverage ?? []), coverage]), [coverage, earlier]);
+  const taughtCounts = useMemo(() => new Map([...allPages].map(([versionId, pages]) => [versionId, pages.size])), [allPages]);
+  const selectedPagesText = coverage.find(entry => entry.versionId === selectedId)?.pages ?? "";
+  const thisSessionPages = useMemo(() => new Set(parsePages(selectedPagesText)), [selectedPagesText]);
+  const summaryRows = useMemo<SummaryRow[]>(() => coverage.flatMap(item => {
+    const entry = entries.find(candidate => candidate.version.versionId === item.versionId);
+    if (!entry) return [];
+    const pagesTaught = parsePages(item.pages).length;
+    const minutes = Math.round(item.seconds / 60);
+    return pagesTaught || minutes ? [{ versionId: item.versionId, label: materialLabel(entry.version), pages: item.pages, pagesTaught, pageCount: entry.version.pageCount, minutes }] : [];
+  }), [coverage, entries]);
+
   const openEntry = (entry: LibraryEntry) => {
+    setJumpTo(null);
     onSelectVersion(entry.version.versionId);
     setMode("reader");
     if (!rehearsal) onOpenedForTeaching(entry.version.versionId);
@@ -296,8 +338,8 @@ export function PdfTeachingWorkspace({
         <button type="button" className="tm-button" aria-pressed={rehearsal} aria-label={rehearsal ? "Exit practice" : "Practise without saving"} onClick={() => enterRehearsal(!rehearsal)}>
           <FlaskConical size={16} aria-hidden="true" /> <span>{rehearsal ? "Exit practice" : "Practise without saving"}</span>
         </button>
-        <button type="button" className="tm-button" disabled={rehearsal || finished} aria-label={finished ? "PDF teaching saved" : "Finish PDF teaching"} onClick={onFinish}>
-          <CheckCircle2 size={16} aria-hidden="true" /> <span>{finished ? "PDF teaching saved" : "Finish PDF teaching"}</span>
+        <button type="button" className="tm-button" disabled={rehearsal} aria-label={finished ? "Open the session summary" : "Finish PDF teaching"} onClick={() => setSummaryOpen(true)}>
+          <CheckCircle2 size={16} aria-hidden="true" /> <span>{finished ? "Session summary" : "Finish PDF teaching"}</span>
         </button>
         <button type="button" className="tm-button" aria-label="Exit Session Mode" onClick={onExit}>
           <LogOut size={16} aria-hidden="true" /> <span>Exit</span>
@@ -346,6 +388,12 @@ export function PdfTeachingWorkspace({
                     </button>
                   </>
                 )}
+                jumpTo={jumpTo}
+                belowToolbar={!rehearsal ? (
+                  <CoverageStrip pageCount={selected.version.pageCount} page={readerPage?.versionId === selectedId ? readerPage.page : 1}
+                    thisSession={thisSessionPages} earlier={earlierPages.get(selected.version.versionId) ?? new Set()}
+                    onJump={page => setJumpTo({ page })} />
+                ) : null}
                 aside={notesOpen && !presenting ? (
                   <TutorNotesPanel service={service} tutorUid={tutorUid} runId={runId} versionId={selected.version.versionId} rehearsal={rehearsal} />
                 ) : null}
@@ -376,6 +424,7 @@ export function PdfTeachingWorkspace({
               active={active}
               disclosureKey={`tutor:${tutorUid}:session-${sessionNumber}`}
               sessionTopics={topics}
+              taughtCounts={taughtCounts}
               onOpen={openEntry}
               onShare={setShareTarget}
               onDetailsSaved={details => setEntries(current => current.map(entry => entry.version.versionId === details.versionId
@@ -401,6 +450,24 @@ export function PdfTeachingWorkspace({
             await service.revokeVersion(shareTarget.version.versionId, recipientUid);
           }}
           onClose={() => setShareTarget(null)}
+        />
+      )}
+      {active && summaryOpen && !rehearsal && (
+        <SessionSummaryDialog
+          active={active}
+          sessionLabel={sessionLabel}
+          clockMinutes={Math.round(timer.elapsedMs / 60_000)}
+          rows={summaryRows}
+          recorded={sessionRecorded}
+          finished={finished}
+          onFinishOnly={() => { onFinish(); setSummaryOpen(false); }}
+          onRecord={async input => {
+            if (!onRecordSession) throw new Error("The session log is not available here.");
+            if (!finished) onFinish();
+            await onRecordSession(input);
+            setSummaryOpen(false);
+          }}
+          onClose={() => setSummaryOpen(false)}
         />
       )}
       <span className="visually-hidden" aria-live="polite">{selected ? `Teaching ${materialLabel(selected.version)}` : ""}</span>

@@ -433,8 +433,10 @@ describe("teaching materials: private tutor records and independent reader state
     const envelope = await tutor.service.saveTeachingEnvelope({
       schemaVersion: 1, runId, sessionNumber: 3, rehearsal: false, status: "paused", clock, surface: "pdf",
       selectedVersionId: versionA.versionId, guidedRunId: null, history: [],
+      coverage: [{ versionId: versionA.versionId, pages: "1-2", seconds: 95 }],
     }, 0);
     expect(envelope.revision).toBe(1);
+    expect(await tutor.service.loadTeachingEnvelope(runId)).toMatchObject({ coverage: [{ versionId: versionA.versionId, pages: "1-2", seconds: 95 }] });
     await expect(tutor.service.saveTeachingEnvelope({ ...envelope }, 0)).rejects.toMatchObject({ code: "conflict" });
     expect(await tutor.service.saveTeachingNote(runId, versionA.versionId, "Private: check his TWR intuition.", 0)).toBe(1);
     await expect(tutor.service.saveTeachingNote(runId, versionA.versionId, "Previous account's late save", 1, "different-owner"))
@@ -451,6 +453,21 @@ describe("teaching materials: private tutor records and independent reader state
     await expectDenied(setDoc(materialRefs.teachingRun(tutor.firestore, tutor.uid, teachingRunIdFor(4)), {
       ...envelope, runId: teachingRunIdFor(4), sessionNumber: 4, rehearsal: true, revision: 1,
     }));
+  });
+
+  it("accepts records without coverage and bounds the coverage list", async () => {
+    const reference = materialRefs.teachingRun(tutor.firestore, tutor.uid, teachingRunIdFor(5));
+    const clock = { status: "paused", durationMs: 9_000_000, elapsedBeforeRunMs: 0, runningSince: null, updatedAt: new Date().toISOString() };
+    const legacy = {
+      schemaVersion: 1, ownerUid: tutor.uid, runId: teachingRunIdFor(5), sessionNumber: 5, rehearsal: false, status: "paused", clock,
+      surface: "pdf", selectedVersionId: null, guidedRunId: null, history: [], revision: 1, updatedAtClient: new Date().toISOString(),
+    };
+    await setDoc(reference, legacy);
+    expect(await tutor.service.loadTeachingEnvelope(teachingRunIdFor(5))).toMatchObject({ revision: 1, coverage: [] });
+    const tooMany = Array.from({ length: 51 }, (_, index) => ({ versionId: versionA.versionId, pages: String(index + 1), seconds: 1 }));
+    await expectDenied(setDoc(reference, { ...legacy, coverage: tooMany, revision: 2 }));
+    await expectDenied(setDoc(reference, { ...legacy, coverage: "1-2", revision: 2 }));
+    await setDoc(reference, { ...legacy, coverage: tooMany.slice(0, 50), revision: 2 });
   });
 
   it("keeps reader state per user; nobody reads another user's state", async () => {

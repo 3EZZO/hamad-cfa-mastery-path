@@ -6,6 +6,7 @@ import {
   type TeachingSessionEnvelope, type TeachingSurface,
 } from "../liveSession/teachingHost";
 import type { SessionTimerSnapshot } from "../liveSession/types";
+import { mergeCoverage, sanitizeCoverage, withTaughtPage, withTeachingSeconds, type PageCoverage } from "./coverageModel";
 
 const CLOUD_SAVE_MS = 2_000;
 const CLOUD_CHECKPOINT_MS = 120_000;
@@ -15,6 +16,7 @@ interface DeviceCheckpoint {
   surface: TeachingSurface;
   selectedVersionId: string | null;
   history: TeachingHistoryEntry[];
+  coverage: PageCoverage[];
   status: TeachingLifecycle;
   savedAt: string;
 }
@@ -35,6 +37,7 @@ function readCheckpoint(uid: string, runId: string): DeviceCheckpoint | null {
       surface: value.surface === "pdf" ? "pdf" : "guided",
       selectedVersionId: typeof value.selectedVersionId === "string" ? value.selectedVersionId : null,
       history: Array.isArray(value.history) ? value.history.slice(0, 50) : [],
+      coverage: sanitizeCoverage(value.coverage),
       status: (["idle", "teaching", "paused", "finished"] as const).includes(value.status as TeachingLifecycle) ? value.status as TeachingLifecycle : "paused",
       savedAt: typeof value.savedAt === "string" ? value.savedAt : clock.updatedAt,
     };
@@ -90,9 +93,11 @@ export function useTeachingSessionRecord({
   const [restoredSurface, setRestoredSurface] = useState<TeachingSurface | null>(null);
   const [finished, setFinished] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [coverage, setCoverage] = useState<PageCoverage[]>([]);
   const state = useRef({
     revision: 0,
     history: [] as TeachingHistoryEntry[],
+    coverage: [] as PageCoverage[],
     selectedVersionId: null as string | null,
     surface,
     guidedRunId,
@@ -117,6 +122,7 @@ export function useTeachingSessionRecord({
       surface: current.surface,
       selectedVersionId: current.selectedVersionId,
       history: current.history,
+      coverage: current.coverage,
       status: lifecycleFor(currentClock(), current.finished),
       savedAt: new Date().toISOString(),
     });
@@ -136,6 +142,7 @@ export function useTeachingSessionRecord({
         status: lifecycleFor(clock, state.current.finished), clock,
         surface: state.current.surface, selectedVersionId: state.current.selectedVersionId,
         guidedRunId: state.current.guidedRunId, history: state.current.history,
+        coverage: state.current.coverage,
       };
     };
     try {
@@ -151,6 +158,7 @@ export function useTeachingSessionRecord({
             adopt(remote.clock, remote.updatedAtClient);
             state.current.revision = remote.revision;
             state.current.history = remote.history.reduce((list, entry) => withHistoryEntry(list, entry.versionId, entry.firstOpenedAtClient), state.current.history);
+            state.current.coverage = mergeCoverage(state.current.coverage, remote.coverage);
           }
           const saved = await service.saveTeachingEnvelope(build(), state.current.revision, tutorUid);
           state.current.revision = saved.revision;
@@ -207,7 +215,9 @@ export function useTeachingSessionRecord({
         state.current.selectedVersionId = source.selectedVersionId;
         state.current.history = [...(remote?.history ?? []), ...(local?.history ?? [])]
           .reduce((list, entry) => withHistoryEntry(list, entry.versionId, entry.firstOpenedAtClient), [] as TeachingHistoryEntry[]);
+        state.current.coverage = mergeCoverage(remote?.coverage ?? [], local?.coverage ?? []);
         state.current.finished = source.status === "finished";
+        setCoverage(state.current.coverage);
         setEngaged(true);
         setSelectedVersionId(source.selectedVersionId);
         setFinished(source.status === "finished");
@@ -277,6 +287,27 @@ export function useTeachingSessionRecord({
     scheduleSave();
   }, [scheduleSave]);
 
+  /** A page held on screen long enough while teaching (see DWELL_MS). */
+  const markPageTaught = useCallback((versionId: string, page: number) => {
+    const current = state.current;
+    if (current.rehearsal || !current.engaged) return;
+    const next = withTaughtPage(current.coverage, versionId, page);
+    if (next.length === current.coverage.length && next.every((entry, index) => entry === current.coverage[index])) return;
+    current.coverage = next;
+    setCoverage(next);
+    scheduleSave();
+  }, [scheduleSave]);
+
+  /** Batched teaching time; saved with the next clock or page save. */
+  const addTeachingSeconds = useCallback((versionId: string, seconds: number) => {
+    const current = state.current;
+    if (current.rehearsal || !current.engaged) return;
+    current.coverage = withTeachingSeconds(current.coverage, versionId, seconds);
+    setCoverage(current.coverage);
+    checkpointNow();
+    dirty.current = true;
+  }, [checkpointNow]);
+
   const finish = useCallback(() => {
     if (currentClock().status === "running") pauseClock();
     state.current.finished = true;
@@ -285,5 +316,8 @@ export function useTeachingSessionRecord({
     scheduleSave();
   }, [currentClock, engage, pauseClock, scheduleSave]);
 
-  return { runId, ready, selectedVersionId, selectVersion, recordOpened, finished, finish, restoredSurface, saveError };
+  return {
+    runId, ready, selectedVersionId, selectVersion, recordOpened, finished, finish, restoredSurface, saveError,
+    coverage, markPageTaught, addTeachingSeconds,
+  };
 }
