@@ -5,7 +5,9 @@ import { formatSharedDate, materialLabel, sortShares, type ReaderPreference } fr
 import { PdfOpenError } from "./pdfErrors";
 import type { ReaderErrorCopy, ReaderView } from "./PdfReader";
 import "./teachingMaterials.css";
-import { compareMaterialLabels, groupMaterialsByTopic, type LabeledMaterialGrant } from "./materialDetails";
+import { compareMaterialLabels, groupMaterialsByTopic, type LabeledMaterialGrant, type MaterialTopic } from "./materialDetails";
+import { TopicGroup } from "./TopicGroup";
+import { useTopicDisclosure } from "./topicDisclosure";
 
 const PdfReader = lazy(() => import("./PdfReader"));
 const PREFERENCE_SAVE_MS = 1_500;
@@ -37,6 +39,10 @@ export default function StudentSessionMaterials({
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [initialView, setInitialView] = useState<{ key: string; view: ReaderView } | null>(null);
+  // The topic of the newest share opens by default; the others start collapsed.
+  const newestTopic = grants?.[0]?.topic; // grants are kept newest first
+  const defaultOpen = useMemo<MaterialTopic[]>(() => (newestTopic ? [newestTopic] : []), [newestTopic]);
+  const disclosure = useTopicDisclosure(`student:${uid}`, defaultOpen);
   // In-memory only (v1 has no offline PDFs); keyed by account, version and
   // share revision so a revoked or re-shared document is never served stale.
   const bytesCache = useRef(new Map<string, Uint8Array>());
@@ -238,8 +244,8 @@ export default function StudentSessionMaterials({
       ) : (
         <div className="tm-topic-groups">
           {groupMaterialsByTopic([...grants].sort(compareMaterialLabels), item => item.topic).map(group => (
-          <section key={group.topic} aria-label={group.topic}>
-            <h3 className="tm-topic-group__title">{group.topic}</h3>
+          <TopicGroup key={group.topic} topic={group.topic} count={group.items.length} open={disclosure.isOpen(group.topic)}
+            onToggle={() => disclosure.setOpen([group.topic], !disclosure.isOpen(group.topic))}>
             <ul className="tm-student__list" aria-label={`${group.topic} PDFs`}>
           {group.items.map(item => (
             <li key={item.versionId} className="tm-material tm-student__item">
@@ -263,7 +269,7 @@ export default function StudentSessionMaterials({
             </li>
           ))}
             </ul>
-          </section>))}
+          </TopicGroup>))}
         </div>
       )}
     </div>

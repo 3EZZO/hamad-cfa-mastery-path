@@ -13,6 +13,7 @@ import { ShareMaterialDialog, type ShareRecipient } from "./ShareMaterialDialog"
 import { shareSummary, TutorMaterialLibrary, type LibraryEntry } from "./TutorMaterialLibrary";
 import { TutorNotesPanel } from "./TutorNotesPanel";
 import { buildLibraryEntries } from "./libraryModel";
+import { materialTopicForSession } from "./topicDisclosure";
 import "./teachingMaterials.css";
 
 const PdfReader = lazy(() => import("./PdfReader"));
@@ -50,6 +51,8 @@ export interface PdfTeachingWorkspaceProps {
   sessionNumber: number;
   sessionLabel: string;
   sessionTitle: string;
+  /** Curriculum topic of the session's plan week. */
+  sessionTopic?: string;
   hostClock: TeachingHostClock;
   clockReady: boolean;
   selectedVersionId: string | null;
@@ -68,7 +71,7 @@ export interface PdfTeachingWorkspaceProps {
  * completes tasks; sharing is a separate deliberate action.
  */
 export function PdfTeachingWorkspace({
-  active, tutorUid, runId, sessionNumber, sessionLabel, sessionTitle, hostClock, clockReady,
+  active, tutorUid, runId, sessionNumber, sessionLabel, sessionTitle, sessionTopic, hostClock, clockReady,
   selectedVersionId, onSelectVersion, onOpenedForTeaching, rehearsal, onRehearsalChange,
   finished, onFinish, onExit,
 }: PdfTeachingWorkspaceProps) {
@@ -331,6 +334,8 @@ export function PdfTeachingWorkspace({
               selectedVersionId={selectedVersionId}
               rehearsal={rehearsal}
               active={active}
+              disclosureKey={`tutor:${tutorUid}:session-${sessionNumber}`}
+              sessionTopic={materialTopicForSession(sessionTopic)}
               onOpen={openEntry}
               onShare={setShareTarget}
               onDetailsSaved={details => setEntries(current => current.map(entry => entry.version.versionId === details.versionId

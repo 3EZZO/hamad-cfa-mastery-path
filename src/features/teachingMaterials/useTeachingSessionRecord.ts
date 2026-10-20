@@ -63,8 +63,10 @@ function roundedClock(clock: SessionTimerSnapshot): SessionTimerSnapshot {
 /**
  * The tutor-owned teaching-session envelope for one scheduled session:
  * host-clock recovery checkpoint, visible surface, selected PDF and private
- * teaching history. It is engaged once the tutor uses Teach from PDF (or a
- * record already exists), so guided-only sessions behave exactly as before.
+ * teaching history. It is engaged once the tutor teaches from PDF — opens a
+ * PDF, runs the clock on the PDF surface or finishes — or a record already
+ * exists. Viewing the default PDF surface alone writes nothing, and
+ * guided-only sessions behave exactly as before.
  * Rehearsal never writes it. Saves are compare-and-set per session, so a
  * pending save can never land on another session's record.
  */
@@ -231,8 +233,12 @@ export function useTeachingSessionRecord({
   // Every host clock transition (start, pause, resume, 30 s checkpoint,
   // pagehide) is mirrored synchronously to the device checkpoint.
   useEffect(() => subscribe(() => {
-    if (!state.current.engaged || state.current.rehearsal) return;
+    if (state.current.rehearsal) return;
     const clock = currentClock();
+    if (!state.current.engaged) {
+      if (state.current.surface !== "pdf" || clock.status === "idle") return;
+      engage();
+    }
     if (state.current.finished && clock.status === "running") {
       state.current.finished = false;
       setFinished(false);
@@ -246,11 +252,12 @@ export function useTeachingSessionRecord({
     }
     lastCloud.current = { status: clock.status, at: Date.now() };
     scheduleSave();
-  }), [checkpointNow, currentClock, scheduleSave, subscribe]);
+  }), [checkpointNow, currentClock, engage, scheduleSave, subscribe]);
 
+  // Switching to the PDF surface while the session clock is under way.
   useEffect(() => {
-    if (surface === "pdf" && ready) engage();
-  }, [engage, ready, surface]);
+    if (surface === "pdf" && ready && !rehearsal && currentClock().status !== "idle") engage();
+  }, [currentClock, engage, ready, rehearsal, surface]);
 
   useEffect(() => {
     if (ready && engaged) scheduleSave();

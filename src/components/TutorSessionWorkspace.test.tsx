@@ -54,6 +54,10 @@ vi.mock("../features/liveSession", async importOriginal => ({
   ...(await importOriginal<typeof import("../features/liveSession")>()),
   LiveSessionConsole: () => <div>Console fixture</div>,
 }));
+// Teach from PDF is the default surface; its cloud library is covered by its own tests.
+vi.mock("../features/teachingMaterials/PdfTeachingWorkspace", () => ({
+  PdfTeachingWorkspace: () => <div>PDF workspace fixture</div>,
+}));
 
 let tree: ReactTestRenderer | undefined;
 let s1: TutorPlaybookPackage;
