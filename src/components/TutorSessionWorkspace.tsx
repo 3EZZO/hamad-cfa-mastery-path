@@ -51,6 +51,8 @@ import { effectiveSessionDate } from "../lib/schedule";
 import { recordedSessionElapsedMs, recoverLiveSessionClock } from "../features/liveSession/sessionClock";
 import { useTeachingHostClock, type TeachingSurface } from "../features/liveSession/teachingHost";
 import { PdfTeachingWorkspace } from "../features/teachingMaterials/PdfTeachingWorkspace";
+import type { SessionRecordInput } from "../features/teachingMaterials/SessionSummaryDialog";
+import { applyPdfSessionRecord, pdfSessionLogId } from "../lib/pdfSessionRecord";
 import { useTeachingSessionRecord } from "../features/teachingMaterials/useTeachingSessionRecord";
 import {
   cacheTutorPlaybookOffline,
@@ -1410,6 +1412,24 @@ function SessionWorkspace({
     ]
   );
 
+  // Teach from PDF: the tutor-confirmed summary becomes the session log.
+  const recordPdfSession = useCallback(async (input: SessionRecordInput) => {
+    updateTracker(current => applyPdfSessionRecord({
+      tracker: current,
+      sessionNumber: session.number,
+      week: firstWeek.week,
+      date: sessionDate,
+      title: session.title,
+      taskId: sessionTaskId,
+      durationMinutes: input.durationMinutes,
+      outcome: input.outcome,
+      nextAction: input.nextAction,
+      completeTask: input.completeTask,
+      recordedAt: new Date().toISOString(),
+    }));
+    notify(`${sessionLabel} is recorded in the session log on this device. It syncs in the background.`);
+  }, [firstWeek.week, notify, session.number, session.title, sessionDate, sessionLabel, sessionTaskId, updateTracker]);
+
   const discardPreSessionRehearsal = useCallback(
     async (result: LiveSessionCloseoutResult) => {
       if (
@@ -1590,6 +1610,11 @@ function SessionWorkspace({
             finished={teachingRecord.finished}
             onFinish={teachingRecord.finish}
             onExit={onExit}
+            coverage={teachingRecord.coverage}
+            onPageTaught={teachingRecord.markPageTaught}
+            onTeachingSeconds={teachingRecord.addTeachingSeconds}
+            onRecordSession={recordPdfSession}
+            sessionRecorded={tracker.sessionLogs.some(log => log.id === pdfSessionLogId(sessionNumber))}
           />
         </div>
       )}

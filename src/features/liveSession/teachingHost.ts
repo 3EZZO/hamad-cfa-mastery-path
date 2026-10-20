@@ -4,6 +4,7 @@ import {
   elapsedTimerMs, MAX_SESSION_ELAPSED_MS, recoverSessionTimer,
 } from "./sessionClock";
 import { useSessionTimer, type SessionTimerController } from "./useSessionTimer";
+import { sanitizeCoverage, type PageCoverage } from "../teachingMaterials/coverageModel";
 
 /**
  * Session teaching host: one canonical clock per scheduled session, shared by
@@ -55,6 +56,8 @@ export interface TeachingSessionEnvelope {
   selectedVersionId: string | null;
   guidedRunId: string | null;
   history: TeachingHistoryEntry[];
+  /** Pages taught and time per PDF; optional in records written before it existed. */
+  coverage: PageCoverage[];
   revision: number;
   updatedAtClient: string;
 }
@@ -120,6 +123,7 @@ export function parseTeachingEnvelope(ownerUid: string, runId: string, value: un
     selectedVersionId: typeof record.selectedVersionId === "string" ? record.selectedVersionId : null,
     guidedRunId: typeof record.guidedRunId === "string" ? record.guidedRunId : null,
     history,
+    coverage: sanitizeCoverage(record.coverage),
     revision,
     updatedAtClient: record.updatedAtClient,
   };

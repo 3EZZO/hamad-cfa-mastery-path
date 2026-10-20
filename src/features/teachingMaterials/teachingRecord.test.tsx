@@ -96,6 +96,50 @@ describe("private teaching-session record", () => {
     expect(JSON.parse(store["hamad-teaching-host:tutor-1:session-03"]!).selectedVersionId).toBe(VERSION_A);
   });
 
+  it("saves taught pages with the record and keeps time for the next save", async () => {
+    await act(async () => { tree = create(<Harness surface="pdf" rehearsal={false} />); });
+    await settle();
+    await act(async () => record.selectVersion(VERSION_A));
+    await act(async () => host.timer.start(150));
+    await settle(3_000);
+    const before = fake.saveTeachingEnvelope.mock.calls.length;
+    await act(async () => record.addTeachingSeconds(VERSION_A, 15));
+    await settle(5_000);
+    expect(fake.saveTeachingEnvelope.mock.calls.length).toBe(before);
+    await act(async () => record.markPageTaught(VERSION_A, 2));
+    await act(async () => record.markPageTaught(VERSION_A, 2));
+    await settle(3_000);
+    expect(fake.saveTeachingEnvelope.mock.calls.length).toBe(before + 1);
+    expect(fake.saveTeachingEnvelope.mock.calls.at(-1)![0].coverage).toEqual([{ versionId: VERSION_A, pages: "2", seconds: 15 }]);
+    expect(record.coverage).toEqual([{ versionId: VERSION_A, pages: "2", seconds: 15 }]);
+  });
+
+  it("restores coverage as the union of the device and cloud copies", async () => {
+    store["hamad-teaching-host:tutor-1:session-03"] = JSON.stringify({
+      clock: { status: "paused", durationMs: 9_000_000, elapsedBeforeRunMs: 60_000, runningSince: null, updatedAt: new Date(T0 - 30_000).toISOString() },
+      surface: "pdf", selectedVersionId: VERSION_A, history: [], status: "paused", savedAt: new Date(T0 - 30_000).toISOString(),
+      coverage: [{ versionId: VERSION_A, pages: "3", seconds: 40 }],
+    });
+    fake.loadTeachingEnvelope.mockResolvedValue({
+      schemaVersion: 1, ownerUid: "tutor-1", runId: "session-03", sessionNumber: 3, rehearsal: false, status: "paused",
+      clock: { status: "paused", durationMs: 9_000_000, elapsedBeforeRunMs: 50_000, runningSince: null, updatedAt: new Date(T0 - 60_000).toISOString() },
+      surface: "pdf", selectedVersionId: VERSION_A, guidedRunId: null, history: [], revision: 2, updatedAtClient: new Date(T0 - 60_000).toISOString(),
+      coverage: [{ versionId: VERSION_A, pages: "1-2", seconds: 30 }],
+    });
+    await act(async () => { tree = create(<Harness surface="pdf" rehearsal={false} />); });
+    await settle();
+    expect(record.coverage).toEqual([{ versionId: VERSION_A, pages: "1-3", seconds: 40 }]);
+  });
+
+  it("never records coverage while practising", async () => {
+    await act(async () => { tree = create(<Harness surface="pdf" rehearsal />); });
+    await settle();
+    await act(async () => { record.markPageTaught(VERSION_A, 1); record.addTeachingSeconds(VERSION_A, 30); });
+    await settle(5_000);
+    expect(record.coverage).toEqual([]);
+    expect(fake.saveTeachingEnvelope).not.toHaveBeenCalled();
+  });
+
   it("writes nothing to the cloud or device while practising (rehearsal)", async () => {
     await act(async () => { tree = create(<Harness surface="pdf" rehearsal />); });
     await settle();

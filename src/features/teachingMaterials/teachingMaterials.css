@@ -558,3 +558,21 @@
 .tm-desk__curriculum summary:focus-visible { outline: 2px solid var(--action, #1f4f8f); outline-offset: 2px; }
 .tm-desk__curriculum ol { display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
 .tm-desk__curriculum li span { display: inline-block; min-width: 2.2em; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Coverage strip under the reader toolbar: taught now, taught earlier, current page. */
+.tm-coverage { display: flex; align-items: center; gap: 12px; padding: 4px clamp(8px, 2vw, 16px) 6px; border-bottom: 1px solid var(--border, #d4dce5); }
+.tm-coverage__track { display: flex; flex: 1; gap: 1px; height: 10px; min-width: 80px; cursor: pointer; }
+.tm-coverage__page { flex: 1; min-width: 1px; background: var(--border, #d4dce5); border-radius: 1px; }
+.tm-coverage__page.is-earlier { background: color-mix(in srgb, var(--action, #1f4f8f) 35%, transparent); }
+.tm-coverage__page.is-now { background: var(--action, #1f4f8f); }
+.tm-coverage__page.is-current { outline: 2px solid var(--ink, #1a1f2b); outline-offset: 1px; }
+.tm-coverage__label { flex: none; color: var(--muted); font-size: var(--text-caption, 0.8rem); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { .tm-coverage__label { display: none; } }
+
+/* Session summary dialog. */
+.tm-summary { max-width: min(720px, calc(100vw - 32px)); }
+.tm-summary__table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: var(--text-caption, 0.85rem); }
+.tm-summary__table th, .tm-summary__table td { padding: 6px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border, #d4dce5); }
+.tm-summary__table td:last-child, .tm-summary__table th:last-child { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tm-dialog label.tm-summary__check { display: flex; align-items: center; gap: 8px; }
+.tm-dialog label.tm-summary__check input { width: auto; min-height: 0; }

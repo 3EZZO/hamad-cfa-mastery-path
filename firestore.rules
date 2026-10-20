@@ -1653,7 +1653,7 @@ service cloud.firestore {
         && data.keys().hasOnly([
           'schemaVersion', 'ownerUid', 'runId', 'sessionNumber', 'rehearsal',
           'status', 'clock', 'surface', 'selectedVersionId', 'guidedRunId',
-          'history', 'revision', 'updatedAtClient'
+          'history', 'coverage', 'revision', 'updatedAtClient'
         ])
         && data.keys().hasAll([
           'schemaVersion', 'ownerUid', 'runId', 'sessionNumber', 'rehearsal',
@@ -1672,6 +1672,9 @@ service cloud.firestore {
         && (data.selectedVersionId == null || teachingVersionIdOk(data.selectedVersionId))
         && (data.guidedRunId == null || (data.guidedRunId is string && data.guidedRunId.size() <= 200))
         && data.history is list && data.history.size() <= 50
+        // Optional per-PDF teaching coverage (pages taught, seconds); added
+        // after the first release, so older records without it stay valid.
+        && (!('coverage' in data) || (data.coverage is list && data.coverage.size() <= 50))
         && data.revision is int
         && data.updatedAtClient is string && data.updatedAtClient.size() <= 40;
     }
