@@ -51,6 +51,11 @@ export function upNext(entries: readonly LibraryEntry[], topics: readonly Materi
   return { items: candidates.slice(0, UP_NEXT_LIMIT), more: Math.max(0, candidates.length - UP_NEXT_LIMIT) };
 }
 
+/** The saved page for the PDF to continue with; null when there is none. */
+export function resumePageFor(resume: LibraryEntry | null, saved: { versionId: string; page: number } | null): number | null {
+  return resume && saved && saved.versionId === resume.version.versionId ? saved.page : null;
+}
+
 /**
  * Where to continue: this session's chosen PDF, else the PDF chosen in the
  * most recently updated earlier session, provided it is still in the library.

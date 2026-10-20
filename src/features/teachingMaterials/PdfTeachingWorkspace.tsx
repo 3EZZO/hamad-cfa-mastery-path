@@ -17,7 +17,7 @@ import { noteForPage, type KeyPage } from "./pdfNotesModel";
 import { buildLibraryEntries } from "./libraryModel";
 import { materialTopicForSession } from "./topicDisclosure";
 import { TeachingDesk } from "./TeachingDesk";
-import { resumeEntry, sessionModules, sessionTopics, taughtEarlier, upNext } from "./teachingDeskModel";
+import { resumeEntry, resumePageFor, sessionModules, sessionTopics, taughtEarlier, upNext } from "./teachingDeskModel";
 import { parsePages, taughtPagesByVersion, type PageCoverage } from "./coverageModel";
 import { CoverageStrip } from "./CoverageStrip";
 import { SessionSummaryDialog, type SessionRecordInput, type SummaryRow } from "./SessionSummaryDialog";
@@ -449,7 +449,7 @@ export function PdfTeachingWorkspace({
             )}
             {entries.length > 0 && (
               <TeachingDesk sessionLabel={sessionLabel} modules={modules} next={next.items} more={next.more}
-                resume={resume} resumePage={resumePage?.versionId === resume?.version.versionId ? resumePage!.page : null}
+                resume={resume} resumePage={resumePageFor(resume, resumePage)}
                 resumeKeyPages={resumeKeys && resumeKeys.versionId === resumeId ? resumeKeys.keyPages : []}
                 loading={earlier === null} onOpen={openEntry} onOpenAt={openAt} />
             )}

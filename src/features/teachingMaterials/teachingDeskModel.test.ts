@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { TeachingSessionEnvelope } from "../liveSession/teachingHost";
 import type { LibraryEntry } from "./libraryModel";
 import type { MaterialTopic } from "./materialDetails";
-import { resumeEntry, sessionModules, sessionTopics, taughtEarlier, upNext } from "./teachingDeskModel";
+import { resumeEntry, resumePageFor, sessionModules, sessionTopics, taughtEarlier, upNext } from "./teachingDeskModel";
 
 function entry(versionId: string, title: string, topic: MaterialTopic, readingNumber: number | null = null, current = true): LibraryEntry {
   const version = { versionId, materialId: `m-${versionId}`, title, readingNumber, pageCount: 20 };
@@ -56,5 +56,14 @@ describe("teaching desk", () => {
     expect(resumeEntry(entries, "a", earlier)?.version.versionId).toBe("a");
     expect(resumeEntry(entries, null, earlier)?.version.versionId).toBe("b");
     expect(resumeEntry(entries, null, [])).toBeNull();
+  });
+
+  it("has no resume page when there is nothing to continue (regression: the desk crashed)", () => {
+    const a = entry("a", "A", "Economics");
+    expect(resumePageFor(null, null)).toBeNull();
+    expect(resumePageFor(a, null)).toBeNull();
+    expect(resumePageFor(null, { versionId: "a", page: 3 })).toBeNull();
+    expect(resumePageFor(a, { versionId: "b", page: 3 })).toBeNull();
+    expect(resumePageFor(a, { versionId: "a", page: 3 })).toBe(3);
   });
 });
