@@ -476,6 +476,6 @@ export function formatSharedDate(ms: number | null): string {
 }
 
 /** Newest share first; a share whose server time is pending sorts first. */
-export function sortShares(grants: readonly MaterialGrant[]): MaterialGrant[] {
+export function sortShares<T extends MaterialGrant>(grants: readonly T[]): T[] {
   return [...grants].sort((a, b) => (b.sharedAtMs ?? Number.MAX_SAFE_INTEGER) - (a.sharedAtMs ?? Number.MAX_SAFE_INTEGER));
 }

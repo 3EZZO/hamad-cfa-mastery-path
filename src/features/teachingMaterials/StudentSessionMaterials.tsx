@@ -1,10 +1,11 @@
 import { ArrowLeft, BookOpen, FileText, RefreshCw, ShieldAlert } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MaterialServiceError, teachingMaterialService } from "../../lib/cloudTeachingMaterials";
-import { formatSharedDate, materialLabel, sortShares, type MaterialGrant, type ReaderPreference } from "./materialTypes";
+import { formatSharedDate, materialLabel, sortShares, type ReaderPreference } from "./materialTypes";
 import { PdfOpenError } from "./pdfErrors";
 import type { ReaderErrorCopy, ReaderView } from "./PdfReader";
 import "./teachingMaterials.css";
+import { compareMaterialLabels, groupMaterialsByTopic, type LabeledMaterialGrant } from "./materialDetails";
 
 const PdfReader = lazy(() => import("./PdfReader"));
 const PREFERENCE_SAVE_MS = 1_500;
@@ -32,7 +33,7 @@ export default function StudentSessionMaterials({
   onClose: () => void;
 }) {
   const service = useMemo(() => teachingMaterialService(), []);
-  const [grants, setGrants] = useState<MaterialGrant[] | null>(null);
+  const [grants, setGrants] = useState<LabeledMaterialGrant[] | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [initialView, setInitialView] = useState<{ key: string; view: ReaderView } | null>(null);
@@ -235,8 +236,12 @@ export default function StudentSessionMaterials({
       {!grants.length ? (
         <p className="tm-state"><FileText size={20} aria-hidden="true" /> Nothing has been shared yet.</p>
       ) : (
-        <ul className="tm-student__list">
-          {grants.map(item => (
+        <div className="tm-topic-groups">
+          {groupMaterialsByTopic([...grants].sort(compareMaterialLabels), item => item.topic).map(group => (
+          <section key={group.topic} aria-label={group.topic}>
+            <h3 className="tm-topic-group__title">{group.topic}</h3>
+            <ul className="tm-student__list" aria-label={`${group.topic} PDFs`}>
+          {group.items.map(item => (
             <li key={item.versionId} className="tm-material tm-student__item">
               <p className="tm-material__eyebrow">
                 {item.readingNumber !== null ? `Reading ${String(item.readingNumber).padStart(2, "0")} · ` : ""}{item.sourceEdition} study notes
@@ -257,7 +262,9 @@ export default function StudentSessionMaterials({
               </div>
             </li>
           ))}
-        </ul>
+            </ul>
+          </section>))}
+        </div>
       )}
     </div>
   );

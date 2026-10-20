@@ -1385,6 +1385,35 @@ service cloud.firestore {
           ? manifest.byteSize - (data.index * 921600) : 921600);
     }
 
+    // Editable display labels are separate from immutable PDF manifests.
+    // Students can fetch one only while entitled to that exact version.
+    function validMaterialDetails(versionId) {
+      let data = request.resource.data;
+      return teachingVersionIdOk(versionId)
+        && data.keys().hasOnly(['versionId', 'title', 'readingNumber', 'topic', 'revision', 'updatedBy', 'updatedAt'])
+        && data.keys().hasAll(['versionId', 'title', 'readingNumber', 'topic', 'revision', 'updatedBy', 'updatedAt'])
+        && data.versionId == versionId
+        && existsAfter(teachingVersionDoc(versionId))
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 160
+        && validReadingNumber(data.readingNumber)
+        && data.topic in ['Quantitative Methods', 'Economics', 'Financial Statement Analysis', 'Corporate Issuers',
+          'Equity Investments', 'Fixed Income', 'Derivatives', 'Alternative Investments',
+          'Portfolio Management', 'Ethical and Professional Standards', 'Supplementary']
+        && data.revision is int && data.revision >= 1
+        && data.updatedBy == request.auth.uid && data.updatedAt == request.time;
+    }
+
+    match /programs/project-202/teachingMaterialDetails/{versionId} {
+      allow get: if activeProject202Role('tutor')
+        || (activeProject202Role('student') && recipientHoldsCurrentGrant(request.auth.uid, versionId));
+      allow list: if activeProject202Role('tutor');
+      allow create: if activeProject202Role('tutor') && validMaterialDetails(versionId)
+        && request.resource.data.revision == 1;
+      allow update: if activeProject202Role('tutor') && validMaterialDetails(versionId)
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+    }
+
     // Ready manifests and their byte chunks are created together, once, and
     // never changed or deleted by a client.
     match /programs/project-202/teachingMaterialVersions/{versionId} {
