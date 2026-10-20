@@ -745,3 +745,27 @@
 .tm-check__answer p, .tm-check__answer ol { margin: 0; }
 .tm-check__formulae { display: flex; flex-wrap: wrap; gap: 8px; }
 .tm-check__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+/* Session recaps: tutor dialog groups and the student's list. */
+.tm-recap__group { display: grid; gap: 4px; margin: 10px 0; padding: 8px 12px; border: 1px solid var(--border, #d4dce5); border-radius: var(--radius-md, 8px); }
+.tm-recap__group legend { padding: 0 4px; font-weight: var(--weight-semibold, 600); font-size: var(--text-caption, 0.85rem); }
+.tm-recap__group small { color: var(--muted); }
+.tm-recaps { display: grid; gap: 10px; }
+.tm-recaps h4 { display: flex; align-items: center; gap: 8px; margin: 0; }
+.tm-recaps > ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.tm-recap {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #d4dce5);
+  border-left: 4px solid var(--action, #1f4f8f);
+  border-radius: var(--radius-lg, 10px);
+}
+.tm-recap h5 { margin: 4px 0 0; color: var(--muted); font-size: var(--text-caption, 0.8rem); font-weight: var(--weight-semibold, 600); }
+.tm-recap ul { margin: 0; padding-left: 18px; }
+.tm-recap p { margin: 0; }
+.tm-recap .tm-recap__keys { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; list-style: none; }
+.tm-recap__keys .tm-chip { display: inline-flex; align-items: center; gap: 6px; }
+.tm-recap__next { padding: 8px 10px; background: var(--surface-2, #f7f9fc); border-radius: var(--radius-md, 8px); }
+.tm-today-card strong svg { vertical-align: -2px; }

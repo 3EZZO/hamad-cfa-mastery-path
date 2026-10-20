@@ -32,6 +32,7 @@ export function defaultOutcome(rows: readonly SummaryRow[]): string {
  */
 export function SessionSummaryDialog({
   active, sessionLabel, clockMinutes, rows, extraLine, recorded, finished, onFinishOnly, onRecord, onClose,
+  recapAction,
 }: {
   active: boolean;
   sessionLabel: string;
@@ -44,6 +45,8 @@ export function SessionSummaryDialog({
   onFinishOnly: () => void;
   onRecord: (input: SessionRecordInput) => Promise<void>;
   onClose: () => void;
+  /** Opens the student recap; `disabledReason` explains why it is unavailable. */
+  recapAction?: { label: string; disabledReason?: string; onOpen: () => void };
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -100,7 +103,13 @@ export function SessionSummaryDialog({
           </label>
           {recorded && <p className="tm-dialog__hint" role="status">Already recorded in the session log. Recording again replaces that entry.</p>}
           {error && <p role="alert" className="tm-dialog__error">{error}</p>}
+          {recapAction?.disabledReason && <p className="tm-dialog__hint">{recapAction.disabledReason}</p>}
           <div className="tm-dialog__actions">
+            {recapAction && (
+              <button type="button" className="tm-button" disabled={busy || !!recapAction.disabledReason} onClick={recapAction.onOpen}>
+                {recapAction.label}
+              </button>
+            )}
             {!finished && <button type="button" className="tm-button" disabled={busy} onClick={onFinishOnly}>Finish without logging</button>}
             <button type="submit" className="tm-button tm-button--primary" disabled={busy || !valid}>
               {busy && <RefreshCw className="tm-spin" size={16} aria-hidden="true" />}

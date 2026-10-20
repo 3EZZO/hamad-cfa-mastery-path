@@ -8,6 +8,8 @@ import "./teachingMaterials.css";
 import { compareMaterialLabels, groupMaterialsByTopic, type LabeledMaterialGrant, type MaterialTopic } from "./materialDetails";
 import { TopicGroup } from "./TopicGroup";
 import { useTopicDisclosure } from "./topicDisclosure";
+import { sortRecaps, takeStudentPage, type SessionRecap } from "./recapModel";
+import { StudentRecaps } from "./StudentRecaps";
 
 const PdfReader = lazy(() => import("./PdfReader"));
 const PREFERENCE_SAVE_MS = 1_500;
@@ -43,6 +45,9 @@ export default function StudentSessionMaterials({
   const newestTopic = grants?.[0]?.topic; // grants are kept newest first
   const defaultOpen = useMemo<MaterialTopic[]>(() => (newestTopic ? [newestTopic] : []), [newestTopic]);
   const disclosure = useTopicDisclosure(`student:${uid}`, defaultOpen);
+  const [recaps, setRecaps] = useState<SessionRecap[]>([]);
+  useEffect(() => service.subscribeMyRecaps(next => setRecaps(sortRecaps(next)), () => setRecaps([])), [attempt, service, uid]);
+  const sharedIds = useMemo(() => new Set((grants ?? []).map(item => item.versionId)), [grants]);
   // In-memory only (v1 has no offline PDFs); keyed by account, version and
   // share revision so a revoked or re-shared document is never served stale.
   const bytesCache = useRef(new Map<string, Uint8Array>());
@@ -113,6 +118,12 @@ export default function StudentSessionMaterials({
     const key = readerKey;
     setInitialView(null);
     const fallback = { page: 1, zoom: 1, fitMode: "width" as const };
+    // A recap's key-page link opens at that page (once).
+    const requested = takeStudentPage(grant.versionId);
+    if (requested !== null) {
+      setInitialView({ key, view: { ...fallback, page: Math.min(Math.max(1, requested), grant.pageCount) } });
+      return;
+    }
     const timer = window.setTimeout(() => {
       if (!cancelled) setInitialView(current => current?.key === key ? current : { key, view: fallback });
     }, 2_500);
@@ -239,6 +250,7 @@ export default function StudentSessionMaterials({
           <span>Your tutor removed access to the PDF you were reading, so it was closed.</span>
         </div>
       )}
+      <StudentRecaps recaps={recaps} sharedVersionIds={sharedIds} onOpen={onOpen} />
       {!grants.length ? (
         <p className="tm-state"><FileText size={20} aria-hidden="true" /> Nothing has been shared yet.</p>
       ) : (

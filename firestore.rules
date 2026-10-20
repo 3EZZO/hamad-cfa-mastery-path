@@ -1563,6 +1563,48 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Session recap for one student and session: the tutor sends, updates or
+    // withdraws it; the student reads only their own active recaps.
+    function validRecap(uid, runId) {
+      let data = request.resource.data;
+      return runId.matches('^session-[0-9]{2}$')
+        && data.keys().hasOnly(['runId', 'sessionNumber', 'status', 'covered', 'keyPages', 'checks', 'nextStep', 'sentBy', 'sentAt', 'revision'])
+        && data.keys().hasAll(['runId', 'sessionNumber', 'status', 'covered', 'keyPages', 'checks', 'nextStep', 'sentBy', 'sentAt', 'revision'])
+        && data.runId == runId
+        && data.sessionNumber is int && data.sessionNumber >= 1 && data.sessionNumber <= 25
+        && data.status in ['active', 'withdrawn']
+        && data.covered is list && data.covered.size() <= 20
+        && data.keyPages is list && data.keyPages.size() <= 30
+        && (data.checks == null || (
+          data.checks is map
+          && data.checks.keys().hasOnly(['correct', 'total'])
+          && data.checks.keys().hasAll(['correct', 'total'])
+          && data.checks.total is int && data.checks.total >= 1 && data.checks.total <= 100
+          && data.checks.correct is int && data.checks.correct >= 0 && data.checks.correct <= data.checks.total
+        ))
+        && data.nextStep is string && data.nextStep.size() <= 500
+        && data.sentBy == request.auth.uid
+        && data.sentAt == request.time
+        // Sending needs an approved student; withdrawing never does.
+        && (data.status == 'withdrawn' || activeStudentRecipient(uid));
+    }
+
+    match /programs/project-202/materialRecipients/{uid}/recaps/{runId} {
+      // Rules are not filters: a student's list query must itself be limited
+      // to their own namespace and status == 'active'.
+      allow get, list: if activeProject202Role('tutor')
+        || (activeProject202Role('student')
+          && request.auth.uid == uid
+          && resource.data.status == 'active');
+      allow create: if activeProject202Role('tutor')
+        && validRecap(uid, runId)
+        && request.resource.data.revision == 1;
+      allow update: if activeProject202Role('tutor')
+        && validRecap(uid, runId)
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+    }
+
     function receiptFieldsOk(versionId) {
       let data = request.resource.data;
       return data.keys().hasOnly(['versionId', 'shareRevision', 'firstOpenedAt', 'lastOpenedAt'])
