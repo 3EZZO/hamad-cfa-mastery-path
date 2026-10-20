@@ -1711,6 +1711,27 @@ service cloud.firestore {
       }
     }
 
+    // Private page notes and key pages per PDF version, kept across
+    // sessions: owning tutor only, compare-and-set revisions.
+    match /programs/project-202/tutorTeachingSessions/{uid}/pdfNotes/{versionId} {
+      allow get: if activeProject202Role('tutor') && request.auth.uid == uid;
+      allow create, update: if activeProject202Role('tutor')
+        && request.auth.uid == uid
+        && teachingVersionIdOk(versionId)
+        && request.resource.data.keys().hasOnly(['versionId', 'pages', 'keyPages', 'revision', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['versionId', 'pages', 'keyPages', 'revision', 'updatedAt'])
+        && request.resource.data.versionId == versionId
+        && request.resource.data.pages is list
+        && request.resource.data.pages.size() <= 100
+        && request.resource.data.keyPages is list
+        && request.resource.data.keyPages.size() <= 50
+        && request.resource.data.revision is int
+        && request.resource.data.revision
+          == (resource == null ? 1 : resource.data.revision + 1)
+        && request.resource.data.updatedAt == request.time;
+      allow list, delete: if false;
+    }
+
     // Everything not explicitly listed above is denied.
     match /{document=**} {
       allow read, write: if false;

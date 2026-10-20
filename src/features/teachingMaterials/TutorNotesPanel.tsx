@@ -13,13 +13,14 @@ const SAVE_DELAY_MS = 900;
  * was typed into, never on a newly selected session or document.
  */
 export function TutorNotesPanel({
-  service, tutorUid, runId, versionId, rehearsal,
+  service, tutorUid, runId, versionId, rehearsal, title = "Private notes",
 }: {
   service: TeachingMaterialService;
   tutorUid: string;
   runId: string;
   versionId: string;
   rehearsal: boolean;
+  title?: string;
 }) {
   const scope = `${tutorUid}:${runId}:${versionId}`;
   const [text, setText] = useState("");
@@ -125,7 +126,7 @@ export function TutorNotesPanel({
   return (
     <section className="tm-notes" aria-labelledby="tm-notes-title">
       <header>
-        <h2 id="tm-notes-title"><LockKeyhole size={14} aria-hidden="true" /> Private notes</h2>
+        <h2 id="tm-notes-title"><LockKeyhole size={14} aria-hidden="true" /> {title}</h2>
         <span className={`tm-save-state${state === "error" ? " tm-save-state--error" : ""}`} role="status" aria-live="polite">{label[state]}</span>
       </header>
       <p>Only you can read these. They are never shared with the student or added to the session record.</p>

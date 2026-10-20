@@ -2,21 +2,25 @@ import { BookOpen, History } from "lucide-react";
 import type { LibraryEntry } from "./libraryModel";
 import { materialLabel } from "./materialTypes";
 import type { SessionModule } from "./teachingDeskModel";
+import { keyPageLabel, type KeyPage } from "./pdfNotesModel";
 
 /**
  * The PDF surface's start screen: continue where teaching stopped, the next
  * PDFs for this session's topics and the session's curriculum modules.
  * Opening from here is the same as "Open for teaching" in the library.
  */
-export function TeachingDesk({ sessionLabel, modules, next, more, resume, resumePage, loading, onOpen }: {
+export function TeachingDesk({ sessionLabel, modules, next, more, resume, resumePage, resumeKeyPages = [], loading, onOpen, onOpenAt }: {
   sessionLabel: string;
   modules: readonly SessionModule[];
   next: readonly LibraryEntry[];
   more: number;
   resume: LibraryEntry | null;
   resumePage: number | null;
+  /** Pinned key pages of the PDF to continue with. */
+  resumeKeyPages?: readonly KeyPage[];
   loading: boolean;
   onOpen: (entry: LibraryEntry) => void;
+  onOpenAt?: (entry: LibraryEntry, page: number) => void;
 }) {
   return (
     <section className="tm-desk" aria-label={`${sessionLabel} teaching desk`}>
@@ -33,6 +37,18 @@ export function TeachingDesk({ sessionLabel, modules, next, more, resume, resume
                 <BookOpen size={16} aria-hidden="true" /> Continue
               </button>
             </div>
+            {onOpenAt && resumeKeyPages.length > 0 && (
+              <div className="tm-desk__keys">
+                <span>Key pages</span>
+                <ul>
+                  {resumeKeyPages.map(entry => (
+                    <li key={entry.page}>
+                      <button type="button" className="tm-chip" onClick={() => onOpenAt(resume, entry.page)}>{keyPageLabel(entry)}</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </article>
         )}
         <article className="tm-desk__card">
