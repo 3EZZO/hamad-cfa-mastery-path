@@ -28,7 +28,7 @@ const STATE_LABEL: Record<PdfNotesState, string> = {
  */
 export function PdfNotesPanel({
   service, tutorUid, runId, sessionNumber, versionId, page, rehearsal,
-  notes, state, error, onUpdate, onFlush, onRetry, onJump, earlierVersions,
+  notes, state, error, onUpdate, onFlush, onRetry, onJump, earlierVersions, stopPrompt,
 }: {
   service: TeachingMaterialService;
   tutorUid: string;
@@ -46,6 +46,8 @@ export function PdfNotesPanel({
   onJump: (page: number) => void;
   /** Other versions of the same PDF, newest first. */
   earlierVersions: readonly { versionId: string; label: string }[];
+  /** The lesson-path stop on this page, with its private prompt. */
+  stopPrompt?: { number: number; prompt: string } | null;
 }) {
   const [full, setFull] = useState("");
   const [pinLabel, setPinLabel] = useState("");
@@ -87,6 +89,13 @@ export function PdfNotesPanel({
         <span className={`tm-save-state${state === "error" ? " tm-save-state--error" : ""}`} role="status" aria-live="polite">{STATE_LABEL[state]}</span>
       </header>
       <p>Only you can read these. They stay with this PDF across sessions and are hidden while presenting. Press N to show or hide them.</p>
+
+      {stopPrompt && (
+        <div className="tm-pagenotes__stop" role="note">
+          <strong>Stop {stopPrompt.number}</strong>
+          <span>{stopPrompt.prompt || "No prompt for this stop."}</span>
+        </div>
+      )}
 
       <label className="tm-pagenotes__field">
         <span>Page {page}</span>

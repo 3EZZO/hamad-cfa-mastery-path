@@ -31,12 +31,14 @@ export function defaultOutcome(rows: readonly SummaryRow[]): string {
  * "Finish and record"; mastery is never changed here.
  */
 export function SessionSummaryDialog({
-  active, sessionLabel, clockMinutes, rows, recorded, finished, onFinishOnly, onRecord, onClose,
+  active, sessionLabel, clockMinutes, rows, pathLine, recorded, finished, onFinishOnly, onRecord, onClose,
 }: {
   active: boolean;
   sessionLabel: string;
   clockMinutes: number;
   rows: readonly SummaryRow[];
+  /** e.g. "Lesson path: 5 of 7 stops reached." */
+  pathLine?: string;
   recorded: boolean;
   finished: boolean;
   onFinishOnly: () => void;
@@ -45,7 +47,7 @@ export function SessionSummaryDialog({
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const [outcome, setOutcome] = useState(() => defaultOutcome(rows));
+  const [outcome, setOutcome] = useState(() => [defaultOutcome(rows), pathLine ?? ""].filter(Boolean).join(" "));
   const [nextAction, setNextAction] = useState("");
   const [minutes, setMinutes] = useState(String(clockMinutes));
   const [completeTask, setCompleteTask] = useState(true);
@@ -79,6 +81,7 @@ export function SessionSummaryDialog({
             </tbody>
           </table></div>
         ) : <p className="tm-state">No PDF pages were taught with the clock running in this session.</p>}
+        {pathLine && <p className="tm-dialog__hint">{pathLine}</p>}
         <form onSubmit={event => {
           event.preventDefault();
           if (!valid || busy || !active) return;

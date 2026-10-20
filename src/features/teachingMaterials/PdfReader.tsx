@@ -48,6 +48,10 @@ export interface PdfReaderProps {
   belowToolbar?: ReactNode;
   /** A page to show; a new request object jumps again to the same page. */
   jumpTo?: { page: number } | null;
+  /** Focus the page once it first renders (keyboard flow across documents). */
+  focusOnLoad?: boolean;
+  /** Open already presenting in the full-window layout (continuing a presentation). */
+  startPresenting?: boolean;
 }
 
 type Presenting = "off" | "fullscreen" | "expanded";
@@ -57,6 +61,7 @@ const DEFAULT_ERROR: ReaderErrorCopy = { message: "The PDF could not be opened."
 export function PdfReader({
   active = true, documentKey, title, subtitle, variant, loadBytes, initialView, onViewChange, onRendered,
   onPresentationChange, describeError, toolbarStart, toolbarEnd, aside, belowToolbar, jumpTo,
+  focusOnLoad = false, startPresenting = false,
 }: PdfReaderProps) {
   const rootRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -83,7 +88,9 @@ export function PdfReader({
   const [customZoom, setCustomZoom] = useState(clampZoom(initialView?.zoom ?? 1));
   const [pageSize, setPageSize] = useState<Size | null>(null);
   const [containerSize, setContainerSize] = useState<Size | null>(null);
-  const [presenting, setPresenting] = useState<Presenting>("off");
+  // Full screen needs a fresh user gesture, so a continued presentation uses the full-window layout.
+  const [presenting, setPresenting] = useState<Presenting>(startPresenting ? "expanded" : "off");
+  const focusOnLoadRef = useRef(focusOnLoad);
   const [toolsCollapsed, setToolsCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -219,6 +226,7 @@ export function PdfReader({
       setRenderState("ready");
       if (!renderedOnceRef.current) {
         renderedOnceRef.current = true;
+        if (focusOnLoadRef.current) viewportRef.current?.focus({ preventScroll: true });
         onRenderedRef.current?.();
       }
       layer.replaceChildren();
