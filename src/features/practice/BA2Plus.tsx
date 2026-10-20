@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type RefObject } from "react";
 import {
   computeArithmetic,
   computeIRR,
@@ -26,6 +26,8 @@ interface BA2PlusProps {
   startTime: number;
   tvmState: TVMState;
   onStateChange: (newState: TVMState) => void;
+  /** When set, the keyboard drives the calculator only while focus is inside this element. */
+  keyScope?: RefObject<HTMLElement | null>;
 }
 
 type TVMRegister = "N" | "IY" | "PV" | "PMT" | "FV";
@@ -54,6 +56,7 @@ export function BA2Plus({
   startTime,
   tvmState,
   onStateChange,
+  keyScope,
 }: BA2PlusProps) {
   const [display, setDisplay] = useState("0.00");
   const [screenLabel, setScreenLabel] = useState("TVM");
@@ -546,6 +549,7 @@ export function BA2Plus({
       if (target?.matches("input, textarea, select, [contenteditable='true']")) {
         return;
       }
+      if (keyScope && !(target && keyScope.current?.contains(target))) return;
       const key = event.key.toUpperCase();
       if (/^[0-9.]$/.test(key)) handleNum(key);
       else if (key === "BACKSPACE" || key === "ESCAPE") handleClear();
@@ -585,6 +589,7 @@ export function BA2Plus({
     handleOperator,
     handleTVM,
     handleUnary,
+    keyScope,
     worksheet,
   ]);
 

@@ -1,4 +1,4 @@
-import { Calculator, ChevronLeft, ChevronRight, CircleAlert, CloudOff, Flag, LogOut, Maximize, Send, ShieldCheck, X } from "lucide-react";
+import { Calculator, ChevronLeft, ChevronRight, CircleAlert, CloudOff, Flag, LogOut, Maximize, Send, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { defaultTVMState } from "../../lib/calculator";
@@ -16,6 +16,7 @@ import {
 } from "../../lib/mockTestContent";
 import { useDialogFocus } from "../liveSession/useDialogFocus";
 import { BA2Plus, type KeystrokeLog } from "../practice/BA2Plus";
+import { FloatingCalculator } from "../practice/FloatingCalculator";
 import { MockTimer } from "./MockTimer";
 import { enterFullscreen, exitFullscreen, fullscreenSupported, useExamLock } from "./useExamLock";
 import { MockExhibits } from "./MockExhibits";
@@ -303,13 +304,9 @@ export function MockTestRunner({
       </div>
 
       {calculatorOpen && (
-        <aside className="mock-calculator" aria-label="BA II Plus calculator">
-          <div className="mock-calculator__head">
-            <strong>BA II Plus</strong>
-            <button type="button" className="mock-icon" aria-label="Close calculator" onClick={() => setCalculatorOpen(false)}><X size={18} /></button>
-          </div>
+        <FloatingCalculator storageKey="module-tests" className="mock-floating-calc" onClose={() => setCalculatorOpen(false)}>
           <BA2Plus onLog={onCalculatorLog} startTime={startedAtMs} tvmState={tvmState} onStateChange={setTvmState} />
-        </aside>
+        </FloatingCalculator>
       )}
 
       {confirm && (
