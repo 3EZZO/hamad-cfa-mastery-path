@@ -1,6 +1,11 @@
-import { ArrowLeft, CheckCircle2, FlaskConical, LogOut, MapPinPlus, NotebookPen, Pause, Play, Send, SkipBack, SkipForward } from "lucide-react";
+import { ArrowLeft, Calculator, CheckCircle2, FlaskConical, ListChecks, LogOut, MapPinPlus, NotebookPen, Pause, Play, Send, SkipBack, SkipForward } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { listActiveStudentMembers } from "../../lib/cloud";
+import { listActiveStudentMembers, listPublishedPracticeBanks } from "../../lib/cloud";
+import { defaultTVMState } from "../../lib/calculator";
+import type { PublishedPracticeBank } from "../../lib/practiceContent";
+import type { FocusRegion } from "./exhibitFocus";
+import { QuickCheck } from "./QuickCheck";
+import { quickCheckLine, quickCheckPool, type QuickCheckResult } from "./quickCheckModel";
 import {
   MaterialServiceError, teachingMaterialService, type RecipientShares,
 } from "../../lib/cloudTeachingMaterials";
@@ -28,6 +33,8 @@ import { usePageDwell } from "./usePageDwell";
 import "./teachingMaterials.css";
 
 const PdfReader = lazy(() => import("./PdfReader"));
+// The calculator loads only when the tutor opens it.
+const BA2Plus = lazy(() => import("../practice/BA2Plus").then(module => ({ default: module.BA2Plus })));
 
 const PDF_ONLY_MINUTES = 150;
 const MAX_CACHED_DOCUMENTS = 4;
@@ -127,6 +134,16 @@ export function PdfTeachingWorkspace({
   const [pathNotice, setPathNotice] = useState("");
   // Moving to a stop in another PDF keeps keyboard focus and any presentation.
   const [carry, setCarry] = useState({ focus: false, present: false });
+  const [focusTo, setFocusTo] = useState<{ page: number; region: FocusRegion } | null>(null);
+  const [currentFocus, setCurrentFocus] = useState<FocusRegion | null>(null);
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [tvmState, setTvmState] = useState(defaultTVMState);
+  const [calcStarted, setCalcStarted] = useState(0);
+  const [checkOpen, setCheckOpen] = useState(false);
+  const [banks, setBanks] = useState<PublishedPracticeBank[] | null>(null);
+  const [banksError, setBanksError] = useState("");
+  const [checkResults, setCheckResults] = useState<QuickCheckResult[]>([]);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // A hidden PDF surface must release its modal's global focus trap.
   useEffect(() => { if (!active) { setShareTarget(null); setSummaryOpen(false); } }, [active]);
@@ -333,11 +350,14 @@ export function PdfTeachingWorkspace({
       return;
     }
     setPathNotice("");
+    const focus = stop.focus ? { page: stop.page, region: stop.focus } : null;
     if (mode === "reader" && selectedId === stop.versionId) {
       setJumpTo({ page: stop.page });
+      setFocusTo(focus);
       return;
     }
     openAt(entry, stop.page);
+    setFocusTo(focus);
     setCarry({ focus: true, present: presenting });
   };
 
@@ -349,7 +369,7 @@ export function PdfTeachingWorkspace({
 
   const addStop = () => {
     if (!selectedId) return;
-    const next = withStop(stops, { versionId: selectedId, page: currentPage, prompt: "" }, stopIndex >= 0 ? stopIndex : undefined);
+    const next = withStop(stops, { versionId: selectedId, page: currentPage, prompt: "", ...(currentFocus ? { focus: currentFocus } : {}) }, stopIndex >= 0 ? stopIndex : undefined);
     if (!next) {
       setPathNotice("The lesson path already has 40 stops. Remove one first.");
       return;
@@ -391,8 +411,27 @@ export function PdfTeachingWorkspace({
     setNotesOpen(value => !value);
   };
 
+  // ------------------------------------------------- calculator & checks
+  const loadBanks = useCallback(() => {
+    setBanksError("");
+    setBanks(null);
+    void listPublishedPracticeBanks().then(setBanks, () => setBanksError("The question bank could not be loaded. Check the connection and try again."));
+  }, []);
+  const openQuickCheck = () => {
+    if (!banks && !banksError) loadBanks();
+    setCheckOpen(true);
+  };
+  const checkPool = useMemo(() => (banks
+    ? quickCheckPool(banks, modules.map(module => module.number), selected?.topic ?? topics[0] ?? null)
+    : { items: [], scope: "none" as const }), [banks, modules, selected?.topic, topics]);
+  const closeQuickCheck = () => {
+    setCheckOpen(false);
+    window.setTimeout(() => rootRef.current?.querySelector<HTMLElement>(".tm-viewport")?.focus({ preventScroll: true }), 0);
+  };
+
   const openEntry = (entry: LibraryEntry) => {
     setJumpTo(null);
+    setFocusTo(null);
     setCarry({ focus: false, present: false });
     onSelectVersion(entry.version.versionId);
     setMode("reader");
@@ -429,7 +468,7 @@ export function PdfTeachingWorkspace({
   const shareState = selected && recipient ? shareSummary(grants.get(selected.version.versionId), receipts.get(selected.version.versionId)) : null;
 
   return (
-    <div className="tm-teach">
+    <div className="tm-teach" ref={rootRef}>
       <div className="tm-teach__bar">
         <div className="tm-teach__title">
           <h1>{sessionLabel} · Teach from PDF</h1>
@@ -524,6 +563,29 @@ export function PdfTeachingWorkspace({
                 )}
                 jumpTo={jumpTo}
                 focusOnLoad={carry.focus}
+                focusTo={focusTo}
+                onFocusChange={setCurrentFocus}
+                tools={(
+                  <>
+                    <button type="button" className="tm-icon" aria-pressed={calcOpen} aria-label={calcOpen ? "Hide the BA II Plus" : "Show the BA II Plus beside the page"}
+                      onClick={() => { if (!calcOpen) setCalcStarted(Date.now()); setCalcOpen(value => !value); }}>
+                      <Calculator size={18} aria-hidden="true" />
+                    </button>
+                    <button type="button" className="tm-icon" aria-label="Quick check from the question bank" onClick={openQuickCheck}>
+                      <ListChecks size={18} aria-hidden="true" />
+                    </button>
+                  </>
+                )}
+                dock={calcOpen ? (
+                  <Suspense fallback={<p className="tm-state" role="status">Loading the calculator…</p>}>
+                    <BA2Plus onLog={() => undefined} startTime={calcStarted} tvmState={tvmState} onStateChange={setTvmState} />
+                  </Suspense>
+                ) : null}
+                overlay={checkOpen ? (
+                  <QuickCheck active={active} loading={!banks && !banksError} error={banksError} pool={checkPool.items} scope={checkPool.scope}
+                    results={checkResults} onResult={result => setCheckResults(current => [...current, result])}
+                    onRetry={loadBanks} onClose={closeQuickCheck} />
+                ) : null}
                 startPresenting={carry.present}
                 belowToolbar={!rehearsal ? (
                   <CoverageStrip pageCount={selected.version.pageCount} page={readerPage?.versionId === selectedId ? readerPage.page : 1}
@@ -604,7 +666,10 @@ export function PdfTeachingWorkspace({
           sessionLabel={sessionLabel}
           clockMinutes={Math.round(timer.elapsedMs / 60_000)}
           rows={summaryRows}
-          pathLine={stops.length ? `Lesson path: ${stops.filter(stop => reachedStops.has(stop.id)).length} of ${stops.length} stops reached.` : undefined}
+          extraLine={[
+            stops.length ? `Lesson path: ${stops.filter(stop => reachedStops.has(stop.id)).length} of ${stops.length} stops reached.` : "",
+            rehearsal ? "" : quickCheckLine(checkResults) ?? "",
+          ].filter(Boolean).join(" ") || undefined}
           recorded={sessionRecorded}
           finished={finished}
           onFinishOnly={() => { onFinish(); setSummaryOpen(false); }}
