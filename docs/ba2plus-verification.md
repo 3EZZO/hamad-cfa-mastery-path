@@ -95,6 +95,43 @@ Final local checks on October 21, 2026:
   published commit and PR; the owner merges manually.
 - The isolated Vite development server started for these checks was stopped.
 
+## Professional appearance update — October 21, 2026
+
+The visual reference is the [TI BA II Plus Professional product photo](https://education.ti.com/en/products/calculators/financial/baii-plus-professional).
+The interactive face uses a black moulded casing, red Professional wordmark,
+recessed green-grey LCD, locally drawn SVG numerals, dark raised keys and silver
+TVM key rims. The TI emblem path comes from the official education site's
+[vector wordmark](https://education.ti.com/-/media/ti/education/images/global-images/logos/ti-logo-web-193x25.svg).
+Worksheet guidance sits below the casing. Screen readers receive the original
+display string and active modes instead of the decorative SVG segments.
+
+This is an appearance update to the standard BA II Plus engine described above.
+Professional-only features such as NFV, MIRR, payback and modified duration are
+not added by the Professional styling. Touch pointers retain 44px key heights;
+the face is consequently taller than the reference on those devices.
+
+**Performed by Codex:** 22 focused component/theme/touch-contract tests passed;
+TypeScript, targeted ESLint and Prettier passed; all 855 tests in 137 files
+passed; the Pages build, PWA checks and private-content audit passed. The existing
+theme-init script and mixed cloud import build warnings remain. In native Chrome
+with synthetic fixtures and the app's styles, arithmetic, keyboard entry,
+backspace, keyboard scoping and visible focus passed. Floating-window keyboard
+movement/resizing and CF0=42 retention across closing/reopening passed. Light
+and dark themes preserved the hardware colours. Same-origin iframe viewports
+at 320 and 390 pixels had no horizontal overflow; the compact panel scrolled to
+the lower keys, and 7 × 6 displayed 42.00 at 320 pixels.
+
+**Reported by owner:** the owner is trying the separate local preview; no formal
+acceptance of the final appearance has been recorded.
+
+**Static reasoning:** calculation, worksheet, storage and logging implementations
+are unchanged. Local SVG paths and CSS need no third-party runtime asset calls.
+
+**Still unverified:** exact photographic/physical-dimension equivalence, actual
+touch hardware ergonomics, and screen-reader speech on a real assistive device.
+The source-contract tests cover touch styling; narrow browser viewports do not
+emulate a physical touch device. Local verification does not deploy the update.
+
 ## References and repeatable checks
 
 - [TI BA II Plus guidebook](https://education.ti.com/html/eguides/financials/pdfs/EN/BA-II-PLUS_EN.pdf): worksheet chapters and formula appendix.

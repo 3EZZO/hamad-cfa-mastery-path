@@ -56,7 +56,7 @@ const keys: Key[] = [
   { id: "INV", text: "INV", secondary: "HYP" },
   { id: "(", text: "(", secondary: "SIN", label: "Open parenthesis" },
   { id: ")", text: ")", secondary: "COS", label: "Close parenthesis" },
-  { id: "^", text: "y^x", secondary: "TAN", label: "Power" },
+  { id: "^", text: "y\u02e3", secondary: "TAN", label: "Power" },
   { id: "*", text: "\u00d7", secondary: "x!", label: "Multiply", type: "op" },
   { id: "LN", text: "LN", secondary: "e\u02e3", label: "Natural logarithm" },
   { id: "7", text: "7", secondary: "DATA", type: "num" },
@@ -100,6 +100,73 @@ const keyboard: Record<string, string> = {
   f: "FV",
   c: "CPT",
 };
+
+// Local SVG segments stay crisp when the panel scales and need no font download.
+// The original display string is retained separately for assistive technology.
+const segments: Record<string, string> = {
+  a: "3,1 15,1 17,3 15,5 3,5 1,3",
+  b: "16,5 18,3 18,15 16,17 14,15 14,7",
+  c: "16,19 18,17 18,29 16,31 14,29 14,21",
+  d: "3,29 15,29 17,31 15,33 3,33 1,31",
+  e: "2,19 4,21 4,29 2,31 0,29 0,17",
+  f: "2,5 4,7 4,15 2,17 0,15 0,3",
+  g: "3,15 15,15 17,17 15,19 3,19 1,17",
+};
+const digitSegments: Record<string, string> = {
+  "0": "abcdef",
+  "1": "bc",
+  "2": "abdeg",
+  "3": "abcdg",
+  "4": "bcfg",
+  "5": "acdfg",
+  "6": "acdefg",
+  "7": "abc",
+  "8": "abcdefg",
+  "9": "abcdfg",
+  "-": "g",
+  e: "adefg",
+};
+
+function CalculatorLCD({ value }: { value: string }) {
+  let cursor = 0;
+  const characters = Array.from(value, (character) => {
+    const x = cursor;
+    cursor += /[.,]/.test(character) ? 7 : 23;
+    return { character, x };
+  });
+  const width = Math.max(246, cursor + 8);
+  return (
+    <svg className="ba2-lcd" viewBox={`0 0 ${width} 38`} aria-hidden="true" focusable="false">
+      {/^[\d.,e+\- ]*$/.test(value) ? (
+        <g transform={`translate(${width - cursor - 2}, 2) skewX(-5)`}>
+          {characters.map(({ character, x }, index) => (
+            <g key={index} transform={`translate(${x}, 0)`}>
+              {character === "." || character === "," ? (
+                <path d={character === "." ? "M1 29h4v4H1z" : "M1 29h4v4l-3 3H0l2-3H1z"} />
+              ) : character === "+" ? (
+                <path d="M2 15h14v4H2z M7 10h4v14H7z" />
+              ) : (
+                Object.entries(segments).map(([id, points]) => (
+                  <polygon
+                    key={id}
+                    points={points}
+                    className={
+                      digitSegments[character]?.includes(id) ? undefined : "ba2-lcd--unlit"
+                    }
+                  />
+                ))
+              )}
+            </g>
+          ))}
+        </g>
+      ) : (
+        <text x={width - 2} y="31" textAnchor="end">
+          {value}
+        </text>
+      )}
+    </svg>
+  );
+}
 
 export function BA2Plus({ onLog, startTime, tvmState, onStateChange, keyScope }: BA2PlusProps) {
   const [state, setState] = useState<CalculatorState>(() => {
@@ -166,48 +233,89 @@ export function BA2Plus({ onLog, startTime, tvmState, onStateChange, keyScope }:
   }, [keyScope, press]);
   return (
     <div className="ba2plus" ref={hostRef}>
-      <div className="ba2-brand">BA II PLUS - FINANCIAL CALCULATOR</div>
-      <div
-        className="ba2-screen"
-        role="status"
-        aria-label="Calculator display"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        <div className="ba2-annunciators">
-          <span>{state.powered ? state.label : ""}</span>
-          {state.powered && state.tvm.isBGN && <span>BGN</span>}
-          {state.second && <span>2ND</span>}
-          {state.compute && <span>CPT</span>}
-          {state.inverse && <span>INV</span>}
-          {state.hyperbolic && <span>HYP</span>}
-          {state.powered && !!state.tables.FORMAT.ANGLE && <span>RAD</span>}
+      <div className="ba2-case">
+        <div className="ba2-brand" aria-label="BA II Plus Professional-style calculator">
+          <div className="ba2-model">
+            BA II <i>Plus</i>
+          </div>
+          <div className="ba2-edition">PROFESSIONAL</div>
         </div>
-        <div className="ba2-digits">{calculatorDisplay(state)}</div>
+        <div className="ba2-display-bezel">
+          <div
+            className="ba2-screen"
+            role="status"
+            aria-label="Calculator display"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <div className="ba2-annunciators" aria-hidden="true">
+              {[
+                ["2nd", state.second],
+                ["INV", state.inverse],
+                ["HYP", state.hyperbolic],
+                ["COMPUTE", state.compute],
+                ["BGN", state.tvm.isBGN],
+                ["RAD", !!state.tables.FORMAT.ANGLE],
+              ].map(([text, on]) => (
+                <span key={String(text)} className={state.powered && on ? "is-on" : undefined}>
+                  {text}
+                </span>
+              ))}
+            </div>
+            <div className="ba2-display-line">
+              <span className="ba2-variable" aria-hidden="true">
+                {state.powered ? state.label : ""}
+              </span>
+              <CalculatorLCD value={calculatorDisplay(state)} />
+            </div>
+            <span className="ba2-display-accessible">
+              {state.powered ? state.label : ""} {state.powered && state.tvm.isBGN ? "BGN" : ""}{" "}
+              {state.second ? "2ND" : ""} {state.compute ? "CPT" : ""} {state.inverse ? "INV" : ""}{" "}
+              {state.hyperbolic ? "HYP" : ""}{" "}
+              {state.powered && state.tables.FORMAT.ANGLE ? "RAD" : ""}
+            </span>
+            <div className="ba2-digits">{calculatorDisplay(state)}</div>
+          </div>
+        </div>
+        <div className="ba2-maker" aria-hidden="true">
+          <svg className="ba2-maker-mark" viewBox="0 0 25 25" focusable="false">
+            <path d="m23.3,7.89v-2.98h-4.79l-.6,3.01h1.72l-.55,2.77h-1.72l-.6,3c-.05.2-.08.35-.1.49-.14.92.26.87,1.55.87l-.59,2.95h-2.25c-2.13,0-3.86-.02-3.41-2.2.07-.34.16-.67.22-.99l.8-4.12h-1.66l.55-2.77h1.65l.6-3.01h-1.55V.37h-5.73v9.23H0c.17,2.39,2.29,2.74,3.06,4.44.53,1.17,1,3.23,2.55,3.25,1.19.01,1.19-1.54,2.72-1.54s2.21,2.91,3.57,5.3c1.02,1.88,2.72,3.14,4.25,3.25,1.26.09,1.87-.34,1.87-.34-.34-.68-.51-1.37-.51-2.39,0-1.54,1.19-3.08,2.55-4.1,1.87-1.37,3.91-1.88,4.59-2.05v-4.79s-1.36-.73-1.36-2.74Zm-7.8,7.16l2.01-10.14h-2.32l-2.01,10.14h2.32Zm2.63-13.35h-2.32l-.44,2.24h2.32l.44-2.24Z" />
+          </svg>
+          Texas Instruments
+        </div>
+        <div className="ba2-keypad">
+          <div className="ba2-grid">
+            {keys.map((key) => (
+              <div
+                key={key.id}
+                className={`ba-key-group${key.id === "=" ? " ba-key-group--equals" : ""}${["2nd", "CF", "NPV", "IRR", "backspace"].includes(key.id) ? " ba-key-group--unlabelled" : ""}`}
+              >
+                <span className="ba-secondary" aria-hidden="true">
+                  {key.secondary || "\u00a0"}
+                </span>
+                <button
+                  type="button"
+                  className={`ba-key ${key.type ?? ""}${(key.id === "2nd" && state.second) || (key.id === "CPT" && state.compute) ? " active" : ""}`}
+                  data-calc-key={key.id}
+                  aria-label={key.label}
+                  aria-pressed={key.id === "2nd" ? state.second : undefined}
+                  title={
+                    key.secondary ? `${key.text} / 2ND ${key.secondary}` : (key.label ?? key.text)
+                  }
+                  disabled={!state.powered && key.id !== "power"}
+                  onClick={() => press(key.id)}
+                >
+                  {key.text}
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="ba2-footer" aria-hidden="true">
+            ADVANCED BUSINESS ANALYST
+          </div>
+        </div>
       </div>
       <div className="ba2-worksheet-status">{calculatorStatus(state)}</div>
-      <div className="ba2-grid">
-        {keys.map((key) => (
-          <div
-            key={key.id}
-            className={`ba-key-group${key.id === "=" ? " ba-key-group--equals" : ""}`}
-          >
-            <span className="ba-secondary">{key.secondary || "\u00a0"}</span>
-            <button
-              type="button"
-              className={`ba-key ${key.type ?? ""}${(key.id === "2nd" && state.second) || (key.id === "CPT" && state.compute) ? " active" : ""}`}
-              data-calc-key={key.id}
-              aria-label={key.label}
-              aria-pressed={key.id === "2nd" ? state.second : undefined}
-              title={key.secondary ? `${key.text} / 2ND ${key.secondary}` : (key.label ?? key.text)}
-              disabled={!state.powered && key.id !== "power"}
-              onClick={() => press(key.id)}
-            >
-              {key.text}
-            </button>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

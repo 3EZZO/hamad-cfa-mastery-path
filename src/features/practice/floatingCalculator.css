@@ -41,7 +41,7 @@
 .fcalc__icon:focus-visible, .fcalc__resize:focus-visible { outline: 2px solid var(--action, #1f4f8f); outline-offset: 1px; }
 .fcalc__body { flex: 1; min-height: 0; overflow: auto; }
 .fcalc__body:focus { outline: none; }
-.fcalc__body .ba2plus { max-width: none; margin: 0; border-radius: 0; box-shadow: none; }
+.fcalc__body .ba2plus { max-width: none; margin: 0; padding: 12px; }
 .fcalc__resize {
   position: absolute;
   right: 2px;
