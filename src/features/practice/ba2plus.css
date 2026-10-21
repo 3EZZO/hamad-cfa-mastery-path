@@ -1,197 +1,374 @@
+/* Hardware colours deliberately stay fixed across the app's light/dark themes. */
 .ba2plus,
 .ba2plus * {
   box-sizing: border-box;
 }
 
 .ba2plus {
-  background: #1a222c;
-  border-radius: var(--radius-lg);
-  padding: 24px;
   width: 100%;
-  max-width: 380px;
+  max-width: 352px;
+  min-width: 0;
   margin: 0 auto;
-  box-shadow:
-    var(--elev-2),
-    inset 0 1px 1px rgba(255, 255, 255, 0.1);
-  border: 1px solid #2a3b4c;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  font-family: var(--font-ui);
+  padding: 8px;
+  font-family: Arial, Helvetica, sans-serif;
   user-select: none;
+  color-scheme: only light;
+}
+
+.ba2-case {
+  position: relative;
+  isolation: isolate;
+  padding: 25px 24px 0;
+  overflow: hidden;
+  border: 1px solid #080909;
+  border-radius: 13px 13px 24px 24px / 11px 11px 20px 20px;
+  background: linear-gradient(
+    90deg,
+    #090a0a,
+    #333536 2%,
+    #181a1a 4%,
+    #171919 96%,
+    #373939 98%,
+    #090a0a
+  );
+  box-shadow:
+    0 14px 24px -12px rgb(0 0 0 / 65%),
+    0 3px 5px rgb(0 0 0 / 25%),
+    inset 0 2px 1px rgb(255 255 255 / 22%),
+    inset 0 -3px 2px #080909;
+}
+
+.ba2-case::before {
+  position: absolute;
+  z-index: -1;
+  inset: 3px 12px 5px;
+  content: "";
+  border: 1px solid rgb(180 185 181 / 14%);
+  border-radius: 3px 3px 16px 16px;
+  background: linear-gradient(110deg, rgb(255 255 255 / 2%), transparent 45%);
+  pointer-events: none;
 }
 
 .ba2-brand {
-  color: #a0aec0;
-  font-size: var(--text-micro);
-  letter-spacing: var(--tracking-label);
-  font-weight: var(--weight-semibold);
-  text-align: right;
-  padding-right: 4px;
+  width: 76%;
+  margin: 0 auto 21px;
+  color: #f3eee1;
+  text-align: center;
+}
+
+.ba2-model {
+  padding-bottom: 2px;
+  border-bottom: 1px solid #a7a49c;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -1.4px;
+  text-shadow: 0 1px 1px #000;
+}
+
+.ba2-model i {
+  font-weight: 400;
+}
+
+.ba2-edition {
+  padding-top: 6px;
+  color: #f04c48;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 3.5px;
+  text-indent: 3.5px;
+}
+
+.ba2-display-bezel {
+  padding: 3px;
+  border: 1px solid #030404;
+  background: #101212;
+  box-shadow:
+    0 1px 0 #414242,
+    inset 0 2px 3px #000;
 }
 
 .ba2-screen {
-  color-scheme: only light;
-  background: #c3cfd9;
-  border-radius: var(--radius-md);
-  padding: 12px;
-  border: 4px solid #0f161c;
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  min-height: 80px;
-  justify-content: space-between;
-}
-
-.ba2-worksheet-status {
-  min-height: 34px;
-  color: #c3cfd9;
-  font-size: var(--text-micro);
-  font-variant-numeric: tabular-nums;
-  line-height: var(--leading-ui);
-  text-align: right;
+  position: relative;
+  min-width: 0;
+  padding: 6px 6px 5px;
+  border: 1px solid #65705c;
+  background: linear-gradient(155deg, #b4bda5, #a1ac95 75%, #aeb69f);
+  color: #20291c;
+  box-shadow: inset 1px 2px 4px rgb(30 40 20 / 30%);
 }
 
 .ba2-annunciators {
   display: flex;
-  gap: 8px;
-  min-height: 14px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  min-height: 12px;
+  white-space: nowrap;
 }
 
 .ba2-annunciators span {
-  font-size: var(--text-micro);
-  font-weight: var(--weight-bold);
-  color: #1a222c;
-  letter-spacing: var(--tracking-display);
+  opacity: 0.12;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 12px;
 }
 
-.ba2-digits {
-  font-family: var(--font-calculator);
-  font-size: var(--text-metric);
-  font-weight: var(--weight-semibold);
-  color: #000;
-  text-align: right;
-  letter-spacing: var(--tracking-tight);
-  min-height: 1.2em;
-  overflow-wrap: anywhere;
+.ba2-annunciators .is-on {
+  opacity: 1;
+}
+
+.ba2-display-line {
+  display: flex;
+  align-items: center;
+  min-height: 47px;
+}
+
+.ba2-variable {
+  flex: none;
+  max-width: 29%;
+  overflow: hidden;
+  font-family: var(--font-calculator, monospace);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ba2-variable:not(:empty) {
+  padding-right: 5px;
+}
+
+.ba2-lcd {
+  display: block;
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  height: 47px;
+  fill: currentColor;
+}
+
+.ba2-lcd--unlit {
+  opacity: 0.045;
+}
+
+.ba2-lcd text {
+  font-family: var(--font-calculator, monospace);
+  font-size: 29px;
+  letter-spacing: -1px;
+}
+
+/* One live region reads the original value and modes, not decorative segments. */
+.ba2-digits,
+.ba2-display-accessible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ba2-maker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 0 14px;
+  color: #e9e5d8;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10px;
+  font-variant: small-caps;
+}
+
+.ba2-maker-mark {
+  width: 19px;
+  height: 19px;
+  fill: #ed3935;
+}
+
+.ba2-keypad {
+  margin: 0 -9px;
+  padding: 12px 6px 0;
+  border-top: 1px solid #303232;
+  background: linear-gradient(180deg, rgb(0 0 0 / 5%), transparent 20%);
 }
 
 .ba2-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px 7px;
 }
 
 .ba-key-group {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  align-items: stretch;
+  gap: 3px;
+}
+
+.ba-key-group--unlabelled {
+  padding-top: 5px;
+}
+
+.ba-key-group--unlabelled .ba-secondary {
+  display: none;
 }
 
 .ba-key-group--equals {
   grid-row: span 2;
 }
+
 .ba-key-group--equals .ba-key {
   flex: 1;
 }
-.ba-key:focus-visible {
-  outline: 2px solid #eab355;
-  outline-offset: 2px;
-}
 
 .ba-secondary {
-  font-size: var(--text-micro);
-  color: #eab355;
-  font-weight: var(--weight-semibold);
+  height: 10px;
+  color: #c3c0b4;
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 10px;
   text-align: center;
-  height: 12px;
-}
-
-.ba-secondary--unavailable {
-  color: #8493a3;
+  white-space: nowrap;
 }
 
 .ba-key {
-  width: 100%;
-  height: 40px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: #2a3b4c;
-  color: #fff;
-  font-size: var(--text-caption);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-  transition: all 0.1s;
-  box-shadow: var(--elev-2);
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.ba-key--second {
-  background: #eab355;
-  color: #1a222c;
-}
-
-.ba-key:disabled {
-  background: #202d39;
-  color: #788797;
-  box-shadow: var(--elev-1);
-  cursor: not-allowed;
-  opacity: 0.72;
-}
-
-.ba-key:disabled:active {
-  transform: none;
-  box-shadow: var(--elev-1);
-}
-
-.ba-key:active,
-.ba-key.active {
-  transform: translateY(4px);
-  box-shadow: var(--elev-1);
+  width: 100%;
+  height: 27px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 1px;
+  border: 1px solid #060707;
+  border-radius: 8px;
+  background: linear-gradient(#363938, #202322 46%, #1a1d1c);
+  color: #f3efe1;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+  text-shadow: 0 1px #000;
+  box-shadow:
+    0 2px 1px #070808,
+    0 0 0 1px #373a37,
+    inset 0 1px 1px rgb(255 255 255 / 24%);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 70ms ease,
+    box-shadow 70ms ease,
+    background 70ms ease;
 }
 
 .ba-key.tvm {
-  background: #3b5065;
-  color: #fff;
+  border-color: #8e9187;
+  box-shadow:
+    0 2px 1px #070808,
+    inset 0 0 0 1px #090b0a;
 }
 
 .ba-key.num {
-  background: #e2e8f0;
-  color: #1a222c;
-  font-size: var(--text-body);
+  font-size: 18px;
 }
 
 .ba-key.op {
-  background: #4a5568;
+  font-size: 20px;
 }
 
-@media (max-width: 400px) {
-  .ba2plus {
-    padding: 16px;
-    gap: 12px;
-  }
-  .ba2-grid {
-    gap: 6px;
-  }
-  .ba-key {
-    height: 36px;
-    font-size: var(--text-label);
-  }
-  .ba-secondary {
-    font-size: var(--text-micro);
-  }
-  .ba2-worksheet-status {
-    font-size: var(--text-micro);
+.ba-key[data-calc-key="ENTER"],
+.ba-key[data-calc-key="power"] {
+  font-size: 10px;
+}
+
+.ba-key[data-calc-key="up"],
+.ba-key[data-calc-key="down"],
+.ba-key[data-calc-key="backspace"] {
+  font-size: 19px;
+}
+
+.ba-key[data-calc-key="sign"] {
+  font-size: 14px;
+}
+
+.ba-key[data-calc-key="."] {
+  font-weight: 700;
+}
+
+.ba-key:focus-visible {
+  outline: 2px solid #f0c879;
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .ba-key:hover:enabled {
+    background: linear-gradient(#464a47, #2d312e);
   }
 }
 
-/* Finger-sized keys on touch devices (desktop keeps the compact 40px key). */
+.ba-key:active:enabled,
+.ba-key.active {
+  transform: translateY(2px);
+  background: #171a18;
+  box-shadow:
+    0 0 0 1px #4e514c,
+    inset 0 2px 3px #000;
+}
+
+.ba-key:disabled {
+  color: #c5c2b6;
+  cursor: default;
+  opacity: 1;
+}
+
+.ba2-footer {
+  padding: 19px 0 22px;
+  color: #bdbbae;
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.ba2-worksheet-status {
+  min-height: 34px;
+  padding: 12px 5px 4px;
+  color: var(--muted, #616964);
+  font-family: var(--font-ui, sans-serif);
+  font-size: var(--text-micro, 11px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* Keep the hardware face while providing larger actual buttons for touch. */
 @media (pointer: coarse) {
   .ba-key {
     height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ba-key {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .ba2-lcd {
+    color: CanvasText;
+  }
+  .ba2-lcd--unlit {
+    visibility: hidden;
+  }
+  .ba-key:focus-visible {
+    outline-color: Highlight;
   }
 }
