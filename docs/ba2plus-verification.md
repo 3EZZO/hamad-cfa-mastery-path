@@ -132,6 +132,95 @@ touch hardware ergonomics, and screen-reader speech on a real assistive device.
 The source-contract tests cover touch styling; narrow browser viewports do not
 emulate a physical touch device. Local verification does not deploy the update.
 
+## CSS hardware realism refinement — October 21, 2026
+
+The face now uses a measured 250 × 485 coordinate system. A single container
+unit scales the casing, faceplate, legends, LCD and keypad together. The desktop
+height/width ratio is 1.94, including inside the existing zoomed floating panel.
+CSS adds separate key sockets, raised top facets and sidewalls, neutral plastic
+grain, restrained lighting and a recessed glass overlay. Local SVG numerals use
+taller segments with space for comma tails. Photographs are comparison references
+only; the shipped calculator face has no photographic background or new assets.
+
+Key feedback lasts 90ms for pointer and keyboard actions, with timer cleanup on
+unmount. Logical 2ND/CPT modes remain in the display after the physical key rises.
+The feedback does not change calculator values or consume the 2ND prefix. A new
+regression test checks release while the second-function mode remains selected.
+Reduced-motion preferences disable movement and transitions. Touch pointers use
+44px-high keys and a wider keypad, with a taller body to avoid overlap; that touch
+profile deliberately differs from the desktop proportions.
+
+**Performed by Codex:** 23 focused component/theme/touch-contract tests, targeted
+ESLint and Prettier, TypeScript, the full suite (856 tests in 137 files), and the
+Pages/PWA/privacy build checks passed. Native Chrome with isolated synthetic
+fixtures and app styles verified arithmetic, backspace, keyboard scoping/focus,
+momentary keyboard feedback, floating movement/resizing and CF0=42 after reopen.
+Measured floating-panel face ratios remained approximately 1.94 before/after
+resizing. Error 1 text, blank power-off output, negative scientific output,
+European 1.234,56, date 12-31-1990 and worksheet labels rendered. The European
+value's ink bounds were inside its SVG viewport. Hardware colours stayed fixed
+between light and dark themes. A comparison screenshot shows the CSS face beside
+TI's reference photo at the same size.
+
+Same-origin 320- and 390-pixel iframe viewports exercised the production touch
+rules with their media condition enabled in the ignored verification fixture.
+Keys measured 44px high, no horizontal overflow occurred, the compact panel
+scrolled, and lower-row calculations displayed 42.00 and 72.00 respectively.
+This checks the touch layout with a desktop pointer, not physical touch input.
+
+**Reported by owner:** the owner accepted the previous Professional-style
+appearance and requested this more realistic refinement in one PR. Acceptance
+of this final refinement has not yet been reported.
+
+**Static reasoning:** the calculation engine, worksheet behaviour, workbook
+storage and logging payloads are unchanged. Only presentation feedback adds a
+short-lived timer. Texture and shadows are static; key movement animates only
+transforms. There are no new packages, persistence changes or runtime asset calls.
+
+**Still unverified:** exact photographic equivalence, physical touch ergonomics,
+screen-reader speech and Safari/Firefox rendering. The browser checks used
+current Chrome with container-relative CSS units; the older-browser base-size
+fallback was not exercised. Actual printed glyph shapes can vary with system
+font rendering. The owner merges manually; this record is not deployment proof.
+
+## Movable calculator in Practice - October 21, 2026
+
+Practice now uses the same `FloatingCalculator` as module tests and PDF teaching.
+On desktop, drag its title bar to move it and its corner to resize it; the two
+handles also support arrow keys. The existing per-device geometry storage uses
+a separate `practice` key, leaving module-test and teaching placements independent.
+The former modal drawer/backdrop is removed, so questions remain interactive.
+Calculator keyboard shortcuts are scoped to the panel; Escape inside closes
+without logging a clear, and keys on question controls do not enter calculations.
+Close receives initial focus after the panel's hidden placement measurement and
+returns focus to the current calculator toggle. Opening a set with the tool
+already open retains those behaviours. Narrow screens retain the shared scrollable
+bottom panel rather than free movement/resizing.
+
+**Performed by Codex:** 26 focused practice/floating tests passed, including three
+new regressions for question interaction/keyboard isolation, persisted geometry,
+and hub-to-set focus/Escape. Targeted ESLint, TypeScript, the full test suite
+(859 tests in 137 files), and the Pages/PWA/private-content build checks passed.
+Native Chrome using the actual PracticeCoach and synthetic data adapters verified
+pointer dragging/resizing, arrow-key controls, 12 + 3 = 15, answer selection and
+submission while open, outside-key isolation, Escape/Enter closing, focus return,
+and the saved size/position on reopen. A 390 x 844 iframe exercised the real
+compact breakpoint: no horizontal overflow, internal calculator scrolling and
+Enter on Close worked. This is a desktop-browser layout check, not physical touch.
+
+**Reported by owner:** the calculator already moves/resizes in module tests and
+PDF teaching; the owner requested the same desktop controls in Practice. No
+owner acceptance of this added integration has yet been reported.
+
+**Static reasoning:** Practice reuses the existing panel and geometry model;
+calculator calculations, worksheets and answer-log payloads are unchanged. The
+existing role, rehearsal and offline/cloud persistence tests remain passing.
+The shared panel gains an optional Close ref and a compact Close Enter guard.
+
+**Still unverified:** physical touch hardware, real screen-reader speech,
+Safari/Firefox, and production use after manual merge. Synthetic browser adapters
+prevented reads/writes of real student records during verification.
+
 ## References and repeatable checks
 
 - [TI BA II Plus guidebook](https://education.ti.com/html/eguides/financials/pdfs/EN/BA-II-PLUS_EN.pdf): worksheet chapters and formula appendix.

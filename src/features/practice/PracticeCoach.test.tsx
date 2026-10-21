@@ -438,6 +438,7 @@ class ElementModel {
   style = { display: "block", visibility: "visible" };
   tabIndex = 0;
   isConnected = true;
+  offsetHeight = 650;
   constructor(public tagName = "DIV") {}
   contains(node: unknown): boolean { return node === this || this.children.some(child => child.contains(node)); }
   hasAttribute(name: string) { return name in this.attrs; }
@@ -458,11 +459,11 @@ const listen = (store: Map<string, Set<Listener>>) => ({
   },
   removeEventListener: (name: string, fn: Listener) => store.get(name)?.delete(fn),
 });
-const doc = { activeElement: null as ElementModel | null, ...listen(documentListeners) };
+const doc = { activeElement: null as ElementModel | null, documentElement: { classList: { add: vi.fn(), remove: vi.fn() } }, ...listen(documentListeners) };
 
 /**
  * Mirrors browser propagation order for the two listeners involved: the
- * dialog hook (document, capture) runs first; the calculator's window
+ * panel/dialog handler (document, capture) runs first; the calculator's window
  * listener runs only if propagation was not stopped.
  */
 function dispatchKey(key: string, target: ElementModel | null = doc.activeElement) {
@@ -485,16 +486,25 @@ function dispatchKey(key: string, target: ElementModel | null = doc.activeElemen
 describe("UI/UX behaviors", () => {
   let tree: ReactTestRenderer | undefined;
   let nodes: { toggle?: ElementModel; close?: ElementModel; dialog?: ElementModel };
+  let panelNodes: ElementModel[];
+  let storage: Record<string, string>;
 
   beforeEach(() => {
     documentListeners.clear();
     windowListeners.clear();
     doc.activeElement = null;
     nodes = {};
+    panelNodes = [];
+    storage = {};
+    vi.stubGlobal("localStorage", { getItem: (key: string) => storage[key] ?? null, setItem: (key: string, value: string) => { storage[key] = value; } });
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.stubGlobal("HTMLElement", ElementModel);
     vi.stubGlobal("document", doc);
     vi.stubGlobal("window", {
+      innerWidth: 1280,
+      innerHeight: 900,
+      requestAnimationFrame: (callback: () => void) => { callback(); return 1; },
+      cancelAnimationFrame: vi.fn(),
       ...listen(windowListeners),
       getComputedStyle: (node: ElementModel) => node.style,
     });
@@ -526,7 +536,10 @@ describe("UI/UX behaviors", () => {
             const node = new ElementModel(String(element.type).toUpperCase());
             const props = element.props as Record<string, unknown>;
             if (props["aria-label"] === "Close calculator") nodes.close = node;
+            if (String(props.className).includes("practice-calculator-toggle")) nodes.toggle = node;
             if (props.role === "dialog") nodes.dialog = node;
+            if (props.className === "practice-calculator-host") node.children = [...panelNodes];
+            panelNodes.push(node);
             return node;
           },
         }
@@ -537,15 +550,13 @@ describe("UI/UX behaviors", () => {
     return tree!;
   }
 
-  const hasCalc = () => tree!.root.findAllByProps({ "aria-label": "BA II Plus Calculator" }).length > 0;
+  const hasCalc = () => tree!.root.findAllByProps({ "aria-label": "BA II Plus calculator" }).length > 0;
   const closeButton = () => tree!.root.findAllByType("button").find(b => b.props["aria-label"] === "Close calculator")!;
 
   async function openCalculator() {
     await act(async () => button(tree!, "Quick 5")!.props.onClick());
     const toggle = tree!.root.findAllByType("button").find(b => b.props.className?.includes("practice-calculator-toggle"))!;
-    // The toggle carries no ref, so model the element that had focus at open.
-    nodes.toggle = new ElementModel("BUTTON");
-    nodes.toggle.focus();
+    nodes.toggle!.focus();
     await act(async () => toggle.props.onClick());
     expect(hasCalc()).toBe(true);
   }
@@ -605,7 +616,7 @@ describe("UI/UX behaviors", () => {
     expect(doc.activeElement).toBe(nodes.toggle);
   });
 
-  it("opens the calculator drawer from the hub for any role and refuses run intents for the tutor", async () => {
+  it("opens the floating calculator from the hub for any role and refuses run intents for the tutor", async () => {
     const onIntentHandled = vi.fn();
     const mount = (intent: string) => (
       <PracticeCoach uid="tutor-uid" role="tutor" manualLog={null} onComplete={vi.fn()} notify={vi.fn()} intent={intent} onIntentHandled={onIntentHandled} />
@@ -625,7 +636,7 @@ describe("UI/UX behaviors", () => {
     expect(hasCalc()).toBe(false);
   });
 
-  it("closes via Escape at the dialog level without logging a calculator clear", async () => {
+  it("closes via Escape inside the panel without logging a calculator clear", async () => {
     await renderStudent();
     await openCalculator();
 
@@ -644,12 +655,12 @@ describe("UI/UX behaviors", () => {
     expect(keys).toEqual(["7"]);
   });
 
-  it("keeps the calculator's digit-editing shortcut while the drawer is open", async () => {
+  it("keeps the calculator's digit-editing shortcut while the panel is open", async () => {
     await renderStudent();
     await openCalculator();
     await act(async () => button(tree!, "7")!.props.onClick());
     await act(async () => button(tree!, "8")!.props.onClick());
-    // Backspace is not a dialog key, so it reaches the calculator's listener.
+    // Backspace reaches the calculator's scoped listener.
     await act(async () => { dispatchKey("Backspace"); });
     expect(hasCalc()).toBe(true);
 
@@ -676,9 +687,8 @@ describe("UI/UX behaviors", () => {
     await renderStudent();
     await openCalculator();
     // The guard lives on the Close button itself: Enter there never reaches
-    // the calculator's window listener; Enter anywhere else in the drawer does.
-    const dialog = tree!.root.find(node => typeof node.type === "string" && node.props.role === "dialog");
-    expect(dialog.props.onKeyDown).toBeUndefined();
+    // the calculator's window listener; Enter on a calculator key still does.
+    expect(tree!.root.findAllByProps({ "aria-modal": "true" })).toHaveLength(0);
     const close = closeButton();
     const onClose = { key: "Enter", stopPropagation: vi.fn() };
     close.props.onKeyDown(onClose);
@@ -686,6 +696,54 @@ describe("UI/UX behaviors", () => {
     const otherKey = { key: "7", stopPropagation: vi.fn() };
     close.props.onKeyDown(otherKey);
     expect(otherKey.stopPropagation).not.toHaveBeenCalled();
+  });
+
+  it("leaves question controls interactive and ignores calculator shortcuts outside the panel", async () => {
+    await renderStudent();
+    await openCalculator();
+    const outside = new ElementModel("BUTTON");
+    outside.focus();
+    await act(async () => { dispatchKey("9", outside); dispatchKey("Escape", outside); });
+    expect(hasCalc()).toBe(true);
+    expect(doc.activeElement).toBe(outside);
+    await act(async () => tree!.root.findAllByProps({ role: "radio" })[0].props.onClick());
+    await act(async () => button(tree!, "Submit answer")!.props.onClick());
+    expect(hasCalc()).toBe(true);
+    const savedRun = harness.saveRun.mock.calls.at(-1)?.[0] as PracticeRun;
+    expect(savedRun.answers[0].calculatorLog).toEqual([]);
+    await act(async () => closeButton().props.onClick());
+    expect(doc.activeElement).toBe(outside);
+  });
+
+  it("moves and resizes in practice and restores that geometry after reopening", async () => {
+    await renderStudent();
+    await openCalculator();
+    const panel = () => tree!.root.findAllByType("section").find(node => node.props.className?.includes("fcalc"))!;
+    const original = { ...panel().props.style };
+    const move = tree!.root.findByProps({ "aria-label": "Move calculator: drag, or use the arrow keys" });
+    await act(async () => move.props.onKeyDown({ key: "ArrowLeft", preventDefault() {}, stopPropagation() {} }));
+    const resize = tree!.root.findByProps({ "aria-label": "Resize calculator: drag, or use the arrow keys" });
+    await act(async () => resize.props.onKeyDown({ key: "ArrowRight", preventDefault() {}, stopPropagation() {} }));
+    expect(panel().props.style.left).toBe(original.left - 24);
+    expect(panel().props.style.width).toBe(original.width + 20);
+    const saved = { ...panel().props.style };
+    expect(JSON.parse(storage["hamad-floating-calculator:practice"]).width).toBe(saved.width);
+    expect(storage["hamad-floating-calculator:module-tests"]).toBeUndefined();
+    await act(async () => closeButton().props.onClick());
+    await act(async () => button(tree!, "BA II Plus")!.props.onClick());
+    expect(panel().props.style).toEqual(saved);
+  });
+
+  it("keeps Escape and focus restoration working when a set starts with the calculator open", async () => {
+    await renderStudent();
+    await act(async () => button(tree!, "BA II Plus")!.props.onClick());
+    expect(hasCalc()).toBe(true);
+    await act(async () => button(tree!, "Quick 5")!.props.onClick());
+    expect(hasCalc()).toBe(true);
+    expect(doc.activeElement).toBe(nodes.close);
+    await act(async () => { dispatchKey("Escape"); });
+    expect(hasCalc()).toBe(false);
+    expect(doc.activeElement).toBe(nodes.toggle);
   });
 
   it("updates saved timestamp only on explicit save", async () => {

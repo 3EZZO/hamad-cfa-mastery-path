@@ -41,6 +41,7 @@ import {
   updatePracticeQuestionState,
 } from "../../lib/practiceEngine";
 import { BA2Plus, type KeystrokeLog } from "./BA2Plus";
+import { FloatingCalculator } from "./FloatingCalculator";
 import { defaultTVMState } from "../../lib/calculator";
 import { analyzeKeystrokes } from "../../lib/calculatorDiagnostics";
 import {
@@ -183,8 +184,14 @@ export function PracticeCoach({
   const [calculatorState, setCalculatorState] = useState(defaultTVMState());
   const answerStartedAt = useRef(Date.now());
   const calculatorCloseRef = useRef<HTMLButtonElement>(null);
-  const calculatorDialogRef = useRef<HTMLDivElement>(null);
-  const closeCalculator = useCallback(() => setShowCalculator(false), []);
+  const calculatorPanelRef = useRef<HTMLDivElement>(null);
+  const calculatorToggleRef = useRef<HTMLButtonElement>(null);
+  const closeCalculator = useCallback(() => {
+    // Restore before unmounting the panel, while its focused control exists.
+    const trigger = calculatorToggleRef.current;
+    if (trigger?.isConnected && calculatorPanelRef.current?.contains(document.activeElement)) trigger.focus();
+    setShowCalculator(false);
+  }, []);
 
   const questions = useMemo(() => banks.flatMap(bank => bank.questions), [banks]);
   const rehearsalBanks = useMemo(
@@ -378,9 +385,27 @@ export function PracticeCoach({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the question, not on the answers array.
   }, [activeRun?.currentIndex, currentQuestion?.id]);
 
-  // Escape is intercepted in the document capture phase so it closes the
-  // drawer without reaching the calculator's own window listener.
-  useDialogFocus(showCalculator, calculatorDialogRef, calculatorCloseRef, closeCalculator);
+  // A floating tool leaves the question interactive. Scope Escape to the
+  // panel and intercept it before the calculator can log it as a clear.
+  useEffect(() => {
+    if (!showCalculator) return;
+    const panel = calculatorPanelRef.current;
+    if (!panel) return;
+    // The shared panel measures its first placement while hidden. Focus once
+    // that layout has been committed, so browsers can focus the Close button.
+    const focusFrame = window.requestAnimationFrame(() => calculatorCloseRef.current?.focus());
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !panel.contains(event.target as Node)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeCalculator();
+    };
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [showCalculator, closeCalculator, view]);
 
   const begin = async (
     mode: PracticeRunMode,
@@ -653,46 +678,26 @@ export function PracticeCoach({
 
   const completedAnswers = lastCompletedRun?.answers ?? [];
   const resultCorrect = completedAnswers.filter(answer => answer.correct).length;
-  // The BA II Plus drawer serves the player and the hub; keystrokes are
+  // The BA II Plus panel serves the player and the hub; keystrokes are
   // logged against an answer only while a question is on screen.
   const inRun = view === "run" && Boolean(activeRun && currentQuestion);
-  const calculatorDrawer = showCalculator && (
-    <>
-      <div
-        className="practice-calculator-backdrop"
-        role="presentation"
-        onClick={closeCalculator}
-      />
-      <div
-        ref={calculatorDialogRef}
-        tabIndex={-1}
-        className="practice-calculator-wrapper"
-        role="dialog"
-        aria-modal="true"
-        aria-label="BA II Plus Calculator"
+  const calculatorPanel = showCalculator && (
+    <div ref={calculatorPanelRef} className="practice-calculator-host">
+      <FloatingCalculator
+        storageKey="practice"
+        className="practice-floating-calc"
+        closeRef={calculatorCloseRef}
+        onClose={closeCalculator}
       >
-        <div className="practice-calculator-header">
-          <h3>Calculator</h3>
-          <button
-            type="button"
-            ref={calculatorCloseRef}
-            onClick={closeCalculator}
-            aria-label="Close calculator"
-            // Let Enter activate this button natively instead of being
-            // consumed as "=" by the calculator's window listener.
-            onKeyDown={event => { if (event.key === "Enter") event.stopPropagation(); }}
-          >
-            <X size={20} />
-          </button>
-        </div>
         <BA2Plus
           onLog={inRun ? (log) => setCalculatorLog(prev => [...prev, log]) : () => {}}
           startTime={answerStartedAt.current}
           tvmState={calculatorState}
           onStateChange={setCalculatorState}
+          keyScope={calculatorPanelRef}
         />
-      </div>
-    </>
+      </FloatingCalculator>
+    </div>
   );
   if ((role === "student" || isRehearsal) && view === "run" && activeRun && currentQuestion) {
     const progress = ((activeRun.currentIndex + (submitted ? 1 : 0)) / activeRun.questionIds.length) * 100;
@@ -718,6 +723,7 @@ export function PracticeCoach({
             <button
               type="button"
               className={`practice-calculator-toggle${showCalculator ? " is-active" : ""}`}
+              ref={calculatorToggleRef}
               aria-pressed={showCalculator}
               onClick={() => setShowCalculator(!showCalculator)}
             >
@@ -804,7 +810,7 @@ export function PracticeCoach({
             </section>
           )}
         </main>
-          {calculatorDrawer}
+          {calculatorPanel}
         </div>
         <footer className="practice-player__dock">
           {!submitted ? (
@@ -950,6 +956,7 @@ export function PracticeCoach({
           )}
           <button
             className={`practice-calculator-toggle practice-calculator-toggle--hub${showCalculator ? " is-active" : ""}`}
+            ref={calculatorToggleRef}
             type="button"
             aria-pressed={showCalculator}
             onClick={() => setShowCalculator(value => !value)}
@@ -960,7 +967,7 @@ export function PracticeCoach({
           {isRehearsal ? <RehearsalStatus /> : <PracticeSync state={sync} />}
         </div>
       </section>
-      {calculatorDrawer}
+      {calculatorPanel}
 
       {(role === "student" || isRehearsal) && activeRun && (
         <button className="practice-resume" type="button" onClick={resume}>
@@ -1051,7 +1058,7 @@ function RehearsalExitDialog({
 }) {
   const dialogRef = useRef<HTMLElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  // Same contract as the calculator drawer: focus trapped, Escape cancels
+  // Modal exit confirmation: focus trapped, Escape cancels
   // wherever focus is, and "Exit rehearsal" regains focus on close.
   useDialogFocus(true, dialogRef, cancelRef, onCancel);
   return (

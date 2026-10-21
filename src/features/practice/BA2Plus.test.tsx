@@ -172,6 +172,27 @@ describe("BA II Plus worksheet controls", () => {
     pressText(root, "7");
     expect(displayValue(root)).toBe("0.00");
   });
+  it("releases the physical key while keeping the selected second-function mode", () => {
+    vi.useFakeTimers();
+    const root = renderCalculator();
+    pressText(root, "2ND");
+    const secondKey = () => root.findByProps({ "data-calc-key": "2nd" });
+    expect(secondKey().props.className).toContain("is-pressed");
+    expect(secondKey().props["aria-pressed"]).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(90);
+    });
+    expect(secondKey().props.className).not.toContain("is-pressed");
+    expect(secondKey().props["aria-pressed"]).toBe(true);
+
+    // Releasing the visual key must not consume the financial function prefix.
+    pressText(root, "I/Y");
+    expect(displayValue(root)).toBe("1.00");
+    expect(root.findByProps({ className: "ba2-worksheet-status" }).children.join("")).toContain(
+      "P/Y",
+    );
+  });
   it("keeps cash-flow data after closing and reopening, with separate hosts isolated", () => {
     const setHostState = vi.fn();
     const props = {

@@ -31,13 +31,15 @@ function useCompact(): boolean {
  * whole, so it stays legible at any size. Position and size are remembered on
  * this device per `storageKey`. On narrow screens it is a plain bottom panel.
  */
-export function FloatingCalculator({ storageKey, title = "BA II Plus", onClose, children, bodyRef, className = "" }: {
+export function FloatingCalculator({ storageKey, title = "BA II Plus", onClose, children, bodyRef, closeRef, className = "" }: {
   storageKey: string;
   title?: string;
   onClose: () => void;
   children: ReactNode;
   /** Receives the calculator body, e.g. to scope its keyboard input. */
   bodyRef?: RefObject<HTMLDivElement | null>;
+  /** Optional initial focus target for the surrounding workspace. */
+  closeRef?: RefObject<HTMLButtonElement | null>;
   /** Extra class, e.g. to set --fcalc-z for the surrounding layers. */
   className?: string;
 }) {
@@ -125,7 +127,8 @@ export function FloatingCalculator({ storageKey, title = "BA II Plus", onClose, 
       <section className={`fcalc fcalc--compact ${className}`} aria-label={`${title} calculator`}>
         <div className="fcalc__bar">
           <strong>{title}</strong>
-          <button type="button" className="fcalc__icon" aria-label="Close calculator" onClick={onClose}><X size={18} aria-hidden="true" /></button>
+          <button type="button" ref={closeRef} className="fcalc__icon" aria-label="Close calculator" onClick={onClose}
+            onKeyDown={event => { if (event.key === "Enter") event.stopPropagation(); }}><X size={18} aria-hidden="true" /></button>
         </div>
         <div className="fcalc__body" ref={bodyRef} tabIndex={-1}>{children}</div>
       </section>
@@ -149,7 +152,7 @@ export function FloatingCalculator({ storageKey, title = "BA II Plus", onClose, 
           <GripHorizontal size={18} aria-hidden="true" />
         </button>
         <strong>{title}</strong>
-        <button type="button" className="fcalc__icon" aria-label="Close calculator" onClick={onClose}
+        <button type="button" ref={closeRef} className="fcalc__icon" aria-label="Close calculator" onClick={onClose}
           // Enter closes here instead of reaching the calculator as "=".
           onKeyDown={event => { if (event.key === "Enter") event.stopPropagation(); }}>
           <X size={18} aria-hidden="true" />
