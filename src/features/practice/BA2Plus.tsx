@@ -105,12 +105,12 @@ const keyboard: Record<string, string> = {
 // The original display string is retained separately for assistive technology.
 const segments: Record<string, string> = {
   a: "3,1 15,1 17,3 15,5 3,5 1,3",
-  b: "16,5 18,3 18,15 16,17 14,15 14,7",
-  c: "16,19 18,17 18,29 16,31 14,29 14,21",
-  d: "3,29 15,29 17,31 15,33 3,33 1,31",
-  e: "2,19 4,21 4,29 2,31 0,29 0,17",
-  f: "2,5 4,7 4,15 2,17 0,15 0,3",
-  g: "3,15 15,15 17,17 15,19 3,19 1,17",
+  b: "16,5 18,3 18,20 16,22 14,20 14,7",
+  c: "16,25 18,23 18,40 16,42 14,40 14,27",
+  d: "3,40 15,40 17,42 15,44 3,44 1,42",
+  e: "2,25 4,27 4,40 2,42 0,40 0,23",
+  f: "2,5 4,7 4,20 2,22 0,20 0,3",
+  g: "3,20 15,20 17,22 15,24 3,24 1,22",
 };
 const digitSegments: Record<string, string> = {
   "0": "abcdef",
@@ -136,15 +136,15 @@ function CalculatorLCD({ value }: { value: string }) {
   });
   const width = Math.max(246, cursor + 8);
   return (
-    <svg className="ba2-lcd" viewBox={`0 0 ${width} 38`} aria-hidden="true" focusable="false">
+    <svg className="ba2-lcd" viewBox={`0 0 ${width} 50`} aria-hidden="true" focusable="false">
       {/^[\d.,e+\- ]*$/.test(value) ? (
         <g transform={`translate(${width - cursor - 2}, 2) skewX(-5)`}>
           {characters.map(({ character, x }, index) => (
             <g key={index} transform={`translate(${x}, 0)`}>
               {character === "." || character === "," ? (
-                <path d={character === "." ? "M1 29h4v4H1z" : "M1 29h4v4l-3 3H0l2-3H1z"} />
+                <path d={character === "." ? "M1 41h3v3H1z" : "M1 41h3v3l-3 3H0l2-3H1z"} />
               ) : character === "+" ? (
-                <path d="M2 15h14v4H2z M7 10h4v14H7z" />
+                <path d="M2 21h14v3H2z M7.5 15.5h3v14h-3z" />
               ) : (
                 Object.entries(segments).map(([id, points]) => (
                   <polygon
@@ -160,7 +160,7 @@ function CalculatorLCD({ value }: { value: string }) {
           ))}
         </g>
       ) : (
-        <text x={width - 2} y="31" textAnchor="end">
+        <text x={width - 2} y="39" textAnchor="end">
           {value}
         </text>
       )}
@@ -169,6 +169,8 @@ function CalculatorLCD({ value }: { value: string }) {
 }
 
 export function BA2Plus({ onLog, startTime, tvmState, onStateChange, keyScope }: BA2PlusProps) {
+  const [pressedKey, setPressedKey] = useState<string | null>(null);
+  const keyRelease = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [state, setState] = useState<CalculatorState>(() => {
     const saved = workbooks.get(onStateChange);
     return saved ? { ...saved, tvm: { ...tvmState } } : createCalculator(tvmState);
@@ -178,6 +180,14 @@ export function BA2Plus({ onLog, startTime, tvmState, onStateChange, keyScope }:
   const reported = useRef(tvmState);
   const press = useCallback(
     (key: string) => {
+      if (key !== "apd") {
+        if (keyRelease.current !== null) clearTimeout(keyRelease.current);
+        setPressedKey(key);
+        keyRelease.current = setTimeout(() => {
+          keyRelease.current = null;
+          setPressedKey(null);
+        }, 90);
+      }
       const next = pressCalculator(stateRef.current, key);
       stateRef.current = next;
       reported.current = next.tvm;
@@ -194,6 +204,12 @@ export function BA2Plus({ onLog, startTime, tvmState, onStateChange, keyScope }:
     [onLog, onStateChange, startTime],
   );
   const latestPress = useRef(press);
+  useEffect(
+    () => () => {
+      if (keyRelease.current !== null) clearTimeout(keyRelease.current);
+    },
+    [],
+  );
   useEffect(() => {
     latestPress.current = press;
   }, [press]);
@@ -293,20 +309,22 @@ export function BA2Plus({ onLog, startTime, tvmState, onStateChange, keyScope }:
                 <span className="ba-secondary" aria-hidden="true">
                   {key.secondary || "\u00a0"}
                 </span>
-                <button
-                  type="button"
-                  className={`ba-key ${key.type ?? ""}${(key.id === "2nd" && state.second) || (key.id === "CPT" && state.compute) ? " active" : ""}`}
-                  data-calc-key={key.id}
-                  aria-label={key.label}
-                  aria-pressed={key.id === "2nd" ? state.second : undefined}
-                  title={
-                    key.secondary ? `${key.text} / 2ND ${key.secondary}` : (key.label ?? key.text)
-                  }
-                  disabled={!state.powered && key.id !== "power"}
-                  onClick={() => press(key.id)}
-                >
-                  {key.text}
-                </button>
+                <span className="ba-key-socket">
+                  <button
+                    type="button"
+                    className={`ba-key ${key.type ?? ""}${(key.id === "2nd" && state.second) || (key.id === "CPT" && state.compute) ? " active" : ""}${pressedKey === key.id ? " is-pressed" : ""}`}
+                    data-calc-key={key.id}
+                    aria-label={key.label}
+                    aria-pressed={key.id === "2nd" ? state.second : undefined}
+                    title={
+                      key.secondary ? `${key.text} / 2ND ${key.secondary}` : (key.label ?? key.text)
+                    }
+                    disabled={!state.powered && key.id !== "power"}
+                    onClick={() => press(key.id)}
+                  >
+                    {key.text}
+                  </button>
+                </span>
               </div>
             ))}
           </div>

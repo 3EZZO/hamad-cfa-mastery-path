@@ -132,6 +132,57 @@ touch hardware ergonomics, and screen-reader speech on a real assistive device.
 The source-contract tests cover touch styling; narrow browser viewports do not
 emulate a physical touch device. Local verification does not deploy the update.
 
+## CSS hardware realism refinement — October 21, 2026
+
+The face now uses a measured 250 × 485 coordinate system. A single container
+unit scales the casing, faceplate, legends, LCD and keypad together. The desktop
+height/width ratio is 1.94, including inside the existing zoomed floating panel.
+CSS adds separate key sockets, raised top facets and sidewalls, neutral plastic
+grain, restrained lighting and a recessed glass overlay. Local SVG numerals use
+taller segments with space for comma tails. Photographs are comparison references
+only; the shipped calculator face has no photographic background or new assets.
+
+Key feedback lasts 90ms for pointer and keyboard actions, with timer cleanup on
+unmount. Logical 2ND/CPT modes remain in the display after the physical key rises.
+The feedback does not change calculator values or consume the 2ND prefix. A new
+regression test checks release while the second-function mode remains selected.
+Reduced-motion preferences disable movement and transitions. Touch pointers use
+44px-high keys and a wider keypad, with a taller body to avoid overlap; that touch
+profile deliberately differs from the desktop proportions.
+
+**Performed by Codex:** 23 focused component/theme/touch-contract tests, targeted
+ESLint and Prettier, TypeScript, the full suite (856 tests in 137 files), and the
+Pages/PWA/privacy build checks passed. Native Chrome with isolated synthetic
+fixtures and app styles verified arithmetic, backspace, keyboard scoping/focus,
+momentary keyboard feedback, floating movement/resizing and CF0=42 after reopen.
+Measured floating-panel face ratios remained approximately 1.94 before/after
+resizing. Error 1 text, blank power-off output, negative scientific output,
+European 1.234,56, date 12-31-1990 and worksheet labels rendered. The European
+value's ink bounds were inside its SVG viewport. Hardware colours stayed fixed
+between light and dark themes. A comparison screenshot shows the CSS face beside
+TI's reference photo at the same size.
+
+Same-origin 320- and 390-pixel iframe viewports exercised the production touch
+rules with their media condition enabled in the ignored verification fixture.
+Keys measured 44px high, no horizontal overflow occurred, the compact panel
+scrolled, and lower-row calculations displayed 42.00 and 72.00 respectively.
+This checks the touch layout with a desktop pointer, not physical touch input.
+
+**Reported by owner:** the owner accepted the previous Professional-style
+appearance and requested this more realistic refinement in one PR. Acceptance
+of this final refinement has not yet been reported.
+
+**Static reasoning:** the calculation engine, worksheet behaviour, workbook
+storage and logging payloads are unchanged. Only presentation feedback adds a
+short-lived timer. Texture and shadows are static; key movement animates only
+transforms. There are no new packages, persistence changes or runtime asset calls.
+
+**Still unverified:** exact photographic equivalence, physical touch ergonomics,
+screen-reader speech and Safari/Firefox rendering. The browser checks used
+current Chrome with container-relative CSS units; the older-browser base-size
+fallback was not exercised. Actual printed glyph shapes can vary with system
+font rendering. The owner merges manually; this record is not deployment proof.
+
 ## References and repeatable checks
 
 - [TI BA II Plus guidebook](https://education.ti.com/html/eguides/financials/pdfs/EN/BA-II-PLUS_EN.pdf): worksheet chapters and formula appendix.
