@@ -183,6 +183,44 @@ current Chrome with container-relative CSS units; the older-browser base-size
 fallback was not exercised. Actual printed glyph shapes can vary with system
 font rendering. The owner merges manually; this record is not deployment proof.
 
+## Movable calculator in Practice - October 21, 2026
+
+Practice now uses the same `FloatingCalculator` as module tests and PDF teaching.
+On desktop, drag its title bar to move it and its corner to resize it; the two
+handles also support arrow keys. The existing per-device geometry storage uses
+a separate `practice` key, leaving module-test and teaching placements independent.
+The former modal drawer/backdrop is removed, so questions remain interactive.
+Calculator keyboard shortcuts are scoped to the panel; Escape inside closes
+without logging a clear, and keys on question controls do not enter calculations.
+Close receives initial focus after the panel's hidden placement measurement and
+returns focus to the current calculator toggle. Opening a set with the tool
+already open retains those behaviours. Narrow screens retain the shared scrollable
+bottom panel rather than free movement/resizing.
+
+**Performed by Codex:** 26 focused practice/floating tests passed, including three
+new regressions for question interaction/keyboard isolation, persisted geometry,
+and hub-to-set focus/Escape. Targeted ESLint, TypeScript, the full test suite
+(859 tests in 137 files), and the Pages/PWA/private-content build checks passed.
+Native Chrome using the actual PracticeCoach and synthetic data adapters verified
+pointer dragging/resizing, arrow-key controls, 12 + 3 = 15, answer selection and
+submission while open, outside-key isolation, Escape/Enter closing, focus return,
+and the saved size/position on reopen. A 390 x 844 iframe exercised the real
+compact breakpoint: no horizontal overflow, internal calculator scrolling and
+Enter on Close worked. This is a desktop-browser layout check, not physical touch.
+
+**Reported by owner:** the calculator already moves/resizes in module tests and
+PDF teaching; the owner requested the same desktop controls in Practice. No
+owner acceptance of this added integration has yet been reported.
+
+**Static reasoning:** Practice reuses the existing panel and geometry model;
+calculator calculations, worksheets and answer-log payloads are unchanged. The
+existing role, rehearsal and offline/cloud persistence tests remain passing.
+The shared panel gains an optional Close ref and a compact Close Enter guard.
+
+**Still unverified:** physical touch hardware, real screen-reader speech,
+Safari/Firefox, and production use after manual merge. Synthetic browser adapters
+prevented reads/writes of real student records during verification.
+
 ## References and repeatable checks
 
 - [TI BA II Plus guidebook](https://education.ti.com/html/eguides/financials/pdfs/EN/BA-II-PLUS_EN.pdf): worksheet chapters and formula appendix.
