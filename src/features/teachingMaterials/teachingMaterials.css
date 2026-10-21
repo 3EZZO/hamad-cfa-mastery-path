@@ -693,35 +693,48 @@
 .tm-toolbar__tools { display: inline-flex; align-items: center; gap: 4px; }
 @media (prefers-reduced-motion: reduce) { .tm-focus-frame { animation: none; } }
 
-/* Quick check: a question over the reader, readable from across the room. */
-.tm-check-backdrop { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgb(15 23 42 / 55%); }
+/* Quick check sits beside the PDF; compact screens use a bounded dialog. */
+.tm-reader__activity {
+  display: flex;
+  flex: 0 0 clamp(360px, 34vw, 440px);
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--tm-rule);
+  background: var(--surface, #fff);
+}
 .tm-check {
-  display: grid;
-  gap: 16px;
-  width: min(880px, 100%);
-  max-height: 100%;
-  overflow: auto;
-  padding: clamp(16px, 3vw, 32px);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   color: var(--ink);
   background: var(--surface, #fff);
-  border-radius: var(--radius-lg, 10px);
-  box-shadow: 0 12px 40px rgb(15 23 42 / 35%);
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
-.tm-check__head { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--text-caption, 0.85rem); }
-.tm-check__head > span:first-child { display: inline-flex; align-items: center; gap: 6px; flex: 1; }
+.tm-check__head { display: flex; flex: none; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--tm-rule); }
+.tm-check__head h2 { display: inline-flex; align-items: center; gap: 6px; flex: 1; margin: 0; font-size: 1rem; }
+.tm-check__head h2:focus { outline: none; }
+.tm-check__body { display: flex; flex: 1; flex-direction: column; min-height: 0; gap: 14px; overflow: auto; overscroll-behavior: contain; padding: 16px; }
+.tm-check__context { display: grid; gap: 4px; font-size: 0.875rem; }
+.tm-check__context > span { color: var(--muted); }
 .tm-check__score { font-variant-numeric: tabular-nums; }
-.tm-check__prompt { margin: 0; font-size: clamp(1.15rem, 2.2vw, 1.6rem); font-weight: var(--weight-regular, 400); line-height: 1.4; }
+.tm-check__prompt { margin: 0; font-size: 1.125rem; font-weight: var(--weight-medium, 500); line-height: 1.5; }
+.tm-check__body > * { flex-shrink: 0; }
 .tm-check__options { display: grid; gap: 10px; }
 .tm-check__option {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   width: 100%;
-  min-height: 52px;
-  padding: 12px 14px;
+  min-height: 44px;
+  padding: 10px 12px;
   color: inherit;
   font: inherit;
-  font-size: clamp(1rem, 1.7vw, 1.2rem);
+  font-size: 1rem;
   text-align: left;
   background: var(--surface-2, #f7f9fc);
   border: 2px solid var(--border, #d4dce5);
@@ -737,12 +750,19 @@
 .tm-check__letter { flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; font-weight: var(--weight-semibold, 600); border: 1px solid currentColor; border-radius: 50%; }
 .tm-check__hint, .tm-check__empty p { margin: 0; color: var(--muted); }
 .tm-check__empty { display: grid; gap: 10px; justify-items: start; }
-.tm-check__empty h2 { margin: 0; font-size: var(--text-section, 1.15rem); }
+.tm-check__empty h3 { margin: 0; font-size: 1.125rem; }
 .tm-check__answer { display: grid; gap: 8px; padding: 12px 14px; background: var(--surface-2, #f7f9fc); border-radius: var(--radius-md, 8px); }
 .tm-check__answer strong { display: inline-flex; align-items: center; gap: 6px; }
 .tm-check__answer p, .tm-check__answer ol { margin: 0; }
 .tm-check__formulae { display: flex; flex-wrap: wrap; gap: 8px; }
-.tm-check__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.tm-check__formulae code { white-space: normal; }
+.tm-check__actions { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--tm-rule); }
+.tm-check__actions button, .tm-check__head button { min-height: 44px; }
+.tm-check__calculator .ba2plus { max-width: 280px; margin: 0 auto; }
+@media (max-width: 899px) {
+  .tm-reader__activity { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; padding: 12px; border: 0; background: rgb(15 23 42 / 35%); }
+  .tm-check { width: min(560px, 100%); max-height: min(85dvh, 100%); border: 1px solid var(--tm-rule); border-radius: var(--radius-lg, 10px); box-shadow: var(--elev-3); }
+}
 
 /* Session recaps: tutor dialog groups and the student's list. */
 .tm-recap__group { display: grid; gap: 4px; margin: 10px 0; padding: 8px 12px; border: 1px solid var(--border, #d4dce5); border-radius: var(--radius-md, 8px); }

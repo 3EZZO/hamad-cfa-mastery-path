@@ -5,6 +5,7 @@ import { defaultTVMState } from "../../lib/calculator";
 import type { PublishedPracticeBank } from "../../lib/practiceContent";
 import type { FocusRegion } from "./exhibitFocus";
 import { QuickCheck } from "./QuickCheck";
+import { useCompactCheck } from "./useCompactCheck";
 import { RecapDialog, type RecapKeyOption } from "./RecapDialog";
 import { quickCheckLine, quickCheckPool, type QuickCheckResult } from "./quickCheckModel";
 import {
@@ -142,6 +143,7 @@ export function PdfTeachingWorkspace({
   const [tvmState, setTvmState] = useState(defaultTVMState);
   const [calcStarted, setCalcStarted] = useState(0);
   const [checkOpen, setCheckOpen] = useState(false);
+  const checkCompact = useCompactCheck();
   const [banks, setBanks] = useState<PublishedPracticeBank[] | null>(null);
   const [banksError, setBanksError] = useState("");
   const [checkResults, setCheckResults] = useState<QuickCheckResult[]>([]);
@@ -151,7 +153,8 @@ export function PdfTeachingWorkspace({
   const calcBodyRef = useRef<HTMLDivElement>(null);
 
   // A hidden PDF surface must release its modal's global focus trap.
-  useEffect(() => { if (!active) { setShareTarget(null); setSummaryOpen(false); setRecapOpen(false); } }, [active]);
+  useEffect(() => { if (!active) { setShareTarget(null); setSummaryOpen(false); setRecapOpen(false); setCheckOpen(false); } }, [active]);
+  useEffect(() => { if (mode !== "reader") setCheckOpen(false); }, [mode]);
 
   // ------------------------------------------------------------ library
   useEffect(() => {
@@ -396,7 +399,7 @@ export function PdfTeachingWorkspace({
   // Shift+arrows (or ] and [) move between stops, even while presenting;
   // captured before the reader so they never also turn the page.
   const onPathKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (mode !== "reader" || !stops.length || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (checkOpen || mode !== "reader" || !stops.length || event.ctrlKey || event.metaKey || event.altKey) return;
     const target = event.target as HTMLElement;
     if (target.closest("input, textarea, select, [contenteditable='true']")) return;
     const delta = (event.shiftKey && event.key === "ArrowRight") || event.key === "]" ? 1
@@ -409,6 +412,7 @@ export function PdfTeachingWorkspace({
 
   // N toggles the private notes unless typing in a field.
   const onTeachKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (checkOpen) return;
     if (event.key.toLowerCase() !== "n" || event.ctrlKey || event.metaKey || event.altKey || presenting || mode !== "reader") return;
     const target = event.target as HTMLElement;
     if (target.closest("input, textarea, select, [contenteditable='true']")) return;
@@ -426,12 +430,16 @@ export function PdfTeachingWorkspace({
     if (!banks && !banksError) loadBanks();
     setCheckOpen(true);
   };
-  const checkPool = useMemo(() => (banks
-    ? quickCheckPool(banks, modules.map(module => module.number), selected?.topic ?? topics[0] ?? null)
-    : { items: [], scope: "none" as const }), [banks, modules, selected?.topic, topics]);
-  const closeQuickCheck = () => {
+  const checkPool = useMemo(() => quickCheckPool(banks ?? [], {
+    title: selected?.version.title ?? "", topic: selected?.topic ?? "Supplementary",
+  }), [banks, selected?.version.title, selected?.topic]);
+  const closeQuickCheck = useCallback(() => {
     setCheckOpen(false);
-    window.setTimeout(() => rootRef.current?.querySelector<HTMLElement>(".tm-viewport")?.focus({ preventScroll: true }), 0);
+    window.requestAnimationFrame(() => rootRef.current?.querySelector<HTMLElement>(".tm-viewport")?.focus({ preventScroll: true }));
+  }, []);
+  const toggleCalculator = () => {
+    if (!calcOpen) setCalcStarted(Date.now());
+    setCalcOpen(value => !value);
   };
 
   // ---------------------------------------------------------- recap
@@ -493,7 +501,7 @@ export function PdfTeachingWorkspace({
 
   return (
     <div className="tm-teach" ref={rootRef}>
-      <div className="tm-teach__bar">
+      <div className="tm-teach__bar" inert={checkOpen && checkCompact}>
         <div className="tm-teach__title">
           <h1>{sessionLabel} · Teach from PDF</h1>
           <p title={sessionTitle}>{sessionTitle}</p>
@@ -592,23 +600,33 @@ export function PdfTeachingWorkspace({
                 tools={(
                   <>
                     <button type="button" className="tm-icon" aria-pressed={calcOpen} aria-label={calcOpen ? "Hide the BA II Plus" : "Show the BA II Plus beside the page"}
-                      onClick={() => { if (!calcOpen) setCalcStarted(Date.now()); setCalcOpen(value => !value); }}>
+                      onClick={toggleCalculator}>
                       <Calculator size={18} aria-hidden="true" />
                     </button>
-                    <button type="button" className="tm-icon" aria-label="Quick check from the question bank" onClick={openQuickCheck}>
+                    <button type="button" className="tm-icon" aria-label="Quick check from the question bank" aria-pressed={checkOpen} disabled={checkOpen} onClick={openQuickCheck}>
                       <ListChecks size={18} aria-hidden="true" />
                     </button>
                   </>
                 )}
+                panelModal={checkCompact}
+                sidePanel={checkOpen ? (
+                  <QuickCheck key={`${selected.version.versionId}:${selected.version.title}:${selected.topic}`}
+                    active={active} modal={checkCompact} pdfLabel={materialLabel(selected.version)}
+                    loading={!banks && !banksError} error={banksError} pool={checkPool.items} scope={checkPool.scope} moduleNumbers={checkPool.moduleNumbers}
+                    results={checkResults} onResult={result => setCheckResults(current => [...current, result])}
+                    onRetry={loadBanks} onClose={closeQuickCheck} onCalculatorToggle={toggleCalculator}
+                    calculator={calcOpen ? (
+                      <Suspense fallback={<p role="status">Loading calculator...</p>}>
+                        <div ref={calcBodyRef} tabIndex={-1}>
+                          <BA2Plus onLog={() => undefined} startTime={calcStarted} tvmState={tvmState} onStateChange={setTvmState} keyScope={calcBodyRef} />
+                        </div>
+                      </Suspense>
+                    ) : undefined} />
+                ) : undefined}
                 overlay={(
                   <>
-                    {checkOpen && (
-                      <QuickCheck active={active} loading={!banks && !banksError} error={banksError} pool={checkPool.items} scope={checkPool.scope}
-                        results={checkResults} onResult={result => setCheckResults(current => [...current, result])}
-                        onRetry={loadBanks} onClose={closeQuickCheck} />
-                    )}
                     {/* Inside the reader so it also floats over a full-screen presentation. */}
-                    {calcOpen && (
+                    {calcOpen && !checkOpen && (
                       <Suspense fallback={null}>
                         <FloatingCalculator storageKey="pdf-teaching" bodyRef={calcBodyRef} onClose={() => setCalcOpen(false)}>
                           <BA2Plus onLog={() => undefined} startTime={calcStarted} tvmState={tvmState} onStateChange={setTvmState} keyScope={calcBodyRef} />

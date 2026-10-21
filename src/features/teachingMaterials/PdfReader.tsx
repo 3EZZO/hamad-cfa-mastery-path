@@ -57,6 +57,10 @@ export interface PdfReaderProps {
   tools?: ReactNode;
   /** Layer over the reader, inside it so it also shows in full screen. */
   overlay?: ReactNode;
+  /** Reading-specific activity beside the page, inside full-screen content. */
+  sidePanel?: ReactNode;
+  /** Narrow layouts present the activity as a modal over an inert reader. */
+  panelModal?: boolean;
   /** Zoom to an exhibit on a page; a new request object applies it again. */
   focusTo?: { page: number; region: FocusRegion } | null;
   onFocusChange?: (region: FocusRegion | null) => void;
@@ -69,8 +73,11 @@ const DEFAULT_ERROR: ReaderErrorCopy = { message: "The PDF could not be opened."
 export function PdfReader({
   active = true, documentKey, title, subtitle, variant, loadBytes, initialView, onViewChange, onRendered,
   onPresentationChange, describeError, toolbarStart, toolbarEnd, aside, belowToolbar, jumpTo,
-  focusOnLoad = false, startPresenting = false, tools, overlay, focusTo, onFocusChange,
+  focusOnLoad = false, startPresenting = false, tools, overlay, sidePanel, panelModal = false, focusTo, onFocusChange,
 }: PdfReaderProps) {
+  const suspended = !!sidePanel;
+  const suspendedRef = useRef(suspended);
+  suspendedRef.current = suspended;
   const rootRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -107,6 +114,7 @@ export function PdfReader({
   const [searchStatus, setSearchStatus] = useState("");
   const pageTextsRef = useRef<string[] | null>(null);
   const searchedRef = useRef("");
+  const searchRequestRef = useRef(0);
   const renderedOnceRef = useRef(false);
 
   const pageCount = pdf?.pageCount ?? 0;
@@ -268,6 +276,7 @@ export function PdfReader({
 
   // ------------------------------------------------------------ actions
   const goTo = useCallback((next: number) => {
+    if (suspendedRef.current) return;
     if (!pageCount) return;
     setPage(clampPage(next, pageCount));
   }, [pageCount]);
@@ -285,6 +294,7 @@ export function PdfReader({
   focusChangeRef.current = onFocusChange;
 
   const applyFocus = useCallback((region: FocusRegion) => {
+    if (suspendedRef.current) return;
     if (!pageSize || !containerSize) return;
     if (!beforeFocusRef.current) beforeFocusRef.current = { fitMode, zoom: customZoom };
     setFitMode("custom");
@@ -339,11 +349,13 @@ export function PdfReader({
   };
 
   const changeZoom = useCallback((direction: 1 | -1) => {
+    if (suspendedRef.current) return;
     setCustomZoom(nextZoomStep(zoom, direction));
     setFitMode("custom");
   }, [zoom]);
 
   const commitPageInput = () => {
+    if (suspended) return;
     const value = Number(pageInput);
     if (Number.isFinite(value) && value >= 1) goTo(value);
     else setPageInput(String(page));
@@ -362,6 +374,8 @@ export function PdfReader({
   }, [pdf]);
 
   const runSearch = useCallback(async (value: string) => {
+    if (suspendedRef.current) return;
+    const request = ++searchRequestRef.current;
     searchedRef.current = normalizeSearch(value);
     if (normalizeSearch(value).length < 2) {
       setMatches([]);
@@ -370,6 +384,7 @@ export function PdfReader({
       return;
     }
     const found = findMatches(await ensurePageTexts(), value);
+    if (request !== searchRequestRef.current || suspendedRef.current) return;
     setMatches(found);
     if (!found.length) {
       setMatchIndex(-1);
@@ -391,12 +406,14 @@ export function PdfReader({
   };
 
   const openSearch = () => {
+    if (suspended) return;
     setSearchOpen(true);
     setToolsCollapsed(false);
-    window.setTimeout(() => searchInputRef.current?.focus(), 0);
+    window.setTimeout(() => { if (!suspendedRef.current) searchInputRef.current?.focus(); }, 0);
   };
 
   const closeSearch = () => {
+    searchRequestRef.current += 1;
     searchedRef.current = "";
     setSearchOpen(false);
     setMatches([]);
@@ -404,6 +421,19 @@ export function PdfReader({
     setSearchStatus("");
     viewportRef.current?.focus({ preventScroll: true });
   };
+
+  // Invalidate late searches and unfinished drags without changing the view.
+  useEffect(() => {
+    if (!suspended) return;
+    searchRequestRef.current += 1;
+    searchedRef.current = "";
+    setSearchOpen(false);
+    setMatches([]);
+    setMatchIndex(-1);
+    setSearchStatus("");
+    setSelecting(false);
+    setDrag(null);
+  }, [suspended]);
 
   // ---------------------------------------------------------- presenting
   const presentingRef = useRef(presenting);
@@ -452,7 +482,7 @@ export function PdfReader({
   };
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
-    if (!active) return;
+    if (!active || suspended) return;
     if (event.key === "Escape") {
       if (searchOpen && event.target === searchInputRef.current) { event.preventDefault(); closeSearch(); return; }
       if (selecting) { event.preventDefault(); setSelecting(false); setDrag(null); return; }
@@ -484,18 +514,18 @@ export function PdfReader({
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- keyboard delegation from focusable descendants
     <section
       ref={rootRef}
-      className={`tm-reader tm-reader--${variant}${presenting !== "off" ? " is-presenting" : ""}${presenting === "expanded" ? " is-expanded" : ""}${toolsCollapsed ? " is-collapsed" : ""}`}
+      className={`tm-reader tm-reader--${variant}${presenting !== "off" ? " is-presenting" : ""}${presenting === "expanded" ? " is-expanded" : ""}${toolsCollapsed ? " is-collapsed" : ""}${suspended ? " has-activity" : ""}`}
       aria-label={`${title} reader`}
       onKeyDown={onKeyDown}
     >
-      <header className="tm-toolbar">
-        {toolbarStart && presenting === "off" && <div className="tm-toolbar__start">{toolbarStart}</div>}
+      <header className="tm-toolbar" inert={suspended && panelModal}>
+        {toolbarStart && presenting === "off" && <div className="tm-toolbar__start" inert={suspended}>{toolbarStart}</div>}
         <div className="tm-toolbar__title">
           <strong>{title}</strong>
           {subtitle && <span>{subtitle}</span>}
         </div>
         <div className="tm-toolbar__group" role="group" aria-label="Pages">
-          <button type="button" className="tm-icon" aria-label="Previous page" disabled={page <= 1 || !pdf} onClick={() => goTo(page - 1)}>
+          <button type="button" className="tm-icon" aria-label="Previous page" disabled={suspended || page <= 1 || !pdf} onClick={() => goTo(page - 1)}>
             <ChevronLeft size={18} aria-hidden="true" />
           </button>
           <label className="tm-page-input">
@@ -503,53 +533,53 @@ export function PdfReader({
             <input
               inputMode="numeric"
               value={pageInput}
-              disabled={!pdf}
+              disabled={suspended || !pdf}
               onChange={event => setPageInput(event.target.value.replace(/[^0-9]/g, "").slice(0, 3))}
               onBlur={commitPageInput}
               onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); commitPageInput(); } }}
             />
             <span aria-hidden="true">/ {pageCount || "–"}</span>
           </label>
-          <button type="button" className="tm-icon" aria-label="Next page" disabled={!pdf || page >= pageCount} onClick={() => goTo(page + 1)}>
+          <button type="button" className="tm-icon" aria-label="Next page" disabled={suspended || !pdf || page >= pageCount} onClick={() => goTo(page + 1)}>
             <ChevronRight size={18} aria-hidden="true" />
           </button>
         </div>
         {!toolsCollapsed && (
           <>
             <div className="tm-toolbar__group" role="group" aria-label="Zoom">
-              <button type="button" className="tm-icon" aria-label="Zoom out" disabled={!pdf} onClick={() => changeZoom(-1)}>
+              <button type="button" className="tm-icon" aria-label="Zoom out" disabled={suspended || !pdf} onClick={() => changeZoom(-1)}>
                 <ZoomOut size={18} aria-hidden="true" />
               </button>
               <span className="tm-zoom" aria-live="polite">{zoomLabel}</span>
-              <button type="button" className="tm-icon" aria-label="Zoom in" disabled={!pdf} onClick={() => changeZoom(1)}>
+              <button type="button" className="tm-icon" aria-label="Zoom in" disabled={suspended || !pdf} onClick={() => changeZoom(1)}>
                 <ZoomIn size={18} aria-hidden="true" />
               </button>
-              <button type="button" className="tm-chip" aria-pressed={fitMode === "width"} disabled={!pdf} onClick={() => setFitMode("width")}>Fit width</button>
-              <button type="button" className="tm-chip" aria-pressed={fitMode === "page"} disabled={!pdf} onClick={() => setFitMode("page")}>Fit page</button>
+              <button type="button" className="tm-chip" aria-pressed={fitMode === "width"} disabled={suspended || !pdf} onClick={() => setFitMode("width")}>Fit width</button>
+              <button type="button" className="tm-chip" aria-pressed={fitMode === "page"} disabled={suspended || !pdf} onClick={() => setFitMode("page")}>Fit page</button>
             </div>
-            <button type="button" className="tm-icon" aria-label="Search in document" aria-pressed={searchOpen} disabled={!pdf} onClick={() => (searchOpen ? closeSearch() : openSearch())}>
+            <button type="button" className="tm-icon" aria-label="Search in document" aria-pressed={searchOpen} disabled={suspended || !pdf} onClick={() => (searchOpen ? closeSearch() : openSearch())}>
               <Search size={18} aria-hidden="true" />
             </button>
           </>
         )}
-        <button type="button" className="tm-icon" aria-pressed={selecting || !!focusRegion} disabled={!pdf}
+        <button type="button" className="tm-icon" aria-pressed={selecting || !!focusRegion} disabled={suspended || !pdf}
           aria-label={focusRegion ? "Show the whole page" : selecting ? "Cancel exhibit focus" : "Focus an exhibit: drag a box on the page"}
           title="Focus an exhibit (drag a box). Esc shows the whole page."
           onClick={() => { if (focusRegion) clearFocus(); else { setSelecting(value => !value); setDrag(null); } }}>
           <ScanSearch size={18} aria-hidden="true" />
         </button>
         {tools && <div className="tm-toolbar__tools">{tools}</div>}
-        <button type="button" className="tm-icon" aria-label={presenting === "off" ? "Present full screen" : "Exit presentation"} disabled={!pdf} onClick={() => void togglePresentation()}>
+        <button type="button" className="tm-icon" aria-label={presenting === "off" ? "Present full screen" : "Exit presentation"} disabled={suspended || !pdf} onClick={() => void togglePresentation()}>
           {presenting === "off" ? <Maximize size={18} aria-hidden="true" /> : <Minimize size={18} aria-hidden="true" />}
         </button>
-        <button type="button" className="tm-icon" aria-label={toolsCollapsed ? "Show reader tools" : "Hide reader tools"} aria-expanded={!toolsCollapsed} onClick={() => setToolsCollapsed(value => !value)}>
+        <button type="button" className="tm-icon" aria-label={toolsCollapsed ? "Show reader tools" : "Hide reader tools"} aria-expanded={!toolsCollapsed} disabled={suspended} onClick={() => setToolsCollapsed(value => !value)}>
           {toolsCollapsed ? <PanelTopOpen size={18} aria-hidden="true" /> : <PanelTopClose size={18} aria-hidden="true" />}
         </button>
         {/* Private notes and administration stay off the presented screen. */}
-        {toolbarEnd && presenting === "off" && <div className="tm-toolbar__end">{toolbarEnd}</div>}
+        {toolbarEnd && presenting === "off" && <div className="tm-toolbar__end" inert={suspended}>{toolbarEnd}</div>}
       </header>
 
-      {searchOpen && !toolsCollapsed && (
+      {searchOpen && !toolsCollapsed && !suspended && (
         <div className="tm-search" role="search">
           <label>
             <span className="visually-hidden">Find in document</span>
@@ -582,11 +612,12 @@ export function PdfReader({
         </div>
       )}
 
-      {belowToolbar && presenting === "off" && belowToolbar}
+      {belowToolbar && presenting === "off" && <div inert={suspended}>{belowToolbar}</div>}
       <div className="tm-reader__body">
         <div
           ref={viewportRef}
           className="tm-viewport"
+          inert={suspended && panelModal}
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the scrollable page takes focus so arrow keys turn pages
           tabIndex={0}
           aria-label={status}
@@ -612,7 +643,7 @@ export function PdfReader({
                   left: `${focusRegion.x * 100}%`, top: `${focusRegion.y * 100}%`, width: `${focusRegion.w * 100}%`, height: `${focusRegion.h * 100}%`,
                 }} />
               )}
-              {selecting && (
+              {selecting && !suspended && (
                 <div className="tm-select-layer" aria-hidden="true"
                   onPointerDown={event => {
                     try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* capture is optional */ }
@@ -649,14 +680,15 @@ export function PdfReader({
             </div>
           )}
         </div>
-        {aside && presenting === "off" && <div className="tm-reader__aside">{aside}</div>}
+        {aside && presenting === "off" && !suspended && <div className="tm-reader__aside">{aside}</div>}
+        {sidePanel && <div className="tm-reader__activity">{sidePanel}</div>}
       </div>
-      {focusRegion && (
+      {focusRegion && !suspended && (
         <button type="button" className="tm-button tm-focus-exit" onClick={clearFocus}>
           <X size={16} aria-hidden="true" /> Whole page
         </button>
       )}
-      {selecting && <p className="tm-select-hint" role="status">Drag a box around the exhibit to focus on it. Esc cancels.</p>}
+      {selecting && !suspended && <p className="tm-select-hint" role="status">Drag a box around the exhibit to focus on it. Esc cancels.</p>}
       {overlay}
       <p className="visually-hidden" aria-live="polite">{loadState === "ready" ? `Page ${page} of ${pageCount}` : ""}</p>
     </section>
