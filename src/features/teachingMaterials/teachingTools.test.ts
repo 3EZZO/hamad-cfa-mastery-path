@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { PracticeQuestion } from "../../lib/practiceContent";
 import { focusScroll, focusZoom, regionFromDrag, sanitizeRegion } from "./exhibitFocus";
 import { sanitizeLessonPath, withCopiedStops, withStop } from "./lessonPathModel";
-import { nextQuickCheck, quickCheckLine, quickCheckPool } from "./quickCheckModel";
+import { nextQuickCheck, quickCheckCatalogIds, quickCheckLine, quickCheckPool } from "./quickCheckModel";
+import { MOCK_MODULES } from "../../data/mockModules";
 
 const question = (id: string, moduleId: string): PracticeQuestion => ({
   id, moduleId, conceptId: "c", type: "calculation", difficulty: 3, estimatedSeconds: 90, prompt: `Q ${id}`,
@@ -47,19 +48,43 @@ describe("exhibit focus", () => {
 
 describe("quick checks", () => {
   const banks = [
-    { storageId: "qm", title: "QM bank", topic: "Quantitative Methods", questions: [question("q10", "m010-regression"), question("q11", "m011-data")] },
+    { storageId: "qm", title: "QM bank", topic: "Quantitative Methods", questions: [question("q1", "m001-returns"), question("q8", "m008-portfolio"), question("q10", "m010-regression"), question("q11", "m011-data")] },
     { storageId: "ec", title: "Econ bank", topic: "Economics", questions: [question("e12", "m012-firms"), question("e40", "m040-other"), question("x", "custom-id")] },
   ];
 
-  it("prefers the session's curriculum modules, then the topic, never unrelated questions", () => {
-    expect(quickCheckPool(banks, [10, 12], "Economics").items.map(item => item.key)).toEqual(["qm:q10", "ec:e12"]);
-    expect(quickCheckPool(banks, [99], "Economics")).toMatchObject({ scope: "topic" });
-    expect(quickCheckPool(banks, [99], "Economics").items.map(item => item.key)).toEqual(["ec:e12", "ec:x"]);
-    expect(quickCheckPool(banks, [99], "Derivatives")).toEqual({ items: [], scope: "none" });
+  it("matches Portfolio Mathematics to module 8, excluding other QM and session questions", () => {
+    const pool = quickCheckPool(banks, { title: "Portfolio Mathematics", topic: "Quantitative Methods" });
+    expect(pool).toMatchObject({ scope: "reading", moduleNumbers: [8] });
+    expect(pool.items.map(item => item.key)).toEqual(["qm:q8"]);
+  });
+
+  it("reuses each approved module mapping and supported upload labels", () => {
+    for (const module of MOCK_MODULES) {
+      expect(quickCheckCatalogIds({ title: module.title, topic: module.topic })).toEqual(module.catalogIds);
+    }
+    expect(quickCheckCatalogIds({ title: "Economics - Module 3 - Fiscal Policy.pdf", topic: "Economics" })).toEqual(["cfa-2027-outline-m014"]);
+    expect(quickCheckCatalogIds({ title: "Reading 05 - Portfolio Mathematics", topic: "Quantitative Methods" })).toEqual(["cfa-2027-outline-m008"]);
+    expect(quickCheckCatalogIds({ title: "Firms and Market Structure", topic: "Economics" })).toEqual(["cfa-2027-outline-m012"]);
+    expect(quickCheckCatalogIds({ title: "Understanding Business Cycle", topic: "Economics" })).toEqual(["cfa-2027-outline-m013"]);
+    expect(quickCheckCatalogIds({ title: "The Return and Risk of a Financial Portfolio", topic: "Quantitative Methods" })).toEqual(["cfa-2027-outline-m008"]);
+  });
+
+  it("does not guess from a reading number, mixed title, wrong topic or broad topic bank", () => {
+    for (const pdf of [
+      { title: "Reading 05", topic: "Quantitative Methods" },
+      { title: "Portfolio Mathematics", topic: "Economics" },
+      { title: "Fiscal Policy and Monetary Policy", topic: "Economics" },
+      { title: "Formula Sheet", topic: "Quantitative Methods" },
+    ]) expect(quickCheckPool(banks, pdf)).toEqual({ items: [], scope: "none", moduleNumbers: [] });
+    expect(quickCheckPool(banks, { title: "Fiscal Policy", topic: "Economics" })).toEqual({ items: [], scope: "reading", moduleNumbers: [14] });
+    expect(quickCheckPool(banks, { title: "The Firm and Market Structures", topic: "Economics" }).items.map(item => item.key)).toEqual(["ec:e12"]);
   });
 
   it("asks unasked questions first and summarises the results", () => {
-    const pool = quickCheckPool(banks, [10, 11], null).items;
+    const pool = [
+      ...quickCheckPool(banks, { title: "Simple Linear Regression", topic: "Quantitative Methods" }).items,
+      ...quickCheckPool(banks, { title: "Introduction to Big Data Techniques", topic: "Quantitative Methods" }).items,
+    ];
     expect(nextQuickCheck(pool, new Set(["qm:q10"]), () => 0)!.key).toBe("qm:q11");
     expect(nextQuickCheck(pool, new Set(["qm:q10", "qm:q11"]), () => 0.99)!.key).toBe("qm:q11");
     expect(nextQuickCheck([], new Set())).toBeNull();
