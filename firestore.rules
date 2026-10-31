@@ -259,8 +259,8 @@ service cloud.firestore {
 
     // ---- Module mock tests and full papers ---------------------------------
     // One compulsory, single-attempt test per module (8 questions, 12 minutes)
-    // and comprehensive papers (44 questions, 66 minutes): 90 seconds a
-    // question either way. The student never reads the answer key or the
+    // and comprehensive papers (45 questions, 67.5 minutes; papers uploaded
+    // before 2026-11 have 44): 90 seconds a question either way. The student never reads the answer key or the
     // review before the attempt is locked, and never the tutor-only sources;
     // the server clock (request.time) is the only timer that counts. A paper
     // attempt freezes its question count and duration when it starts; every
@@ -321,7 +321,7 @@ service cloud.firestore {
         ])
         && data.schemaVersion in [1, 2]
         && ((kind == 'module' && data.questionCount == 8)
-          || (kind == 'paper' && data.schemaVersion == 2 && data.questionCount == 44))
+          || (kind == 'paper' && data.schemaVersion == 2 && data.questionCount in [44, 45]))
         && data.durationSeconds == data.questionCount * 90
         && data.moduleId == moduleId
         && data.title is string && data.title.size() > 0 && data.title.size() <= 200
@@ -372,7 +372,7 @@ service cloud.firestore {
           ])
           && data.answers == [null, null, null, null, null, null, null, null]
           && data.flags == [false, false, false, false, false, false, false, false])
-        || (meta.questionCount == 44
+        || (meta.questionCount in [44, 45]
           && data.keys().hasOnly([
             'uid', 'moduleId', 'testVersion', 'attemptNumber', 'status', 'startedAt',
             'lastSeenAt', 'answers', 'flags', 'incidents', 'keystrokes', 'submittedAt',
@@ -381,9 +381,9 @@ service cloud.firestore {
           ])
           && data.questionCount == meta.questionCount
           && data.durationSeconds == meta.durationSeconds
-          && data.answers.size() == 44 && data.answers.hasOnly([null])
-          && data.flags.size() == 44 && data.flags.hasOnly([false])
-          && data.dwellMs.size() == 44 && data.dwellMs.hasOnly([0]));
+          && data.answers.size() == meta.questionCount && data.answers.hasOnly([null])
+          && data.flags.size() == meta.questionCount && data.flags.hasOnly([false])
+          && data.dwellMs.size() == meta.questionCount && data.dwellMs.hasOnly([0]));
     }
 
     function validNewMockAttempt(attemptId) {
@@ -410,8 +410,8 @@ service cloud.firestore {
 
     // Per-question time is a client estimate for the tutor, so only its shape is checked.
     function mockValidDwell(data, previous) {
-      return mockCount(previous) == 44
-        ? data.dwellMs is list && data.dwellMs.size() == 44
+      return mockCount(previous) >= 44
+        ? data.dwellMs is list && data.dwellMs.size() == mockCount(previous)
         : !('dwellMs' in data);
     }
 
@@ -421,7 +421,7 @@ service cloud.firestore {
         && mockValidFlags(data.flags, n)
         && mockValidDwell(data, previous)
         && mockAppendOnly(data.incidents, previous.incidents, 100)
-        && mockAppendOnly(data.keystrokes, previous.keystrokes, n == 44 ? 1500 : 600);
+        && mockAppendOnly(data.keystrokes, previous.keystrokes, n >= 44 ? 1500 : 600);
     }
 
     // Autosave while the clock is running: the attempt stays active.
@@ -468,9 +468,10 @@ service cloud.firestore {
     }
 
     // Rules have no loops, so every question is checked by index: the first
-    // eight for every test, questions 9-44 only for a paper. The lists are
-    // bound once (c: stored per-question results, a: frozen answers, k: key)
-    // to stay well inside the 1,000-expression limit for a 44-question paper.
+    // eight for every test, questions 9-44 for a paper and question 45 for a
+    // 45-question paper. The lists are bound once (c: stored per-question
+    // results, a: frozen answers, k: key) to stay well inside the
+    // 1,000-expression limit.
     function mockGradedFirstEight(c, a, k) {
       return c[0] == (a[0] == k[0]) && c[1] == (a[1] == k[1])
         && c[2] == (a[2] == k[2]) && c[3] == (a[3] == k[3])
@@ -515,6 +516,7 @@ service cloud.firestore {
         && data.correct is list && data.correct.size() == n
         && mockGradedFirstEight(data.correct, previous.answers, key.correct)
         && (n == 8 || mockGradedPaperRest(data.correct, previous.answers, key.correct))
+        && (n != 45 || data.correct[44] == (previous.answers[44] == key.correct[44]))
         && data.score == data.correct.removeAll([false]).size();
     }
 
@@ -612,7 +614,7 @@ service cloud.firestore {
         && rehearsalId.split('_')[0] == request.auth.uid
         && data.testId is string && data.testId.size() > 0 && data.testId.size() <= 80
         && data.testVersion is string && data.testVersion.size() <= 60
-        && data.questionCount in [8, 44]
+        && data.questionCount in [8, 44, 45]
         && data.durationSeconds == data.questionCount * 90
         && data.status in ['active', 'finished']
         && data.startedAtMs is int && data.updatedAtMs is int

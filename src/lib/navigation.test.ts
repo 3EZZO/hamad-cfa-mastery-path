@@ -4,7 +4,7 @@ import { NAV, NAV_ITEMS, navigationTarget, shortcutTabs, TAB_IDS, TUTOR_TAB_IDS,
 
 describe("navigation", () => {
   it("leads with Module Tests, then Today, Plan, Practice, Progress, Notes and the tutor group", () => {
-    expect(visibleNavItems(NAV, false).map((item) => item.label)).toEqual(["Module Tests", "Today", "Plan", "Practice", "Progress", "Notes & Data"]);
+    expect(visibleNavItems(NAV, false).map((item) => item.label)).toEqual(["Tests & Mocks", "Today", "Plan", "Practice", "Progress", "Notes & Data"]);
     expect(visibleNavItems(NAV, true).map((item) => item.id)).toEqual([...NAV.tabs]);
     expect(NAV.mobilePrimary).toEqual(["moduleMocks", "dashboard", "plan", "practice"]);
   });

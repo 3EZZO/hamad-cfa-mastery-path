@@ -207,13 +207,13 @@ describe("grading and timing", () => {
 
 describe("full mock papers (schema 2)", () => {
   const paperAttempt = (overrides: Partial<MockAttempt> = {}) =>
-    attempt({ moduleId: SYNTHETIC_PAPER_ID, questionCount: 44, durationSeconds: 3960, answers: Array(44).fill(null), flags: Array(44).fill(false), ...overrides });
+    attempt({ moduleId: SYNTHETIC_PAPER_ID, questionCount: 45, durationSeconds: 4050, answers: Array(45).fill(null), flags: Array(45).fill(false), ...overrides });
 
-  it("parses a 44-question, 66-minute paper and keeps schema 1 module tests unchanged", () => {
+  it("parses a 45-question, 67.5-minute paper and keeps schema 1 module tests unchanged", () => {
     const paper = parseMockTestDraft(syntheticPaper());
     expect(paper.kind).toBe("paper");
-    expect(paper.questions).toHaveLength(44);
-    expect(mockDurationMsFor(44)).toBe(66 * 60 * 1000);
+    expect(paper.questions).toHaveLength(45);
+    expect(mockDurationMsFor(45)).toBe(67.5 * 60 * 1000);
     const legacy = parseMockTestDraft(syntheticDraft());
     expect(legacy.kind).toBe("module");
     expect(splitMockDraft(legacy).sources).toBeNull();
@@ -221,7 +221,7 @@ describe("full mock papers (schema 2)", () => {
   });
 
   it("rejects wrong sizes, unregistered paper ids and schema 2 fields on schema 1", () => {
-    expect(() => parseMockTestDraft(syntheticPaper({ questions: syntheticPaper().questions.slice(0, 43) }))).toThrow("exactly 44");
+    expect(() => parseMockTestDraft(syntheticPaper({ questions: syntheticPaper().questions.slice(0, 44) }))).toThrow("exactly 45");
     expect(() => parseMockTestDraft(syntheticPaper({ moduleId: "qm-paper-99" }))).toThrow("registered papers");
     expect(() => parseMockTestDraft(syntheticPaper({ kind: "module", moduleId: "m99-synthetic" }))).toThrow("exactly 8");
     expect(() => parseMockTestDraft(syntheticPaper({ kind: "module" }))).toThrow("cannot use a paper id");
@@ -240,8 +240,8 @@ describe("full mock papers (schema 2)", () => {
     for (const leak of ["synthetic-bank", "moduleTag", "catalogId", "cfa-2027", "skill", "authoring", "correctOption", "Synthetic explanation"]) {
       expect(studentView).not.toContain(leak);
     }
-    expect(docs.key.correct).toHaveLength(44);
-    expect(docs.key.modules).toHaveLength(44);
+    expect(docs.key.correct).toHaveLength(45);
+    expect(docs.key.modules).toHaveLength(45);
     expect(docs.key.skills![0]).toBe("calculation");
     expect(docs.sources!.items[0]).toMatchObject({ id: "qmp01-q01", authoring: "source", bankId: "synthetic-bank-1", sourcePage: 3 });
     expect(docs.sources!.items[10]).toMatchObject({ authoring: "authored", bankId: "", sourcePage: null });
@@ -319,28 +319,36 @@ describe("full mock papers (schema 2)", () => {
     expect(() => parseMockTestDraft(long)).not.toThrow();
   });
 
-  it("grades, times and resolves a frozen 44-question attempt", () => {
-    const key = Array.from({ length: 44 }, (_, index) => (index % 3) as 0 | 1 | 2);
+  it("grades, times and resolves a frozen 45-question attempt", () => {
+    const key = Array.from({ length: 45 }, (_, index) => (index % 3) as 0 | 1 | 2);
     const answers = key.map((right, index) => (index < 30 ? right : null));
     expect(gradeMockAnswers(answers, key).score).toBe(30);
     expect(() => gradeMockAnswers(answers.slice(0, 8), key)).toThrow("different questions");
-    expect(() => gradeMockAnswers(answers.slice(0, 10), key.slice(0, 10))).toThrow("8 or 44");
+    expect(() => gradeMockAnswers(answers.slice(0, 10), key.slice(0, 10))).toThrow("8, 44, 45");
 
     const durationMs = mockAttemptDurationMs(paperAttempt());
-    expect(durationMs).toBe(3_960_000);
-    expect(mockAttemptQuestionCount(paperAttempt())).toBe(44);
+    expect(durationMs).toBe(4_050_000);
+    expect(mockAttemptQuestionCount(paperAttempt())).toBe(45);
     expect(mockAttemptQuestionCount(attempt())).toBe(8);
     expect(mockAttemptView(paperAttempt(), 1_000_000 + MOCK_DURATION_MS + 1)).toBe("in-progress");
     expect(mockAttemptView(paperAttempt(), 1_000_000 + durationMs)).toBe("expired");
     expect(mockTimeUsedMs(paperAttempt({ submittedAtMs: 1_000_000 + durationMs + 9_000 }))).toBe(durationMs);
     expect(mockRemainingMs(1_000_000, 1_000_000, 0, durationMs)).toBe(durationMs);
-    expect(emptyAnswers(44)).toHaveLength(44);
-    expect(emptyDwell(44).every(value => value === 0)).toBe(true);
+    expect(emptyAnswers(45)).toHaveLength(45);
+    expect(emptyDwell(45).every(value => value === 0)).toBe(true);
+  });
+
+  it("keeps grading and timing papers uploaded with 44 questions", () => {
+    const key = Array.from({ length: 44 }, (_, index) => (index % 3) as 0 | 1 | 2);
+    expect(gradeMockAnswers(key, key).score).toBe(44);
+    const legacy = paperAttempt({ questionCount: 44, durationSeconds: 3960, answers: Array(44).fill(null), flags: Array(44).fill(false) });
+    expect(mockAttemptDurationMs(legacy)).toBe(3_960_000);
+    expect(mockKeystrokeLimit(44)).toBe(1500);
   });
 
   it("keeps a larger calculator history for papers only", () => {
     expect(mockKeystrokeLimit(8)).toBe(600);
-    expect(mockKeystrokeLimit(44)).toBe(1500);
+    expect(mockKeystrokeLimit(45)).toBe(1500);
     const stroke = { q: 0, key: "1", display: "1", t: 0, registers: { N: 0, IY: 0, PV: 0, PMT: 0, FV: 0, PY: 1, CY: 1, isBGN: false } };
     let log = Array.from({ length: 600 }, () => stroke);
     expect(appendKeystroke(log, stroke)).toHaveLength(600);
@@ -359,7 +367,7 @@ describe("mock exam papers for every CFA topic", () => {
   it("accepts a paper for a topic without module tests, with official-module tags only", () => {
     const docs = splitMockDraft(parseMockTestDraft(syntheticTopicPaper("eth-paper-01")));
     expect(docs.key.modules).toBeUndefined();
-    expect(docs.key.catalogIds).toHaveLength(44);
+    expect(docs.key.catalogIds).toHaveLength(45);
     expect(docs.sources!.items[0]!.moduleTag).toBe("");
   });
 

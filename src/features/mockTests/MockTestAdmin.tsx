@@ -18,12 +18,14 @@ import {
   type MockTestPackage,
 } from "../../lib/cloudMockTests";
 import {
+  MOCK_KIND_QUESTION_COUNT,
   formatMockClock,
   incidentLabel,
   isMockAttemptLocked,
   mockAttemptId,
   mockAttemptQuestionCount,
   mockAttemptView,
+  mockDurationMsFor,
   mockTimeUsedMs,
   optionLetter,
   type MockAttempt,
@@ -511,7 +513,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
         variant="sub"
         className="mock-admin__topic"
         title={MOCK_PAPER_SECTION}
-        meta={`${metas.filter(meta => isMockPaperId(meta.moduleId)).length} of ${MOCK_PAPERS.length} uploaded · 44 questions · 66:00 each`}
+        meta={`${metas.filter(meta => isMockPaperId(meta.moduleId)).length} of ${MOCK_PAPERS.length} uploaded · ${MOCK_KIND_QUESTION_COUNT.paper} questions · ${formatMockClock(mockDurationMsFor(MOCK_KIND_QUESTION_COUNT.paper))} each`}
         summary="One paper per CFA topic: upload it as a draft, check its coverage report and key, rehearse it from the Tests page, then publish"
       >
         <div className="mock-admin__modules">

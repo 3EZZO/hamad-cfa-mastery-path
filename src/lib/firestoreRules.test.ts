@@ -201,16 +201,18 @@ describe("module mock test Firestore rule boundary", () => {
     expect(counters).not.toContain("activeProject202Role('student')");
   });
 
-  it("allows only 8-question/12-minute module tests and 44-question/66-minute papers", () => {
+  it("allows 8-question/12-minute module tests and 45-question/67.5-minute papers (44 for earlier papers)", () => {
     const meta = blockBetween("function validMockTestMeta(moduleId)", "function validMockContent(");
     expect(meta).toContain("(kind == 'module' && data.questionCount == 8)");
-    expect(meta).toContain("(kind == 'paper' && data.schemaVersion == 2 && data.questionCount == 44)");
+    expect(meta).toContain("(kind == 'paper' && data.schemaVersion == 2 && data.questionCount in [44, 45])");
     expect(meta).toContain("data.durationSeconds == data.questionCount * 90");
     const shape = blockBetween("function mockNewAttemptShape(data, meta)", "function validNewMockAttempt(");
     expect(shape).toContain("data.answers == [null, null, null, null, null, null, null, null]");
     expect(shape).toContain("data.durationSeconds == meta.durationSeconds");
-    expect(shape).toContain("data.dwellMs.size() == 44 && data.dwellMs.hasOnly([0])");
-    expect(mock()).toContain("mockAppendOnly(data.keystrokes, previous.keystrokes, n == 44 ? 1500 : 600)");
+    expect(shape).toContain("data.dwellMs.size() == meta.questionCount && data.dwellMs.hasOnly([0])");
+    expect(mock()).toContain("mockAppendOnly(data.keystrokes, previous.keystrokes, n >= 44 ? 1500 : 600)");
+    // The 45th question of a paper is graded too.
+    expect(mock()).toContain("(n != 45 || data.correct[44] == (previous.answers[44] == key.correct[44]))");
   });
 
   it("keeps paper provenance tutor-only and rehearsals private to their tutor", () => {

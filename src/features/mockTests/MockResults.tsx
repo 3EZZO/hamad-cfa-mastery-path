@@ -131,7 +131,7 @@ export function MockResults({
   const count = local ? local.pkg.key.correct.length : attempt ? mockAttemptQuestionCount(attempt) : 0;
   const forfeited = reason === "leave";
   const percent = score === null || count === 0 ? 0 : Math.round((score / count) * 100);
-  // A strong result (6 of 8, 33 of 44 or better) earns the crest medal in the reveal.
+  // A strong result (6 of 8, 34 of 45 or better) earns the crest medal in the reveal.
   const strong = !forfeited && score !== null && score >= Math.ceil(count * 0.75);
   // Until the tutor releases the review the student sees the final score only.
   const reviewOpen = Boolean(local) || attempt?.reviewReleased === true;
