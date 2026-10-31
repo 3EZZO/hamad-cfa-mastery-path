@@ -384,4 +384,3 @@ describe("mock exam papers for every CFA topic", () => {
     expect(() => parseMockTestDraft(syntheticPaper({ moduleId: "qm-paper-02" }))).toThrow("registered papers");
   });
 });
-
