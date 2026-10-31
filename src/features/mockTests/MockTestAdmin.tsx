@@ -2,7 +2,7 @@ import { BadgeCheck, BellRing, CalendarClock, CalendarX, ClipboardCheck, CircleA
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useAppDialog } from "../../components/AppDialog";
 import { MOCK_MODULES, MOCK_TOPICS, mockModuleById, mockModuleCode, mockModuleLabel, mockModulesInTopic, type MockTopic } from "../../data/mockModules";
-import { MOCK_PAPERS, isMockPaperId, mockPaperById } from "../../data/mockPapers";
+import { MOCK_PAPERS, MOCK_PAPER_SECTION, isMockPaperId, mockPaperById, mockTestTitle } from "../../data/mockPapers";
 import { analyzeKeystrokes } from "../../lib/calculatorDiagnostics";
 import { getCloudErrorMessage, listActiveStudentMembers, type ProjectMember } from "../../lib/cloud";
 import {
@@ -226,7 +226,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
           continue;
         }
         const meta = await uploadMockTestDraft(raw);
-        notify(`${meta.title} uploaded as a draft. Review the answer key${isMockPaperId(meta.moduleId) ? " and the coverage report" : ""} before publishing.`);
+        notify(`${mockTestTitle(meta)} uploaded as a draft. Review the answer key${isMockPaperId(meta.moduleId) ? " and the coverage report" : ""} before publishing.`);
       } catch (cause) {
         failures.push(`${file.name}: ${cause instanceof Error && cause.cause instanceof Error ? cause.cause.message : getCloudErrorMessage(cause)}`);
       }
@@ -252,19 +252,19 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
   const unpublish = async (meta: MockTestMeta) => {
     const started = attempts.some(attempt => attempt.moduleId === meta.moduleId);
     if (isMockPaperId(meta.moduleId) && paperTaken(meta.moduleId)) {
-      await dialog.confirm(`${meta.title} has been attempted, so it stays published: unpublishing would hide Hamad's result and review. Reset the attempt instead if he should sit it again.`);
+      await dialog.confirm(`${mockTestTitle(meta)} has been attempted, so it stays published: unpublishing would hide Hamad's result and review. Reset the attempt instead if he should sit it again.`);
       return;
     }
     const ok = await dialog.confirm(
       started
-        ? `A student has already started ${meta.title}. Unpublishing hides it from students who have not started; existing attempts keep their results. Continue?`
-        : `Unpublish ${meta.title}? It returns to Draft and the student will no longer see it.`,
+        ? `A student has already started ${mockTestTitle(meta)}. Unpublishing hides it from students who have not started; existing attempts keep their results. Continue?`
+        : `Unpublish ${mockTestTitle(meta)}? It returns to Draft and the student will no longer see it.`,
     );
     if (!ok) return;
     setBusy(true);
     try {
       await setMockTestPublished(meta, false);
-      notify(`${meta.title} is back in Draft.`);
+      notify(`${mockTestTitle(meta)} is back in Draft.`);
       await refresh();
     } catch (cause) {
       setError(getCloudErrorMessage(cause));
@@ -313,7 +313,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
     const list = drafts.map(meta => {
       const module = mockModuleById(meta.moduleId);
       const low = lowConfidence[meta.moduleId] ?? 0;
-      const name = module ? `${mockModuleCode(module)} ${module.title}` : meta.title;
+      const name = module ? `${mockModuleCode(module)} ${module.title}` : mockTestTitle(meta);
       return `${name} (version ${meta.version}${low ? `, ${low} ${low === 1 ? "answer" : "answers"} below High confidence` : ""})`;
     }).join("; ");
     const ok = await dialog.confirm(
@@ -328,7 +328,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
       try {
         await setMockTestPublished(meta, true);
       } catch (cause) {
-        failures.push(`${meta.title}: ${getCloudErrorMessage(cause)}`);
+        failures.push(`${mockTestTitle(meta)}: ${getCloudErrorMessage(cause)}`);
       }
     }
     const published = drafts.length - failures.length;
@@ -510,9 +510,9 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
         id="tests:papers"
         variant="sub"
         className="mock-admin__topic"
-        title="Full QM mocks"
+        title={MOCK_PAPER_SECTION}
         meta={`${metas.filter(meta => isMockPaperId(meta.moduleId)).length} of ${MOCK_PAPERS.length} uploaded · 44 questions · 66:00 each`}
-        summary="Upload a paper as a draft, check its coverage report and key, rehearse it from the Tests page, then publish"
+        summary="One paper per CFA topic: upload it as a draft, check its coverage report and key, rehearse it from the Tests page, then publish"
       >
         <div className="mock-admin__modules">
           {MOCK_PAPERS.map(paper => {
@@ -523,7 +523,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
             return (
               <article key={paper.id} className="mock-admin__module">
                 <div>
-                  <span>Paper {paper.number}</span>
+                  <span>{paper.code}</span>
                   <strong>{paper.title}</strong>
                   <small>{meta ? `${meta.status === "published" ? "Published" : "Draft"} · version ${meta.version}${taken ? " · frozen (attempted)" : ""}` : "No paper uploaded"}</small>
                   {meta?.status === "published" && studentUid && (
@@ -596,8 +596,8 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                 const listed = [
                   ...MOCK_MODULES.filter(module => (resultsTopic === "all" || module.topic === resultsTopic) && shown(module.id))
                     .map(module => ({ id: module.id, group: module.topic as string, label: mockModuleLabel(module) })),
-                  ...(resultsTopic === "all" || resultsTopic === "Quantitative Methods"
-                    ? MOCK_PAPERS.filter(paper => shown(paper.id)).map(paper => ({ id: paper.id, group: "Full QM mocks", label: paper.title }))
+                  ...(MOCK_PAPERS.some(paper => resultsTopic === "all" || paper.topic === resultsTopic)
+                    ? MOCK_PAPERS.filter(paper => (resultsTopic === "all" || paper.topic === resultsTopic) && shown(paper.id)).map(paper => ({ id: paper.id, group: MOCK_PAPER_SECTION, label: paper.title }))
                     : []),
                 ];
                 return listed.map((module, index) => {

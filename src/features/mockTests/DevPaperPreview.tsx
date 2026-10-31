@@ -11,6 +11,7 @@ import {
   parseMockTestDraft,
   splitMockDraft,
 } from "../../lib/mockTestContent";
+import { MOCK_PAPER_KIND } from "../../data/mockPapers";
 import { MockResults } from "./MockResults";
 import { MockTestRunner } from "./MockTestRunner";
 import { PaperBreakdownView } from "./PaperBreakdownView";
@@ -110,7 +111,7 @@ export default function DevPaperPreview() {
   return (
     <MockTestRunner
       rehearsal="unsaved"
-      kindLabel={pkg.meta.kind === "paper" ? "Full QM mock" : "Module mock test"}
+      kindLabel={pkg.meta.kind === "paper" ? MOCK_PAPER_KIND : "Module mock test"}
       moduleLabel={`${pkg.meta.title} · preview`}
       questions={pkg.questions.questions}
       startedAtMs={Date.now()}

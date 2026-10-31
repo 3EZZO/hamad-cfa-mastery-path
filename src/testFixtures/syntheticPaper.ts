@@ -2,9 +2,10 @@
  * A synthetic 44-question paper upload (schema 2) for tests. No real mock
  * content is ever committed: stems, options and explanations are placeholders.
  */
-import { MOCK_PAPER_MODULE_IDS } from "../data/mockPapers";
+import { paperCatalogIds, paperModuleTestIds } from "../data/mockPapers";
 
 export const SYNTHETIC_PAPER_ID = "qm-paper-01";
+const QM_MODULE_TESTS = paperModuleTestIds(SYNTHETIC_PAPER_ID);
 
 const SKILLS = ["calculation", "concept", "interpretation", "trap"] as const;
 
@@ -43,7 +44,7 @@ export function syntheticPaperQuestion(index: number, overrides: Record<string, 
     distractors: ["a", "b", "c"],
     confidence: "High",
     tags: {
-      moduleTag: MOCK_PAPER_MODULE_IDS[index % MOCK_PAPER_MODULE_IDS.length],
+      moduleTag: QM_MODULE_TESTS[index % QM_MODULE_TESTS.length],
       catalogId: `cfa-2027-outline-m${String((index % 11) + 1).padStart(3, "0")}`,
       los: ["synthetic learning outcome"],
       skill: SKILLS[index % SKILLS.length],
@@ -67,4 +68,25 @@ export function syntheticPaper(overrides: Record<string, unknown> = {}) {
     questions: Array.from({ length: 44 }, (_, index) => syntheticPaperQuestion(index)),
     ...overrides,
   };
+}
+
+/** The same synthetic paper for another topic, tagged with that topic's modules. */
+export function syntheticTopicPaper(paperId: string, overrides: Record<string, unknown> = {}) {
+  const catalog = paperCatalogIds(paperId);
+  const moduleTests = paperModuleTestIds(paperId);
+  return syntheticPaper({
+    moduleId: paperId,
+    questions: Array.from({ length: 44 }, (_, index) => {
+      const question = syntheticPaperQuestion(index);
+      return {
+        ...question,
+        tags: {
+          ...question.tags,
+          moduleTag: moduleTests.length ? moduleTests[index % moduleTests.length] : "",
+          catalogId: catalog[index % catalog.length],
+        },
+      };
+    }),
+    ...overrides,
+  });
 }
