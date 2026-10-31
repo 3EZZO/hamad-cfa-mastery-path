@@ -108,10 +108,10 @@ async function expectDenied(work: Promise<unknown>) {
 
 const ref = (who: Actor, collectionName: string, id: string) => doc(who.firestore, "programs", "project-202", collectionName, id);
 
-function syntheticModuleDraft(): MockTestDraft {
+function syntheticModuleDraft(moduleId = MODULE): MockTestDraft {
   return parseMockTestDraft({
     schemaVersion: 1,
-    moduleId: MODULE,
+    moduleId,
     version: "module-v1",
     title: "Synthetic module test",
     source: "emulator fixture",
@@ -313,9 +313,8 @@ describe("mock test and paper rules (emulator)", () => {
     await expectDenied(updateDoc(ref(student, "mockAttempts", id), { score: graded.score, correct: graded.correct.slice(0, 8) }));
     await updateDoc(ref(student, "mockAttempts", id), { score: graded.score, correct: graded.correct });
     expect(key.modules).toHaveLength(45);
-    await expectDenied(getDocFromServer(ref(student, "mockTestReviews", PAPER)));
-    await expectDenied(getDocFromServer(ref(student, "mockTestSources", PAPER)));
-    await updateDoc(ref(tutor, "mockAttempts", id), { reviewReleased: true });
+    // The review opens with the lock, without any tutor release; sources never do.
+    expect((await getDocFromServer(ref(student, "mockAttempts", id))).data()!.reviewReleased).toBe(false);
     expect((await getDocFromServer(ref(student, "mockTestReviews", PAPER))).data()!.items).toHaveLength(45);
     await expectDenied(getDocFromServer(ref(student, "mockTestSources", PAPER)));
   });
@@ -395,6 +394,139 @@ describe("mock test and paper rules (emulator)", () => {
     const graded = gradeMockAnswers(paperKey, paperKey);
     await updateDoc(ref(student, "mockAttempts", id), { score: graded.score, correct: graded.correct });
     expect((await getDocFromServer(ref(student, "mockAttempts", id))).data()!.score).toBe(45);
+  });
+});
+
+describe("module tests: learn, then final (emulator)", () => {
+  const RETAKE = "m98-retake-module";
+  let draft: MockTestDraft;
+  let key: MockOption[];
+  let id: string;
+
+  /** The student's retake batch (cloudMockTests.startFinalMockAttempt), with parts that can be left out or tampered with. */
+  function retake(
+    who: Actor,
+    attemptId: string,
+    current: Record<string, unknown>,
+    options: { overrides?: Record<string, unknown>; counter?: boolean; remove?: boolean; reason?: boolean } = {},
+  ) {
+    const n = current.attemptNumber as number;
+    const batch = writeBatch(who.firestore);
+    batch.set(ref(who, "mockAttemptHistory", `${attemptId}_${n}`), {
+      ...current, id: attemptId, archivedAt: serverTimestamp(), archivedBy: who.uid,
+      ...(options.reason === false ? {} : { archiveReason: "retake" }),
+      ...options.overrides,
+    });
+    if (options.counter !== false) batch.set(ref(who, "mockAttemptCounters", attemptId), { next: n + 1 });
+    if (options.remove !== false) batch.delete(ref(who, "mockAttempts", attemptId));
+    return batch.commit();
+  }
+
+  const live = async () => (await getDocFromServer(ref(student, "mockAttempts", id))).data()!;
+  const submit = (answers: (MockOption | null)[]) => updateDoc(ref(student, "mockAttempts", id), {
+    answers, status: "submitted", finishReason: "submit", submittedAt: serverTimestamp(), lastSeenAt: serverTimestamp(),
+  });
+  const grade = async () => {
+    const graded = gradeMockAnswers((await live()).answers, key);
+    await updateDoc(ref(student, "mockAttempts", id), { score: graded.score, correct: graded.correct });
+    return graded.score;
+  };
+
+  beforeAll(async () => {
+    draft = syntheticModuleDraft(RETAKE);
+    key = splitMockDraft(draft).key.correct;
+    await uploadBatch(tutor, draft).commit();
+    await publish(tutor, RETAKE);
+    id = `${student.uid}_${RETAKE}`;
+  });
+
+  it("starts a plain first attempt; a first attempt can never claim a first-try score", async () => {
+    await expectDenied(setDoc(ref(student, "mockAttempts", id), { ...newAttempt(student, RETAKE, draft.version, 8, false), firstTryScore: 8 }));
+    await setDoc(ref(student, "mockAttempts", id), newAttempt(student, RETAKE, draft.version, 8, false));
+    await expectDenied(getDocFromServer(ref(student, "mockTestKeys", RETAKE)));
+    await expectDenied(getDocFromServer(ref(student, "mockTestReviews", RETAKE)));
+    await expectDenied(retake(student, id, await live()));
+  });
+
+  it("refuses a retake before grading, then opens the review as soon as the attempt is locked", async () => {
+    // Five of eight right.
+    await submit(key.map((option, index) => (index < 5 ? option : ((option + 1) % 3) as MockOption)));
+    await expectDenied(retake(student, id, await live()));
+    expect(await grade()).toBe(5);
+    expect((await getDocFromServer(ref(student, "mockTestReviews", RETAKE))).data()!.items).toHaveLength(8);
+    expect((await getDocFromServer(ref(student, "mockTestKeys", RETAKE))).data()!.correct).toEqual(key);
+  });
+
+  it("refuses a forged, partial or foreign retake", async () => {
+    const current = await live();
+    // The copy must be exact: no better score, no changed answers.
+    await expectDenied(retake(student, id, current, { overrides: { score: 8 } }));
+    await expectDenied(retake(student, id, current, { overrides: { answers: key } }));
+    await expectDenied(retake(student, id, current, { overrides: { archivedBy: tutor.uid } }));
+    // All three writes, together.
+    await expectDenied(retake(student, id, current, { remove: false }));
+    await expectDenied(retake(student, id, current, { counter: false, remove: false }));
+    await expectDenied(retake(student, id, current, { overrides: {}, counter: true, remove: true, reason: false }));
+    // The counter may only move to the next number.
+    const skip = writeBatch(student.firestore);
+    skip.set(ref(student, "mockAttemptHistory", `${id}_1`), { ...current, id, archivedAt: serverTimestamp(), archivedBy: student.uid, archiveReason: "retake" });
+    skip.set(ref(student, "mockAttemptCounters", id), { next: 5 });
+    skip.delete(ref(student, "mockAttempts", id));
+    await expectDenied(skip.commit());
+    // Nobody else can retake the student's attempt.
+    await expectDenied(retake(otherStudent, id, current));
+    expect((await live()).score).toBe(5);
+  });
+
+  it("retakes, then starts the final attempt only with the archived first-try score", async () => {
+    await retake(student, id, await live());
+    const archived = (await getDocFromServer(ref(student, "mockAttemptHistory", `${id}_1`))).data()!;
+    expect(archived.archiveReason).toBe("retake");
+    expect(archived.score).toBe(5);
+    expect((await getDocFromServer(ref(student, "mockAttempts", id))).exists()).toBe(false);
+    const final = { ...newAttempt(student, RETAKE, draft.version, 8, false), attemptNumber: 2 };
+    await expectDenied(setDoc(ref(student, "mockAttempts", id), final));
+    await expectDenied(setDoc(ref(student, "mockAttempts", id), { ...final, firstTryScore: 8 }));
+    await setDoc(ref(student, "mockAttempts", id), { ...final, firstTryScore: 5 });
+    // While the final runs, the key and the review are closed again.
+    await expectDenied(getDocFromServer(ref(student, "mockTestKeys", RETAKE)));
+    await expectDenied(getDocFromServer(ref(student, "mockTestReviews", RETAKE)));
+    // The first-try score cannot be edited.
+    await expectDenied(updateDoc(ref(student, "mockAttempts", id), { firstTryScore: 8, lastSeenAt: serverTimestamp() }));
+    await expectDenied(updateDoc(ref(tutor, "mockAttempts", id), { firstTryScore: 8 }));
+  });
+
+  it("never retakes a final attempt", async () => {
+    await submit(key);
+    expect(await grade()).toBe(8);
+    const final = await live();
+    expect(final.firstTryScore).toBe(5);
+    await expectDenied(retake(student, id, final));
+    expect((await getDocFromServer(ref(student, "mockTestReviews", RETAKE))).exists()).toBe(true);
+  });
+
+  it("never retakes a paper", async () => {
+    const paperId = `${otherStudent.uid}_legacy-paper-44`;
+    const paperAttempt = (await getDocFromServer(ref(otherStudent, "mockAttempts", paperId))).data()!;
+    expect(paperAttempt.score).toBe(44);
+    await expectDenied(retake(otherStudent, paperId, paperAttempt));
+  });
+
+  it("starts a new first attempt after a tutor reset of the final; a reset cannot pose as a retake", async () => {
+    const final = await live();
+    const pose = writeBatch(tutor.firestore);
+    pose.set(ref(tutor, "mockAttemptHistory", `${id}_2`), { ...final, id, archivedAt: serverTimestamp(), archivedBy: tutor.uid, archiveReason: "retake" });
+    pose.set(ref(tutor, "mockAttemptCounters", id), { next: 3 });
+    pose.delete(ref(tutor, "mockAttempts", id));
+    await expectDenied(pose.commit());
+    const reset = writeBatch(tutor.firestore);
+    reset.set(ref(tutor, "mockAttemptHistory", `${id}_2`), { ...final, id, archivedAt: serverTimestamp(), archivedBy: tutor.uid });
+    reset.set(ref(tutor, "mockAttemptCounters", id), { next: 3 });
+    reset.delete(ref(tutor, "mockAttempts", id));
+    await reset.commit();
+    const next = { ...newAttempt(student, RETAKE, draft.version, 8, false), attemptNumber: 3 };
+    await expectDenied(setDoc(ref(student, "mockAttempts", id), { ...next, firstTryScore: 8 }));
+    await setDoc(ref(student, "mockAttempts", id), next);
   });
 });
 
