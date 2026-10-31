@@ -47,7 +47,7 @@ describe("buildActivity", () => {
       "Mistake logged",
       "Payment paid",
     ]);
-    expect(events[0]!.detail).toBe("6/8 · 1 focus incidents · Review released");
+    expect(events[0]!.detail).toBe("6/8 · 1 focus incidents");
     expect(events[2]!.detail).toBe("4 answered · 75% correct");
     expect(events.at(-1)!.detail).toBe("SAR 2,000");
   });

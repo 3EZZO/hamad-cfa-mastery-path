@@ -32,6 +32,8 @@ export interface BriefModuleTest {
   moduleId: string;
   title: string;
   score: number | null;
+  /** On a final attempt: the first try it followed (learn, then final). */
+  firstTry: number | null;
   outOf: number;
   submittedAtMs: number;
 }
@@ -129,6 +131,7 @@ export function buildTutorBrief({
       moduleId: attempt.moduleId,
       title: mockModuleById(attempt.moduleId)?.title ?? attempt.moduleId,
       score: attempt.score,
+      firstTry: attempt.firstTryScore ?? null,
       outOf: MOCK_QUESTION_COUNT,
       submittedAtMs: attempt.submittedAtMs!,
     }));

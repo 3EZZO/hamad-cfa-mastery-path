@@ -41,7 +41,8 @@ describe("buildTestBoard", () => {
     entry(5, { deadline: "2026-09-30" }),
     entry(6, { attempt: attempt({ status: "active", startedAtMs: NOW - 60_000, submittedAtMs: null, score: null }) }),
     entry(7, { attempt: attempt({ score: null }) }),
-    entry(8, { attempt: attempt({ score: 8 }) }),
+    // A final attempt (7/8 first try, 8/8 final): nothing more to do.
+    entry(8, { attempt: attempt({ score: 8, attemptNumber: 2, firstTryScore: 7 }) }),
   ], NOW);
 
   it("orders by what needs attention first", () => {
@@ -68,8 +69,25 @@ describe("buildTestBoard", () => {
 
   it("folds away only finished tests that need nothing more", () => {
     expect(board.filter(isSettled).map((row) => row.number)).toEqual([8]);
-    const forfeited = buildTestBoard([entry(9, { attempt: attempt({ status: "forfeited", score: 0 }) })], NOW);
-    expect(isSettled(forfeited[0])).toBe(true);
+    // A forfeited final attempt is finished; a forfeited first attempt still has its final to take.
+    const forfeitedFinal = buildTestBoard([entry(9, { attempt: attempt({ status: "forfeited", score: 0, firstTryScore: 2 }) })], NOW);
+    expect(isSettled(forfeitedFinal[0])).toBe(true);
+    const forfeitedFirst = buildTestBoard([entry(9, { attempt: attempt({ status: "forfeited", score: 0 }) })], NOW);
+    expect(forfeitedFirst[0]!.finalAvailable).toBe(true);
+    expect(isSettled(forfeitedFirst[0])).toBe(false);
+  });
+
+  it("keeps a strong first try in view while its final attempt is open", () => {
+    const [row] = buildTestBoard([entry(1, { attempt: attempt({ score: 8 }) })], NOW);
+    expect(row).toMatchObject({ status: "done", score: 8, firstTry: 8, finalAvailable: true, weak: false });
+    expect(isSettled(row!)).toBe(false);
+  });
+
+  it("judges repair on the first try, not the final score", () => {
+    const [row] = buildTestBoard([entry(1, { attempt: attempt({ score: 8, attemptNumber: 2, firstTryScore: 4 }) })], NOW);
+    expect(row).toMatchObject({ score: 8, firstTry: 4, finalAvailable: false, weak: true });
+    expect(isSettled(row!)).toBe(false);
+    expect(summarizeTopic([row!])).toMatchObject({ repair: 1, averageScore: 8 });
   });
 
   it("counts progress against the tests due by the next deadline, finished ones included", () => {

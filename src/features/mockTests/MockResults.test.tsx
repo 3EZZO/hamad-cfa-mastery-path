@@ -39,7 +39,7 @@ function attempt(reviewReleased: boolean): MockAttempt {
 
 let tree: ReactTestRenderer | undefined;
 
-async function render(props: { attempt?: MockAttempt; local?: LocalReview; practice?: ReviewPractice }) {
+async function render(props: { attempt?: MockAttempt; local?: LocalReview; practice?: ReviewPractice; onStartFinal?: () => void }) {
   await act(async () => {
     tree = create(<MockResults moduleLabel="Module 1" onBack={vi.fn()} {...props} />);
   });
@@ -61,25 +61,44 @@ describe("Module test results", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows the student only the final score before the review is released", async () => {
+  it("opens the question grid and explanations as soon as the attempt is locked, with no tutor release", async () => {
     const root = await render({ attempt: attempt(false) });
     const text = textOf(root);
     expect(textOf(root.findByProps({ className: "mock-score__value" }))).toBe("5");
     expect(text).toContain("63%");
-    expect(text).not.toContain("Time used");
-    expect(text).not.toContain("You chose");
-    expect(hasClass(root, "mock-results__grid")).toBe(false);
-    expect(hasClass(root, "mock-review")).toBe(false);
-    expect(hasClass(root, "mock-results__pending")).toBe(true);
-    expect(getMockQuestions).not.toHaveBeenCalled();
-  });
-
-  it("shows the question grid and explanations once the review is released", async () => {
-    const root = await render({ attempt: attempt(true) });
-    expect(textOf(root)).toContain("Time used");
+    expect(text).toContain("Time used");
+    expect(text).toContain("You chose");
     expect(root.findByProps({ className: "mock-results__grid" }).findAllByType("li")).toHaveLength(8);
     expect(textOf(root.findByProps({ className: "mock-review" }))).toContain("Stem 1");
     expect(hasClass(root, "mock-results__pending")).toBe(false);
+    expect(getMockQuestions).toHaveBeenCalledTimes(1);
+  });
+
+  it("never loads the answers while an attempt is still running", async () => {
+    const root = await render({ attempt: { ...attempt(false), status: "active", submittedAtMs: null, finishReason: null } as MockAttempt });
+    expect(hasClass(root, "mock-review")).toBe(false);
+    expect(hasClass(root, "mock-results__grid")).toBe(false);
+    expect(getMockQuestions).not.toHaveBeenCalled();
+  });
+
+  it("calls a reviewed first attempt to the final attempt", async () => {
+    const onStartFinal = vi.fn();
+    const root = await render({ attempt: attempt(false), onStartFinal });
+    const call = root.findByProps({ className: "mock-final" });
+    expect(textOf(call)).toContain("Now your final attempt.");
+    expect(textOf(call)).toContain("the same 8 questions");
+    await act(async () => button(call, "Start final attempt").props.onClick());
+    expect(onStartFinal).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a final attempt's score beside its first try, with no further attempt", async () => {
+    const final = { ...attempt(false), attemptNumber: 2, firstTryScore: 3 } as MockAttempt;
+    const root = await render({ attempt: final, onStartFinal: vi.fn() });
+    expect(hasClass(root, "mock-final")).toBe(false);
+    const text = textOf(root);
+    expect(text).toContain("Module 1 · final attempt");
+    expect(text).toContain("Final score63%");
+    expect(text).toContain("First try3/8");
   });
 
   it("shows a tutor rehearsal in full straight away", async () => {
@@ -157,10 +176,18 @@ describe("Module test results", () => {
     expect(root.findAll((node) => node.props.className === "mock-review__practice")).toHaveLength(0);
   });
 
-  it("shows no practice links in a tutor rehearsal or before the review is released", async () => {
-    const practice: ReviewPractice = { moduleTitle: "Fiscal Policy", practiceModuleId: "m014-fiscal-tools", onPractise: vi.fn() };
-    const root = await render({ attempt: attempt(false), practice });
+  it("shows no practice links in a tutor rehearsal", async () => {
+    const local: LocalReview = {
+      reason: "submit",
+      work: { answers: attempt(false).answers, flags: attempt(false).flags } as LocalReview["work"],
+      correct: attempt(false).correct!,
+      score: 5,
+      timeUsedMs: 300_000,
+      pkg: { meta: { moduleId: "m01" }, questions: { questions }, key: { correct: key }, review: { items } } as unknown as LocalReview["pkg"],
+    };
+    const root = await render({ local });
     expect(root.findAll((node) => node.props.className === "mock-practice")).toHaveLength(0);
+    expect(hasClass(root, "mock-final")).toBe(false);
   });
 
   it("scores a 44-question paper out of 44 and shows its module breakdown with the review", async () => {
@@ -213,7 +240,7 @@ describe("Module test results", () => {
     }) as unknown as MockAttempt;
     const verdictOf = (root: ReactTestInstance) => root.find((node) => typeof node.props.className === "string" && node.props.className.startsWith("mock-results__verdict "));
 
-    it("fails 37/45 (82.22%) with the owner's message, before the review is released", async () => {
+    it("fails 37/45 (82.22%) with the owner's message, and opens the review at once", async () => {
       const root = await render({ attempt: paperAttempt(37) });
       const verdict = verdictOf(root);
       expect(verdict.props.className).toBe("mock-results__verdict is-fail");
@@ -226,8 +253,10 @@ describe("Module test results", () => {
       expect(textOf(root)).toContain("Pass mark84.44% (38/45)");
       expect(textOf(root)).toContain("Score82.22%");
       expect(hasClass(root, "mock-results__reveal")).toBe(true);
-      expect(textOf(root)).not.toContain("Time used");
+      expect(textOf(root)).toContain("Time used");
+      // One attempt on a paper: no retry and no final attempt.
       expect(textOf(root)).not.toContain("Retry");
+      expect(hasClass(root, "mock-final")).toBe(false);
     });
 
     it.each([

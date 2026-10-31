@@ -44,11 +44,22 @@ describe("Module mock scores", () => {
     for (let i = 0; i < 3; i += 1) await act(async () => { await Promise.resolve(); });
     const trends = tree!.root.findAll((node) => node.type === "section" && node.props.className === "mock-trend");
     expect(trends.map((trend) => textOf(trend.findByProps({ className: "mock-trend__head" })))).toEqual([
-      "Quantitative Methodsavg 6.0/8 · 2 graded",
-      "Economicsavg 7.0/8 · 1 graded",
+      "Quantitative Methodsavg first try 6.0/8 · 2 graded",
+      "Economicsavg first try 7.0/8 · 1 graded",
     ]);
     const quantScores = trends[0].findByType("ol").findAllByType("li");
     expect(quantScores.map((item) => textOf(item))).toEqual(["4/8QM1", "8/8QM2"]);
     expect(quantScores[0].props.className).toBe("is-weak");
+  });
+
+  it("trends a final attempt on its first try and lists both scores", async () => {
+    attempts.list = [{ ...attempt("m01-rates-and-returns", 8, 1_000), attemptNumber: 2, firstTryScore: 3 }];
+    await act(async () => { tree = create(<ModuleMockScores uid="student-1" role="student" />); });
+    for (let i = 0; i < 3; i += 1) await act(async () => { await Promise.resolve(); });
+    const trend = tree!.root.find((node) => node.type === "section" && node.props.className === "mock-trend");
+    expect(textOf(trend.findByProps({ className: "mock-trend__head" }))).toBe("Quantitative Methodsavg first try 3.0/8 · 1 graded");
+    const row = tree!.root.find((node) => node.type === "li" && String(node.props.className).startsWith("mock-scores__row")
+      && textOf(node.findByProps({ className: "mock-scores__module" })) === "QM1");
+    expect(textOf(row.findByProps({ className: "mock-scores__value" }))).toBe("3/8 → final 8/8");
   });
 });

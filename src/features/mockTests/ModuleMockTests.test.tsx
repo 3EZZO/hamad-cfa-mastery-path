@@ -39,6 +39,7 @@ vi.mock("../../lib/cloudMockTests", () => ({
   listMockAttempts: vi.fn(async () => [...cloud.attempts.values()]),
   finalizeExpiredMockAttempt: vi.fn(), finishMockAttempt: vi.fn(), getMockQuestions: vi.fn(), gradeMockAttempt: vi.fn(async (value: unknown) => value),
   loadMockTestPackage: vi.fn(), resumeMockAttempt: vi.fn(), saveMockWork: vi.fn(), startMockAttempt: vi.fn(),
+  startFinalMockAttempt: vi.fn(async () => { throw new Error("offline in this test"); }),
 }));
 vi.mock("../../lib/cloud", () => ({
   getCloudErrorMessage: () => "error",
@@ -54,6 +55,7 @@ vi.mock("./MockTestRunner", () => ({ MockTestRunner: () => null, requestExamFull
 vi.mock("./MockResults", () => ({ MockResults: () => null }));
 vi.mock("./useExamLock", () => ({ exitFullscreen: vi.fn() }));
 
+import { startFinalMockAttempt } from "../../lib/cloudMockTests";
 import { ModuleMockTests } from "./ModuleMockTests";
 
 function textOf(node: ReactTestInstance): string {
@@ -104,8 +106,10 @@ describe("Module Tests priority board", () => {
     vi.setSystemTime(now);
     cloud.published = new Set(["m01-rates-and-returns", "m02-time-value-of-money", "m03-statistical-measures", "m04-probability-trees"]);
     cloud.attempts = new Map<string, unknown>([
+      // A first try below 6/8, its final attempt still to take.
       ["m01-rates-and-returns", attempt("m01-rates-and-returns", { score: 4 })],
-      ["m02-time-value-of-money", attempt("m02-time-value-of-money", { score: 8, reviewReleased: true })],
+      // A final attempt: 6/8 first try, 8/8 final.
+      ["m02-time-value-of-money", attempt("m02-time-value-of-money", { attemptNumber: 2, score: 8, firstTryScore: 6 })],
     ]);
     cloud.deadlines = new Map([["m04-probability-trees", "2026-10-03"]]);
     cloud.practiceModuleIds = [];
@@ -147,25 +151,58 @@ describe("Module Tests priority board", () => {
     expect(onOpenRepair).toHaveBeenCalledTimes(1);
   });
 
-  it("offers the released review on a finished test and the result on a pending one", async () => {
+  it("offers the final attempt after a first try, and the review on every finished test", async () => {
     const root = (await render("student")).root;
     const card = (title: string) => root.find((node) => node.type === "li"
       && String(node.props.className ?? "").startsWith("mock-card")
       && textOf(node.findByType("h4")) === title);
-    const released = doneRow(root, "The Time Value of Money in Finance");
-    expect(textOf(released)).toContain("Completed · 8/8");
-    expect(textOf(released.findByType("button"))).toBe("Read review");
-    const pending = card("Rates and Returns");
-    expect(textOf(pending)).not.toContain("Review ready");
-    expect(textOf(pending.findByType("button"))).toBe("View result");
+    // A final attempt is finished: it folds away, showing both scores.
+    const final = doneRow(root, "The Time Value of Money in Finance");
+    expect(textOf(final)).toContain("Final 8/8 · first try 6/8");
+    expect(final.findAllByType("button").map(textOf)).toEqual(["Review"]);
+    // A first try opens its answers at once and offers the final attempt.
+    const first = card("Rates and Returns");
+    expect(textOf(first)).toContain("First try 4/8");
+    expect(textOf(first)).toContain("Answers open · final attempt to take");
+    const actions = first.findByProps({ className: "mock-card__actions" }).findAllByType("button");
+    expect(actions.map(textOf)).toEqual(["Final attempt", "Review"]);
+    expect(root.findByProps({ "aria-label": "Module test rules" }).findAllByType("li").map(textOf)).toContain("Two attempts: learn, then final");
   });
 
-  it("shows the tutor the student's status, unreleased reviews and a reminder shortcut", async () => {
+  it("starts the final attempt from its own start screen", async () => {
+    const root = (await render("student")).root;
+    const first = root.find((node) => node.type === "li" && String(node.props.className ?? "").startsWith("mock-card")
+      && textOf(node.findByType("h4")) === "Rates and Returns");
+    await act(async () => first.find((node) => node.type === "button" && textOf(node) === "Final attempt").props.onClick());
+    const start = root.findByProps({ className: "mock-start" });
+    expect(textOf(start)).toContain("Final attempt.");
+    expect(textOf(start)).toContain("This score counts as your final score");
+    const begin = start.find((node) => node.type === "button" && textOf(node).includes("Start final attempt"));
+    expect(begin.props.disabled).toBe(true);
+    await act(async () => start.findByType("input").props.onChange({ target: { checked: true } }));
+    await act(async () => start.find((node) => node.type === "button" && textOf(node).includes("Start final attempt")).props.onClick());
+    for (let i = 0; i < 3; i += 1) await act(async () => { await Promise.resolve(); });
+    expect(startFinalMockAttempt).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(startFinalMockAttempt).mock.calls[0]![0]).toMatchObject({ moduleId: "m01-rates-and-returns", score: 4 });
+  });
+
+  it("explains a first attempt's two-attempt rule on its start screen", async () => {
+    const root = (await render("student")).root;
+    const available = root.find((node) => node.type === "li" && String(node.props.className ?? "").startsWith("mock-card")
+      && textOf(node.findByType("h4")) === "Statistical Measures of Asset Returns");
+    await act(async () => available.find((node) => node.type === "button" && textOf(node) === "Start").props.onClick());
+    const start = textOf(root.findByProps({ className: "mock-start" }));
+    expect(start).toContain("Two attempts: learn, then final.");
+    expect(start).toContain("Start Test");
+  });
+
+  it("shows the tutor the student's first try and final, and a reminder shortcut", async () => {
     const onOpenReminders = vi.fn();
     const root = (await render("tutor", { onOpenReminders })).root;
     const text = textOf(root);
-    expect(text).toContain("Hamad: 4/8");
-    expect(text).toContain("Review not released yet");
+    expect(text).toContain("Hamad: first try 4/8 · final not taken yet");
+    expect(text).toContain("Hamad: 6/8 → final 8/8");
+    expect(text).not.toContain("not released");
     expect(textOf(root.findByProps({ className: "mock-hub__summary" }))).toContain("Hamad: 0 of 1 due by");
     const remind = root.find((node) => node.type === "button" && textOf(node).includes("Send a reminder"));
     await act(async () => remind.props.onClick());

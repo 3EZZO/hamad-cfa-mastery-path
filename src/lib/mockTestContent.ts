@@ -793,6 +793,11 @@ export function mockFirstTryScore(attempt: Pick<MockAttempt, "score" | "firstTry
   return attempt.firstTryScore ?? attempt.score;
 }
 
+/** The final attempt's score, or null when this is not a final attempt (or it is not graded yet). */
+export function mockFinalScore(attempt: Pick<MockAttempt, "score" | "firstTryScore">): number | null {
+  return isFinalMockAttempt(attempt) ? attempt.score : null;
+}
+
 export function mockAttemptDurationMs(attempt: Pick<MockAttempt, "durationSeconds">): number {
   return attempt.durationSeconds === undefined ? MOCK_DURATION_MS : attempt.durationSeconds * 1000;
 }

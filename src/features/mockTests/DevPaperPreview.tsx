@@ -98,7 +98,7 @@ export default function DevPaperPreview() {
 
   const count = pkg.key.correct.length;
   if (view === "review") {
-    // The review as a student sees it once released: every answer right, or only the first `correct`.
+    // The review as a student sees it after submitting: every answer right, or only the first `correct`.
     const right = params.has("correct") ? Math.max(0, Number(params.get("correct")) || 0) : count;
     const answers = pkg.key.correct.map((option, index) => (index < right ? option : ((option + 1) % 3) as typeof option));
     const { correct, score } = gradeMockAnswers(answers, pkg.key.correct);

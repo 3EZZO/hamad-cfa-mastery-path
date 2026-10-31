@@ -347,17 +347,12 @@ function TutorAdminConsole({
     if (action.type === "approve-session") return reviewSessionRequest(action.taskId, "approved");
     setBusyItem(item.id);
     try {
-      if (action.type === "grade" || action.type === "release-review") {
+      if (action.type === "grade") {
         const mocks = await import("../lib/cloudMockTests");
         const attempt = consoleData.attempts?.find((entry) => entry.id === action.attemptId);
         if (!attempt) throw new Error("That attempt is no longer available. Refresh and try again.");
-        if (action.type === "grade") {
-          const graded = await mocks.tutorGradeMockAttempt(attempt);
-          notifyAndRefresh(`Graded: ${graded.score ?? "?"}/8.`);
-        } else {
-          await mocks.setMockReviewReleased(attempt.id, true);
-          notifyAndRefresh("Review released to Hamad.");
-        }
+        const graded = await mocks.tutorGradeMockAttempt(attempt);
+        notifyAndRefresh(`Graded: ${graded.score ?? "?"}/8.`);
       } else if (action.type === "unlock-bank") {
         const { savePracticeAssignment } = await import("../lib/cloud");
         const assigned = consoleData.assignedBankIds ?? [];

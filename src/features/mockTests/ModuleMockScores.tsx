@@ -55,7 +55,7 @@ export function ModuleMockScores({ uid, role }: { uid: string; role: ProjectRole
               <section key={trend.topic} className="mock-trend" aria-labelledby={headingId}>
                 <div className="mock-trend__head">
                   <strong id={headingId}>{trend.topic}</strong>
-                  <span>avg {trend.averageScore.toFixed(1)}/{MOCK_QUESTION_COUNT} · {trend.graded} graded</span>
+                  <span>avg first try {trend.averageScore.toFixed(1)}/{MOCK_QUESTION_COUNT} · {trend.graded} graded</span>
                 </div>
                 <span className="mock-trend__bar" aria-hidden="true"><i style={{ width: `${(trend.averageScore / MOCK_QUESTION_COUNT) * 100}%` }} /></span>
                 <ol className="mock-trend__recent" aria-label={`Latest ${trend.recent.length} ${trend.topic} scores, oldest first`}>
@@ -83,7 +83,7 @@ export function ModuleMockScores({ uid, role }: { uid: string; role: ProjectRole
               <span className="mock-scores__title">{module.title}</span>
               <span className="mock-scores__bar" aria-hidden="true"><i style={{ width: `${percent ?? 0}%` }} /></span>
               <strong className="mock-scores__value">
-                {view === "forfeited" ? "Forfeited" : percent !== null ? `${attempt!.score}/${MOCK_QUESTION_COUNT}` : view === "not-started" ? "—" : view === "in-progress" ? "In progress" : "Grading"}
+                {view === "forfeited" ? "Forfeited" : percent !== null ? `${attempt!.firstTryScore === undefined ? "" : `${attempt!.firstTryScore}/${MOCK_QUESTION_COUNT} → final `}${attempt!.score}/${MOCK_QUESTION_COUNT}` : view === "not-started" ? "—" : view === "in-progress" ? "In progress" : "Grading"}
               </strong>
               <small>{used !== null ? formatMockClock(used) : ""}{attempt && attempt.incidents.length > 0 && role === "tutor" ? ` · ${attempt.incidents.length} incidents` : ""}</small>
             </li>

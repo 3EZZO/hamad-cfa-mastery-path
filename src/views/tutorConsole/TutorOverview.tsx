@@ -60,13 +60,12 @@ export function TutorOverview({
           title="Module tests"
           action="Open tests"
           onAction={() => onSection("tests")}
-          tone={tests.drafts + tests.toRelease + tests.toGrade > 0 ? "attention" : undefined}
+          tone={tests.drafts + tests.toGrade > 0 ? "attention" : undefined}
         >
           {loading ? <p>Loading…</p> : (
             <>
               <p><strong>{tests.published}</strong> published{tests.drafts ? ` · ${tests.drafts} ${tests.drafts === 1 ? "draft" : "drafts"}` : ""}</p>
               <p>Hamad has finished <strong>{tests.done}</strong></p>
-              {tests.toRelease > 0 && <p className="is-attention">{tests.toRelease} {tests.toRelease === 1 ? "review" : "reviews"} to release</p>}
               {tests.toGrade > 0 && <p className="is-attention">{tests.toGrade} to grade</p>}
             </>
           )}

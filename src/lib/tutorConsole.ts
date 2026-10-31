@@ -130,7 +130,7 @@ export function searchConsole(entries: readonly ConsoleEntry[], query: string, l
 // ------------------------------------------------------------------ overview
 
 export interface ConsoleGlance {
-  tests: { published: number; drafts: number; toRelease: number; toGrade: number; done: number };
+  tests: { published: number; drafts: number; toGrade: number; done: number };
   practice: { banks: number; unlocked: number; questions: number };
   reminders: { active: number; unacknowledged: number };
   approvals: number;
@@ -138,7 +138,7 @@ export interface ConsoleGlance {
 
 export interface GlanceInput {
   metas: ReadonlyArray<{ moduleId: string; status: "draft" | "published" }> | null;
-  attempts: ReadonlyArray<{ moduleId: string; status: string; score: number | null; reviewReleased: boolean }> | null;
+  attempts: ReadonlyArray<{ moduleId: string; status: string; score: number | null }> | null;
   reminders: ReadonlyArray<{ status: string; acknowledgedAtMs: number | null }> | null;
   banks: ReadonlyArray<{ storageId: string; questions: readonly unknown[] }> | null;
   assignedBankIds: readonly string[] | null;
@@ -156,7 +156,6 @@ export function consoleGlance(input: GlanceInput): ConsoleGlance {
     tests: {
       published: metas.filter((meta) => meta.status === "published").length,
       drafts: metas.filter((meta) => meta.status === "draft").length,
-      toRelease: finished.filter((attempt) => attempt.score !== null && !attempt.reviewReleased).length,
       toGrade: finished.filter((attempt) => attempt.score === null).length,
       done: finished.length,
     },
@@ -173,7 +172,7 @@ export function consoleGlance(input: GlanceInput): ConsoleGlance {
 /** What waits on the tutor in each section, for the tab badges. */
 export function sectionCounts(glance: ConsoleGlance): Partial<Record<TutorSection, number>> {
   return {
-    tests: glance.tests.drafts + glance.tests.toRelease + glance.tests.toGrade,
+    tests: glance.tests.drafts + glance.tests.toGrade,
     sessions: glance.approvals,
   };
 }

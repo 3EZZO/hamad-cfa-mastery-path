@@ -110,7 +110,8 @@ describe("Full QM mocks section", () => {
     expect(text).toContain("No paper yet");
     expect(text).toContain("Economics Paper");
     expect(text).toContain("Draft · version v1");
-    expect(text).toContain("Hamad: 31/44 · review not released");
+    expect(text).toContain("Hamad: 31/44");
+    expect(text).not.toContain("not released");
     expect(text).toContain("Resume rehearsal");
     expect(text).toContain("40/44");
     expect(text).toContain("never appears in Hamad's results");
@@ -126,7 +127,8 @@ describe("Full QM mocks section", () => {
 
     vi.mocked(listMockAttempts).mockResolvedValueOnce([paper45(38)]);
     root = await render("tutor");
-    expect(textOf(root)).toContain("Hamad: 38/45 · Passed · review not released");
+    expect(textOf(root)).toContain("Hamad: 38/45 · Passed");
+    expect(textOf(root)).not.toContain("not released");
     expect(textOf(root)).not.toContain("40/44 · ");
   });
 });

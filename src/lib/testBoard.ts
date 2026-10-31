@@ -1,5 +1,5 @@
 import { deadlinePassed } from "./mockReminders";
-import { mockAttemptView, type MockAttempt } from "./mockTestContent";
+import { canStartFinalMockAttempt, mockAttemptView, mockFirstTryScore, type MockAttempt } from "./mockTestContent";
 
 /**
  * The Tests destination's priority board: every module test in the order it
@@ -21,10 +21,15 @@ export interface BoardEntry {
 
 export interface BoardRow extends BoardEntry {
   status: BoardStatus;
+  /** The score that counts: the final attempt's, or the only attempt's. */
   score: number | null;
+  /** The first try, before the answers were seen: what repair and the tutor's analytics read. */
+  firstTry: number | null;
+  /** A graded first attempt whose final attempt is still open (learn, then final). */
+  finalAvailable: boolean;
   /** Deadline passed and the test is still not submitted. */
   overdue: boolean;
-  /** Finished below WEAK_SCORE: worth a repair pass. */
+  /** First try below WEAK_SCORE: worth a repair pass. */
   weak: boolean;
 }
 
@@ -67,12 +72,15 @@ export function buildTestBoard(entries: BoardEntry[], nowMs: number): BoardRow[]
     .map((entry): BoardRow => {
       const status = boardStatus(entry, nowMs);
       const score = entry.attempt?.score ?? null;
+      const firstTry = entry.attempt && status !== "in-progress" ? mockFirstTryScore(entry.attempt) : null;
       return {
         ...entry,
         status,
         score,
+        firstTry,
+        finalAvailable: canStartFinalMockAttempt(entry.attempt),
         overdue: (status === "due" || status === "in-progress") && deadlinePassed(entry.deadline, nowMs),
-        weak: status === "done" && score !== null && score < WEAK_SCORE,
+        weak: status === "done" && firstTry !== null && firstTry < WEAK_SCORE,
       };
     })
     .sort((left, right) =>
@@ -107,7 +115,7 @@ export interface TopicProgress {
   inProgress: number;
   due: number;
   overdue: number;
-  /** Finished below WEAK_SCORE. */
+  /** First try below WEAK_SCORE. */
   repair: number;
   /** Mean of the graded scores (out of MOCK_QUESTION_COUNT), or null before any grade. */
   averageScore: number | null;
@@ -128,9 +136,9 @@ export function summarizeTopic(rows: BoardRow[]): TopicProgress {
   };
 }
 
-/** Finished with nothing left to do: these fold away; weak results stay in view for repair. */
+/** Finished with nothing left to do: these fold away; weak results and open final attempts stay in view. */
 export function isSettled(row: BoardRow): boolean {
-  return (row.status === "done" && !row.weak) || row.status === "forfeited";
+  return ((row.status === "done" && !row.weak) || row.status === "forfeited") && !row.finalAvailable;
 }
 
 /** Earliest active deadline per module from a list of reminders for one student. */

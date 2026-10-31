@@ -13,7 +13,7 @@ vi.mock("../lazyViews", () => ({
   PracticeBankAdmin: () => <p className="stub-practice">Practice bank admin</p>,
 }));
 vi.mock("../components/TutorBrief", () => ({ TutorBriefPanel: () => <p className="stub-brief">Brief</p> }));
-const cloudMocks = vi.hoisted(() => ({ setMockReviewReleased: vi.fn(async () => undefined), tutorGradeMockAttempt: vi.fn() }));
+const cloudMocks = vi.hoisted(() => ({ tutorGradeMockAttempt: vi.fn() }));
 vi.mock("../lib/cloudMockTests", () => cloudMocks);
 vi.mock("../components/AppDialog", () => ({
   useAppDialog: () => ({ confirm: vi.fn(async () => true), prompt: vi.fn(async () => ""), active: () => true }),
@@ -91,11 +91,11 @@ describe("Tutor Admin control centre", () => {
   it("shows the sections as tabs with counts of what is waiting", async () => {
     const root = await render("overview");
     const tabs = root.findAll((node) => node.type === "button" && node.props.role === "tab");
-    // Inbox: release a review, follow up a quiet reminder, an overdue payment, a draft.
-    expect(tabs.map(textOf)).toEqual(["Overview4", "Tests2", "Practice", "Sessions", "Activity", "Records"]);
-    // One draft plus one review to release.
+    // Inbox: follow up a quiet reminder, an overdue payment, a draft (reviews open on submit: nothing to release).
+    expect(tabs.map(textOf)).toEqual(["Overview3", "Tests1", "Practice", "Sessions", "Activity", "Records"]);
+    // One draft.
     const badge = tabs[1]!.findByType("em");
-    expect(badge.props["aria-label"]).toBe("2 waiting");
+    expect(badge.props["aria-label"]).toBe("1 waiting");
   });
 
   it("summarizes tests, reminders, practice, sessions and payments on the overview", async () => {
@@ -105,7 +105,7 @@ describe("Tutor Admin control centre", () => {
     const tile = (title: string) => root.find((node) => node.type === "article" && String(node.props.className).startsWith("coach-tile")
       && textOf(node.findByType("h4")) === title);
     expect(textOf(tile("Module tests"))).toContain("1 published · 1 draft");
-    expect(textOf(tile("Module tests"))).toContain("1 review to release");
+    expect(textOf(tile("Module tests"))).not.toContain("release");
     expect(textOf(tile("Reminders"))).toContain("1 not yet acknowledged");
     expect(textOf(tile("Practice"))).toContain("0 of 1 banks unlocked");
     expect(textOf(tile("Payments"))).toContain("1 open (SAR 2,000), 1 overdue");
@@ -141,19 +141,19 @@ describe("Tutor Admin control centre", () => {
   });
 
   it("lists the action inbox, runs an action and hides an item", async () => {
-    const root = await render("overview");
+    const onOpenPayments = vi.fn();
+    const root = await render("overview", vi.fn(), onOpenPayments);
     const items = () => root.findAll((node) => node.type === "li" && String(node.props.className).startsWith("coach-inbox__item"));
     expect(items().map((item) => textOf(item.findByType("strong")))).toEqual([
-      "Release the review of EC3 Fiscal Policy",
       "A payment is overdue",
       "Reminder not opened for 2+ days",
       "1 draft to review and publish",
     ]);
     await act(async () => items()[0]!.findByProps({ className: "button button-primary" }).props.onClick());
-    expect(cloudMocks.setMockReviewReleased).toHaveBeenCalledWith("s_e03-fiscal-policy", true);
-    const hide = items()[3]!.findAll((node) => node.type === "button" && node.props.title === "Hide until it changes")[0]!;
+    expect(onOpenPayments).toHaveBeenCalledTimes(1);
+    const hide = items()[2]!.findAll((node) => node.type === "button" && node.props.title === "Hide until it changes")[0]!;
     await act(async () => hide.props.onClick());
-    expect(items()).toHaveLength(3);
+    expect(items()).toHaveLength(2);
     expect(textOf(root)).toContain("Show 1 hidden");
   });
 

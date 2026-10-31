@@ -567,15 +567,6 @@ export async function listMockAttemptHistory(): Promise<MockAttemptHistoryEntry[
   }
 }
 
-export async function setMockReviewReleased(attemptId: string, released: boolean): Promise<void> {
-  try {
-    const { firestore } = services();
-    await updateDoc(ref(firestore, "mockAttempts", attemptId), { reviewReleased: released });
-  } catch (error) {
-    throw mapError(error);
-  }
-}
-
 /** Tutor grading fallback, e.g. when the student went offline after submitting. */
 export async function tutorGradeMockAttempt(attempt: MockAttempt): Promise<MockAttempt> {
   try {

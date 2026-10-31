@@ -1,6 +1,6 @@
 import { mockModuleById, mockModuleCode } from "../data/mockModules";
 import { deadlinePassed, type MockReminder } from "./mockReminders";
-import type { MockAttempt } from "./mockTestContent";
+import { mockFirstTryScore, type MockAttempt } from "./mockTestContent";
 import { catalogIdForPracticeModule } from "./practiceLinks";
 import { WEAK_SCORE, deadlinesByModule } from "./testBoard";
 import type { PaymentSummary, TutorSection } from "./tutorConsole";
@@ -17,7 +17,6 @@ export type InboxKind =
   | "approval"
   | "grade"
   | "overdue"
-  | "release"
   | "payment"
   | "weak"
   | "reminder"
@@ -28,7 +27,6 @@ export type InboxKind =
 export type InboxAction =
   | { type: "approve-session"; taskId: string }
   | { type: "grade"; attemptId: string }
-  | { type: "release-review"; attemptId: string }
   | { type: "unlock-bank"; storageId: string }
   | { type: "remind"; moduleIds: string[] }
   | { type: "open"; section: TutorSection; anchor: string | null }
@@ -137,14 +135,6 @@ export function buildTutorInbox(input: InboxInput): InboxItem[] {
     });
   }
 
-  for (const attempt of finished.filter((entry) => entry.score !== null && !entry.reviewReleased)) {
-    items.push({
-      id: `release-${attempt.id}`, kind: "release", priority: 70, title: `Release the review of ${label(attempt.moduleId)}`,
-      detail: `Hamad scored ${attempt.score}/8; he sees only the score until you release it`, version: String(attempt.submittedAtMs),
-      section: "tests", action: { type: "release-review", attemptId: attempt.id }, actionLabel: "Release review",
-    });
-  }
-
   if (input.payment?.state === "overdue") {
     items.push({
       id: "payment", kind: "payment", priority: 65, title: "A payment is overdue",
@@ -163,8 +153,8 @@ export function buildTutorInbox(input: InboxInput): InboxItem[] {
     }
   }
 
-  // Weak results with no practice on that curriculum module since the test.
-  for (const attempt of finished.filter((entry) => entry.score !== null && entry.score < WEAK_SCORE && entry.status === "submitted")) {
+  // Weak first tries with no practice on that curriculum module since the test.
+  for (const attempt of finished.filter((entry) => entry.score !== null && mockFirstTryScore(entry)! < WEAK_SCORE && entry.status === "submitted")) {
     const module = mockModuleById(attempt.moduleId);
     if (!module) continue;
     const since = attempt.submittedAtMs ?? 0;
@@ -177,7 +167,7 @@ export function buildTutorInbox(input: InboxInput): InboxItem[] {
     const locked = candidates.find((bank) => !bank.unlocked);
     const anyUnlocked = candidates.some((bank) => bank.unlocked);
     items.push({
-      id: `weak-${attempt.id}`, kind: "weak", priority: 60, title: `${mockModuleCode(module)} ${module.title}: ${attempt.score}/8, no practice since`,
+      id: `weak-${attempt.id}`, kind: "weak", priority: 60, title: `${mockModuleCode(module)} ${module.title}: ${mockFirstTryScore(attempt)}/8 first try, no practice since`,
       detail: anyUnlocked ? "A practice set is unlocked but not used yet" : locked ? `Unlock "${locked.title}" for repair` : "No practice bank covers this module yet",
       version: `${attempt.id}-${attempt.score}`, section: "practice",
       action: !anyUnlocked && locked ? { type: "unlock-bank", storageId: locked.storageId } : { type: "open", section: "practice", anchor: null },

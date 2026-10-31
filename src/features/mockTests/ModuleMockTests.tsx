@@ -12,6 +12,7 @@ import {
   loadMockTestPackage,
   resumeMockAttempt,
   saveMockWork,
+  startFinalMockAttempt,
   startMockAttempt,
   type MockTestPackage,
   type MockWork,
@@ -27,9 +28,11 @@ import { usePracticeSnapshot } from "../../hooks/usePracticeSnapshot";
 import {
   MOCK_QUESTION_COUNT,
   appendIncident,
+  canStartFinalMockAttempt,
   emptyAnswers,
   emptyFlags,
   gradeMockAnswers,
+  isFinalMockAttempt,
   isMockAttemptLocked,
   mockAttemptView,
   type MockAttempt,
@@ -63,7 +66,7 @@ interface TutorView {
 
 type Screen =
   | { kind: "hub" }
-  | { kind: "start"; moduleId: string }
+  | { kind: "start"; moduleId: string; final?: boolean }
   | { kind: "run"; moduleId: string; questions: MockQuestion[]; attempt: MockAttempt; serverOffsetMs: number }
   | { kind: "rehearse"; moduleId: string; pkg: MockTestPackage; startedAtMs: number }
   | { kind: "results"; moduleId: string }
@@ -231,6 +234,29 @@ export function ModuleMockTests({
     }
   };
 
+  /** Learn, then final: archive the reviewed first attempt and start the final one. */
+  const beginFinal = async (entry: ModuleState) => {
+    if (!entry.meta || !entry.attempt) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setError("You are offline. The test needs a connection to start and to save your answers.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    await requestExamFullscreen();
+    try {
+      const anchored = await startFinalMockAttempt(entry.attempt, entry.meta);
+      const questions = await getMockQuestions(entry.module.id);
+      setScreen({ kind: "run", moduleId: entry.module.id, questions: questions.questions, ...anchored });
+    } catch (cause) {
+      await exitFullscreen();
+      setError(getCloudErrorMessage(cause));
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const resume = async (entry: ModuleState) => {
     if (!entry.attempt) return;
     setBusy(true);
@@ -330,16 +356,18 @@ export function ModuleMockTests({
   }
 
   if (screen.kind === "start" && current?.meta) {
+    const final = screen.final === true && canStartFinalMockAttempt(current.attempt);
     return (
       <StartScreen
-        eyebrow={`${mockModuleLabel(current.module)} mock test`}
+        eyebrow={`${mockModuleLabel(current.module)} mock test${final ? " · final attempt" : ""}`}
         title={current.module.title}
         questionCount={current.meta.questionCount}
         durationMs={current.meta.durationSeconds * 1000}
         busy={busy}
         error={error}
+        attempt={final ? "final" : "first"}
         onCancel={() => { setError(""); setScreen({ kind: "hub" }); }}
-        onStart={() => void begin(current)}
+        onStart={() => void (final ? beginFinal(current) : begin(current))}
       />
     );
   }
@@ -350,6 +378,8 @@ export function ModuleMockTests({
         moduleLabel={moduleLabel(current.module)}
         attempt={current.attempt}
         onBack={() => setScreen({ kind: "hub" })}
+        busy={busy}
+        onStartFinal={isTutor || !canStartFinalMockAttempt(current.attempt) ? undefined : () => { setError(""); setScreen({ kind: "start", moduleId: current.module.id, final: true }); }}
         practice={isTutor ? undefined : {
           moduleTitle: current.module.title,
           practiceModuleId: practiceFor(current.module),
@@ -411,7 +441,6 @@ export function ModuleMockTests({
     open: topic === "all" ? view.open : { ...view.open, [topic]: true },
   });
   const summary = summarizeTestBoard(board);
-  const awaitingRelease = isTutor ? board.filter(row => row.status === "done" && row.attempt && !row.attempt.reviewReleased).length : 0;
   // This study-plan week's tests, in curriculum order (unpublished ones are listed as such).
   const weekEntries = modules.filter(entry => weekIds.has(entry.module.id));
   const weekRows = weekEntries.map(entry => rowFor.get(entry.module.id)).filter((row): row is BoardRow => Boolean(row));
@@ -462,7 +491,7 @@ export function ModuleMockTests({
         <ul className="mock-hub__rules" aria-label="Module test rules">
           <li><Target size={16} />{MOCK_QUESTION_COUNT} questions</li>
           <li><Timer size={16} />12:00 total</li>
-          <li><LockKeyhole size={16} />One attempt</li>
+          <li><LockKeyhole size={16} />Two attempts: learn, then final</li>
         </ul>
       </header>
 
@@ -480,7 +509,6 @@ export function ModuleMockTests({
           {summary.inProgress > 0 && <span className="is-live">{summary.inProgress} in progress</span>}
           {summary.overdue > 0 && <span className="is-overdue">{summary.overdue} overdue</span>}
           {summary.nextDeadline && <span><CalendarClock size={14} aria-hidden="true" />{deadlineCountdown(summary.nextDeadline, now)} · {summary.done} of {summary.published} done overall</span>}
-          {awaitingRelease > 0 && <span>{awaitingRelease} {awaitingRelease === 1 ? "review" : "reviews"} not released</span>}
           {isTutor && onOpenReminders && (
             <button type="button" className="mock-button mock-button--ghost" onClick={onOpenReminders}><BellRing size={16} />Send a reminder</button>
           )}
@@ -573,6 +601,7 @@ export function ModuleMockTests({
                     onOpen={() => { setError(""); setScreen({ kind: "start", moduleId: entry.module.id }); }}
                     onResume={() => void resume(entry)}
                     onResults={() => setScreen({ kind: "results", moduleId: entry.module.id })}
+                    onFinal={() => { setError(""); setScreen({ kind: "start", moduleId: entry.module.id, final: true }); }}
                     onRehearse={() => void rehearse(entry)}
                     thisWeek={weekIds.has(entry.module.id)}
                     {...practiseProps(entry)}
@@ -611,6 +640,7 @@ function ModuleCard({
   onOpen,
   onResume,
   onResults,
+  onFinal,
   onRehearse,
   thisWeek = false,
   practiceModuleId,
@@ -626,6 +656,8 @@ function ModuleCard({
   onOpen: () => void;
   onResume: () => void;
   onResults: () => void;
+  /** Student: open the start screen of the final attempt. */
+  onFinal: () => void;
   onRehearse: () => void;
   /** Belongs to the current study-plan week. */
   thisWeek?: boolean;
@@ -633,8 +665,7 @@ function ModuleCard({
   practiceModuleId?: string;
   onPractise?: () => void;
 }) {
-  const { module, attempt } = entry;
-  const view = mockAttemptView(attempt, Date.now());
+  const { module } = entry;
   const status = cardStatus(entry, row, isTutor);
 
   return (
@@ -652,15 +683,12 @@ function ModuleCard({
             <CalendarClock size={13} aria-hidden="true" />Due {formatReminderDate(row.deadline)} · {deadlineCountdown(row.deadline, nowMs)}
           </span>
         )}
-        {isTutor && row?.status === "done" && row.attempt && !row.attempt.reviewReleased && (
-          <span className="mock-card__deadline">Review not released yet</span>
-        )}
-        {!isTutor && view === "completed" && attempt?.reviewReleased && (
-          <span className="mock-card__review"><BookOpenCheck size={13} aria-hidden="true" />Review ready</span>
+        {!isTutor && row?.finalAvailable && (
+          <span className="mock-card__review"><BookOpenCheck size={13} aria-hidden="true" />Answers open · final attempt to take</span>
         )}
         {!isTutor && row?.weak && (
           <div className="mock-card__repair">
-            <span>Below {WEAK_SCORE}/{MOCK_QUESTION_COUNT}: repair before moving on.</span>
+            <span>First try below {WEAK_SCORE}/{MOCK_QUESTION_COUNT}: repair before moving on.</span>
             {practiceModuleId && onPractise && (
               <button type="button" className="mock-button mock-button--primary" onClick={onPractise}><Dumbbell size={15} />Practise {module.title}</button>
             )}
@@ -671,7 +699,7 @@ function ModuleCard({
         {entry.error && <small className="mock-card__error">{entry.error}</small>}
       </div>
       <div className="mock-card__action">
-        <CardAction entry={entry} isTutor={isTutor} busy={busy} onOpen={onOpen} onResume={onResume} onResults={onResults} onRehearse={onRehearse} />
+        <CardAction entry={entry} isTutor={isTutor} busy={busy} onOpen={onOpen} onResume={onResume} onResults={onResults} onFinal={onFinal} onRehearse={onRehearse} />
       </div>
     </li>
   );
@@ -685,21 +713,32 @@ function cardStatus(entry: ModuleState, row: BoardRow | undefined, isTutor: bool
       : meta.status !== "published"
         ? { label: "Draft", tone: "draft" }
         : row?.status === "done"
-          ? { label: `Hamad: ${row.score}/${MOCK_QUESTION_COUNT}`, tone: "done" }
+          ? { label: `Hamad: ${tutorScore(row)}`, tone: "done" }
           : row?.status === "grading"
             ? { label: "Hamad: submitted · awaiting grading", tone: "live" }
             : row?.status === "forfeited"
-              ? { label: "Hamad: forfeited", tone: "forfeit" }
+              ? { label: `Hamad: forfeited${row.finalAvailable ? " · final not taken yet" : ""}`, tone: "forfeit" }
               : row?.status === "in-progress"
                 ? { label: "Hamad: in progress", tone: "live" }
                 : { label: "Published · not taken yet", tone: "todo" };
   }
   const view = mockAttemptView(attempt, Date.now());
   if (!meta) return { label: "No test yet", tone: "none" };
-  if (view === "completed") return { label: attempt?.score === null ? "Completed" : `Completed · ${attempt!.score}/${MOCK_QUESTION_COUNT}`, tone: "done" };
-  if (view === "forfeited") return { label: "Forfeited", tone: "forfeit" };
+  if (view === "completed") {
+    if (!attempt || attempt.score === null) return { label: "Completed", tone: "done" };
+    return isFinalMockAttempt(attempt)
+      ? { label: `Final ${attempt.score}/${MOCK_QUESTION_COUNT} · first try ${attempt.firstTryScore}/${MOCK_QUESTION_COUNT}`, tone: "done" }
+      : { label: `First try ${attempt.score}/${MOCK_QUESTION_COUNT}`, tone: "done" };
+  }
+  if (view === "forfeited") return { label: attempt && isFinalMockAttempt(attempt) ? "Final attempt forfeited" : "Forfeited", tone: "forfeit" };
   if (view === "in-progress" || view === "expired") return { label: "In progress", tone: "live" };
   return { label: "Not started", tone: "todo" };
+}
+
+/** The tutor's view of a graded test: "first try 5/8 · final not taken yet" or "5/8 → final 7/8". */
+function tutorScore(row: BoardRow): string {
+  if (row.attempt && isFinalMockAttempt(row.attempt)) return `${row.firstTry}/${MOCK_QUESTION_COUNT} → final ${row.score}/${MOCK_QUESTION_COUNT}`;
+  return `first try ${row.score}/${MOCK_QUESTION_COUNT}${row.finalAvailable ? " · final not taken yet" : ""}`;
 }
 
 function CardAction({
@@ -709,6 +748,7 @@ function CardAction({
   onOpen,
   onResume,
   onResults,
+  onFinal,
   onRehearse,
 }: {
   entry: ModuleState;
@@ -717,6 +757,7 @@ function CardAction({
   onOpen?: () => void;
   onResume?: () => void;
   onResults: () => void;
+  onFinal?: () => void;
   onRehearse: () => void;
 }) {
   const { meta, attempt } = entry;
@@ -735,10 +776,18 @@ function CardAction({
   if (view === "in-progress" || view === "expired") {
     return <button type="button" className="mock-button mock-button--primary" disabled={busy} onClick={onResume}>Return</button>;
   }
+  if (onFinal && canStartFinalMockAttempt(attempt)) {
+    return (
+      <span className="mock-card__actions">
+        <button type="button" className="mock-button mock-button--primary" disabled={busy} onClick={onFinal}>
+          <PlayCircle size={16} />Final attempt
+        </button>
+        <button type="button" className="mock-button mock-button--ghost" onClick={onResults}>Review</button>
+      </span>
+    );
+  }
   return (
-    <button type="button" className={`mock-button mock-button--${attempt?.reviewReleased ? "primary" : "ghost"}`} onClick={onResults}>
-      {attempt?.reviewReleased ? "Read review" : "View result"}
-    </button>
+    <button type="button" className="mock-button mock-button--ghost" onClick={onResults}>Review</button>
   );
 }
 
@@ -769,9 +818,6 @@ function SettledRow({
         {status.tone === "done" ? <CircleCheckBig size={14} /> : status.tone === "forfeit" ? <Flag size={14} /> : null}
         {status.label}
       </span>
-      {isTutor && row?.status === "done" && row.attempt && !row.attempt.reviewReleased && (
-        <small className="mock-done__note">Review not released</small>
-      )}
       <CardAction entry={entry} isTutor={isTutor} busy={busy} onResults={onResults} onRehearse={onRehearse} />
     </li>
   );

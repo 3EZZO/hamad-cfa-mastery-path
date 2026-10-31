@@ -41,7 +41,6 @@ vi.mock("../../lib/cloudMockTests", () => ({
     } : null;
   }),
   setMockTestPublished: vi.fn(async (value: MockTestMeta, published: boolean) => ({ ...value, status: published ? "published" : "draft" })),
-  setMockReviewReleased: vi.fn(async () => undefined),
   resetMockAttempt: vi.fn(), tutorGradeMockAttempt: vi.fn(), uploadMockTestDraft: vi.fn(),
 }));
 vi.mock("../../lib/cloud", () => ({
@@ -62,7 +61,7 @@ vi.mock("./MockReminderAdmin", () => ({
 }));
 vi.mock("./MockAnswerKeyReview", () => ({ MockAnswerKeyReview: () => null }));
 
-import { setMockReviewReleased, setMockTestPublished } from "../../lib/cloudMockTests";
+import { setMockTestPublished } from "../../lib/cloudMockTests";
 import { cancelMockReminder, editMockReminder, sendMockReminder } from "../../lib/cloudMockReminders";
 import { daysFromNow, yesterday } from "../../lib/reminderComposer";
 import { MockTestAdmin } from "./MockTestAdmin";
@@ -98,14 +97,14 @@ describe("Tutor Admin module tests by topic", () => {
     state.attempts = [
       attempt("m01-rates-and-returns"),
       attempt("e03-fiscal-policy"),
-      attempt("m02-time-value-of-money", { reviewReleased: true }),
+      // A final attempt: 5/8 first try, then the final.
+      attempt("m02-time-value-of-money", { attemptNumber: 2, firstTryScore: 5 }),
     ];
     state.lowConfidence = { "e01-firm-and-market-structures": 1 };
     state.confirm = true;
     state.reminders = [];
     confirm.mockClear();
     vi.mocked(setMockTestPublished).mockClear();
-    vi.mocked(setMockReviewReleased).mockClear();
   });
   afterEach(async () => {
     if (tree) await act(async () => tree!.unmount());
@@ -141,13 +140,17 @@ describe("Tutor Admin module tests by topic", () => {
     expect(setMockTestPublished).not.toHaveBeenCalled();
   });
 
-  it("releases the reviews of graded, unreleased attempts in one topic only", async () => {
+  it("has no review release: reviews open on submit, so only grading and reset remain", async () => {
     const root = await render();
-    expect(button(topicGroup(root, "Quantitative Methods"), "Release all reviews").props.disabled).toBe(false);
-    await act(async () => button(topicGroup(root, "Economics"), "Release all reviews (1)").props.onClick());
-    expect((confirm.mock.calls[0] as unknown as [string])[0]).toContain("(EC3)");
-    expect(setMockReviewReleased).toHaveBeenCalledTimes(1);
-    expect(setMockReviewReleased).toHaveBeenCalledWith("student-1_e03-fiscal-policy", true);
+    expect(root.findAll((node) => node.type === "button" && /Release|Hide review/.test(textOf(node)))).toHaveLength(0);
+    expect(textOf(root)).not.toContain("not released");
+  });
+
+  it("shows a final attempt with its first try, and a first attempt as the first try", async () => {
+    const root = await render();
+    const cells = root.findByProps({ className: "mock-table mock-admin__results" }).findAll((node) => node.type === "td").map(textOf);
+    expect(cells).toContain("5/8 → final 7/8");
+    expect(cells).toContain("7/8 first try");
   });
 
   it("filters the results table by topic under topic headings", async () => {
@@ -203,7 +206,8 @@ describe("Tutor Admin test controls", () => {
     const root = await render();
     const due = (moduleId: string) =>
       textOf(row(root, moduleId).find((node) => String(node.props.className).startsWith("mock-admin__due")));
-    expect(due("e03-fiscal-policy")).toBe("Done · 7/8");
+    // Hamad has not taken the final attempt yet, so this is the first try.
+    expect(due("e03-fiscal-policy")).toBe("Done · 7/8 first try");
     expect(due("e06-international-trade")).toMatch(/^Due .+ · 3 days left$/);
     expect(due("e08-exchange-rate-calculations")).toMatch(/^Overdue · was due /);
     const labels = (moduleId: string) => row(root, moduleId).findAllByType("button").map(textOf);

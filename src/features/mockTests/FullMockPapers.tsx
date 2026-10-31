@@ -106,7 +106,6 @@ function StudentStatus({ attempt, meta }: { attempt: MockAttempt | null; meta: M
   return (
     <span className="mock-status mock-status--done">
       Hamad: {live.score === null ? "grading" : `${live.score}/${count}${paperVerdictSuffix(live.moduleId, live.score, count)}`}{live.attemptNumber > 1 ? ` · attempt ${live.attemptNumber} (repeat)` : ""}
-      {live.reviewReleased ? "" : " · review not released"}
     </span>
   );
 }
@@ -194,7 +193,7 @@ export function FullMockPapers({
   const resultsAttempt = screen.kind === "results" ? current?.attempt ?? null : null;
   useEffect(() => {
     setStudentKey(null);
-    if (!resultsAttempt || !resultsAttempt.reviewReleased) return;
+    if (!resultsAttempt || !isMockAttemptLocked(resultsAttempt)) return;
     getMockKeyDoc(resultsAttempt.moduleId).then(setStudentKey, () => setStudentKey(null));
   }, [resultsAttempt]);
 
@@ -437,7 +436,7 @@ export function FullMockPapers({
           <History size={16} />
           <span>
             Rehearse runs the same paper Hamad gets and is saved on your tutor account only, so a long rehearsal survives a reload. It never appears in Hamad's results.
-            {" "}Upload, publish, release and reset papers in {onOpenTutorAdmin ? <button type="button" className="mock-hub__link" onClick={onOpenTutorAdmin}>Tutor Admin</button> : <strong>Tutor Admin</strong>}.
+            {" "}Upload, publish and reset papers in {onOpenTutorAdmin ? <button type="button" className="mock-hub__link" onClick={onOpenTutorAdmin}>Tutor Admin</button> : <strong>Tutor Admin</strong>}.
           </span>
         </p>
       )}

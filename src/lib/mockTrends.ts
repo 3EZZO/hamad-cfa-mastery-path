@@ -1,10 +1,11 @@
 import { MOCK_TOPICS, mockModuleById, mockModuleCode, type MockTopic } from "../data/mockModules";
-import type { MockAttempt } from "./mockTestContent";
+import { mockFirstTryScore, type MockAttempt } from "./mockTestContent";
 
 /**
  * Module test scores per topic for Progress → Mocks: the average of the graded
  * (submitted, not forfeited) tests and the most recent few in the order they
- * were taken. Topics without a graded test are left out.
+ * were taken. Topics without a graded test are left out. Each test counts with
+ * its first try, before the answers were seen (learn, then final).
  */
 export interface TopicTrendScore {
   moduleId: string;
@@ -26,7 +27,7 @@ export function topicScoreTrends(attempts: readonly MockAttempt[], recentCount =
     .filter(attempt => attempt.status === "submitted" && attempt.score !== null && attempt.submittedAtMs !== null)
     .flatMap(attempt => {
       const module = mockModuleById(attempt.moduleId);
-      return module ? [{ module, score: attempt.score!, at: attempt.submittedAtMs! }] : [];
+      return module ? [{ module, score: mockFirstTryScore(attempt)!, at: attempt.submittedAtMs! }] : [];
     })
     .sort((left, right) => left.at - right.at);
   return MOCK_TOPICS.flatMap((topic): TopicTrend[] => {

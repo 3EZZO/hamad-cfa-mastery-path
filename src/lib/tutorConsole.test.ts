@@ -66,10 +66,10 @@ describe("consoleGlance", () => {
     const glance = consoleGlance({
       metas: [{ moduleId: "a", status: "published" }, { moduleId: "b", status: "published" }, { moduleId: "c", status: "draft" }],
       attempts: [
-        { moduleId: "a", status: "submitted", score: 6, reviewReleased: false },
-        { moduleId: "b", status: "submitted", score: null, reviewReleased: false },
-        { moduleId: "d", status: "active", score: null, reviewReleased: false },
-        { moduleId: "e", status: "forfeited", score: 0, reviewReleased: true },
+        { moduleId: "a", status: "submitted", score: 6 },
+        { moduleId: "b", status: "submitted", score: null },
+        { moduleId: "d", status: "active", score: null },
+        { moduleId: "e", status: "forfeited", score: 0 },
       ],
       reminders: [{ status: "active", acknowledgedAtMs: null }, { status: "active", acknowledgedAtMs: 5 }, { status: "cancelled", acknowledgedAtMs: null }],
       banks: [{ storageId: "x", questions: [1, 2, 3] }, { storageId: "y", questions: [1] }],
@@ -77,12 +77,12 @@ describe("consoleGlance", () => {
       approvals: 2,
     });
     expect(glance).toEqual({
-      tests: { published: 2, drafts: 1, toRelease: 1, toGrade: 1, done: 3 },
+      tests: { published: 2, drafts: 1, toGrade: 1, done: 3 },
       practice: { banks: 2, unlocked: 1, questions: 4 },
       reminders: { active: 2, unacknowledged: 1 },
       approvals: 2,
     });
-    expect(sectionCounts(glance)).toEqual({ tests: 3, sessions: 2 });
+    expect(sectionCounts(glance)).toEqual({ tests: 2, sessions: 2 });
   });
 
   it("treats data that has not loaded as empty", () => {
