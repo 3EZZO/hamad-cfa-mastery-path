@@ -30,3 +30,12 @@ mock-test-questions/
 output/pdf/
 output/pdf-import/
 .firebase-emulator-data/
+
+# The private QM question bank (structured data, source images, packaged
+# archive) and the provider browser tooling used to export it. Mock tests
+# built from it reach the app only through the tutor upload.
+output/finquiz-bank/
+output/mastery-path-finquiz-source-bank.zip
+output/finquiz-*.js
+# Embeds private bank question ids and their module assignments.
+scripts/classify-qm-modules.py

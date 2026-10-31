@@ -4,18 +4,21 @@
 // SHA-256, byte size, page count and page sizes with the same pdf.js release
 // the app uses, proposes the material labels the tutor upload would suggest,
 // and writes the result to the git-ignored `output/pdf-import/` folder.
-// It never uploads, modifies or regenerates a PDF.
+// It never uploads, modifies or regenerates a PDF. PDFs listed in the private
+// `output/pdf-import/exclude.json` (see teachingPdfExclusions.mjs) are skipped.
 //
-//   node scripts/inventory-teaching-pdfs.mjs [sourceDir] [outputFile]
+//   node scripts/inventory-teaching-pdfs.mjs [sourceDir] [outputFile] [excludeFile]
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { loadTeachingPdfExclusions, partitionTeachingPdfs } from "./teachingPdfExclusions.mjs";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_PAGES = 100;
 const sourceDir = path.resolve(process.argv[2] || "output/pdf");
 const outputFile = path.resolve(process.argv[3] || "output/pdf-import/inventory.json");
+const excludeFile = path.resolve(process.argv[4] || "output/pdf-import/exclude.json");
 
 const SMALL_WORDS = new Set(["a", "an", "and", "as", "at", "by", "for", "in", "of", "on", "or", "the", "to"]);
 
@@ -41,7 +44,8 @@ function proposeLabel(fileName) {
   return { readingNumber: match ? Number(match[1]) : null, title };
 }
 
-const entries = (await readdir(sourceDir)).filter((name) => name.toLowerCase().endsWith(".pdf")).sort();
+const exclusions = await loadTeachingPdfExclusions(excludeFile);
+const { included: entries, excluded } = partitionTeachingPdfs(await readdir(sourceDir), exclusions);
 const items = [];
 for (const name of entries) {
   const bytes = await readFile(path.join(sourceDir, name));
@@ -77,4 +81,5 @@ for (const item of items) {
   const reading = item.readingNumber === null ? "--" : String(item.readingNumber).padStart(2, "0");
   console.log(`${reading}  ${String(item.pageCount).padStart(3)}p  ${String(item.byteSize).padStart(8)}B  ${item.pageSizes.join(",")}  ${item.sha256.slice(0, 12)}  ${item.title}${item.problems.length ? `  !! ${item.problems.join("; ")}` : ""}`);
 }
+for (const name of excluded) console.log(`--  excluded  ${name}`);
 console.log(`Total: ${totals.files} files, ${totals.pages} pages, ${totals.bytes} bytes → ${path.relative(process.cwd(), outputFile)} (git-ignored)`);
