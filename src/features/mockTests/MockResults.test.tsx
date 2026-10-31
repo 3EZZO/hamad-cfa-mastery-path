@@ -89,7 +89,7 @@ describe("Module test results", () => {
       correct: attempt(false).correct!,
       score: 5,
       timeUsedMs: 300_000,
-      pkg: { questions: { questions }, key: { correct: key }, review: { items } } as unknown as LocalReview["pkg"],
+      pkg: { meta: { moduleId: "m01" }, questions: { questions }, key: { correct: key }, review: { items } } as unknown as LocalReview["pkg"],
     };
     const root = await render({ local });
     expect(hasClass(root, "mock-results__grid")).toBe(true);
@@ -200,5 +200,51 @@ describe("Module test results", () => {
     expect(textOf(root)).toContain("on your tutor account only");
     expect(textOf(root.findByProps({ className: "breakdown-probe" }))).toBe("44 answers, 44 times");
     expect(root.findByProps({ className: "mock-results__grid mock-results__grid--many" }).findAllByType("li")).toHaveLength(44);
+    // The pass mark is defined for 45 questions, so a 44-question paper gets no verdict.
+    expect(root.findAll((node) => typeof node.props.className === "string" && node.props.className.startsWith("mock-results__verdict"))).toHaveLength(0);
+  });
+
+  describe("a 45-question Mock Exam paper", () => {
+    const paperAttempt = (score: number, reviewReleased = false) => ({
+      id: "student-1_qm-paper-01", uid: "student-1", moduleId: "qm-paper-01", testVersion: "v1", attemptNumber: 1, status: "submitted",
+      questionCount: 45, durationSeconds: 4050, startedAtMs: 0, lastSeenAtMs: 0,
+      answers: Array(45).fill(0), flags: Array(45).fill(false), incidents: [], keystrokes: [], submittedAtMs: 1_800_000, finishReason: "submit",
+      score, correct: Array.from({ length: 45 }, (_, index) => index < score), reviewReleased,
+    }) as unknown as MockAttempt;
+    const verdictOf = (root: ReactTestInstance) => root.find((node) => typeof node.props.className === "string" && node.props.className.startsWith("mock-results__verdict "));
+
+    it("fails 37/45 (82.22%) with the owner's message, before the review is released", async () => {
+      const root = await render({ attempt: paperAttempt(37) });
+      const verdict = verdictOf(root);
+      expect(verdict.props.className).toBe("mock-results__verdict is-fail");
+      expect(textOf(verdict)).toBe(
+        "Not passed"
+        + "Sorry, you haven’t cleared this paper yet. You need at least 38 correct answers out of 45 to pass. "
+        + "Review the topics you found difficult with your tutor—we’ll work through them together."
+        + "Your score: 37/45 (82.22%)",
+      );
+      expect(textOf(root)).toContain("Pass mark84.44% (38/45)");
+      expect(textOf(root)).toContain("Score82.22%");
+      expect(hasClass(root, "mock-results__reveal")).toBe(true);
+      expect(textOf(root)).not.toContain("Time used");
+      expect(textOf(root)).not.toContain("Retry");
+    });
+
+    it.each([
+      [38, "84.44"],
+      [45, "100.00"],
+    ])("passes %i/45 (%s%%) and awards the crest", async (score, percent) => {
+      const root = await render({ attempt: paperAttempt(score, true) });
+      const verdict = verdictOf(root);
+      expect(verdict.props.className).toBe("mock-results__verdict is-pass");
+      expect(textOf(verdict)).toBe(`PassedCongratulations! You’ve cleared this paper. Well done!Your score: ${score}/45 (${percent}%)`);
+      expect(hasClass(root, "mock-results__reveal is-strong")).toBe(true);
+    });
+
+    it("gives no crest to 34–37/45, which no longer clear the bar", async () => {
+      const root = await render({ attempt: paperAttempt(36) });
+      expect(hasClass(root, "mock-results__reveal")).toBe(true);
+      expect(hasClass(root, "mock-results__reveal is-strong")).toBe(false);
+    });
   });
 });

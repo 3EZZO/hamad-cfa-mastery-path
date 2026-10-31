@@ -37,6 +37,7 @@ import { cancelMockReminder, editMockReminder, listMockReminders, sendMockRemind
 import { deadlineCountdown, deadlinePassed, formatReminderDate, isReminderDate, localDay, type MockReminder } from "../../lib/mockReminders";
 import { clearDeadlineChanges, composeReminderMessage, daysFromNow, overdueDraft, type ReminderPreset, type ReminderTone } from "../../lib/reminderComposer";
 import { deadlinesByModule } from "../../lib/testBoard";
+import { paperVerdictSuffix } from "../../lib/paperPass";
 import { consoleAnchor } from "../../lib/tutorConsole";
 import { Fold, useReveal } from "../../views/tutorConsole/Fold";
 import { MockAnswerKeyReview } from "./MockAnswerKeyReview";
@@ -533,7 +534,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                       {!attempt ? "Hamad: not started"
                         : view === "in-progress" ? `Hamad: in progress · ${attempt.answers.filter(answer => answer !== null).length}/${mockAttemptQuestionCount(attempt)} answered`
                           : view === "forfeited" ? "Hamad: forfeited"
-                            : `Hamad: ${attempt.score ?? "?"}/${mockAttemptQuestionCount(attempt)}${attempt.attemptNumber > 1 ? " (repeat)" : ""}${attempt.reviewReleased ? "" : " · review not released"}`}
+                            : `Hamad: ${attempt.score ?? "?"}/${mockAttemptQuestionCount(attempt)}${paperVerdictSuffix(attempt.moduleId, attempt.score, mockAttemptQuestionCount(attempt))}${attempt.attemptNumber > 1 ? " (repeat)" : ""}${attempt.reviewReleased ? "" : " · review not released"}`}
                     </small>
                   )}
                 </div>
@@ -619,7 +620,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                         <th scope="row">{name}</th>
                         <td>{module.label}</td>
                         <td>{{ "not-started": "Not started", "in-progress": "In progress", expired: "Expired, not finalized", completed: "Completed", forfeited: "Forfeited" }[view]}</td>
-                        <td>{attempt?.score != null ? `${attempt.score}/${mockAttemptQuestionCount(attempt)}` : attempt && view !== "in-progress" ? "Not graded" : "—"}</td>
+                        <td>{attempt?.score != null ? `${attempt.score}/${mockAttemptQuestionCount(attempt)}${paperVerdictSuffix(attempt.moduleId, attempt.score, mockAttemptQuestionCount(attempt))}` : attempt && view !== "in-progress" ? "Not graded" : "—"}</td>
                         <td>{attempt ? (mockTimeUsedMs(attempt) === null ? "—" : formatMockClock(mockTimeUsedMs(attempt)!)) : "—"}</td>
                         <td>{attempt ? attempt.incidents.length : "—"}</td>
                         <td className="mock-admin__row-actions">
@@ -728,7 +729,7 @@ function AttemptDetail({
           <ul>
             {archived.sort((a, b) => a.attemptNumber - b.attemptNumber).map(entry => (
               <li key={entry.attemptNumber}>
-                Attempt {entry.attemptNumber}: {entry.score !== null ? `${entry.score}/${mockAttemptQuestionCount(entry)}` : "not graded"}, {entry.finishReason ? FINISH[entry.finishReason] : "unfinished"}, {entry.incidents.length} incidents · reset {new Date(entry.archivedAtMs).toLocaleString()}
+                Attempt {entry.attemptNumber}: {entry.score !== null ? `${entry.score}/${mockAttemptQuestionCount(entry)}${paperVerdictSuffix(entry.moduleId, entry.score, mockAttemptQuestionCount(entry))}` : "not graded"}, {entry.finishReason ? FINISH[entry.finishReason] : "unfinished"}, {entry.incidents.length} incidents · reset {new Date(entry.archivedAtMs).toLocaleString()}
               </li>
             ))}
           </ul>
