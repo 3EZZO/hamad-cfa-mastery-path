@@ -1,19 +1,29 @@
 import { describe, expect, it } from "vitest";
 import {
   MOCK_DURATION_MS,
+  MOCK_MAX_DOC_BYTES,
   MOCK_MAX_INCIDENTS,
   MockContentError,
   appendIncident,
+  appendKeystroke,
+  emptyAnswers,
+  emptyDwell,
   formatMockClock,
   gradeMockAnswers,
+  mockAttemptDurationMs,
   mockAttemptId,
+  mockAttemptQuestionCount,
   mockAttemptView,
+  mockDocBytes,
+  mockDurationMsFor,
+  mockKeystrokeLimit,
   mockRemainingMs,
   mockTimeUsedMs,
   parseMockTestDraft,
   splitMockDraft,
   type MockAttempt,
 } from "./mockTestContent";
+import { SYNTHETIC_PAPER_ID, syntheticPaper, syntheticPaperQuestion, syntheticTree } from "../testFixtures/syntheticPaper";
 
 // Synthetic fixture only: real mock content is private and never committed.
 function syntheticDraft(overrides: Record<string, unknown> = {}) {
@@ -192,5 +202,155 @@ describe("grading and timing", () => {
       incidents = appendIncident(incidents, { type: "tab-hidden", atClient: "x", elapsedMs: index });
     }
     expect(incidents).toHaveLength(MOCK_MAX_INCIDENTS);
+  });
+});
+
+describe("full mock papers (schema 2)", () => {
+  const paperAttempt = (overrides: Partial<MockAttempt> = {}) =>
+    attempt({ moduleId: SYNTHETIC_PAPER_ID, questionCount: 44, durationSeconds: 3960, answers: Array(44).fill(null), flags: Array(44).fill(false), ...overrides });
+
+  it("parses a 44-question, 66-minute paper and keeps schema 1 module tests unchanged", () => {
+    const paper = parseMockTestDraft(syntheticPaper());
+    expect(paper.kind).toBe("paper");
+    expect(paper.questions).toHaveLength(44);
+    expect(mockDurationMsFor(44)).toBe(66 * 60 * 1000);
+    const legacy = parseMockTestDraft(syntheticDraft());
+    expect(legacy.kind).toBe("module");
+    expect(splitMockDraft(legacy).sources).toBeNull();
+    expect(Object.keys(splitMockDraft(legacy).questions.questions[0]!)).toEqual(["id", "stem", "table", "figure", "options"]);
+  });
+
+  it("rejects wrong sizes, unregistered paper ids and schema 2 fields on schema 1", () => {
+    expect(() => parseMockTestDraft(syntheticPaper({ questions: syntheticPaper().questions.slice(0, 43) }))).toThrow("exactly 44");
+    expect(() => parseMockTestDraft(syntheticPaper({ moduleId: "qm-paper-99" }))).toThrow("registered papers");
+    expect(() => parseMockTestDraft(syntheticPaper({ kind: "module", moduleId: "m99-synthetic" }))).toThrow("exactly 8");
+    expect(() => parseMockTestDraft(syntheticPaper({ kind: "module" }))).toThrow("cannot use a paper id");
+    expect(() => parseMockTestDraft(syntheticDraft({ moduleId: "qm-paper-01" }))).toThrow("cannot use a paper id");
+    const withTree = syntheticDraft();
+    (withTree.questions[0] as Record<string, unknown>).tree = syntheticTree();
+    expect(() => parseMockTestDraft(withTree)).toThrow("need schemaVersion 2");
+    const withSourceRef = syntheticPaper();
+    (withSourceRef.questions[0] as Record<string, unknown>).sourceRef = "private";
+    expect(() => parseMockTestDraft(withSourceRef)).toThrow("keeps provenance in source");
+  });
+
+  it("splits tags into the key and provenance into the tutor-only sources, never into the questions", () => {
+    const docs = splitMockDraft(parseMockTestDraft(syntheticPaper()));
+    const studentView = JSON.stringify(docs.questions);
+    for (const leak of ["synthetic-bank", "moduleTag", "catalogId", "cfa-2027", "skill", "authoring", "correctOption", "Synthetic explanation"]) {
+      expect(studentView).not.toContain(leak);
+    }
+    expect(docs.key.correct).toHaveLength(44);
+    expect(docs.key.modules).toHaveLength(44);
+    expect(docs.key.skills![0]).toBe("calculation");
+    expect(docs.sources!.items[0]).toMatchObject({ id: "qmp01-q01", authoring: "source", bankId: "synthetic-bank-1", sourcePage: 3 });
+    expect(docs.sources!.items[10]).toMatchObject({ authoring: "authored", bankId: "", sourcePage: null });
+    expect(JSON.stringify(docs.review)).not.toContain("synthetic-bank");
+  });
+
+  it("checks authored versus source provenance and the 2027 tags", () => {
+    const authoredWithBank = syntheticPaper();
+    authoredWithBank.questions[10] = syntheticPaperQuestion(10, { source: { authoring: "authored", bankId: "x", sourcePage: null } });
+    expect(() => parseMockTestDraft(authoredWithBank)).toThrow("authored question has no bankId");
+    const sourceWithoutPage = syntheticPaper();
+    sourceWithoutPage.questions[0] = syntheticPaperQuestion(0, { source: { authoring: "source", bankId: "x", sourcePage: null } });
+    expect(() => parseMockTestDraft(sourceWithoutPage)).toThrow("needs bankId and sourcePage");
+    const badCatalog = syntheticPaper();
+    badCatalog.questions[0] = syntheticPaperQuestion(0, { tags: { ...syntheticPaperQuestion(0).tags, catalogId: "m009" } });
+    expect(() => parseMockTestDraft(badCatalog)).toThrow("official 2027 module id");
+    const economics = syntheticPaper();
+    economics.questions[0] = syntheticPaperQuestion(0, { tags: { ...syntheticPaperQuestion(0).tags, moduleTag: "e03-fiscal-policy" } });
+    expect(() => parseMockTestDraft(economics)).toThrow("Quantitative Methods module test id");
+  });
+
+  it("shows a graphic in the exam only when the question supplies it", () => {
+    const tags = (exhibitPolicy: string) => ({ ...syntheticPaperQuestion(0).tags, exhibitPolicy });
+    const supplied = syntheticPaper();
+    supplied.questions[0] = syntheticPaperQuestion(0, { tree: syntheticTree(), tags: tags("supplied") });
+    expect(parseMockTestDraft(supplied).questions[0]!.tree!.branches[0]!.children).toHaveLength(2);
+
+    const buildIt = syntheticPaper();
+    buildIt.questions[0] = syntheticPaperQuestion(0, { tree: syntheticTree(), tags: tags("explanation-only") });
+    expect(() => parseMockTestDraft(buildIt)).toThrow("only exhibitPolicy supplied");
+    buildIt.questions[0] = syntheticPaperQuestion(0, { reviewTree: syntheticTree(), tags: tags("explanation-only") });
+    const parsed = splitMockDraft(parseMockTestDraft(buildIt));
+    expect(parsed.questions.questions[0]!.tree).toBeNull();
+    expect(parsed.review.items[0]!.reviewTree!.title).toBe("Synthetic tree");
+
+    const missing = syntheticPaper();
+    missing.questions[0] = syntheticPaperQuestion(0, { tags: tags("supplied") });
+    expect(() => parseMockTestDraft(missing)).toThrow("needs a figure or tree");
+  });
+
+  it("bounds tree size and depth", () => {
+    const deep = syntheticTree();
+    let node = deep.branches[0]!.children[0]! as Record<string, unknown>;
+    for (let level = 0; level < 3; level += 1) {
+      const child = { label: "deeper", probability: "0.5" };
+      node.children = [child, { label: "other", probability: "0.5" }];
+      node = child;
+    }
+    const supplied = { ...syntheticPaperQuestion(0).tags, exhibitPolicy: "supplied" };
+    const paper = syntheticPaper();
+    paper.questions[0] = syntheticPaperQuestion(0, { tree: deep, tags: supplied });
+    expect(() => parseMockTestDraft(paper)).toThrow("deeper than 3 levels");
+    const single = syntheticTree();
+    single.branches = [single.branches[0]!];
+    paper.questions[0] = syntheticPaperQuestion(0, { tree: single, tags: supplied });
+    expect(() => parseMockTestDraft(paper)).toThrow("2-4 branches");
+  });
+
+  it("rejects an upload whose documents would exceed the size budget", () => {
+    // Every field within its own limit, but 44 maximal tables add up past the budget.
+    const headers = Array.from({ length: 12 }, (_, index) => `H${index}`);
+    const rows = Array.from({ length: 30 }, () => ({ cells: Array(12).fill("x".repeat(300)) }));
+    const heavy = syntheticPaper({
+      questions: syntheticPaper().questions.map(question => ({ ...question, table: { caption: "Exhibit", headers, rows } })),
+    });
+    expect(() => parseMockTestDraft(heavy)).toThrow("questions document would be");
+    // A realistic paper with long explanations stays inside it.
+    const long = syntheticPaper();
+    long.questions = long.questions.map(question => ({
+      ...question,
+      explanation: "x".repeat(4000),
+      working: Array(12).fill("y".repeat(600)),
+      distractors: ["z".repeat(1200), "z".repeat(1200), "z".repeat(1200)],
+    }));
+    expect(() => parseMockTestDraft(long)).not.toThrow();
+  });
+
+  it("grades, times and resolves a frozen 44-question attempt", () => {
+    const key = Array.from({ length: 44 }, (_, index) => (index % 3) as 0 | 1 | 2);
+    const answers = key.map((right, index) => (index < 30 ? right : null));
+    expect(gradeMockAnswers(answers, key).score).toBe(30);
+    expect(() => gradeMockAnswers(answers.slice(0, 8), key)).toThrow("different questions");
+    expect(() => gradeMockAnswers(answers.slice(0, 10), key.slice(0, 10))).toThrow("8 or 44");
+
+    const durationMs = mockAttemptDurationMs(paperAttempt());
+    expect(durationMs).toBe(3_960_000);
+    expect(mockAttemptQuestionCount(paperAttempt())).toBe(44);
+    expect(mockAttemptQuestionCount(attempt())).toBe(8);
+    expect(mockAttemptView(paperAttempt(), 1_000_000 + MOCK_DURATION_MS + 1)).toBe("in-progress");
+    expect(mockAttemptView(paperAttempt(), 1_000_000 + durationMs)).toBe("expired");
+    expect(mockTimeUsedMs(paperAttempt({ submittedAtMs: 1_000_000 + durationMs + 9_000 }))).toBe(durationMs);
+    expect(mockRemainingMs(1_000_000, 1_000_000, 0, durationMs)).toBe(durationMs);
+    expect(emptyAnswers(44)).toHaveLength(44);
+    expect(emptyDwell(44).every(value => value === 0)).toBe(true);
+  });
+
+  it("keeps a larger calculator history for papers only", () => {
+    expect(mockKeystrokeLimit(8)).toBe(600);
+    expect(mockKeystrokeLimit(44)).toBe(1500);
+    const stroke = { q: 0, key: "1", display: "1", t: 0, registers: { N: 0, IY: 0, PV: 0, PMT: 0, FV: 0, PY: 1, CY: 1, isBGN: false } };
+    let log = Array.from({ length: 600 }, () => stroke);
+    expect(appendKeystroke(log, stroke)).toHaveLength(600);
+    expect(appendKeystroke(log, stroke, 1500)).toHaveLength(601);
+    log = Array.from({ length: 1500 }, () => stroke);
+    expect(appendKeystroke(log, stroke, 1500)).toHaveLength(1500);
+  });
+
+  it("measures document sizes in UTF-8 bytes", () => {
+    expect(mockDocBytes({ a: "é" })).toBe(new TextEncoder().encode(JSON.stringify({ a: "é" })).length);
+    expect(MOCK_MAX_DOC_BYTES).toBeLessThan(1_048_576);
   });
 });

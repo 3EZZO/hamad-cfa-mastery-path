@@ -257,10 +257,14 @@ service cloud.firestore {
       allow list, delete: if false;
     }
 
-    // ---- Module mock tests -------------------------------------------------
-    // One compulsory, single-attempt, 12-minute, 8-question test per module.
-    // The student never reads the answer key or the review before the attempt
-    // is locked; the server clock (request.time) is the only timer that counts.
+    // ---- Module mock tests and full papers ---------------------------------
+    // One compulsory, single-attempt test per module (8 questions, 12 minutes)
+    // and comprehensive papers (44 questions, 66 minutes): 90 seconds a
+    // question either way. The student never reads the answer key or the
+    // review before the attempt is locked, and never the tutor-only sources;
+    // the server clock (request.time) is the only timer that counts. A paper
+    // attempt freezes its question count and duration when it starts; every
+    // attempt without them is an 8-question / 12-minute module-test attempt.
 
     function mockDoc(collectionName, docId) {
       return /databases/$(database)/documents/programs/project-202/$(collectionName)/$(docId);
@@ -284,27 +288,22 @@ service cloud.firestore {
         && get(mockDoc('mockAttempts', attemptId)).data.status in ['submitted', 'forfeited'];
     }
 
+    function mockCount(attempt) {
+      return attempt.get('questionCount', 8);
+    }
+
     function mockDeadlineOpen(attempt) {
-      // 12 minutes plus 15 seconds of network grace.
-      return request.time <= attempt.startedAt + duration.value(735, 's');
+      // The attempt's duration (12 or 66 minutes) plus 15 seconds of network grace.
+      return request.time <= attempt.startedAt
+        + duration.value(attempt.get('durationSeconds', 720) + 15, 's');
     }
 
-    function mockValidAnswer(value) {
-      return value == null || value in [0, 1, 2];
+    function mockValidAnswers(list, n) {
+      return list is list && list.size() == n && list.hasOnly([null, 0, 1, 2]);
     }
 
-    function mockValidAnswers(list) {
-      return list is list && list.size() == 8
-        && mockValidAnswer(list[0]) && mockValidAnswer(list[1])
-        && mockValidAnswer(list[2]) && mockValidAnswer(list[3])
-        && mockValidAnswer(list[4]) && mockValidAnswer(list[5])
-        && mockValidAnswer(list[6]) && mockValidAnswer(list[7]);
-    }
-
-    function mockValidFlags(list) {
-      return list is list && list.size() == 8
-        && list[0] is bool && list[1] is bool && list[2] is bool && list[3] is bool
-        && list[4] is bool && list[5] is bool && list[6] is bool && list[7] is bool;
+    function mockValidFlags(list, n) {
+      return list is list && list.size() == n && list.hasOnly([true, false]);
     }
 
     function mockAppendOnly(next, previous, max) {
@@ -315,17 +314,19 @@ service cloud.firestore {
 
     function validMockTestMeta(moduleId) {
       let data = request.resource.data;
+      let kind = data.get('kind', 'module');
       return data.keys().hasOnly([
-          'schemaVersion', 'moduleId', 'title', 'version', 'status', 'questionCount',
+          'schemaVersion', 'kind', 'moduleId', 'title', 'version', 'status', 'questionCount',
           'durationSeconds', 'updatedBy', 'updatedAtClient', 'publishedAtClient'
         ])
-        && data.schemaVersion == 1
+        && data.schemaVersion in [1, 2]
+        && ((kind == 'module' && data.questionCount == 8)
+          || (kind == 'paper' && data.schemaVersion == 2 && data.questionCount == 44))
+        && data.durationSeconds == data.questionCount * 90
         && data.moduleId == moduleId
         && data.title is string && data.title.size() > 0 && data.title.size() <= 200
         && data.version is string && data.version.size() > 0 && data.version.size() <= 60
         && data.status in ['draft', 'published']
-        && data.questionCount == 8
-        && data.durationSeconds == 720
         && data.updatedBy == request.auth.uid
         && data.updatedAtClient is string && data.updatedAtClient.size() <= 40
         && (data.publishedAtClient == null
@@ -334,31 +335,70 @@ service cloud.firestore {
 
     function validMockContent(moduleId, listField) {
       let data = request.resource.data;
+      let meta = getAfter(mockDoc('mockTests', moduleId)).data;
       return data.keys().hasOnly(['moduleId', 'version', listField])
         && data.moduleId == moduleId
-        && data.version == getAfter(mockDoc('mockTests', moduleId)).data.version
-        && data[listField] is list && data[listField].size() == 8;
+        && data.version == meta.version
+        && data[listField] is list && data[listField].size() == meta.questionCount;
+    }
+
+    function mockOptionalTagList(data, field, n) {
+      return !(field in data) || (data[field] is list && data[field].size() == n);
+    }
+
+    // The key may carry per-question tags (module test, official module,
+    // skill); they become readable together with the key, after the lock.
+    function validMockKey(moduleId) {
+      let data = request.resource.data;
+      let meta = getAfter(mockDoc('mockTests', moduleId)).data;
+      return data.keys().hasOnly(['moduleId', 'version', 'correct', 'modules', 'catalogIds', 'skills'])
+        && data.moduleId == moduleId
+        && data.version == meta.version
+        && data.correct is list && data.correct.size() == meta.questionCount
+        && mockOptionalTagList(data, 'modules', meta.questionCount)
+        && mockOptionalTagList(data, 'catalogIds', meta.questionCount)
+        && mockOptionalTagList(data, 'skills', meta.questionCount);
+    }
+
+    // A module-test attempt has exactly the original shape. A paper attempt
+    // also freezes the paper's question count and duration, and starts its
+    // per-question time estimate at zero.
+    function mockNewAttemptShape(data, meta) {
+      return (meta.questionCount == 8
+          && data.keys().hasOnly([
+            'uid', 'moduleId', 'testVersion', 'attemptNumber', 'status', 'startedAt',
+            'lastSeenAt', 'answers', 'flags', 'incidents', 'keystrokes', 'submittedAt',
+            'finishReason', 'score', 'correct', 'reviewReleased'
+          ])
+          && data.answers == [null, null, null, null, null, null, null, null]
+          && data.flags == [false, false, false, false, false, false, false, false])
+        || (meta.questionCount == 44
+          && data.keys().hasOnly([
+            'uid', 'moduleId', 'testVersion', 'attemptNumber', 'status', 'startedAt',
+            'lastSeenAt', 'answers', 'flags', 'incidents', 'keystrokes', 'submittedAt',
+            'finishReason', 'score', 'correct', 'reviewReleased',
+            'questionCount', 'durationSeconds', 'dwellMs'
+          ])
+          && data.questionCount == meta.questionCount
+          && data.durationSeconds == meta.durationSeconds
+          && data.answers.size() == 44 && data.answers.hasOnly([null])
+          && data.flags.size() == 44 && data.flags.hasOnly([false])
+          && data.dwellMs.size() == 44 && data.dwellMs.hasOnly([0]));
     }
 
     function validNewMockAttempt(attemptId) {
       let data = request.resource.data;
       let counter = mockDoc('mockAttemptCounters', attemptId);
-      return data.keys().hasOnly([
-          'uid', 'moduleId', 'testVersion', 'attemptNumber', 'status', 'startedAt',
-          'lastSeenAt', 'answers', 'flags', 'incidents', 'keystrokes', 'submittedAt',
-          'finishReason', 'score', 'correct', 'reviewReleased'
-        ])
-        && data.uid == request.auth.uid
+      return data.uid == request.auth.uid
         && data.moduleId is string
         && attemptId == request.auth.uid + '_' + data.moduleId
         && mockTestIsPublished(data.moduleId)
         && data.testVersion == get(mockDoc('mockTests', data.moduleId)).data.version
+        && mockNewAttemptShape(data, get(mockDoc('mockTests', data.moduleId)).data)
         && data.attemptNumber == (exists(counter) ? get(counter).data.next : 1)
         && data.status == 'active'
         && data.startedAt == request.time
         && data.lastSeenAt == request.time
-        && data.answers == [null, null, null, null, null, null, null, null]
-        && data.flags == [false, false, false, false, false, false, false, false]
         && data.incidents == []
         && data.keystrokes == []
         && data.submittedAt == null
@@ -368,11 +408,20 @@ service cloud.firestore {
         && data.reviewReleased == false;
     }
 
+    // Per-question time is a client estimate for the tutor, so only its shape is checked.
+    function mockValidDwell(data, previous) {
+      return mockCount(previous) == 44
+        ? data.dwellMs is list && data.dwellMs.size() == 44
+        : !('dwellMs' in data);
+    }
+
     function mockWorkIsValid(data, previous) {
-      return mockValidAnswers(data.answers)
-        && mockValidFlags(data.flags)
+      let n = mockCount(previous);
+      return mockValidAnswers(data.answers, n)
+        && mockValidFlags(data.flags, n)
+        && mockValidDwell(data, previous)
         && mockAppendOnly(data.incidents, previous.incidents, 100)
-        && mockAppendOnly(data.keystrokes, previous.keystrokes, 600);
+        && mockAppendOnly(data.keystrokes, previous.keystrokes, n == 44 ? 1500 : 600);
     }
 
     // Autosave while the clock is running: the attempt stays active.
@@ -382,7 +431,7 @@ service cloud.firestore {
       return previous.status == 'active'
         && mockDeadlineOpen(previous)
         && data.diff(previous).affectedKeys()
-          .hasOnly(['answers', 'flags', 'incidents', 'keystrokes', 'lastSeenAt'])
+          .hasOnly(['answers', 'flags', 'incidents', 'keystrokes', 'dwellMs', 'lastSeenAt'])
         && data.lastSeenAt == request.time
         && mockWorkIsValid(data, previous);
     }
@@ -394,7 +443,7 @@ service cloud.firestore {
       return previous.status == 'active'
         && mockDeadlineOpen(previous)
         && data.diff(previous).affectedKeys().hasOnly([
-          'answers', 'flags', 'incidents', 'keystrokes', 'lastSeenAt',
+          'answers', 'flags', 'incidents', 'keystrokes', 'dwellMs', 'lastSeenAt',
           'status', 'submittedAt', 'finishReason'
         ])
         && ((data.status == 'submitted' && data.finishReason in ['submit', 'timeout'])
@@ -418,32 +467,55 @@ service cloud.firestore {
         && data.lastSeenAt == request.time;
     }
 
-    function mockCorrectAt(data, key, index) {
-      return data.correct[index] == (data.answers[index] == key.correct[index]);
+    // Rules have no loops, so every question is checked by index: the first
+    // eight for every test, questions 9-44 only for a paper. The lists are
+    // bound once (c: stored per-question results, a: frozen answers, k: key)
+    // to stay well inside the 1,000-expression limit for a 44-question paper.
+    function mockGradedFirstEight(c, a, k) {
+      return c[0] == (a[0] == k[0]) && c[1] == (a[1] == k[1])
+        && c[2] == (a[2] == k[2]) && c[3] == (a[3] == k[3])
+        && c[4] == (a[4] == k[4]) && c[5] == (a[5] == k[5])
+        && c[6] == (a[6] == k[6]) && c[7] == (a[7] == k[7]);
     }
 
-    function mockPoint(value) {
-      return value ? 1 : 0;
+    function mockGradedPaperRest(c, a, k) {
+      return c[8] == (a[8] == k[8]) && c[9] == (a[9] == k[9])
+        && c[10] == (a[10] == k[10]) && c[11] == (a[11] == k[11])
+        && c[12] == (a[12] == k[12]) && c[13] == (a[13] == k[13])
+        && c[14] == (a[14] == k[14]) && c[15] == (a[15] == k[15])
+        && c[16] == (a[16] == k[16]) && c[17] == (a[17] == k[17])
+        && c[18] == (a[18] == k[18]) && c[19] == (a[19] == k[19])
+        && c[20] == (a[20] == k[20]) && c[21] == (a[21] == k[21])
+        && c[22] == (a[22] == k[22]) && c[23] == (a[23] == k[23])
+        && c[24] == (a[24] == k[24]) && c[25] == (a[25] == k[25])
+        && c[26] == (a[26] == k[26]) && c[27] == (a[27] == k[27])
+        && c[28] == (a[28] == k[28]) && c[29] == (a[29] == k[29])
+        && c[30] == (a[30] == k[30]) && c[31] == (a[31] == k[31])
+        && c[32] == (a[32] == k[32]) && c[33] == (a[33] == k[33])
+        && c[34] == (a[34] == k[34]) && c[35] == (a[35] == k[35])
+        && c[36] == (a[36] == k[36]) && c[37] == (a[37] == k[37])
+        && c[38] == (a[38] == k[38]) && c[39] == (a[39] == k[39])
+        && c[40] == (a[40] == k[40]) && c[41] == (a[41] == k[41])
+        && c[42] == (a[42] == k[42]) && c[43] == (a[43] == k[43]);
     }
 
-    // Once locked, the stored score must equal the key applied to the frozen answers.
+    // Once locked, the stored score must equal the key applied to the frozen
+    // answers: every per-question result is checked, and the score is the
+    // number of true results.
     function mockStudentGrade() {
       let data = request.resource.data;
       let previous = resource.data;
       let key = get(mockDoc('mockTestKeys', previous.moduleId)).data;
+      let n = mockCount(previous);
       return previous.status in ['submitted', 'forfeited']
         && previous.score == null
         && data.diff(previous).affectedKeys().hasOnly(['score', 'correct'])
         && key.version == previous.testVersion
-        && data.correct is list && data.correct.size() == 8
-        && mockCorrectAt(data, key, 0) && mockCorrectAt(data, key, 1)
-        && mockCorrectAt(data, key, 2) && mockCorrectAt(data, key, 3)
-        && mockCorrectAt(data, key, 4) && mockCorrectAt(data, key, 5)
-        && mockCorrectAt(data, key, 6) && mockCorrectAt(data, key, 7)
-        && data.score == mockPoint(data.correct[0]) + mockPoint(data.correct[1])
-          + mockPoint(data.correct[2]) + mockPoint(data.correct[3])
-          + mockPoint(data.correct[4]) + mockPoint(data.correct[5])
-          + mockPoint(data.correct[6]) + mockPoint(data.correct[7]);
+        && key.correct.size() == n
+        && data.correct is list && data.correct.size() == n
+        && mockGradedFirstEight(data.correct, previous.answers, key.correct)
+        && (n == 8 || mockGradedPaperRest(data.correct, previous.answers, key.correct))
+        && data.score == data.correct.removeAll([false]).size();
     }
 
     match /programs/project-202/mockTests/{moduleId} {
@@ -473,7 +545,7 @@ service cloud.firestore {
       allow list, delete: if false;
       allow create, update: if activeProject202Role('tutor')
         && mockTestIsDraftAfter(moduleId)
-        && validMockContent(moduleId, 'correct');
+        && validMockKey(moduleId);
     }
 
     match /programs/project-202/mockTestReviews/{moduleId} {
@@ -481,6 +553,15 @@ service cloud.firestore {
         || (activeProject202Member()
           && mockAttemptLocked(request.auth.uid + '_' + moduleId)
           && get(mockDoc('mockAttempts', request.auth.uid + '_' + moduleId)).data.reviewReleased == true);
+      allow list, delete: if false;
+      allow create, update: if activeProject202Role('tutor')
+        && mockTestIsDraftAfter(moduleId)
+        && validMockContent(moduleId, 'items');
+    }
+
+    // Paper provenance (private source ids, pages, authoring): tutor only, always.
+    match /programs/project-202/mockTestSources/{moduleId} {
+      allow get: if activeProject202Role('tutor');
       allow list, delete: if false;
       allow create, update: if activeProject202Role('tutor')
         && mockTestIsDraftAfter(moduleId)
@@ -515,6 +596,45 @@ service cloud.firestore {
         && request.resource.data.archivedBy == request.auth.uid
         && request.resource.data.archivedAt == request.time;
       allow update, delete: if false;
+    }
+
+    // A tutor's own rehearsal of a test or paper: saved so a 66-minute run
+    // survives a reload, readable and writable only by that tutor, and never
+    // part of any student's attempts, results or history.
+    function validMockRehearsal(rehearsalId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'uid', 'testId', 'testVersion', 'questionCount', 'durationSeconds', 'status',
+          'startedAtMs', 'updatedAtMs', 'finishedAtMs', 'finishReason', 'answers', 'flags',
+          'dwellMs', 'score', 'correct'
+        ])
+        && data.uid == request.auth.uid
+        && rehearsalId.split('_')[0] == request.auth.uid
+        && data.testId is string && data.testId.size() > 0 && data.testId.size() <= 80
+        && data.testVersion is string && data.testVersion.size() <= 60
+        && data.questionCount in [8, 44]
+        && data.durationSeconds == data.questionCount * 90
+        && data.status in ['active', 'finished']
+        && data.startedAtMs is int && data.updatedAtMs is int
+        && mockValidAnswers(data.answers, data.questionCount)
+        && mockValidFlags(data.flags, data.questionCount)
+        && data.dwellMs is list && data.dwellMs.size() == data.questionCount
+        && (data.correct == null
+          || (data.correct is list && data.correct.size() == data.questionCount))
+        && (data.score == null || (data.score is int && data.score >= 0 && data.score <= data.questionCount));
+    }
+
+    match /programs/project-202/mockRehearsals/{rehearsalId} {
+      allow get: if activeProject202Role('tutor')
+        && (resource == null || resource.data.uid == request.auth.uid);
+      allow list, delete: if activeProject202Role('tutor') && resource.data.uid == request.auth.uid;
+      allow create: if activeProject202Role('tutor') && validMockRehearsal(rehearsalId);
+      allow update: if activeProject202Role('tutor')
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.testId == resource.data.testId
+        && request.resource.data.testVersion == resource.data.testVersion
+        && request.resource.data.startedAtMs == resource.data.startedAtMs
+        && validMockRehearsal(rehearsalId);
     }
 
     match /programs/project-202/mockAttemptCounters/{attemptId} {
