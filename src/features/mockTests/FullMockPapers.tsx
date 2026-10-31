@@ -1,6 +1,6 @@
 import { CircleAlert, Clock3, History, LockKeyhole, Maximize, PlayCircle, RotateCcw, Target, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MOCK_PAPERS, type MockPaper } from "../../data/mockPapers";
+import { MOCK_PAPERS, MOCK_PAPER_KIND, MOCK_PAPER_SECTION, type MockPaper } from "../../data/mockPapers";
 import { getCloudErrorMessage, listActiveStudentMembers } from "../../lib/cloud";
 import {
   finalizeExpiredMockAttempt,
@@ -119,7 +119,7 @@ export function FullMockPapers({
   uid: string;
   role: ProjectRole;
   notify: Notify;
-  /** True while a paper screen (start, exam, results) replaces the Tests hub. */
+  /** True while a Mastery Exam screen (start, exam, results) replaces the Tests hub. */
   onFocusChange: (focused: boolean) => void;
   onOpenTutorAdmin?: () => void;
   /** Student: practise a module test's curriculum module after a paper. */
@@ -291,7 +291,7 @@ export function FullMockPapers({
     const count = mockAttemptQuestionCount(screen.attempt);
     return (
       <MockTestRunner
-        kindLabel="Full QM mock"
+        kindLabel={MOCK_PAPER_KIND}
         moduleLabel={current.paper.title}
         questions={screen.questions}
         startedAtMs={screen.attempt.startedAtMs}
@@ -321,7 +321,7 @@ export function FullMockPapers({
     return (
       <MockTestRunner
         rehearsal="saved"
-        kindLabel="Full QM mock"
+        kindLabel={MOCK_PAPER_KIND}
         moduleLabel={current.paper.title}
         questions={pkg.questions.questions}
         startedAtMs={rehearsal.startedAtMs}
@@ -370,7 +370,7 @@ export function FullMockPapers({
   if (screen.kind === "start" && current?.meta) {
     return (
       <StartScreen
-        eyebrow="Full QM mock · all modules"
+        eyebrow={`${MOCK_PAPER_KIND} · Quantitative Methods · all modules`}
         title={current.paper.title}
         questionCount={current.meta.questionCount}
         durationMs={current.meta.durationSeconds * 1000}
@@ -419,8 +419,8 @@ export function FullMockPapers({
     <section className="mock-papers" aria-labelledby="mock-papers-title">
       <div className="mock-papers__head">
         <div>
-          <p className="mock-hub__eyebrow">Comprehensive · all QM modules</p>
-          <h3 id="mock-papers-title">Full QM mocks</h3>
+          <p className="mock-hub__eyebrow">Quantitative Methods · all modules</p>
+          <h3 id="mock-papers-title">{MOCK_PAPER_SECTION}</h3>
         </div>
         <ul className="mock-hub__rules" aria-label="Paper rules">
           <li><Target size={16} />44 questions</li>
@@ -448,7 +448,7 @@ export function FullMockPapers({
         </div>
       )}
       {loading ? (
-        <p className="mock-hub__loading" aria-busy="true">Loading full mocks…</p>
+        <p className="mock-hub__loading" aria-busy="true">Loading Mastery Examinations…</p>
       ) : (
         <ul className="mock-papers__list">
           {visible.map(entry => {
@@ -458,7 +458,7 @@ export function FullMockPapers({
             return (
               <li key={entry.paper.id} className="mock-paper">
                 <div className="mock-paper__title">
-                  <span className="mock-paper__number">{entry.paper.number}</span>
+                  <span className="mock-paper__number">{entry.paper.numeral}</span>
                   <div>
                     <strong>{entry.paper.title}</strong>
                     <small>

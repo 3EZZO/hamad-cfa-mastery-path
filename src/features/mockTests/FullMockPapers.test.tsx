@@ -51,6 +51,7 @@ vi.mock("../../lib/cloud", () => ({
 
 import { getMockAttempt } from "../../lib/cloudMockTests";
 import { FullMockPapers } from "./FullMockPapers";
+import { mockTestTitle } from "../../data/mockPapers";
 
 function textOf(node: ReactTestInstance): string {
   return node.children.map((child) => (typeof child === "string" ? child : textOf(child))).join("");
@@ -82,6 +83,14 @@ describe("Full QM mocks section", () => {
     expect(text).toContain("66:00");
     expect(text).not.toContain("Rehearse");
     expect(text).toContain("Open");
+    expect(textOf(root.findByProps({ id: "mock-papers-title" }))).toBe("Mastery Examinations");
+    expect(text).toContain("Mastery Exam · QM Paper I");
+    expect(textOf(root.findByProps({ className: "mock-paper__number" }))).toBe("I");
+  });
+
+  it("shows a paper's registry name even when the upload carried an older title", () => {
+    expect(mockTestTitle({ moduleId: "qm-paper-01", title: "Full QM mock 1" })).toBe("Mastery Exam · QM Paper I");
+    expect(mockTestTitle({ moduleId: "m01-rates-and-returns", title: "Module 1 test" })).toBe("Module 1 test");
   });
 
   it("shows the student's completed score and time", async () => {

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { saveMockAnswerKey, setMockTestPublished, type MockTestPackage } from "../../lib/cloudMockTests";
 import { getCloudErrorMessage } from "../../lib/cloud";
 import { mockModuleById, mockModuleCode } from "../../data/mockModules";
+import { mockTestTitle } from "../../data/mockPapers";
 import { READING_INDEX } from "../../data/readings";
 import { formatMockClock, mockDocBytes, optionLetter, type MockOption, type MockReviewItem, type MockSourcesDoc, type MockTestMeta } from "../../lib/mockTestContent";
 import "./moduleMock.css";
@@ -106,7 +107,7 @@ export function MockAnswerKeyReview({
     try {
       if (dirty) await saveMockAnswerKey(pkg.meta.moduleId, { ...pkg.key, correct }, { ...pkg.review, items });
       const meta = await setMockTestPublished(pkg.meta, true);
-      notify(`${meta.title} is published. It is now visible to the student.`);
+      notify(`${mockTestTitle(meta)} is published. It is now visible to the student.`);
       onPublished(meta);
     } catch (cause) {
       setError(getCloudErrorMessage(cause));
@@ -125,7 +126,7 @@ export function MockAnswerKeyReview({
       <div className="panel-heading">
         <div>
           <p className="eyebrow">Answer key review · {published ? "Published (read-only)" : "Draft, hidden from the student"}</p>
-          <h3 id="mock-keyreview-title">{pkg.meta.title}</h3>
+          <h3 id="mock-keyreview-title">{mockTestTitle(pkg.meta)}</h3>
           <small>Version {pkg.meta.version}</small>
         </div>
       </div>
@@ -196,7 +197,7 @@ export function MockAnswerKeyReview({
           <button type="button" className="button" disabled={!dirty || busy} onClick={() => void save()}><Save size={16} />Save changes</button>
           {confirmPublish ? (
             <>
-              <span>Publish {pkg.meta.title} version {pkg.meta.version} now? The student will see it and can start it.</span>
+              <span>Publish {mockTestTitle(pkg.meta)} version {pkg.meta.version} now? The student will see it and can start it.</span>
               <button type="button" className="button" disabled={busy} onClick={() => setConfirmPublish(false)}>Cancel</button>
               <button type="button" className="button button-primary" disabled={busy} onClick={() => void publish()}><BadgeCheck size={16} />Confirm publish</button>
             </>

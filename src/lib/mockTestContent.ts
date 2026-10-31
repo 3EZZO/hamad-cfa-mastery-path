@@ -571,7 +571,7 @@ export function parseMockTestDraft(value: unknown): MockTestDraft {
   if (!Array.isArray(value.questions) || value.questions.length !== count) {
     throw new MockContentError(
       kind === "paper"
-        ? `A full mock paper must have exactly ${count} questions.`
+        ? `A Mastery Exam paper must have exactly ${count} questions.`
         : `A module mock test must have exactly ${count} questions.`,
     );
   }

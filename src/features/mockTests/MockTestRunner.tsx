@@ -35,7 +35,7 @@ export interface MockTestRunnerProps {
   initialWork: MockWork;
   /** The attempt's own duration: 12 minutes for a module test, 66 for a paper. */
   durationMs?: number;
-  /** "Module mock test" or "Full QM mock". */
+  /** "Module mock test" or "Mastery Exam". */
   kindLabel?: string;
   keystrokeLimit?: number;
   /**
