@@ -652,6 +652,11 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-practice p { flex: 1 1 260px; margin: 0; line-height: var(--leading-ui); }
 
 .mock-review { display: grid; gap: 14px; }
+/* Grid items default to min-width: auto, so one wide exhibit (a data table or
+   a probability tree) would stretch every card past a phone screen; let the
+   cards shrink and the exhibits scroll inside their own boxes instead. */
+.mock-review > *,
+.mock-keyreview > * { min-width: 0; }
 .mock-review h3 { margin: 8px 0 0; }
 .mock-review__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; }
 .mock-review__filter { display: flex; flex-wrap: wrap; gap: 8px; }
