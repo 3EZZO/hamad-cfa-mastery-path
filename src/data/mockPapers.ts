@@ -1,33 +1,46 @@
 import { MOCK_MODULES } from "./mockModules";
+import { READING_CATALOG } from "./readings";
 
 /**
- * Mastery Examinations: comprehensive Quantitative Methods papers, 44 questions across every QM
- * module test, 66 minutes. Like a module test, the id is the Firestore
- * document id of the paper and the suffix of every attempt id, so it must
- * never change once a paper has been published. Papers are deliberately kept
- * out of MOCK_MODULES: module views, trends, reminders and the heatmap stay
- * one-test-per-module.
+ * Mock Exams: one comprehensive paper per CFA Level I topic, 44 questions in
+ * 66 minutes, built from the hardest unseen questions of that topic. Like a
+ * module test, the id is the Firestore document id of the paper and the
+ * suffix of every attempt id, so it must never change once a paper has been
+ * uploaded (`qm-paper-01` predates this list and keeps its id). Papers are
+ * deliberately kept out of MOCK_MODULES: module views, trends, reminders and
+ * the heatmap stay one-test-per-module.
  */
 export interface MockPaper {
   id: string;
-  number: number;
-  /** Roman numeral shown on the paper's badge and in its title. */
-  numeral: string;
+  /** Curriculum topic, as in the study plan and the reading catalog. */
+  topic: string;
+  /** Short badge code, as on the module tests (QM, EC, ...). */
+  code: string;
   title: string;
 }
 
 /** What the student and the tutor call this kind of test. */
-export const MOCK_PAPER_SECTION = "Mastery Examinations";
-export const MOCK_PAPER_KIND = "Mastery Exam";
+export const MOCK_PAPER_SECTION = "Mock Exams";
+export const MOCK_PAPER_KIND = "Mock Exam";
 
+const paper = (id: string, topic: string, code: string): MockPaper => ({ id, topic, code, title: `${topic} Paper` });
+
+/** In curriculum order. */
 export const MOCK_PAPERS: readonly MockPaper[] = [
-  { id: "qm-paper-01", number: 1, numeral: "I", title: "Mastery Exam · QM Paper I" },
-  { id: "qm-paper-02", number: 2, numeral: "II", title: "Mastery Exam · QM Paper II" },
-  { id: "qm-paper-03", number: 3, numeral: "III", title: "Mastery Exam · QM Paper III" },
+  paper("eth-paper-01", "Ethical and Professional Standards", "ETH"),
+  paper("qm-paper-01", "Quantitative Methods", "QM"),
+  paper("ec-paper-01", "Economics", "EC"),
+  paper("fsa-paper-01", "Financial Statement Analysis", "FSA"),
+  paper("ci-paper-01", "Corporate Issuers", "CI"),
+  paper("eq-paper-01", "Equity Investments", "EQ"),
+  paper("fi-paper-01", "Fixed Income", "FI"),
+  paper("der-paper-01", "Derivatives", "DER"),
+  paper("alt-paper-01", "Alternative Investments", "ALT"),
+  paper("pm-paper-01", "Portfolio Management", "PM"),
 ];
 
 export function mockPaperById(id: string): MockPaper | undefined {
-  return MOCK_PAPERS.find(paper => paper.id === id);
+  return MOCK_PAPERS.find(entry => entry.id === id);
 }
 
 /**
@@ -39,10 +52,17 @@ export function mockTestTitle(meta: { moduleId: string; title: string }): string
 }
 
 export function isMockPaperId(id: string): boolean {
-  return MOCK_PAPERS.some(paper => paper.id === id);
+  return MOCK_PAPERS.some(entry => entry.id === id);
 }
 
-/** The Quantitative Methods module tests a paper's questions are tagged with. */
-export const MOCK_PAPER_MODULE_IDS: readonly string[] = MOCK_MODULES
-  .filter(module => module.topic === "Quantitative Methods")
-  .map(module => module.id);
+/** Module tests of a paper's topic (QM and Economics have them; other topics have none yet). */
+export function paperModuleTestIds(paperId: string): string[] {
+  const topic = mockPaperById(paperId)?.topic;
+  return MOCK_MODULES.filter(module => module.topic === topic).map(module => module.id);
+}
+
+/** Official 2027 curriculum modules (READING_CATALOG ids) of a paper's topic. */
+export function paperCatalogIds(paperId: string): string[] {
+  const topic = mockPaperById(paperId)?.topic;
+  return READING_CATALOG.readings.filter(reading => reading.topic === topic).map(reading => reading.id);
+}

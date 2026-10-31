@@ -370,7 +370,7 @@ export function FullMockPapers({
   if (screen.kind === "start" && current?.meta) {
     return (
       <StartScreen
-        eyebrow={`${MOCK_PAPER_KIND} · Quantitative Methods · all modules`}
+        eyebrow={`${MOCK_PAPER_KIND} · ${current.paper.topic} · all modules`}
         title={current.paper.title}
         questionCount={current.meta.questionCount}
         durationMs={current.meta.durationSeconds * 1000}
@@ -419,7 +419,7 @@ export function FullMockPapers({
     <section className="mock-papers" aria-labelledby="mock-papers-title">
       <div className="mock-papers__head">
         <div>
-          <p className="mock-hub__eyebrow">Quantitative Methods · all modules</p>
+          <p className="mock-hub__eyebrow">One paper per CFA topic · all modules</p>
           <h3 id="mock-papers-title">{MOCK_PAPER_SECTION}</h3>
         </div>
         <ul className="mock-hub__rules" aria-label="Paper rules">
@@ -458,11 +458,11 @@ export function FullMockPapers({
             return (
               <li key={entry.paper.id} className="mock-paper">
                 <div className="mock-paper__title">
-                  <span className="mock-paper__number">{entry.paper.numeral}</span>
+                  <span className="mock-paper__number">{entry.paper.code}</span>
                   <div>
                     <strong>{entry.paper.title}</strong>
                     <small>
-                      {entry.meta ? `${entry.meta.questionCount} questions · ${formatMockClock(entry.meta.durationSeconds * 1000)}` : "Not uploaded yet"}
+                      {entry.meta ? `${entry.meta.questionCount} questions · ${formatMockClock(entry.meta.durationSeconds * 1000)}` : "No paper yet"}
                       {isTutor && entry.meta && ` · ${entry.meta.status === "published" ? "Published" : "Draft"} · version ${entry.meta.version}`}
                     </small>
                   </div>

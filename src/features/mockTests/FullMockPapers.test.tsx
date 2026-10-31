@@ -8,8 +8,7 @@ const meta = (id: string, status: "draft" | "published"): MockTestMeta => ({
 });
 const metas: Record<string, MockTestMeta | null> = {
   "qm-paper-01": meta("qm-paper-01", "published"),
-  "qm-paper-02": meta("qm-paper-02", "draft"),
-  "qm-paper-03": null,
+  "ec-paper-01": meta("ec-paper-01", "draft"),
 };
 const studentAttempt = {
   id: "student-1_qm-paper-01", uid: "student-1", moduleId: "qm-paper-01", testVersion: "v1", attemptNumber: 1,
@@ -83,13 +82,13 @@ describe("Full QM mocks section", () => {
     expect(text).toContain("66:00");
     expect(text).not.toContain("Rehearse");
     expect(text).toContain("Open");
-    expect(textOf(root.findByProps({ id: "mock-papers-title" }))).toBe("Mastery Examinations");
-    expect(text).toContain("Mastery Exam · QM Paper I");
-    expect(textOf(root.findByProps({ className: "mock-paper__number" }))).toBe("I");
+    expect(textOf(root.findByProps({ id: "mock-papers-title" }))).toBe("Mock Exams");
+    expect(text).toContain("Quantitative Methods Paper");
+    expect(textOf(root.findByProps({ className: "mock-paper__number" }))).toBe("QM");
   });
 
   it("shows a paper's registry name even when the upload carried an older title", () => {
-    expect(mockTestTitle({ moduleId: "qm-paper-01", title: "Full QM mock 1" })).toBe("Mastery Exam · QM Paper I");
+    expect(mockTestTitle({ moduleId: "qm-paper-01", title: "Full QM mock 1" })).toBe("Quantitative Methods Paper");
     expect(mockTestTitle({ moduleId: "m01-rates-and-returns", title: "Module 1 test" })).toBe("Module 1 test");
   });
 
@@ -102,8 +101,14 @@ describe("Full QM mocks section", () => {
   it("gives the tutor every paper, Hamad's status and saved, resumable rehearsals", async () => {
     const root = await render("tutor");
     const text = textOf(root);
-    expect(root.findAllByProps({ className: "mock-paper" })).toHaveLength(3);
-    expect(text).toContain("Not uploaded yet");
+    // One card per CFA topic for the tutor, in curriculum order.
+    const cards = root.findAllByProps({ className: "mock-paper" });
+    expect(cards).toHaveLength(10);
+    expect(cards.map(card => textOf(card.findByProps({ className: "mock-paper__number" })))).toEqual(
+      ["ETH", "QM", "EC", "FSA", "CI", "EQ", "FI", "DER", "ALT", "PM"],
+    );
+    expect(text).toContain("No paper yet");
+    expect(text).toContain("Economics Paper");
     expect(text).toContain("Draft · version v1");
     expect(text).toContain("Hamad: 31/44 · review not released");
     expect(text).toContain("Resume rehearsal");

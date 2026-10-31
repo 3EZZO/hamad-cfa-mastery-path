@@ -1,4 +1,4 @@
-import { MOCK_PAPERS, MOCK_PAPER_MODULE_IDS, isMockPaperId } from "../data/mockPapers";
+import { MOCK_PAPERS, isMockPaperId, mockPaperById, paperCatalogIds, paperModuleTestIds } from "../data/mockPapers";
 
 /**
  * Mock tests: content contract, grading and timing.
@@ -181,7 +181,10 @@ export type MockAuthoring = "source" | "authored";
 
 /** Schema 2 tags, readable with the key once the attempt is locked. */
 export interface MockQuestionTags {
-  /** The module test this question exercises (a MOCK_MODULES id). */
+  /**
+   * The module test this question exercises (a MOCK_MODULES id of the paper's
+   * topic); empty for topics that have no module tests.
+   */
   moduleTag: string;
   /** Official 2027 curriculum module (READING_CATALOG id). */
   catalogId: string;
@@ -497,8 +500,8 @@ function parseTree(value: unknown, field: string): MockTree | null {
 
 function parseTags(value: unknown, field: string): MockQuestionTags {
   if (!isRecord(value)) throw new MockContentError(`${field} must be an object.`);
-  const moduleTag = text(value.moduleTag, `${field}.moduleTag`, 80);
-  if (!ID_PATTERN.test(moduleTag)) throw new MockContentError(`${field}.moduleTag must be a module test id.`);
+  const moduleTag = text(value.moduleTag ?? "", `${field}.moduleTag`, 80, true);
+  if (moduleTag && !ID_PATTERN.test(moduleTag)) throw new MockContentError(`${field}.moduleTag must be a module test id.`);
   const catalogId = text(value.catalogId, `${field}.catalogId`, 80);
   if (!CATALOG_PATTERN.test(catalogId)) throw new MockContentError(`${field}.catalogId must be an official 2027 module id.`);
   const los = textList(value.los, `${field}.los`, 300, 4);
@@ -544,6 +547,21 @@ function checkExhibitPolicy(question: MockDraftQuestion, field: string): void {
   }
 }
 
+/** A paper's questions belong to its topic: its official modules and, where they exist, its module tests. */
+function checkPaperTags(paperId: string, tags: MockQuestionTags, field: string): void {
+  const topic = mockPaperById(paperId)!.topic;
+  if (!paperCatalogIds(paperId).includes(tags.catalogId)) {
+    throw new MockContentError(`${field}.catalogId must be an official ${topic} module.`);
+  }
+  const moduleTests = paperModuleTestIds(paperId);
+  if (moduleTests.length && !moduleTests.includes(tags.moduleTag)) {
+    throw new MockContentError(`${field}.moduleTag must be a ${topic} module test id.`);
+  }
+  if (!moduleTests.length && tags.moduleTag) {
+    throw new MockContentError(`${field}.moduleTag must be empty: ${topic} has no module tests.`);
+  }
+}
+
 function testKind(value: Record<string, unknown>, schemaVersion: MockSchemaVersion): MockTestKind {
   if (schemaVersion === MOCK_SCHEMA_VERSION) {
     if (value.kind !== undefined && value.kind !== "module") throw new MockContentError("A schema 1 upload is a module test.");
@@ -571,7 +589,7 @@ export function parseMockTestDraft(value: unknown): MockTestDraft {
   if (!Array.isArray(value.questions) || value.questions.length !== count) {
     throw new MockContentError(
       kind === "paper"
-        ? `A Mastery Exam paper must have exactly ${count} questions.`
+        ? `A mock exam paper must have exactly ${count} questions.`
         : `A module mock test must have exactly ${count} questions.`,
     );
   }
@@ -609,9 +627,8 @@ export function parseMockTestDraft(value: unknown): MockTestDraft {
     question.reviewFigure = parseFigure(raw.reviewFigure, `${field}.reviewFigure`);
     question.reviewTree = parseTree(raw.reviewTree, `${field}.reviewTree`);
     question.tags = parseTags(raw.tags, `${field}.tags`);
-    if (kind === "paper" && !MOCK_PAPER_MODULE_IDS.includes(question.tags.moduleTag)) {
-      throw new MockContentError(`${field}.tags.moduleTag must be a Quantitative Methods module test id.`);
-    }
+    if (kind === "paper") checkPaperTags(moduleId, question.tags, `${field}.tags`);
+    else if (!question.tags.moduleTag) throw new MockContentError(`${field}.tags.moduleTag is empty.`);
     question.source = parseSource(raw.source, `${field}.source`);
     checkExhibitPolicy(question, field);
     return question;
@@ -646,7 +663,10 @@ export function splitMockDraft(draft: MockTestDraft): MockDraftDocs {
   const v2 = draft.schemaVersion === MOCK_SCHEMA_VERSION_V2;
   const key: MockKeyDoc = { moduleId, version, correct: draft.questions.map(question => question.correctOption) };
   if (v2) {
-    key.modules = draft.questions.map(question => question.tags!.moduleTag);
+    // Topics without module tests carry no per-question module tags.
+    if (draft.questions.every(question => question.tags!.moduleTag)) {
+      key.modules = draft.questions.map(question => question.tags!.moduleTag);
+    }
     key.catalogIds = draft.questions.map(question => question.tags!.catalogId);
     key.skills = draft.questions.map(question => question.tags!.skill);
   }

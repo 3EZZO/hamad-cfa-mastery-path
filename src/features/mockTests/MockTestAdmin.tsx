@@ -510,9 +510,9 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
         id="tests:papers"
         variant="sub"
         className="mock-admin__topic"
-        title={`${MOCK_PAPER_SECTION} (QM)`}
+        title={MOCK_PAPER_SECTION}
         meta={`${metas.filter(meta => isMockPaperId(meta.moduleId)).length} of ${MOCK_PAPERS.length} uploaded · 44 questions · 66:00 each`}
-        summary="Upload a paper as a draft, check its coverage report and key, rehearse it from the Tests page, then publish"
+        summary="One paper per CFA topic: upload it as a draft, check its coverage report and key, rehearse it from the Tests page, then publish"
       >
         <div className="mock-admin__modules">
           {MOCK_PAPERS.map(paper => {
@@ -523,7 +523,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
             return (
               <article key={paper.id} className="mock-admin__module">
                 <div>
-                  <span>QM Paper {paper.numeral}</span>
+                  <span>{paper.code}</span>
                   <strong>{paper.title}</strong>
                   <small>{meta ? `${meta.status === "published" ? "Published" : "Draft"} · version ${meta.version}${taken ? " · frozen (attempted)" : ""}` : "No paper uploaded"}</small>
                   {meta?.status === "published" && studentUid && (
@@ -596,8 +596,8 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                 const listed = [
                   ...MOCK_MODULES.filter(module => (resultsTopic === "all" || module.topic === resultsTopic) && shown(module.id))
                     .map(module => ({ id: module.id, group: module.topic as string, label: mockModuleLabel(module) })),
-                  ...(resultsTopic === "all" || resultsTopic === "Quantitative Methods"
-                    ? MOCK_PAPERS.filter(paper => shown(paper.id)).map(paper => ({ id: paper.id, group: MOCK_PAPER_SECTION, label: paper.title }))
+                  ...(MOCK_PAPERS.some(paper => resultsTopic === "all" || paper.topic === resultsTopic)
+                    ? MOCK_PAPERS.filter(paper => (resultsTopic === "all" || paper.topic === resultsTopic) && shown(paper.id)).map(paper => ({ id: paper.id, group: MOCK_PAPER_SECTION, label: paper.title }))
                     : []),
                 ];
                 return listed.map((module, index) => {

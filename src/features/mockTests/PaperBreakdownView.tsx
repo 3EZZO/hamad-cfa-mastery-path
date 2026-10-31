@@ -38,8 +38,12 @@ export function PaperBreakdownView({
   onPractise?: (moduleId: string) => void;
 }) {
   const breakdown = paperBreakdown(keyDoc, answers, correct, dwellMs);
-  if (breakdown.byModule.length === 0) return null;
-  const weakest = weakestRows(breakdown.byModule);
+  // Topics without module tests are grouped by their official 2027 modules instead.
+  const byModuleTest = breakdown.byModule.length > 0;
+  const primary = byModuleTest ? breakdown.byModule : breakdown.byCatalog;
+  if (primary.length === 0) return null;
+  const primaryName = byModuleTest ? moduleName : catalogName;
+  const weakest = weakestRows(primary);
   const row = (item: BreakdownRow, label: string) => (
     <tr key={item.id}>
       <th scope="row">{label}</th>
@@ -70,16 +74,16 @@ export function PaperBreakdownView({
         <ul className="mock-breakdown__weak" aria-label="Repair first">
           {weakest.map(item => (
             <li key={item.id}>
-              <span><strong>{moduleName(item.id)}</strong> · {item.correct} of {item.total}</span>
-              {onPractise && <button type="button" className="mock-button mock-button--ghost" onClick={() => onPractise(item.id)}>Practise</button>}
+              <span><strong>{primaryName(item.id)}</strong> · {item.correct} of {item.total}</span>
+              {onPractise && byModuleTest && <button type="button" className="mock-button mock-button--ghost" onClick={() => onPractise(item.id)}>Practise</button>}
             </li>
           ))}
         </ul>
       )}
-      {table("Module tests", breakdown.byModule, moduleName)}
+      {table(byModuleTest ? "Module tests" : "Official 2027 curriculum modules", primary, primaryName)}
       <details className="mock-breakdown__more">
-        <summary>Official 2027 modules and skills</summary>
-        {table("Official 2027 curriculum modules", breakdown.byCatalog, catalogName)}
+        <summary>{byModuleTest ? "Official 2027 modules and skills" : "Skills"}</summary>
+        {byModuleTest && table("Official 2027 curriculum modules", breakdown.byCatalog, catalogName)}
         {table("Skills", breakdown.bySkill, id => SKILL_LABEL[id] ?? id)}
       </details>
     </section>

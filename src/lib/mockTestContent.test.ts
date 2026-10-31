@@ -23,7 +23,7 @@ import {
   splitMockDraft,
   type MockAttempt,
 } from "./mockTestContent";
-import { SYNTHETIC_PAPER_ID, syntheticPaper, syntheticPaperQuestion, syntheticTree } from "../testFixtures/syntheticPaper";
+import { SYNTHETIC_PAPER_ID, syntheticPaper, syntheticPaperQuestion, syntheticTopicPaper, syntheticTree } from "../testFixtures/syntheticPaper";
 
 // Synthetic fixture only: real mock content is private and never committed.
 function syntheticDraft(overrides: Record<string, unknown> = {}) {
@@ -354,3 +354,34 @@ describe("full mock papers (schema 2)", () => {
     expect(MOCK_MAX_DOC_BYTES).toBeLessThan(1_048_576);
   });
 });
+
+describe("mock exam papers for every CFA topic", () => {
+  it("accepts a paper for a topic without module tests, with official-module tags only", () => {
+    const docs = splitMockDraft(parseMockTestDraft(syntheticTopicPaper("eth-paper-01")));
+    expect(docs.key.modules).toBeUndefined();
+    expect(docs.key.catalogIds).toHaveLength(44);
+    expect(docs.sources!.items[0]!.moduleTag).toBe("");
+  });
+
+  it("requires the topic's own module tests where they exist", () => {
+    const economics = splitMockDraft(parseMockTestDraft(syntheticTopicPaper("ec-paper-01")));
+    expect(economics.key.modules!.every(id => id.startsWith("e0"))).toBe(true);
+    const wrong = syntheticTopicPaper("ec-paper-01");
+    wrong.questions[0] = { ...wrong.questions[0]!, tags: { ...wrong.questions[0]!.tags, moduleTag: "m01-rates-and-returns" } };
+    expect(() => parseMockTestDraft(wrong)).toThrow("must be a Economics module test id");
+  });
+
+  it("keeps every question inside the paper's own topic", () => {
+    const offTopic = syntheticPaper();
+    offTopic.questions[0] = syntheticPaperQuestion(0, { tags: { ...syntheticPaperQuestion(0).tags, catalogId: "cfa-2027-outline-m012" } });
+    expect(() => parseMockTestDraft(offTopic)).toThrow("must be an official Quantitative Methods module");
+    const tagged = syntheticTopicPaper("fi-paper-01");
+    tagged.questions[0] = { ...tagged.questions[0]!, tags: { ...tagged.questions[0]!.tags, moduleTag: "m01-rates-and-returns" } };
+    expect(() => parseMockTestDraft(tagged)).toThrow("must be empty: Fixed Income has no module tests");
+  });
+
+  it("rejects ids that are not registered papers, including the retired QM papers 2 and 3", () => {
+    expect(() => parseMockTestDraft(syntheticPaper({ moduleId: "qm-paper-02" }))).toThrow("registered papers");
+  });
+});
+
