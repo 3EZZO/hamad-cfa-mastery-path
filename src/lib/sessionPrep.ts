@@ -1,6 +1,6 @@
 import { mockModuleById, mockModuleCode, mockModulesForCatalog } from "../data/mockModules";
 import { READING_INDEX } from "../data/readings";
-import type { MockAttempt } from "./mockTestContent";
+import { mockFinalScore as finalScore, mockFirstTryScore, type MockAttempt } from "./mockTestContent";
 import type { ModuleStanding, PracticeAnswerFact } from "./tutorInsights";
 
 /**
@@ -13,12 +13,13 @@ export interface SessionPrep {
   session: { number: number; date: string; title: string };
   /** Date of the previous session (YYYY-MM-DD), when there was one. */
   since: string | null;
-  results: Array<{ code: string; title: string; score: number | null }>;
+  /** `score` is the first try; `final` the final attempt's score, when one was taken. */
+  results: Array<{ code: string; title: string; score: number | null; final: number | null }>;
   practice: { answered: number; accuracy: number | null };
   focus: ModuleStanding[];
   overdue: string[];
   readings: string[];
-  tests: Array<{ id: string; code: string; title: string; state: "unpublished" | "to-take" | "taken"; score: number | null }>;
+  tests: Array<{ id: string; code: string; title: string; state: "unpublished" | "to-take" | "taken"; score: number | null; final: number | null }>;
 }
 
 function localMidnight(day: string): number {
@@ -42,7 +43,7 @@ export function buildSessionPrep(input: {
     .sort((left, right) => (left.submittedAtMs ?? 0) - (right.submittedAtMs ?? 0))
     .flatMap((attempt) => {
       const module = mockModuleById(attempt.moduleId);
-      return module ? [{ code: mockModuleCode(module), title: module.title, score: attempt.score }] : [];
+      return module ? [{ code: mockModuleCode(module), title: module.title, score: mockFirstTryScore(attempt), final: finalScore(attempt) }] : [];
     });
   const recent = input.answers.filter((answer) => answer.answeredAtMs >= sinceMs);
   const correct = recent.filter((answer) => answer.correct).length;
@@ -64,10 +65,17 @@ export function buildSessionPrep(input: {
         code: mockModuleCode(module),
         title: module.title,
         state: attempt ? "taken" : input.publishedTestIds.has(module.id) ? "to-take" : "unpublished",
-        score: attempt?.score ?? null,
+        score: attempt ? mockFirstTryScore(attempt) : null,
+        final: attempt ? finalScore(attempt) : null,
       };
     }),
   };
+}
+
+/** A test's first try, and its final attempt when there is one: "5/8" or "5/8 → final 7/8". */
+export function scoreText(result: { score: number | null; final: number | null }): string {
+  if (result.score === null) return "ungraded";
+  return `${result.score}/8${result.final === null ? "" : ` → final ${result.final}/8`}`;
 }
 
 const percent = (value: number | null) => (value === null ? "–" : `${Math.round(value * 100)}%`);
@@ -77,7 +85,7 @@ export function sessionPrepText(prep: SessionPrep, dateLabel: string): string {
   const lines = [`Session ${String(prep.session.number).padStart(2, "0")} · ${dateLabel} · ${prep.session.title}`, ""];
   lines.push(prep.since ? `Since the last session (${prep.since}):` : "So far:");
   lines.push(prep.results.length
-    ? `- Tests: ${prep.results.map((result) => `${result.code} ${result.score === null ? "ungraded" : `${result.score}/8`}`).join(", ")}`
+    ? `- Tests: ${prep.results.map((result) => `${result.code} ${scoreText(result)}`).join(", ")}`
     : "- Tests: none taken");
   lines.push(`- Practice: ${prep.practice.answered} answered${prep.practice.answered ? `, ${percent(prep.practice.accuracy)} correct` : ""}`);
   if (prep.focus.length) {
@@ -93,7 +101,7 @@ export function sessionPrepText(prep: SessionPrep, dateLabel: string): string {
     for (const reading of prep.readings) lines.push(`- ${reading}`);
   }
   if (prep.tests.length) {
-    lines.push("", `Module tests: ${prep.tests.map((test) => `${test.code} ${test.state === "taken" ? (test.score === null ? "taken" : `${test.score}/8`) : test.state === "to-take" ? "to take" : "not published"}`).join(", ")}`);
+    lines.push("", `Module tests: ${prep.tests.map((test) => `${test.code} ${test.state === "taken" ? (test.score === null ? "taken" : scoreText(test)) : test.state === "to-take" ? "to take" : "not published"}`).join(", ")}`);
   }
   return lines.join("\n");
 }

@@ -11,7 +11,6 @@ const KIND_ICON: Record<InboxKind, typeof Inbox> = {
   approval: CircleCheckBig,
   grade: ClipboardCheck,
   overdue: Clock3,
-  release: ClipboardCheck,
   payment: BadgeDollarSign,
   weak: TrendingDown,
   reminder: BellRing,

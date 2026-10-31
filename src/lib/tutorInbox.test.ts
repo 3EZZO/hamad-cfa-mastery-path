@@ -35,7 +35,7 @@ describe("buildTutorInbox", () => {
     expect(buildTutorInbox(input())).toEqual([]);
   });
 
-  it("ranks a live test, approvals, grading, overdue tests and reviews to release", () => {
+  it("ranks a live test, approvals, grading and overdue tests; reviews need no release", () => {
     const items = buildTutorInbox(input({
       approvals: [{ taskId: "w5-session-1", label: "Session 05", requestedAt: "2026-10-09T10:00:00Z" }],
       metas: [{ moduleId: "e06-international-trade", status: "published" }, { moduleId: "e07-capital-flows-fx-market", status: "published" }],
@@ -46,9 +46,8 @@ describe("buildTutorInbox", () => {
       ],
       reminders: [reminder({ deadline: "2026-10-08", moduleIds: ["e06-international-trade", "e07-capital-flows-fx-market"], acknowledgedAtMs: NOW })],
     }));
-    expect(kinds(items)).toEqual(["live", "approval", "grade", "overdue", "release"]);
+    expect(kinds(items)).toEqual(["live", "approval", "grade", "overdue"]);
     expect(items[3]).toMatchObject({ title: "2 tests are overdue", detail: "EC6, EC7", action: { type: "remind", moduleIds: ["e06-international-trade", "e07-capital-flows-fx-market"] } });
-    expect(items[4]!.action).toEqual({ type: "release-review", attemptId: "s_e03-fiscal-policy" });
   });
 
   it("does not call a test overdue once taken, before its deadline, or when unpublished", () => {

@@ -1,6 +1,6 @@
 import { BellRing, ClipboardList, Copy, PlayCircle } from "lucide-react";
 import { formatDate } from "../../lib/dates";
-import { sessionPrepText, type SessionPrep } from "../../lib/sessionPrep";
+import { scoreText, sessionPrepText, type SessionPrep } from "../../lib/sessionPrep";
 import { consoleAnchor } from "../../lib/tutorConsole";
 import "./tutorConsole.css";
 import { Fold } from "./Fold";
@@ -39,7 +39,7 @@ export function SessionPrepPanel({
         <div className="coach-prep__grid">
           <div>
             <h4>{prep.since ? `Since ${formatDate(prep.since, { day: "numeric", month: "short" })}` : "So far"}</h4>
-            <p>{prep.results.length ? prep.results.map((result) => `${result.code} ${result.score === null ? "ungraded" : `${result.score}/8`}`).join(" · ") : "No tests taken"}</p>
+            <p>{prep.results.length ? prep.results.map((result) => `${result.code} ${scoreText(result)}`).join(" · ") : "No tests taken"}</p>
             <p>Practice: {prep.practice.answered} answered{prep.practice.answered ? `, ${percent(prep.practice.accuracy)} correct` : ""}</p>
           </div>
           <div>
@@ -50,7 +50,7 @@ export function SessionPrepPanel({
           <div>
             <h4>This session</h4>
             {prep.readings.length ? <ul>{prep.readings.map((reading) => <li key={reading}>{reading}</li>)}</ul> : <p>No readings listed</p>}
-            {prep.tests.length > 0 && <p>Tests: {prep.tests.map((test) => `${test.code} ${test.state === "taken" ? (test.score === null ? "taken" : `${test.score}/8`) : test.state === "to-take" ? "to take" : "not published"}`).join(" · ")}</p>}
+            {prep.tests.length > 0 && <p>Tests: {prep.tests.map((test) => `${test.code} ${test.state === "taken" ? (test.score === null ? "taken" : scoreText(test)) : test.state === "to-take" ? "to take" : "not published"}`).join(" · ")}</p>}
           </div>
         </div>
       )}

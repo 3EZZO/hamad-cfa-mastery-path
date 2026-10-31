@@ -1,4 +1,4 @@
-import { Archive, ArrowLeft, Check, CircleAlert, Clock3, Dumbbell, Flag, LockKeyhole, RotateCcw, X } from "lucide-react";
+import { Archive, ArrowLeft, Check, CircleAlert, Clock3, Dumbbell, Flag, PlayCircle, RotateCcw, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Crest } from "../../components/Crest";
 import {
@@ -12,7 +12,10 @@ import {
 import { getCloudErrorMessage } from "../../lib/cloud";
 import { paperPassMarkLabel, paperScoreLine, paperVerdict, paperVerdictMessage } from "../../lib/paperPass";
 import {
+  canStartFinalMockAttempt,
   formatMockClock,
+  isFinalMockAttempt,
+  isMockAttemptLocked,
   mockAttemptQuestionCount,
   mockTimeUsedMs,
   optionLetter,
@@ -87,6 +90,8 @@ export function MockResults({
   backLabel = "All module tests",
   practice,
   breakdown,
+  onStartFinal,
+  busy = false,
 }: {
   moduleLabel: string;
   attempt?: MockAttempt;
@@ -94,6 +99,9 @@ export function MockResults({
   onBack: () => void;
   backLabel?: string;
   practice?: ReviewPractice;
+  /** Student, module test: start the final attempt from this first attempt's review. */
+  onStartFinal?: () => void;
+  busy?: boolean;
   /** A paper's results by module and skill; shown once the review is open. */
   breakdown?: (review: { answers: readonly (number | null)[]; correct: readonly boolean[] | null; dwellMs?: readonly number[] }) => ReactNode;
 }) {
@@ -116,8 +124,9 @@ export function MockResults({
     gradeMockAttempt(attempt).then(setAttempt, cause => setError(getCloudErrorMessage(cause)));
   }, [attempt]);
 
+  // The answers and explanations open as soon as the attempt is locked.
   useEffect(() => {
-    if (!attempt?.reviewReleased || review) return;
+    if (!attempt || !isMockAttemptLocked(attempt) || review) return;
     Promise.all([getMockQuestions(attempt.moduleId), getMockAnswerKey(attempt.moduleId), getMockReview(attempt.moduleId)])
       .then(([questions, key, items]) => setReview({ questions: questions.questions, key, items: items.items }))
       .catch(cause => setError(getCloudErrorMessage(cause)));
@@ -138,8 +147,10 @@ export function MockResults({
   const passMark = verdict ? paperPassMarkLabel(moduleId) : null;
   // The crest medal: a cleared paper, or 6 of 8 or better on a module test.
   const strong = !forfeited && score !== null && (verdict ? verdict.passed : score >= Math.ceil(count * 0.75));
-  // Until the tutor releases the review the student sees the final score only.
-  const reviewOpen = Boolean(local) || attempt?.reviewReleased === true;
+  const reviewOpen = Boolean(local) || (attempt ? isMockAttemptLocked(attempt) : false);
+  // Module tests are learn, then final: the first attempt's review leads to the final attempt.
+  const final = attempt ? isFinalMockAttempt(attempt) : false;
+  const finalOpen = Boolean(attempt && onStartFinal && canStartFinalMockAttempt(attempt));
   // Unanswered counts as a mistake.
   const isMistake = (index: number) => review ? answers[index] !== review.key[index] : correct?.[index] === false;
   const mistakes = Array.from({ length: count }, (_, index) => index).filter(isMistake);
@@ -162,14 +173,15 @@ export function MockResults({
       <button type="button" className="mock-results__back" onClick={onBack}><ArrowLeft size={18} />{backLabel}</button>
       <div className={`mock-results__reveal${forfeited ? " is-forfeit" : ""}${strong ? " is-strong" : ""}`}>
         {strong && <Crest size={56} animated className="mock-results__medal" />}
-        <p className="mock-results__eyebrow">{local ? (local.saved ? "Rehearsal result · on your tutor account only" : "Rehearsal result · not saved") : moduleLabel}</p>
+        <p className="mock-results__eyebrow">{local ? (local.saved ? "Rehearsal result · on your tutor account only" : "Rehearsal result · not saved") : final ? `${moduleLabel} · final attempt` : moduleLabel}</p>
         <h2 id="mock-results-title">{forfeited ? "Test forfeited" : "Your result"}</h2>
         <div className="mock-score" style={{ ["--mock-score" as string]: `${percent}` }} aria-label={score === null ? "Grading" : `${score} out of ${count}`}>
           <span className="mock-score__value">{score === null ? "…" : score}</span>
           <span className="mock-score__of">/ {count}</span>
         </div>
         <dl className="mock-results__facts">
-          <div><dt>Score</dt><dd>{score === null ? "Grading…" : verdict ? `${verdict.percent}%` : `${percent}%`}</dd></div>
+          <div><dt>{final ? "Final score" : "Score"}</dt><dd>{score === null ? "Grading…" : verdict ? `${verdict.percent}%` : `${percent}%`}</dd></div>
+          {final && attempt?.firstTryScore !== undefined && <div><dt>First try</dt><dd>{attempt.firstTryScore}/{count}</dd></div>}
           {passMark && <div><dt>Pass mark</dt><dd>{passMark}</dd></div>}
           {reviewOpen && (
             <>
@@ -187,6 +199,18 @@ export function MockResults({
         )}
       </div>
       {error && <p className="mock-hub__error" role="alert"><CircleAlert size={16} />{error}</p>}
+
+      {finalOpen && (
+        <div className="mock-final" role="group" aria-label="Final attempt">
+          <p>
+            <strong>Now your final attempt.</strong> Go through the answers below, then take the test again: the same {count} questions,
+            with a fresh clock. Your final attempt is the score that counts.
+          </p>
+          <button type="button" className="mock-button mock-button--primary" disabled={busy} onClick={onStartFinal}>
+            <PlayCircle size={16} />Start final attempt
+          </button>
+        </div>
+      )}
 
       {reviewOpen && breakdown?.({ answers, correct, dwellMs: local ? local.work.dwellMs : attempt?.dwellMs })}
 
@@ -277,8 +301,8 @@ export function MockResults({
             );
           })}
         </div>
-      ) : (
-        <p className="mock-results__pending"><LockKeyhole size={16} />Your question-by-question results, correct answers and explanations appear here when your tutor releases the review.</p>
+      ) : reviewOpen && !error && (
+        <p className="mock-results__pending">Loading the answers and explanations…</p>
       )}
     </section>
   );

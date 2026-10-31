@@ -1,4 +1,4 @@
-import { BadgeCheck, BellRing, CalendarClock, CalendarX, ClipboardCheck, CircleAlert, CloudUpload, Eye, EyeOff, History, RotateCcw, TimerOff, Unlock } from "lucide-react";
+import { BadgeCheck, BellRing, CalendarClock, CalendarX, ClipboardCheck, CircleAlert, CloudUpload, Eye, EyeOff, History, RotateCcw, TimerOff } from "lucide-react";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useAppDialog } from "../../components/AppDialog";
 import { MOCK_MODULES, MOCK_TOPICS, mockModuleById, mockModuleCode, mockModuleLabel, mockModulesInTopic, type MockTopic } from "../../data/mockModules";
@@ -11,7 +11,6 @@ import {
   listMockTestMetas,
   loadMockTestPackage,
   resetMockAttempt,
-  setMockReviewReleased,
   setMockTestPublished,
   tutorGradeMockAttempt,
   uploadMockTestDraft,
@@ -19,8 +18,10 @@ import {
 } from "../../lib/cloudMockTests";
 import {
   MOCK_KIND_QUESTION_COUNT,
+  canStartFinalMockAttempt,
   formatMockClock,
   incidentLabel,
+  isFinalMockAttempt,
   isMockAttemptLocked,
   mockAttemptId,
   mockAttemptQuestionCount,
@@ -46,6 +47,18 @@ import { MockReminderAdmin } from "./MockReminderAdmin";
 import "./moduleMock.css";
 
 type Notify = (message: string, tone?: "success" | "warning") => void;
+
+/**
+ * A graded attempt for the tutor: a module test's final attempt shows its first
+ * try too ("5/8 → final 7/8"), a first attempt with its final still to take is
+ * marked so, and a paper carries its pass verdict.
+ */
+function attemptScore(attempt: MockAttempt): string {
+  const count = mockAttemptQuestionCount(attempt);
+  if (isFinalMockAttempt(attempt)) return `${attempt.firstTryScore}/${count} → final ${attempt.score ?? "?"}/${count}`;
+  const firstTry = canStartFinalMockAttempt(attempt) ? " first try" : "";
+  return `${attempt.score ?? "?"}/${count}${firstTry}${paperVerdictSuffix(attempt.moduleId, attempt.score, count)}`;
+}
 
 const FINISH: Record<string, string> = {
   submit: "Submitted",
@@ -283,7 +296,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
       `Reset ${studentName}'s ${module ? mockModuleLabel(module) : paper?.title ?? attempt.moduleId} attempt? The current attempt is kept in the history and ${studentName} can take the test again. `
         + (paper
           ? "A paper's questions stay the same, so a second attempt is a repeat and is reported as one, never as unseen evidence."
-          : "If the review was released, the student has already seen the answers: consider uploading a new version first."),
+          : "The student has already seen the answers, so this starts a new first attempt and then a final one on the same questions: consider uploading a new version first."),
     );
     if (!ok) return;
     setBusy(true);
@@ -298,18 +311,6 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
     }
   };
 
-  const release = async (attempt: MockAttempt, released: boolean) => {
-    setBusy(true);
-    try {
-      await setMockReviewReleased(attempt.id, released);
-      notify(released ? "Answers and explanations released to the student." : "Review hidden again.");
-      await refresh();
-    } catch (cause) {
-      setError(getCloudErrorMessage(cause));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   /** Publish every draft in a topic after one confirmation that lists them. */
   const publishDrafts = async (topic: MockTopic, drafts: MockTestMeta[]) => {
@@ -336,34 +337,6 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
     }
     const published = drafts.length - failures.length;
     if (published) notify(`${published} ${topic} ${published === 1 ? "test" : "tests"} published.`);
-    if (failures.length) setError(failures.join("\n"));
-    await refresh();
-    setBusy(false);
-  };
-
-  /** Release the review of every graded, unreleased attempt in a topic. */
-  const releaseReviews = async (topic: MockTopic, pending: MockAttempt[]) => {
-    const codes = pending.map(attempt => {
-      const module = mockModuleById(attempt.moduleId);
-      return module ? mockModuleCode(module) : attempt.moduleId;
-    }).join(", ");
-    const ok = await dialog.confirm(
-      `Release the review for ${pending.length} ${topic} ${pending.length === 1 ? "test" : "tests"} (${codes})? `
-        + "The student will see the answers and explanations.",
-    );
-    if (!ok) return;
-    setBusy(true);
-    setError("");
-    const failures: string[] = [];
-    for (const attempt of pending) {
-      try {
-        await setMockReviewReleased(attempt.id, true);
-      } catch (cause) {
-        failures.push(`${attempt.moduleId}: ${getCloudErrorMessage(cause)}`);
-      }
-    }
-    const released = pending.length - failures.length;
-    if (released) notify(`${released} ${released === 1 ? "review" : "reviews"} released.`);
     if (failures.length) setError(failures.join("\n"));
     await refresh();
     setBusy(false);
@@ -414,8 +387,6 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
         const topicModules = mockModulesInTopic(topic);
         const topicMetas = metas.filter(meta => topicModules.some(module => module.id === meta.moduleId));
         const drafts = topicMetas.filter(meta => meta.status === "draft");
-        const unreleased = attempts.filter(attempt => topicModules.some(module => module.id === attempt.moduleId)
-          && attempt.status !== "active" && attempt.score !== null && !attempt.reviewReleased);
         const pendingInTopic = topicModules
           .filter(module => metas.some(meta => meta.moduleId === module.id && meta.status === "published") && !isDone(module.id))
           .map(module => module.id);
@@ -432,9 +403,6 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
             <div className="mock-admin__bulk">
               <button type="button" className="button" disabled={busy || drafts.length === 0} onClick={() => void publishDrafts(topic, drafts)}>
                 <BadgeCheck size={16} />Publish all drafts ({drafts.length})
-              </button>
-              <button type="button" className="button" disabled={busy || unreleased.length === 0} onClick={() => void releaseReviews(topic, unreleased)}>
-                <Unlock size={16} />Release all reviews ({unreleased.length})
               </button>
               <button type="button" className="button" disabled={busy || pendingInTopic.length === 0} onClick={() => void setTopicDueDate(topic, pendingInTopic)}>
                 <CalendarClock size={16} />Set a due date ({pendingInTopic.length})
@@ -460,7 +428,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                       {live && (
                         <small className={overdue ? "mock-admin__due is-overdue" : "mock-admin__due"}>
                           {done
-                            ? `Done${attempt?.score != null ? ` · ${attempt.score}/${mockAttemptQuestionCount(attempt)}` : ""}`
+                            ? `Done${attempt?.score != null ? ` · ${attemptScore(attempt)}` : ""}`
                             : overdue
                               ? `Overdue · was due ${formatReminderDate(due!)}`
                               : due
@@ -534,7 +502,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                       {!attempt ? "Hamad: not started"
                         : view === "in-progress" ? `Hamad: in progress · ${attempt.answers.filter(answer => answer !== null).length}/${mockAttemptQuestionCount(attempt)} answered`
                           : view === "forfeited" ? "Hamad: forfeited"
-                            : `Hamad: ${attempt.score ?? "?"}/${mockAttemptQuestionCount(attempt)}${paperVerdictSuffix(attempt.moduleId, attempt.score, mockAttemptQuestionCount(attempt))}${attempt.attemptNumber > 1 ? " (repeat)" : ""}${attempt.reviewReleased ? "" : " · review not released"}`}
+                            : `Hamad: ${attempt.score ?? "?"}/${mockAttemptQuestionCount(attempt)}${paperVerdictSuffix(attempt.moduleId, attempt.score, mockAttemptQuestionCount(attempt))}${attempt.attemptNumber > 1 ? " (repeat)" : ""}`}
                     </small>
                   )}
                 </div>
@@ -620,7 +588,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                         <th scope="row">{name}</th>
                         <td>{module.label}</td>
                         <td>{{ "not-started": "Not started", "in-progress": "In progress", expired: "Expired, not finalized", completed: "Completed", forfeited: "Forfeited" }[view]}</td>
-                        <td>{attempt?.score != null ? `${attempt.score}/${mockAttemptQuestionCount(attempt)}${paperVerdictSuffix(attempt.moduleId, attempt.score, mockAttemptQuestionCount(attempt))}` : attempt && view !== "in-progress" ? "Not graded" : "—"}</td>
+                        <td>{attempt?.score != null ? attemptScore(attempt) : attempt && view !== "in-progress" ? "Not graded" : "—"}</td>
                         <td>{attempt ? (mockTimeUsedMs(attempt) === null ? "—" : formatMockClock(mockTimeUsedMs(attempt)!)) : "—"}</td>
                         <td>{attempt ? attempt.incidents.length : "—"}</td>
                         <td className="mock-admin__row-actions">
@@ -631,11 +599,6 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                           )}
                           {attempt && attempt.status !== "active" && attempt.score === null && (
                             <button type="button" className="button" disabled={busy} onClick={() => void grade(attempt)}>Grade</button>
-                          )}
-                          {attempt && attempt.status !== "active" && (
-                            <button type="button" className="button" disabled={busy} onClick={() => void release(attempt, !attempt.reviewReleased)}>
-                              <Unlock size={15} />{attempt.reviewReleased ? "Hide review" : "Release review"}
-                            </button>
                           )}
                           {attempt && (
                             <button type="button" className="button" disabled={busy} onClick={() => void reset(attempt, name)}>
@@ -729,7 +692,7 @@ function AttemptDetail({
           <ul>
             {archived.sort((a, b) => a.attemptNumber - b.attemptNumber).map(entry => (
               <li key={entry.attemptNumber}>
-                Attempt {entry.attemptNumber}: {entry.score !== null ? `${entry.score}/${mockAttemptQuestionCount(entry)}${paperVerdictSuffix(entry.moduleId, entry.score, mockAttemptQuestionCount(entry))}` : "not graded"}, {entry.finishReason ? FINISH[entry.finishReason] : "unfinished"}, {entry.incidents.length} incidents · reset {new Date(entry.archivedAtMs).toLocaleString()}
+                Attempt {entry.attemptNumber}{entry.archiveReason === "retake" ? " (first try)" : ""}: {entry.score !== null ? `${entry.score}/${mockAttemptQuestionCount(entry)}${paperVerdictSuffix(entry.moduleId, entry.score, mockAttemptQuestionCount(entry))}` : "not graded"}, {entry.finishReason ? FINISH[entry.finishReason] : "unfinished"}, {entry.incidents.length} incidents · {entry.archiveReason === "retake" ? "Hamad started the final attempt" : "reset"} {new Date(entry.archivedAtMs).toLocaleString()}
               </li>
             ))}
           </ul>

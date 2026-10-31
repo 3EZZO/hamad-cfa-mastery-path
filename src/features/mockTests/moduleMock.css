@@ -656,6 +656,9 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 /* Repair after a review: the practice set for this test's module, or the fallbacks. */
 .mock-practice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--mk-gold) 55%, var(--mk-line)); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--mk-gold) 10%, var(--mk-surface)); }
 .mock-practice p { flex: 1 1 260px; margin: 0; line-height: var(--leading-ui); }
+/* Learn, then final: the call to take the module test's final attempt after reviewing the first. */
+.mock-final { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--mk-blue) 45%, var(--mk-line)); border-left-width: 4px; border-radius: var(--radius-lg); background: color-mix(in srgb, var(--mk-blue) 8%, var(--mk-surface)); }
+.mock-final p { flex: 1 1 260px; margin: 0; line-height: var(--leading-ui); }
 
 .mock-review { display: grid; gap: 14px; }
 /* Grid items default to min-width: auto, so one wide exhibit (a data table or
@@ -812,6 +815,7 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
   .mock-card__number { width: 44px; height: 44px; font-size: var(--text-body); }
   .mock-card__action { grid-column: 1 / -1; }
   .mock-card__action .mock-button { width: 100%; }
+  .mock-card__actions { flex-direction: column; }
   .mock-scores__row { grid-template-columns: 36px minmax(0, 1fr) auto; }
   .mock-scores__bar { display: none; }
   .mock-topic { padding: 12px; }
@@ -1012,6 +1016,8 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-hub__summary .mock-button { margin-left: auto; }
 .mock-card__deadline { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; color: var(--mk-muted); font-size: var(--text-caption); font-weight: var(--weight-semibold); }
 .mock-card__deadline.is-overdue { color: var(--mk-wrong); }
+/* A first attempt's two actions: take the final attempt, or go back to the review. */
+.mock-card__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .mock-card__review { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; color: var(--mk-right); font-size: var(--text-caption); font-weight: var(--weight-bold); }
 .mock-card__repair { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 8px; padding: 8px 10px; border-radius: var(--radius-lg); background: var(--mk-wrong-bg); }
 .mock-card__repair > span { flex: 1 1 100%; color: var(--mk-wrong); font-size: var(--text-nav); font-weight: var(--weight-bold); }

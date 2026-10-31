@@ -69,16 +69,20 @@ export function buildActivity(input: ActivityInput): ActivityEvent[] {
         title: `${forfeited ? "Forfeited" : "Submitted"} ${test(attempt.moduleId)}`,
         detail: [
           attempt.score === null ? "Awaiting grading" : `${attempt.score}/8`,
+          attempt.firstTryScore !== undefined ? `final attempt (first try ${attempt.firstTryScore}/8)` : "",
           attempt.incidents.length ? `${attempt.incidents.length} focus incidents` : "",
-          attempt.reviewReleased ? "Review released" : "",
         ].filter(Boolean).join(" · "),
       });
     }
   }
   for (const entry of input.history) {
+    const retake = entry.archiveReason === "retake";
     events.push({
       id: `reset-${entry.id}-${entry.attemptNumber}`, kind: "test", atMs: entry.archivedAtMs,
-      title: `Attempt reset: ${test(entry.moduleId)}`, detail: `Attempt ${entry.attemptNumber}${entry.score === null ? "" : ` scored ${entry.score}/8`}`,
+      title: `${retake ? "Final attempt started" : "Attempt reset"}: ${test(entry.moduleId)}`,
+      detail: retake
+        ? `First try${entry.score === null ? "" : ` ${entry.score}/8`}, reviewed before the final`
+        : `Attempt ${entry.attemptNumber}${entry.score === null ? "" : ` scored ${entry.score}/8`}`,
     });
   }
   for (const run of input.runs) {

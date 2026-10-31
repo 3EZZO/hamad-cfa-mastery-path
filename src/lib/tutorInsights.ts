@@ -1,7 +1,7 @@
 import { MOCK_MODULES, mockModuleCode, mockModulesForCatalog, type MockModule } from "../data/mockModules";
 import { PLAN } from "../data/plan";
 import { READING_INDEX } from "../data/readings";
-import type { MockAttempt } from "./mockTestContent";
+import { mockFirstTryScore, type MockAttempt } from "./mockTestContent";
 import { catalogIdForPracticeModule } from "./practiceLinks";
 import { WEAK_SCORE } from "./testBoard";
 import { weekCatalogIds } from "./weekTests";
@@ -50,7 +50,8 @@ export function moduleStandings(
     if (attempt.status === "active" || attempt.score === null) continue;
     const module = MOCK_MODULES.find((candidate) => candidate.id === attempt.moduleId);
     if (!module) continue;
-    for (const catalogId of module.catalogIds) tests.set(catalogId, { module, score: attempt.score });
+    // The first try is the evidence: a final attempt follows a full review of the answers.
+    for (const catalogId of module.catalogIds) tests.set(catalogId, { module, score: mockFirstTryScore(attempt)! });
   }
   const practice = new Map<string, { answered: number; correct: number }>();
   for (const answer of answers) {

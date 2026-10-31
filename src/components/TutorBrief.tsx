@@ -70,7 +70,7 @@ export function TutorBriefContent({ brief, practiceStatus, testsStatus }: {
             {brief.moduleTests.map((test) => (
               <li key={`${test.moduleId}-${test.submittedAtMs}`}>
                 <strong>{test.title}</strong>
-                <span>{test.score === null ? "Awaiting grading" : `${test.score}/${test.outOf}`} · {formatDate(new Date(test.submittedAtMs).toISOString().slice(0, 10), { day: "numeric", month: "short" })}</span>
+                <span>{test.score === null ? "Awaiting grading" : `${test.firstTry === null ? "" : `${test.firstTry}/${test.outOf} → final `}${test.score}/${test.outOf}`} · {formatDate(new Date(test.submittedAtMs).toISOString().slice(0, 10), { day: "numeric", month: "short" })}</span>
               </li>
             ))}
           </ul>
