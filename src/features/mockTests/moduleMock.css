@@ -341,6 +341,9 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
   position: sticky;
   z-index: 2;
   top: 0;
+  /* A flex item of the scrolling exam layer: never shrink below its content,
+     or on phones the second row (save state, calculator, leave) overlaps the page. */
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
@@ -1006,3 +1009,78 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
   .mock-card__deadline, .mock-card__review { display: flex; margin: 6px 0 0; }
   .mock-hub__summary .mock-button { margin-left: 0; }
 }
+
+/* ------------------------------------------------------- full QM mock papers */
+/* A 44-question palette: a compact grid on desktop; on phones the scrolling
+   strip stays, and "All questions" opens the full grid. */
+.mock-nav__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 12px; }
+.mock-nav__head .mock-nav__summary { margin: 0; }
+.mock-nav__toggle {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--radius-lg);
+  color: var(--mk-ink);
+  background: var(--mk-soft);
+  font: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+.mock-nav--many ol { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+.mock-nav--many .mock-nav__chip { aspect-ratio: auto; min-height: 34px; border-radius: var(--radius-sm); font-size: var(--text-caption); }
+.mock-nav--many .mock-nav__chip svg { top: 2px; right: 2px; width: 9px; height: 9px; }
+@media (max-width: 899px) {
+  .mock-nav__toggle { display: inline-flex; }
+  .mock-nav--many .mock-nav__chip { min-height: 44px; }
+  .mock-nav--many.is-open ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); overflow: visible; }
+}
+
+.mock-papers { display: grid; gap: 12px; margin: 0 0 24px; padding: 18px; border: 1px solid var(--mk-line); border-radius: var(--radius-lg); background: var(--mk-surface); }
+.mock-papers__head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.mock-papers__head h3 { margin: 2px 0 0; }
+.mock-papers__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.mock-paper { display: grid; align-content: start; gap: 10px; padding: 14px; border: 1px solid var(--mk-line); border-radius: var(--radius-lg); background: var(--mk-soft); }
+.mock-paper__title { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.mock-paper__title small { display: block; color: var(--mk-muted); font-size: var(--text-caption); }
+.mock-paper__number { display: grid; width: 40px; height: 40px; place-items: center; border-radius: var(--radius-lg); color: #fff; background: var(--mk-blue-deep); font-family: var(--font-financial, monospace); font-weight: var(--weight-bold); }
+.mock-paper .mock-status { justify-self: start; white-space: normal; }
+.mock-paper__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mock-paper__rehearsals { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; color: var(--mk-muted); font-size: var(--text-caption); }
+.mock-paper__rehearsals li { display: flex; align-items: center; gap: 6px; }
+
+/* Results by module: counts first, small samples marked. */
+.mock-breakdown { display: grid; gap: 10px; margin: 0 0 18px; }
+.mock-breakdown h3 { margin: 0; }
+.mock-breakdown__note { margin: 0; color: var(--mk-muted); font-size: var(--text-caption); }
+.mock-breakdown__weak { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.mock-breakdown__weak li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: var(--radius-lg); background: var(--mk-wrong-bg); }
+.mock-breakdown__more summary { cursor: pointer; font-weight: var(--weight-bold); }
+.mock-breakdown__table td .mock-status { white-space: nowrap; }
+.mock-results__grid--many { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+
+/* Tutor coverage report above a paper's answer key. */
+.mock-report { display: grid; gap: 8px; margin: 0 0 16px; padding: 14px; border: 1px solid var(--mk-line); border-radius: var(--radius-lg); background: var(--mk-soft); }
+.mock-report p { margin: 0; }
+.mock-report__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.mock-report__grid h4 { margin: 0 0 4px; }
+.mock-report__grid ul { margin: 0; padding-left: 18px; }
+.mock-report__sizes { color: var(--mk-muted); font-size: var(--text-caption); }
+.mock-keyreview__tags { display: block; color: var(--mk-muted); }
+
+/* Worked graphic shown only in the review. */
+.mock-review__worked { margin: 8px 0 12px; }
+.mock-review__worked-label { margin: 0 0 6px; color: var(--mk-muted); font-size: var(--text-caption); font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: .04em; }
+
+/* Probability trees: drawn from data, probabilities exactly as written. */
+.mock-tree { max-width: 720px; overflow-x: auto; }
+.mock-tree .mock-figure__svg { min-width: 420px; }
+.mock-tree__edge { stroke: var(--fig-primary); stroke-width: 1.75; }
+.mock-tree__node { fill: var(--mk-surface); stroke: var(--fig-primary); stroke-width: 2; }
+.mock-tree__node--root { fill: var(--fig-primary); }
+.mock-tree__probability { fill: var(--fig-primary); font-family: var(--font-financial, monospace); font-size: var(--text-caption); font-weight: var(--weight-bold); }
+.mock-tree__label { fill: var(--mk-ink); }
+.mock-tree__note { fill: var(--mk-muted); }

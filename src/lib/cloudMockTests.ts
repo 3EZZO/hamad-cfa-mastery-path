@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocFromServer,
   getDocs,
+  onSnapshot,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -422,6 +423,35 @@ export async function gradeMockAttempt(attempt: MockAttempt): Promise<MockAttemp
     return { ...attempt, score, correct };
   } catch (error) {
     throw mapError(error);
+  }
+}
+
+/** The whole key document, including a paper's per-question tags (readable once locked). */
+export async function getMockKeyDoc(moduleId: string): Promise<MockKeyDoc> {
+  try {
+    const { firestore } = services();
+    const snapshot = await getDoc(ref(firestore, "mockTestKeys", moduleId));
+    if (!snapshot.exists()) throw new CloudClientError("invalid-cloud-data");
+    return snapshot.data() as MockKeyDoc;
+  } catch (error) {
+    throw mapError(error);
+  }
+}
+
+/**
+ * Tutor: follow one attempt while it is in progress (answered count, last
+ * seen, incidents). Used only for an active paper, so the app stays light.
+ */
+export function watchMockAttempt(attemptId: string, onChange: (attempt: MockAttempt | null) => void): () => void {
+  try {
+    const { firestore } = services();
+    return onSnapshot(
+      ref(firestore, "mockAttempts", attemptId),
+      snapshot => onChange(snapshot.exists() ? parseAttempt(snapshot.id, snapshot.data()) : null),
+      () => onChange(null),
+    );
+  } catch {
+    return () => undefined;
   }
 }
 

@@ -2,6 +2,7 @@ import { BadgeCheck, BellRing, CalendarClock, CalendarX, ClipboardCheck, CircleA
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useAppDialog } from "../../components/AppDialog";
 import { MOCK_MODULES, MOCK_TOPICS, mockModuleById, mockModuleCode, mockModuleLabel, mockModulesInTopic, type MockTopic } from "../../data/mockModules";
+import { MOCK_PAPERS, isMockPaperId, mockPaperById } from "../../data/mockPapers";
 import { analyzeKeystrokes } from "../../lib/calculatorDiagnostics";
 import { getCloudErrorMessage, listActiveStudentMembers, type ProjectMember } from "../../lib/cloud";
 import {
@@ -17,17 +18,17 @@ import {
   type MockTestPackage,
 } from "../../lib/cloudMockTests";
 import {
-  MOCK_QUESTION_COUNT,
   formatMockClock,
   incidentLabel,
   isMockAttemptLocked,
   mockAttemptId,
+  mockAttemptQuestionCount,
   mockAttemptView,
   mockTimeUsedMs,
   optionLetter,
   type MockAttempt,
   type MockAttemptHistoryEntry,
-  type MockOption,
+  type MockKeyDoc,
   type MockTestMeta,
 } from "../../lib/mockTestContent";
 import { cancelMockReminder, editMockReminder, listMockReminders, sendMockReminder } from "../../lib/cloudMockReminders";
@@ -37,6 +38,7 @@ import { deadlinesByModule } from "../../lib/testBoard";
 import { consoleAnchor } from "../../lib/tutorConsole";
 import { Fold, useReveal } from "../../views/tutorConsole/Fold";
 import { MockAnswerKeyReview } from "./MockAnswerKeyReview";
+import { PaperBreakdownView } from "./PaperBreakdownView";
 import { MockReminderAdmin } from "./MockReminderAdmin";
 import "./moduleMock.css";
 
@@ -61,7 +63,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
   const [attempts, setAttempts] = useState<MockAttempt[]>([]);
   const [history, setHistory] = useState<MockAttemptHistoryEntry[]>([]);
   const [students, setStudents] = useState<ProjectMember[]>([]);
-  const [keys, setKeys] = useState<Record<string, MockOption[]>>({});
+  const [keys, setKeys] = useState<Record<string, MockKeyDoc>>({});
   // Answers below High confidence per uploaded test, shown before a bulk publish.
   const [lowConfidence, setLowConfidence] = useState<Record<string, number>>({});
   const [resultsTopic, setResultsTopic] = useState<MockTopic | "all">("all");
@@ -95,7 +97,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
       setHistory(nextHistory);
       setStudents(nextStudents);
       const packages = await Promise.all(nextMetas.map(meta => loadMockTestPackage(meta.moduleId).catch(() => null)));
-      setKeys(Object.fromEntries(packages.filter(Boolean).map(pkg => [pkg!.meta.moduleId, pkg!.key.correct])));
+      setKeys(Object.fromEntries(packages.filter(Boolean).map(pkg => [pkg!.meta.moduleId, pkg!.key])));
       setLowConfidence(Object.fromEntries(packages.filter(Boolean).map(pkg => [
         pkg!.meta.moduleId,
         pkg!.review.items.filter(item => item.confidence !== "High").length,
@@ -121,6 +123,8 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
   const attemptFor = (moduleId: string) => (studentUid ? attempts.find(entry => entry.id === mockAttemptId(studentUid, moduleId)) ?? null : null);
   const isDone = (moduleId: string) => { const attempt = attemptFor(moduleId); return attempt ? isMockAttemptLocked(attempt) : false; };
   const label = (ids: readonly string[]) => ids.map(id => { const module = mockModuleById(id); return module ? mockModuleCode(module) : id; }).join(", ");
+  /** A paper is frozen once anyone has attempted it: archived attempts must keep their meaning. */
+  const paperTaken = (paperId: string) => attempts.some(entry => entry.moduleId === paperId) || history.some(entry => entry.moduleId === paperId);
 
   const remind = (moduleIds: string[], tone: ReminderTone = "friendly") => {
     setPreset({ moduleIds, tone });
@@ -200,10 +204,10 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
     }
   };
 
-  const openResult = (module: (typeof MOCK_MODULES)[number]) => {
+  const openResult = (module: { id: string; topic?: MockTopic }) => {
     if (!studentUid) return;
     const rowKey = `${studentUid}-${module.id}`;
-    setResultsTopic(module.topic);
+    setResultsTopic(module.topic ?? "Quantitative Methods");
     setExpanded(rowKey);
     window.setTimeout(() => reveal(`mock-result-${rowKey}`), 50);
   };
@@ -215,8 +219,14 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
     const failures: string[] = [];
     for (const file of Array.from(files)) {
       try {
-        const meta = await uploadMockTestDraft(JSON.parse(await file.text()));
-        notify(`${meta.title} uploaded as a draft. Review the answer key before publishing.`);
+        const raw = JSON.parse(await file.text());
+        const id = typeof raw?.moduleId === "string" ? raw.moduleId : "";
+        if (isMockPaperId(id) && paperTaken(id)) {
+          failures.push(`${file.name}: ${mockPaperById(id)?.title ?? id} has already been attempted, so its content is frozen. Upload new content under the next paper instead.`);
+          continue;
+        }
+        const meta = await uploadMockTestDraft(raw);
+        notify(`${meta.title} uploaded as a draft. Review the answer key${isMockPaperId(meta.moduleId) ? " and the coverage report" : ""} before publishing.`);
       } catch (cause) {
         failures.push(`${file.name}: ${cause instanceof Error && cause.cause instanceof Error ? cause.cause.message : getCloudErrorMessage(cause)}`);
       }
@@ -241,6 +251,10 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
 
   const unpublish = async (meta: MockTestMeta) => {
     const started = attempts.some(attempt => attempt.moduleId === meta.moduleId);
+    if (isMockPaperId(meta.moduleId) && paperTaken(meta.moduleId)) {
+      await dialog.confirm(`${meta.title} has been attempted, so it stays published: unpublishing would hide Hamad's result and review. Reset the attempt instead if he should sit it again.`);
+      return;
+    }
     const ok = await dialog.confirm(
       started
         ? `A student has already started ${meta.title}. Unpublishing hides it from students who have not started; existing attempts keep their results. Continue?`
@@ -261,9 +275,12 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
 
   const reset = async (attempt: MockAttempt, studentName: string) => {
     const module = mockModuleById(attempt.moduleId);
+    const paper = mockPaperById(attempt.moduleId);
     const ok = await dialog.confirm(
-      `Reset ${studentName}'s ${module ? mockModuleLabel(module) : attempt.moduleId} attempt? The current attempt is kept in the history and ${studentName} can take the test again. `
-        + "If the review was released, the student has already seen the answers: consider uploading a new version first.",
+      `Reset ${studentName}'s ${module ? mockModuleLabel(module) : paper?.title ?? attempt.moduleId} attempt? The current attempt is kept in the history and ${studentName} can take the test again. `
+        + (paper
+          ? "A paper's questions stay the same, so a second attempt is a repeat and is reported as one, never as unseen evidence."
+          : "If the review was released, the student has already seen the answers: consider uploading a new version first."),
     );
     if (!ok) return;
     setBusy(true);
@@ -440,7 +457,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                       {live && (
                         <small className={overdue ? "mock-admin__due is-overdue" : "mock-admin__due"}>
                           {done
-                            ? `Done${attempt?.score != null ? ` · ${attempt.score}/${MOCK_QUESTION_COUNT}` : ""}`
+                            ? `Done${attempt?.score != null ? ` · ${attempt.score}/${mockAttemptQuestionCount(attempt)}` : ""}`
                             : overdue
                               ? `Overdue · was due ${formatReminderDate(due!)}`
                               : due
@@ -489,6 +506,58 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
         );
       })}
 
+      <Fold
+        id="tests:papers"
+        variant="sub"
+        className="mock-admin__topic"
+        title="Full QM mocks"
+        meta={`${metas.filter(meta => isMockPaperId(meta.moduleId)).length} of ${MOCK_PAPERS.length} uploaded · 44 questions · 66:00 each`}
+        summary="Upload a paper as a draft, check its coverage report and key, rehearse it from the Tests page, then publish"
+      >
+        <div className="mock-admin__modules">
+          {MOCK_PAPERS.map(paper => {
+            const meta = metas.find(entry => entry.moduleId === paper.id);
+            const attempt = attemptFor(paper.id);
+            const taken = paperTaken(paper.id);
+            const view = mockAttemptView(attempt, Date.now());
+            return (
+              <article key={paper.id} className="mock-admin__module">
+                <div>
+                  <span>Paper {paper.number}</span>
+                  <strong>{paper.title}</strong>
+                  <small>{meta ? `${meta.status === "published" ? "Published" : "Draft"} · version ${meta.version}${taken ? " · frozen (attempted)" : ""}` : "No paper uploaded"}</small>
+                  {meta?.status === "published" && studentUid && (
+                    <small className="mock-admin__due">
+                      {!attempt ? "Hamad: not started"
+                        : view === "in-progress" ? `Hamad: in progress · ${attempt.answers.filter(answer => answer !== null).length}/${mockAttemptQuestionCount(attempt)} answered`
+                          : view === "forfeited" ? "Hamad: forfeited"
+                            : `Hamad: ${attempt.score ?? "?"}/${mockAttemptQuestionCount(attempt)}${attempt.attemptNumber > 1 ? " (repeat)" : ""}${attempt.reviewReleased ? "" : " · review not released"}`}
+                    </small>
+                  )}
+                </div>
+                {meta && (
+                  <div className="mock-admin__actions">
+                    <button type="button" className="button" disabled={busy} onClick={() => void openReview(paper.id)}>
+                      <Eye size={16} />{meta.status === "published" ? "View key and coverage" : "Review key and coverage"}
+                    </button>
+                    {meta.status === "published" && !taken && (
+                      <button type="button" className="button" disabled={busy} onClick={() => void unpublish(meta)}>
+                        <EyeOff size={16} />Unpublish
+                      </button>
+                    )}
+                    {attempt && (
+                      <button type="button" className="button" disabled={busy} onClick={() => openResult({ id: paper.id })}>
+                        <ClipboardCheck size={16} />Result
+                      </button>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </Fold>
+
       <MockReminderAdmin
         key={presetSerial}
         preset={preset}
@@ -522,11 +591,18 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
             <tbody>
               {students.flatMap(student => {
                 // Modules without an uploaded test and without an attempt add nothing to the table.
-                const listed = MOCK_MODULES.filter(module => (resultsTopic === "all" || module.topic === resultsTopic)
-                  && (attempts.some(entry => entry.id === mockAttemptId(student.uid, module.id)) || metas.some(entry => entry.moduleId === module.id)));
+                const shown = (id: string) => attempts.some(entry => entry.id === mockAttemptId(student.uid, id)) || metas.some(entry => entry.moduleId === id);
+                // Papers are listed after the Quantitative Methods module tests, under their own heading.
+                const listed = [
+                  ...MOCK_MODULES.filter(module => (resultsTopic === "all" || module.topic === resultsTopic) && shown(module.id))
+                    .map(module => ({ id: module.id, group: module.topic as string, label: mockModuleLabel(module) })),
+                  ...(resultsTopic === "all" || resultsTopic === "Quantitative Methods"
+                    ? MOCK_PAPERS.filter(paper => shown(paper.id)).map(paper => ({ id: paper.id, group: "Full QM mocks", label: paper.title }))
+                    : []),
+                ];
                 return listed.map((module, index) => {
                   const attempt = attempts.find(entry => entry.id === mockAttemptId(student.uid, module.id)) ?? null;
-                  const firstOfTopic = index === 0 || listed[index - 1]!.topic !== module.topic;
+                  const firstOfTopic = index === 0 || listed[index - 1]!.group !== module.group;
                   const view = mockAttemptView(attempt, Date.now());
                   // Member records carry no names; this program has one student, Hamad.
                   const name = students.length === 1 ? "Hamad" : `Student ${student.uid.slice(0, 6)}`;
@@ -535,13 +611,13 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                   return (
                     <Fragment key={rowKey}>
                       {firstOfTopic && (
-                        <tr className="mock-admin__topic-row"><th scope="colgroup" colSpan={7}>{module.topic}</th></tr>
+                        <tr className="mock-admin__topic-row"><th scope="colgroup" colSpan={7}>{module.group}</th></tr>
                       )}
                       <tr id={`mock-result-${rowKey}`}>
                         <th scope="row">{name}</th>
-                        <td>{mockModuleLabel(module)}</td>
+                        <td>{module.label}</td>
                         <td>{{ "not-started": "Not started", "in-progress": "In progress", expired: "Expired, not finalized", completed: "Completed", forfeited: "Forfeited" }[view]}</td>
-                        <td>{attempt?.score != null ? `${attempt.score}/${MOCK_QUESTION_COUNT}` : attempt && view !== "in-progress" ? "Not graded" : "—"}</td>
+                        <td>{attempt?.score != null ? `${attempt.score}/${mockAttemptQuestionCount(attempt)}` : attempt && view !== "in-progress" ? "Not graded" : "—"}</td>
                         <td>{attempt ? (mockTimeUsedMs(attempt) === null ? "—" : formatMockClock(mockTimeUsedMs(attempt)!)) : "—"}</td>
                         <td>{attempt ? attempt.incidents.length : "—"}</td>
                         <td className="mock-admin__row-actions">
@@ -568,7 +644,7 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
                       {expanded === rowKey && attempt && (
                         <tr className="mock-admin__detail-row">
                           <td colSpan={7}>
-                            <AttemptDetail attempt={attempt} keyAnswers={keys[module.id]} archived={archived} />
+                            <AttemptDetail attempt={attempt} keyDoc={keys[module.id]} archived={archived} />
                           </td>
                         </tr>
                       )}
@@ -587,20 +663,28 @@ export function MockTestAdmin({ notify, reminderPreset = null }: {
 
 function AttemptDetail({
   attempt,
-  keyAnswers,
+  keyDoc,
   archived,
 }: {
   attempt: MockAttempt;
-  keyAnswers: MockOption[] | undefined;
+  keyDoc: MockKeyDoc | undefined;
   archived: MockAttemptHistoryEntry[];
 }) {
+  const keyAnswers = keyDoc?.correct;
+  const moduleCode = (index: number) => {
+    const module = keyDoc?.modules ? mockModuleById(keyDoc.modules[index]!) : undefined;
+    return module ? mockModuleCode(module) : null;
+  };
   return (
     <div className="mock-admin__detail">
       <p>
-        Attempt {attempt.attemptNumber} · started {new Date(attempt.startedAtMs).toLocaleString()} ·{" "}
+        Attempt {attempt.attemptNumber}{attempt.attemptNumber > 1 ? " (repeat)" : ""} · started {new Date(attempt.startedAtMs).toLocaleString()} ·{" "}
         {attempt.finishReason ? FINISH[attempt.finishReason] : "still running"}
         {attempt.submittedAtMs ? ` at ${new Date(attempt.submittedAtMs).toLocaleTimeString()}` : ""}
       </p>
+      {keyDoc?.modules && (
+        <PaperBreakdownView keyDoc={keyDoc} answers={attempt.answers} correct={attempt.correct} dwellMs={attempt.dwellMs} />
+      )}
       <ol className="mock-admin__answers">
         {attempt.answers.map((answer, index) => {
           const right = keyAnswers?.[index];
@@ -611,8 +695,9 @@ function AttemptDetail({
             : [];
           return (
             <li key={index} className={right === undefined ? "" : correct ? "is-right" : "is-wrong"}>
-              <strong>Q{index + 1}</strong> chose {optionLetter(answer)}{right !== undefined && ` · key ${optionLetter(right)}`}
+              <strong>Q{index + 1}</strong>{moduleCode(index) && ` (${moduleCode(index)})`} chose {optionLetter(answer)}{right !== undefined && ` · key ${optionLetter(right)}`}
               {attempt.flags[index] && " · flagged"}
+              {attempt.dwellMs && ` · ~${formatMockClock(attempt.dwellMs[index] ?? 0)}`}
               {!correct && strokes.length > 0 && (
                 <details>
                   <summary>{strokes.length} calculator keystrokes</summary>
@@ -641,7 +726,7 @@ function AttemptDetail({
           <ul>
             {archived.sort((a, b) => a.attemptNumber - b.attemptNumber).map(entry => (
               <li key={entry.attemptNumber}>
-                Attempt {entry.attemptNumber}: {entry.score !== null ? `${entry.score}/${MOCK_QUESTION_COUNT}` : "not graded"}, {entry.finishReason ? FINISH[entry.finishReason] : "unfinished"}, {entry.incidents.length} incidents · reset {new Date(entry.archivedAtMs).toLocaleString()}
+                Attempt {entry.attemptNumber}: {entry.score !== null ? `${entry.score}/${mockAttemptQuestionCount(entry)}` : "not graded"}, {entry.finishReason ? FINISH[entry.finishReason] : "unfinished"}, {entry.incidents.length} incidents · reset {new Date(entry.archivedAtMs).toLocaleString()}
               </li>
             ))}
           </ul>

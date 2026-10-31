@@ -1,6 +1,6 @@
 import { Archive, BellRing, BookOpenCheck, CalendarClock, CalendarRange, ChevronDown, Dumbbell, CircleAlert, CircleCheckBig, Clock3, Flag, LockKeyhole, Maximize, PlayCircle, RotateCcw, ShieldAlert, Target, Timer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { MOCK_MODULES, MOCK_TOPICS, mockModuleCode, mockModuleLabel, type MockModule, type MockTopic } from "../../data/mockModules";
+import { MOCK_MODULES, MOCK_TOPICS, mockModuleById, mockModuleCode, mockModuleLabel, type MockModule, type MockTopic } from "../../data/mockModules";
 import {
   finalizeExpiredMockAttempt,
   finishMockAttempt,
@@ -41,7 +41,9 @@ import type { ProjectRole } from "../../lib/permissions";
 import { setShellBusy } from "../../lib/shellBusy";
 import { MockResults, type LocalReview } from "./MockResults";
 import { MockTestRunner, requestExamFullscreen } from "./MockTestRunner";
+import { StartScreen } from "./MockStartScreen";
 import { exitFullscreen } from "./useExamLock";
+import { FullMockPapers } from "./FullMockPapers";
 import "./moduleMock.css";
 
 type Notify = (message: string, tone?: "success" | "warning") => void;
@@ -124,6 +126,8 @@ export function ModuleMockTests({
   const [deadlines, setDeadlines] = useState<Map<string, string>>(new Map());
   const [tutorView, setTutorView] = useState<TutorView | null>(null);
   const [view, setView] = useState<MockHubView>(loadHubView);
+  // A full-paper screen (start, exam, results) replaces the rest of the hub.
+  const [paperFocus, setPaperFocus] = useState(false);
   const updateView = (next: MockHubView) => { setView(next); saveHubView(next); };
 
   const refresh = useCallback(async () => {
@@ -306,7 +310,7 @@ export function ModuleMockTests({
     const { pkg } = screen;
     return (
       <MockTestRunner
-        rehearsal
+        rehearsal="unsaved"
         moduleLabel={moduleLabel(current.module)}
         questions={pkg.questions.questions}
         startedAtMs={screen.startedAtMs}
@@ -328,7 +332,10 @@ export function ModuleMockTests({
   if (screen.kind === "start" && current?.meta) {
     return (
       <StartScreen
-        entry={current}
+        eyebrow={`${mockModuleLabel(current.module)} mock test`}
+        title={current.module.title}
+        questionCount={current.meta.questionCount}
+        durationMs={current.meta.durationSeconds * 1000}
         busy={busy}
         error={error}
         onCancel={() => { setError(""); setScreen({ kind: "hub" }); }}
@@ -424,8 +431,28 @@ export function ModuleMockTests({
       : {};
   };
 
+  // Students practise a paper's weak module through that module test's practice set.
+  const practisePaperModule = isTutor || !onPracticeModule ? undefined : (moduleTestId: string) => {
+    const module = mockModuleById(moduleTestId);
+    const practiceModuleId = module ? practiceFor(module) : null;
+    if (practiceModuleId) onPracticeModule(practiceModuleId);
+    else onOpenRepair?.();
+  };
+  // FullMockPapers keeps one place in the tree so a running paper never remounts.
+  const papers = (
+    <FullMockPapers
+      uid={uid}
+      role={role}
+      notify={notify}
+      onFocusChange={setPaperFocus}
+      onOpenTutorAdmin={onOpenTutorAdmin}
+      onPracticeModule={practisePaperModule}
+    />
+  );
+
   return (
-    <section className="mock-hub" aria-labelledby="mock-hub-title">
+    <section className={paperFocus ? undefined : "mock-hub"} aria-labelledby={paperFocus ? undefined : "mock-hub-title"}>
+      {!paperFocus && <>
       <header className="mock-hub__hero">
         <div>
           <p className="mock-hub__eyebrow">Assessment · not practice</p>
@@ -497,7 +524,11 @@ export function ModuleMockTests({
           </ul>
         </section>
       )}
+      </>}
 
+      {papers}
+
+      {!paperFocus && <>
       {loading ? (
         <p className="mock-hub__loading" aria-busy="true">Loading module tests…</p>
       ) : (
@@ -564,6 +595,7 @@ export function ModuleMockTests({
           })}
         </>
       )}
+      </>}
     </section>
   );
 }
@@ -812,49 +844,6 @@ function TopicSection({
             <ul id={doneId} className="mock-done__list" hidden={!doneOpen}>{settled}</ul>
           </div>
         )}
-      </div>
-    </section>
-  );
-}
-
-export function StartScreen({
-  entry,
-  busy,
-  error,
-  onCancel,
-  onStart,
-}: {
-  entry: ModuleState;
-  busy: boolean;
-  error: string;
-  onCancel: () => void;
-  onStart: () => void;
-}) {
-  const [acknowledged, setAcknowledged] = useState(false);
-  return (
-    <section className="mock-start" aria-labelledby="mock-start-title">
-      <div className="mock-start__card">
-        <p className="mock-start__eyebrow">{mockModuleLabel(entry.module)} mock test</p>
-        <h2 id="mock-start-title">{entry.module.title}</h2>
-        <div className="mock-start__clock" aria-hidden="true">12:00</div>
-        <ul className="mock-start__rules">
-          <li><strong>{MOCK_QUESTION_COUNT} questions, 12 minutes.</strong> About 90 seconds each. The clock runs on the server and does not pause.</li>
-          <li><strong>One attempt.</strong> Pressing Start uses it. You cannot restart or retake the test.</li>
-          <li><strong>Full screen.</strong> Leaving full screen or switching apps is recorded for your tutor.</li>
-          <li><strong>Leave Test forfeits.</strong> Closing the page does not stop the clock; at 00:00 your selected answers are submitted.</li>
-          <li><strong>Tools.</strong> Flag questions, move freely between them, and use the BA II Plus calculator.</li>
-        </ul>
-        <label className="mock-start__ack">
-          <input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} />
-          I understand this is my only attempt and that leaving forfeits it.
-        </label>
-        {error && <p className="mock-hub__error" role="alert"><CircleAlert size={16} />{error}</p>}
-        <div className="mock-start__actions">
-          <button type="button" className="mock-button mock-button--ghost" onClick={onCancel} disabled={busy}>Not now</button>
-          <button type="button" className="mock-button mock-button--start" onClick={onStart} disabled={!acknowledged || busy}>
-            <Maximize size={18} />{busy ? "Starting…" : "Start Test"}
-          </button>
-        </div>
       </div>
     </section>
   );

@@ -2,9 +2,62 @@ import { ArrowLeft, BadgeCheck, CircleAlert, Save } from "lucide-react";
 import { useState } from "react";
 import { saveMockAnswerKey, setMockTestPublished, type MockTestPackage } from "../../lib/cloudMockTests";
 import { getCloudErrorMessage } from "../../lib/cloud";
-import { optionLetter, type MockOption, type MockReviewItem, type MockTestMeta } from "../../lib/mockTestContent";
+import { mockModuleById, mockModuleCode } from "../../data/mockModules";
+import { READING_INDEX } from "../../data/readings";
+import { formatMockClock, mockDocBytes, optionLetter, type MockOption, type MockReviewItem, type MockSourcesDoc, type MockTestMeta } from "../../lib/mockTestContent";
 import "./moduleMock.css";
-import { MockExhibits } from "./MockExhibits";
+import { MockExhibits, MockReviewExhibits } from "./MockExhibits";
+
+function countBy(values: readonly string[]): [string, number][] {
+  const counts = new Map<string, number>();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+/**
+ * A paper's upload report: size and timing, coverage by module test, official
+ * 2027 module and skill, graphics, authored questions and document sizes, so
+ * the tutor sees what the paper assesses before publishing it.
+ */
+export function PaperUploadReport({ pkg, sources }: { pkg: MockTestPackage; sources: MockSourcesDoc }) {
+  const items = sources.items;
+  const authored = items.filter(item => item.authoring === "authored").length;
+  const graphics = pkg.questions.questions.filter(question => question.figure || question.tree).length;
+  const reviewGraphics = pkg.review.items.filter(item => item.reviewFigure || item.reviewTree).length;
+  const tables = pkg.questions.questions.filter(question => question.table).length;
+  const keystrokes = pkg.review.items.filter(item => item.keystrokes).length;
+  const sizes = [["questions", pkg.questions], ["key", pkg.key], ["review", pkg.review], ["sources", sources]] as const;
+  return (
+    <section className="mock-report" aria-label="Paper upload report">
+      <p>
+        <strong>{pkg.meta.questionCount} questions · {formatMockClock(pkg.meta.durationSeconds * 1000)}</strong>
+        {" "}· {tables} tables · {graphics} exam graphics · {reviewGraphics} review-only graphics · {keystrokes} with BA II Plus keystrokes
+        {" "}· {authored} authored (not from the bank)
+      </p>
+      <div className="mock-report__grid">
+        <div>
+          <h4>Module tests</h4>
+          <ul>{countBy(items.map(item => item.moduleTag)).map(([id, count]) => {
+            const module = mockModuleById(id);
+            return <li key={id}>{module ? `${mockModuleCode(module)} ${module.title}` : id}: {count}</li>;
+          })}</ul>
+        </div>
+        <div>
+          <h4>Official 2027 modules</h4>
+          <ul>{countBy(items.map(item => item.catalogId)).map(([id, count]) => <li key={id}>{READING_INDEX.get(id)?.title ?? id}: {count}</li>)}</ul>
+        </div>
+        <div>
+          <h4>Skills and learning outcomes</h4>
+          <ul>{countBy(items.map(item => item.skill)).map(([id, count]) => <li key={id}>{id}: {count}</li>)}</ul>
+          <p>{new Set(items.flatMap(item => item.los)).size} distinct learning outcomes</p>
+        </div>
+      </div>
+      <p className="mock-report__sizes">
+        Document sizes: {sizes.map(([name, doc]) => `${name} ${Math.round(mockDocBytes(doc) / 1024)} KB`).join(" · ")}
+      </p>
+    </section>
+  );
+}
 
 /**
  * Tutor-only answer key review. The tutor checks every question, answer,
@@ -68,7 +121,7 @@ export function MockAnswerKeyReview({
 
   return (
     <section className="panel mock-keyreview" aria-labelledby="mock-keyreview-title">
-      <button type="button" className="mock-results__back" onClick={onBack}><ArrowLeft size={18} />Back to module tests</button>
+      <button type="button" className="mock-results__back" onClick={onBack}><ArrowLeft size={18} />Back to tests</button>
       <div className="panel-heading">
         <div>
           <p className="eyebrow">Answer key review · {published ? "Published (read-only)" : "Draft, hidden from the student"}</p>
@@ -80,9 +133,11 @@ export function MockAnswerKeyReview({
         <p className="mock-hub__error"><CircleAlert size={16} />{needsAttention} {needsAttention === 1 ? "answer is" : "answers are"} below High confidence. Check them before publishing.</p>
       )}
       {published && <p className="mock-hub__note">This test is published, so its key is locked. Unpublish it from the module list to make changes.</p>}
+      {pkg.sources && <PaperUploadReport pkg={pkg} sources={pkg.sources} />}
 
       {pkg.questions.questions.map((question, index) => {
         const item = items[index]!;
+        const source = pkg.sources?.items[index];
         return (
           <article key={question.id} className={`mock-keyreview__item mock-keyreview__item--${item.confidence.toLowerCase()}`}>
             <header>
@@ -90,6 +145,15 @@ export function MockAnswerKeyReview({
               <span>{item.concept}</span>
               <span className={`mock-confidence mock-confidence--${item.confidence.toLowerCase()}`}>{item.confidence} confidence</span>
               {item.sourceRef && <small>{item.sourceRef}{item.sourceFiles.length ? ` · ${item.sourceFiles.join(", ")}` : ""}</small>}
+              {source && (
+                <small className="mock-keyreview__tags">
+                  {mockModuleById(source.moduleTag) ? mockModuleCode(mockModuleById(source.moduleTag)!) : source.moduleTag}
+                  {" "}· {READING_INDEX.get(source.catalogId)?.title ?? source.catalogId} · {source.skill}
+                  {source.exhibitPolicy !== "none" ? ` · graphic ${source.exhibitPolicy}` : ""}
+                  {" "}· {source.authoring === "authored" ? "Authored" : `Source p. ${source.sourcePage}`}
+                  {source.los.length ? ` · LOS: ${source.los.join("; ")}` : ""}
+                </small>
+              )}
             </header>
             <p className="mock-review__stem">{question.stem}</p>
             <MockExhibits question={question} />
@@ -118,6 +182,7 @@ export function MockAnswerKeyReview({
             </label>
             {item.working.length > 0 && <ol className="mock-review__working">{item.working.map((step, stepIndex) => <li key={stepIndex}>{step}</li>)}</ol>}
             {item.keystrokes && <p className="mock-review__keys"><strong>BA II Plus:</strong> <code>{item.keystrokes}</code></p>}
+            <MockReviewExhibits item={item} />
             <ul className="mock-review__why">
               {item.distractors.map((why, option) => <li key={option}><strong>{optionLetter(option)}:</strong> {why}</li>)}
             </ul>
@@ -131,7 +196,7 @@ export function MockAnswerKeyReview({
           <button type="button" className="button" disabled={!dirty || busy} onClick={() => void save()}><Save size={16} />Save changes</button>
           {confirmPublish ? (
             <>
-              <span>Publish now? The student will see this test and can start it.</span>
+              <span>Publish {pkg.meta.title} version {pkg.meta.version} now? The student will see it and can start it.</span>
               <button type="button" className="button" disabled={busy} onClick={() => setConfirmPublish(false)}>Cancel</button>
               <button type="button" className="button button-primary" disabled={busy} onClick={() => void publish()}><BadgeCheck size={16} />Confirm publish</button>
             </>

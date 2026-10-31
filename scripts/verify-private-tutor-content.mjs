@@ -27,6 +27,9 @@ const forbiddenContentMarkers = [
   "hamad-cfa-reading-",
   "synthetic-password-1",
   "Synthetic reading A",
+  // The development-only mock preview (src/features/mockTests/DevPaperPreview.tsx)
+  // must never ship: it reads private mock files from the local machine.
+  "dev-paper-preview-harness",
 ];
 
 async function filesBelow(directory) {

@@ -4,10 +4,10 @@ const RADIUS = 26;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /** The exam clock: large, always visible, urgent for the final five minutes. */
-export function MockTimer({ remainingMs }: { remainingMs: number }) {
+export function MockTimer({ remainingMs, totalMs = MOCK_DURATION_MS }: { remainingMs: number; totalMs?: number }) {
   const urgent = remainingMs <= MOCK_URGENT_MS;
   const final = remainingMs <= 60_000;
-  const fraction = Math.max(0, Math.min(1, remainingMs / MOCK_DURATION_MS));
+  const fraction = Math.max(0, Math.min(1, remainingMs / totalMs));
   const label = formatMockClock(remainingMs);
   const minutesLeft = Math.ceil(remainingMs / 60_000);
   return (

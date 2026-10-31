@@ -1,9 +1,11 @@
-import { Calculator, ChevronLeft, ChevronRight, CircleAlert, CloudOff, Flag, LogOut, Maximize, Send, ShieldCheck } from "lucide-react";
+import { Calculator, ChevronLeft, ChevronRight, CircleAlert, CloudOff, Flag, LayoutGrid, LogOut, Maximize, Send, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { defaultTVMState } from "../../lib/calculator";
 import type { MockWork } from "../../lib/cloudMockTests";
 import {
+  MOCK_DURATION_MS,
+  MOCK_MAX_KEYSTROKES,
   appendIncident,
   appendKeystroke,
   incidentLabel,
@@ -20,6 +22,7 @@ import { FloatingCalculator } from "../practice/FloatingCalculator";
 import { MockTimer } from "./MockTimer";
 import { enterFullscreen, exitFullscreen, fullscreenSupported, useExamLock } from "./useExamLock";
 import { MockExhibits } from "./MockExhibits";
+import { addDwell, useQuestionDwell } from "./useQuestionDwell";
 
 type Confirm = null | "submit" | "leave";
 type SaveState = "saved" | "saving" | "offline";
@@ -30,10 +33,25 @@ export interface MockTestRunnerProps {
   startedAtMs: number;
   serverOffsetMs: number;
   initialWork: MockWork;
-  rehearsal?: boolean;
+  /** The attempt's own duration: 12 minutes for a module test, 66 for a paper. */
+  durationMs?: number;
+  /** "Module mock test" or "Full QM mock". */
+  kindLabel?: string;
+  keystrokeLimit?: number;
+  /**
+   * A tutor rehearsal. "unsaved" (module tests) keeps everything local;
+   * "saved" persists it to the tutor's own rehearsal record so it resumes
+   * after a reload. Neither ever touches a student attempt.
+   */
+  rehearsal?: false | "unsaved" | "saved";
+  /** Open on this question (dev preview screenshots); defaults to the first unanswered. */
+  initialIndex?: number;
   onSave: (work: MockWork) => Promise<void>;
   onFinish: (reason: Exclude<MockFinishReason, "expired">, work: MockWork) => Promise<void>;
 }
+
+/** Above this many questions the palette gets a compact grid and an expandable strip on phones. */
+const MANY_QUESTIONS = 12;
 
 export function MockTestRunner({
   moduleLabel,
@@ -41,7 +59,11 @@ export function MockTestRunner({
   startedAtMs,
   serverOffsetMs,
   initialWork,
+  durationMs = MOCK_DURATION_MS,
+  kindLabel = "Module mock test",
+  keystrokeLimit = MOCK_MAX_KEYSTROKES,
   rehearsal = false,
+  initialIndex,
   onSave,
   onFinish,
 }: MockTestRunnerProps) {
@@ -50,6 +72,7 @@ export function MockTestRunner({
   const workRef = useRef(work);
   workRef.current = work;
   const [index, setIndex] = useState(() => {
+    if (initialIndex !== undefined) return Math.max(0, Math.min(questions.length - 1, initialIndex));
     const firstOpen = initialWork.answers.findIndex(answer => answer === null);
     return firstOpen < 0 ? 0 : firstOpen;
   });
@@ -60,11 +83,14 @@ export function MockTestRunner({
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState("");
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const finishingRef = useRef(false);
   const dirty = useRef(false);
+  const many = questions.length > MANY_QUESTIONS;
+  const currentChipRef = useRef<HTMLButtonElement>(null);
 
   const serverNow = () => Date.now() + serverOffsetMs;
-  const remainingMs = mockRemainingMs(startedAtMs, nowMs, serverOffsetMs);
+  const remainingMs = mockRemainingMs(startedAtMs, nowMs, serverOffsetMs, durationMs);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowMs(Date.now()), 250);
@@ -75,6 +101,11 @@ export function MockTestRunner({
     dirty.current = true;
     setWork(current => change(current));
   }, []);
+
+  // Per-question time, for papers only (attempts that carry dwellMs).
+  const dwell = useQuestionDwell(Boolean(initialWork.dwellMs) && !finishing, index, (at, ms) => update(current => (
+    current.dwellMs ? { ...current, dwellMs: addDwell(current.dwellMs, at, ms) } : current
+  )));
 
   const onIncident = useCallback((type: MockIncidentType) => {
     update(current => ({
@@ -137,14 +168,17 @@ export function MockTestRunner({
     setCalculatorOpen(false);
     setFinishError("");
     try {
-      await onFinish(reason, workRef.current);
+      const rest = dwell.take();
+      const current = workRef.current;
+      const final = current.dwellMs && rest.ms > 0 ? { ...current, dwellMs: addDwell(current.dwellMs, rest.index, rest.ms) } : current;
+      await onFinish(reason, final);
       await exitFullscreen();
     } catch (error) {
       finishingRef.current = false;
       setFinishing(false);
       setFinishError(error instanceof Error ? error.message : "Could not reach the server. Check your connection and try again.");
     }
-  }, [onFinish]);
+  }, [onFinish, dwell]);
 
   // 00:00 submits whatever is selected.
   useEffect(() => {
@@ -165,7 +199,15 @@ export function MockTestRunner({
     flags[index] = !flags[index];
     return { ...current, flags };
   });
-  const go = (next: number) => setIndex(Math.max(0, Math.min(questions.length - 1, next)));
+  const go = (next: number) => {
+    setIndex(Math.max(0, Math.min(questions.length - 1, next)));
+    setPaletteOpen(false);
+  };
+
+  // Keep the current question visible in the scrolling strip on small screens.
+  useEffect(() => {
+    currentChipRef.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [index]);
 
   const onCalculatorLog = (log: KeystrokeLog) => update(current => ({
     ...current,
@@ -175,7 +217,7 @@ export function MockTestRunner({
       display: String(log.display).slice(0, 24),
       t: Math.max(0, serverNow() - startedAtMs),
       registers: { ...log.registers },
-    }),
+    }, keystrokeLimit),
   }));
 
   // Keyboard: A/B/C or 1/2/3 answer, arrows move, F flags. Off while typing in the calculator.
@@ -198,17 +240,17 @@ export function MockTestRunner({
     <div ref={rootRef} className="mock-exam" role="application" aria-label={`${moduleLabel} mock test`}>
       <header className="mock-exam__bar">
         <div className="mock-exam__identity">
-          <span>{rehearsal ? "Rehearsal · nothing is saved" : "Module mock test"}</span>
+          <span>{rehearsal === "saved" ? `Rehearsal · ${kindLabel}` : rehearsal ? "Rehearsal · nothing is saved" : kindLabel}</span>
           <strong>{moduleLabel}</strong>
         </div>
-        <MockTimer remainingMs={remainingMs} />
+        <MockTimer remainingMs={remainingMs} totalMs={durationMs} />
         <div className="mock-exam__tools">
-          {rehearsal ? (
+          {rehearsal === "unsaved" ? (
             // Display only: a rehearsal saves nothing, so it never claims "Saved".
             <span className="mock-save mock-save--rehearsal" role="status"><ShieldCheck size={15} />Not saved</span>
           ) : (
             <span className={`mock-save mock-save--${saveState}`} role="status">
-              {saveState === "offline" ? <><CloudOff size={15} />Reconnecting…</> : saveState === "saving" ? "Saving…" : "Saved"}
+              {saveState === "offline" ? <><CloudOff size={15} />Reconnecting…</> : saveState === "saving" ? "Saving…" : rehearsal ? "Saved to your rehearsal" : "Saved"}
             </span>
           )}
           <button type="button" className="mock-tool" onClick={() => setCalculatorOpen(open => !open)} aria-pressed={calculatorOpen}>
@@ -221,8 +263,20 @@ export function MockTestRunner({
       </header>
 
       <div className="mock-exam__layout">
-        <nav className="mock-nav" aria-label="Questions">
-          <p className="mock-nav__summary">{answered} of {questions.length} answered</p>
+        <nav className={`mock-nav${many ? " mock-nav--many" : ""}${paletteOpen ? " is-open" : ""}`} aria-label="Questions">
+          <div className="mock-nav__head">
+            <p className="mock-nav__summary">{answered} of {questions.length} answered</p>
+            {many && (
+              <button
+                type="button"
+                className="mock-nav__toggle"
+                aria-expanded={paletteOpen}
+                onClick={() => setPaletteOpen(open => !open)}
+              >
+                <LayoutGrid size={16} aria-hidden="true" />{paletteOpen ? "Hide all" : "All questions"}
+              </button>
+            )}
+          </div>
           <ol>
             {questions.map((item, position) => {
               const isAnswered = work.answers[position] !== null;
@@ -230,6 +284,7 @@ export function MockTestRunner({
               return (
                 <li key={item.id}>
                   <button
+                    ref={position === index ? currentChipRef : undefined}
                     type="button"
                     className={[
                       "mock-nav__chip",
@@ -329,11 +384,15 @@ export function MockTestRunner({
               </>
             ) : (
               <>
-                <h2 id="mock-confirm-title">Leave and forfeit this test?</h2>
-                <p className="mock-modal__warn"><CircleAlert size={18} />Leaving ends your only attempt. It is recorded as <strong>Forfeited</strong> and cannot be restarted.</p>
+                <h2 id="mock-confirm-title">{rehearsal ? "Leave this rehearsal?" : "Leave and forfeit this test?"}</h2>
+                {rehearsal ? (
+                  <p>{rehearsal === "saved" ? "Your rehearsal stays saved on your tutor account; you can resume or discard it later." : "Nothing from this rehearsal is kept."}</p>
+                ) : (
+                  <p className="mock-modal__warn"><CircleAlert size={18} />Leaving ends your only attempt. It is recorded as <strong>Forfeited</strong> and cannot be restarted.</p>
+                )}
                 <div className="mock-modal__actions">
                   <button ref={confirmSafeRef} type="button" className="mock-button mock-button--ghost" onClick={() => setConfirm(null)}>Stay in the test</button>
-                  <button type="button" className="mock-button mock-button--danger" onClick={() => void finish("leave")}>Leave and forfeit</button>
+                  <button type="button" className="mock-button mock-button--danger" onClick={() => void finish("leave")}>{rehearsal ? "Leave rehearsal" : "Leave and forfeit"}</button>
                 </div>
               </>
             )}

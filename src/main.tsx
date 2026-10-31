@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -29,12 +29,22 @@ const registration: Promise<ServiceWorkerRegistration | null> = import.meta.env.
     })
   : Promise.resolve(null);
 
+// Development only: a local mock-test preview for the tutor review sheet. The
+// DEV constant is false in production builds, so this import is removed there
+// (verified by the build's private-content check).
+const DevPaperPreview = import.meta.env.DEV ? lazy(() => import("./features/mockTests/DevPaperPreview")) : null;
+const paperPreview = DevPaperPreview !== null && new URLSearchParams(window.location.search).has("paper-preview");
+
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <ErrorBoundary scope="app" variant="app">
-      <App />
-    </ErrorBoundary>
-    <PwaInstallPrompt />
-    <UpdateToast registration={registration} />
-  </StrictMode>,
+  paperPreview && DevPaperPreview ? (
+    <Suspense fallback={null}><DevPaperPreview /></Suspense>
+  ) : (
+    <StrictMode>
+      <ErrorBoundary scope="app" variant="app">
+        <App />
+      </ErrorBoundary>
+      <PwaInstallPrompt />
+      <UpdateToast registration={registration} />
+    </StrictMode>
+  ),
 );
