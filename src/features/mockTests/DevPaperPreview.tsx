@@ -24,7 +24,10 @@ import "./moduleMock.css";
  * shows exactly what the student will see. It never calls Firebase: the file
  * is read from this machine and nothing is saved or sent.
  *
- *   /?paper-preview=<project-relative path to a *.mock.json>&q=<1-based>&view=exam|review
+ *   /?paper-preview=<project-relative path to a *.mock.json>&q=<1-based>&view=exam|review[&correct=<n>]
+ *
+ * `correct` (review only) answers the first n questions right and the rest
+ * wrong, to see a pass or fail result; without it every answer is right.
  */
 export const DEV_PAPER_PREVIEW_MARKER = "dev-paper-preview-harness";
 
@@ -95,8 +98,9 @@ export default function DevPaperPreview() {
 
   const count = pkg.key.correct.length;
   if (view === "review") {
-    // The review as a student sees it once released, with every answer shown as chosen correctly.
-    const answers = [...pkg.key.correct];
+    // The review as a student sees it once released: every answer right, or only the first `correct`.
+    const right = params.has("correct") ? Math.max(0, Number(params.get("correct")) || 0) : count;
+    const answers = pkg.key.correct.map((option, index) => (index < right ? option : ((option + 1) % 3) as typeof option));
     const { correct, score } = gradeMockAnswers(answers, pkg.key.correct);
     return (
       <MockResults

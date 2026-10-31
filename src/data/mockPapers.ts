@@ -17,13 +17,22 @@ export interface MockPaper {
   /** Short badge code, as on the module tests (QM, EC, ...). */
   code: string;
   title: string;
+  /**
+   * Pass mark: the fewest correct answers that clear the paper, defined for a
+   * paper of exactly `outOf` questions. Judged on the correct count, never on
+   * a rounded percentage.
+   */
+  pass: { correct: number; outOf: number };
 }
 
 /** What the student and the tutor call this kind of test. */
 export const MOCK_PAPER_SECTION = "Mock Exams";
 export const MOCK_PAPER_KIND = "Mock Exam";
 
-const paper = (id: string, topic: string, code: string): MockPaper => ({ id, topic, code, title: `${topic} Paper` });
+/** The owner's pass mark for every 45-question paper: 38 of 45 (84.44%). */
+export const MOCK_PAPER_PASS = { correct: 38, outOf: 45 } as const;
+
+const paper = (id: string, topic: string, code: string): MockPaper => ({ id, topic, code, title: `${topic} Paper`, pass: MOCK_PAPER_PASS });
 
 /** In curriculum order. */
 export const MOCK_PAPERS: readonly MockPaper[] = [

@@ -48,7 +48,7 @@ vi.mock("../../lib/cloud", () => ({
   listActiveStudentMembers: vi.fn(async () => [{ uid: "student-1" }]),
 }));
 
-import { getMockAttempt } from "../../lib/cloudMockTests";
+import { getMockAttempt, listMockAttempts } from "../../lib/cloudMockTests";
 import { FullMockPapers } from "./FullMockPapers";
 import { mockTestTitle } from "../../data/mockPapers";
 
@@ -114,5 +114,19 @@ describe("Full QM mocks section", () => {
     expect(text).toContain("Resume rehearsal");
     expect(text).toContain("40/44");
     expect(text).toContain("never appears in Hamad's results");
+  });
+
+  it("shows the pass mark and judges 45-question papers on it (44-question attempts get no verdict)", async () => {
+    const paper45 = (score: number) => ({ ...studentAttempt, questionCount: 45, durationSeconds: 4050, score }) as MockAttempt;
+    vi.mocked(getMockAttempt).mockResolvedValueOnce(paper45(37));
+    let root = await render("student");
+    expect(textOf(root)).toContain("Pass mark 84.44% (38/45)");
+    expect(textOf(root)).toContain("37/45 · Not passed · 30:00");
+    await act(async () => tree!.unmount());
+
+    vi.mocked(listMockAttempts).mockResolvedValueOnce([paper45(38)]);
+    root = await render("tutor");
+    expect(textOf(root)).toContain("Hamad: 38/45 · Passed · review not released");
+    expect(textOf(root)).not.toContain("40/44 · ");
   });
 });

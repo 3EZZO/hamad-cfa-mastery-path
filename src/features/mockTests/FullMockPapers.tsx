@@ -1,4 +1,4 @@
-import { CircleAlert, Clock3, History, LockKeyhole, Maximize, PlayCircle, RotateCcw, Target, Timer, Trash2 } from "lucide-react";
+import { BadgeCheck, CircleAlert, Clock3, History, LockKeyhole, Maximize, PlayCircle, RotateCcw, Target, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MOCK_PAPERS, MOCK_PAPER_KIND, MOCK_PAPER_SECTION, type MockPaper } from "../../data/mockPapers";
 import { getCloudErrorMessage, listActiveStudentMembers } from "../../lib/cloud";
@@ -46,6 +46,7 @@ import {
   type MockTestMeta,
 } from "../../lib/mockTestContent";
 import type { ProjectRole } from "../../lib/permissions";
+import { paperPassMarkLabel, paperVerdictSuffix } from "../../lib/paperPass";
 import { setShellBusy } from "../../lib/shellBusy";
 import { MockResults, type LocalReview } from "./MockResults";
 import { PaperBreakdownView } from "./PaperBreakdownView";
@@ -104,7 +105,7 @@ function StudentStatus({ attempt, meta }: { attempt: MockAttempt | null; meta: M
   if (view === "forfeited") return <span className="mock-status mock-status--forfeit">Hamad: forfeited</span>;
   return (
     <span className="mock-status mock-status--done">
-      Hamad: {live.score === null ? "grading" : `${live.score}/${count}`}{live.attemptNumber > 1 ? ` · attempt ${live.attemptNumber} (repeat)` : ""}
+      Hamad: {live.score === null ? "grading" : `${live.score}/${count}${paperVerdictSuffix(live.moduleId, live.score, count)}`}{live.attemptNumber > 1 ? ` · attempt ${live.attemptNumber} (repeat)` : ""}
       {live.reviewReleased ? "" : " · review not released"}
     </span>
   );
@@ -428,6 +429,7 @@ export function FullMockPapers({
           <li><Target size={16} />{MOCK_KIND_QUESTION_COUNT.paper} questions</li>
           <li><Timer size={16} />{formatMockClock(mockDurationMsFor(MOCK_KIND_QUESTION_COUNT.paper))} total</li>
           <li><LockKeyhole size={16} />One attempt</li>
+          <li><BadgeCheck size={16} />Pass mark {paperPassMarkLabel(MOCK_PAPERS[0].id)}</li>
         </ul>
       </div>
       {isTutor && (
@@ -476,7 +478,7 @@ export function FullMockPapers({
                       <ul className="mock-paper__rehearsals" aria-label="Your recent rehearsals">
                         {finished.map(item => (
                           <li key={item.id}>
-                            Rehearsal {new Date(item.startedAtMs).toLocaleDateString()}: {item.score}/{item.questionCount}
+                            Rehearsal {new Date(item.startedAtMs).toLocaleDateString()}: {item.score}/{item.questionCount}{paperVerdictSuffix(entry.paper.id, item.score, item.questionCount)}
                             {item.finishedAtMs ? ` in ${formatMockClock(Math.min(item.finishedAtMs - item.startedAtMs, item.durationSeconds * 1000))}` : ""}
                             {item.testVersion !== entry.meta?.version ? " (older version)" : ""}
                             <button type="button" className="mock-hub__link" disabled={busy} onClick={() => void discard(item)} aria-label="Delete this rehearsal">
@@ -512,7 +514,7 @@ export function FullMockPapers({
                     {(view === "completed" || view === "forfeited") && (
                       <>
                         <span className={`mock-status mock-status--${view === "forfeited" ? "overdue" : "done"}`}>
-                          {view === "forfeited" ? "Forfeited" : entry.attempt?.score === null ? "Grading" : `${entry.attempt?.score}/${mockAttemptQuestionCount(entry.attempt!)}`}
+                          {view === "forfeited" ? "Forfeited" : entry.attempt?.score === null ? "Grading" : `${entry.attempt?.score}/${mockAttemptQuestionCount(entry.attempt!)}${paperVerdictSuffix(entry.paper.id, entry.attempt!.score, mockAttemptQuestionCount(entry.attempt!))}`}
                           {entry.attempt && mockTimeUsedMs(entry.attempt) !== null && view !== "forfeited" ? ` · ${formatMockClock(mockTimeUsedMs(entry.attempt)!)}` : ""}
                         </span>
                         <button type="button" className="mock-button mock-button--ghost" onClick={() => setScreen({ kind: "results", paperId: entry.paper.id })}>
