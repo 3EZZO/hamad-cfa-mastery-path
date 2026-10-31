@@ -22,8 +22,13 @@ export const MOCK_SCHEMA_VERSION_V2 = 2 as const;
 export type MockSchemaVersion = typeof MOCK_SCHEMA_VERSION | typeof MOCK_SCHEMA_VERSION_V2;
 export type MockTestKind = "module" | "paper";
 export const MOCK_SECONDS_PER_QUESTION = 90;
-/** Questions per test kind; firestore.rules accepts exactly these counts. */
-export const MOCK_KIND_QUESTION_COUNT: Record<MockTestKind, number> = { module: 8, paper: 44 };
+/** Questions per test kind for new uploads; firestore.rules accepts these counts. */
+export const MOCK_KIND_QUESTION_COUNT: Record<MockTestKind, number> = { module: 8, paper: 45 };
+/**
+ * Every count an existing test or attempt may have: papers uploaded before
+ * 2026-11 have 44 questions and keep grading, timing and rehearsals.
+ */
+export const MOCK_KNOWN_QUESTION_COUNTS: readonly number[] = [8, 44, 45];
 /** Module-test count and duration: the defaults for every pre-paper document and attempt. */
 export const MOCK_QUESTION_COUNT = MOCK_KIND_QUESTION_COUNT.module;
 export const MOCK_DURATION_MS = MOCK_QUESTION_COUNT * MOCK_SECONDS_PER_QUESTION * 1000;
@@ -43,7 +48,7 @@ export function mockDurationMsFor(questionCount: number): number {
 }
 
 export function mockKeystrokeLimit(questionCount: number): number {
-  return questionCount === MOCK_KIND_QUESTION_COUNT.paper ? MOCK_PAPER_MAX_KEYSTROKES : MOCK_MAX_KEYSTROKES;
+  return questionCount >= 44 ? MOCK_PAPER_MAX_KEYSTROKES : MOCK_MAX_KEYSTROKES;
 }
 
 export type MockOption = 0 | 1 | 2;
@@ -757,8 +762,8 @@ export function gradeMockAnswers(
   answers: readonly MockAnswer[],
   key: readonly MockOption[],
 ): { correct: boolean[]; score: number } {
-  if (!Object.values(MOCK_KIND_QUESTION_COUNT).includes(key.length)) {
-    throw new MockContentError(`The answer key must have ${Object.values(MOCK_KIND_QUESTION_COUNT).join(" or ")} entries.`);
+  if (!MOCK_KNOWN_QUESTION_COUNTS.includes(key.length)) {
+    throw new MockContentError(`The answer key must have ${MOCK_KNOWN_QUESTION_COUNTS.join(", ")} entries.`);
   }
   if (answers.length !== key.length) throw new MockContentError("The answers and the key cover different questions.");
   const correct = key.map((right, index) => answers[index] === right);

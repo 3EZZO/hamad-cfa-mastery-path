@@ -29,12 +29,14 @@ import {
   type MockRehearsal,
 } from "../../lib/cloudMockRehearsals";
 import {
+  MOCK_KIND_QUESTION_COUNT,
   appendIncident,
   formatMockClock,
   isMockAttemptLocked,
   mockAttemptDurationMs,
   mockAttemptQuestionCount,
   mockAttemptView,
+  mockDurationMsFor,
   mockKeystrokeLimit,
   mockRemainingMs,
   mockTimeUsedMs,
@@ -423,8 +425,8 @@ export function FullMockPapers({
           <h3 id="mock-papers-title">{MOCK_PAPER_SECTION}</h3>
         </div>
         <ul className="mock-hub__rules" aria-label="Paper rules">
-          <li><Target size={16} />44 questions</li>
-          <li><Timer size={16} />66:00 total</li>
+          <li><Target size={16} />{MOCK_KIND_QUESTION_COUNT.paper} questions</li>
+          <li><Timer size={16} />{formatMockClock(mockDurationMsFor(MOCK_KIND_QUESTION_COUNT.paper))} total</li>
           <li><LockKeyhole size={16} />One attempt</li>
         </ul>
       </div>

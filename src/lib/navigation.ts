@@ -48,7 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "practice", label: "Practice", mobileLabel: "Practice", icon: TimerReset, keywords: ["Mistake Review", "Mistakes", "Retests"] },
   { id: "progress", label: "Progress", mobileLabel: "Progress", icon: Grid3x3, hint: "Module heatmap and mocks", keywords: ["Topic Progress", "Topics", "Mock Results", "Mocks", "Heatmap"] },
   { id: "mastery", label: "Topic Progress", mobileLabel: "Topics", icon: Gauge, hint: "Mastery by subject" },
-  { id: "moduleMocks", label: "Module Tests", mobileLabel: "Tests", icon: ClipboardCheck, hint: "Compulsory timed assessments", keywords: ["Tests", "Module mock", "Assessment", "Results", "Scores"] },
+  { id: "moduleMocks", label: "Tests & Mocks", mobileLabel: "Tests", icon: ClipboardCheck, hint: "Module tests and topic mock exams", keywords: ["Tests", "Module Tests", "Module mock", "Mock Exams", "Papers", "Assessment", "Results", "Scores"] },
   { id: "mocks", label: "Mock Results", mobileLabel: "Mocks", icon: TrendingUp },
   { id: "errors", label: "Mistake Review", mobileLabel: "Mistakes", icon: Archive, hint: "Corrections & retests" },
   { id: "notes", label: "Notes & Data", mobileLabel: "Notes", icon: NotebookPen, hint: "General notes & backups" },
@@ -179,9 +179,9 @@ export const TAB_COPY: Record<TabId, { eyebrow: string; title: string; descripti
     description: "Review each subject's practice results and tutor-assessed mastery.",
   },
   moduleMocks: {
-    eyebrow: "One attempt · 12 minutes · full screen",
-    title: "Module Tests",
-    description: "A compulsory eight-question mock for each module, taken under exam conditions.",
+    eyebrow: "One attempt · timed · full screen",
+    title: "Tests & Mock Exams",
+    description: "Module tests after each module and one mock exam paper per topic, taken under exam conditions.",
   },
   mocks: {
     eyebrow: "Performance under conditions",

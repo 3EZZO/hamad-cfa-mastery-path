@@ -456,10 +456,10 @@ export function ModuleMockTests({
       <header className="mock-hub__hero">
         <div>
           <p className="mock-hub__eyebrow">Assessment · not practice</p>
-          <h2 id="mock-hub-title">Module Tests</h2>
-          <p>One compulsory test per published module, in full screen. Your result goes straight to your tutor.</p>
+          <h2 id="mock-hub-title">Tests &amp; Mock Exams</h2>
+          <p>A compulsory test for each published module and a mock exam paper per topic, all in full screen. Your result goes straight to your tutor.</p>
         </div>
-        <ul className="mock-hub__rules" aria-label="Test rules">
+        <ul className="mock-hub__rules" aria-label="Module test rules">
           <li><Target size={16} />{MOCK_QUESTION_COUNT} questions</li>
           <li><Timer size={16} />12:00 total</li>
           <li><LockKeyhole size={16} />One attempt</li>

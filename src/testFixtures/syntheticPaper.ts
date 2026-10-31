@@ -1,5 +1,5 @@
 /**
- * A synthetic 44-question paper upload (schema 2) for tests. No real mock
+ * A synthetic 45-question paper upload (schema 2) for tests. No real mock
  * content is ever committed: stems, options and explanations are placeholders.
  */
 import { paperCatalogIds, paperModuleTestIds } from "../data/mockPapers";
@@ -65,7 +65,7 @@ export function syntheticPaper(overrides: Record<string, unknown> = {}) {
     version: "paper-test-1",
     title: "Synthetic full mock",
     source: "Unit test fixture",
-    questions: Array.from({ length: 44 }, (_, index) => syntheticPaperQuestion(index)),
+    questions: Array.from({ length: 45 }, (_, index) => syntheticPaperQuestion(index)),
     ...overrides,
   };
 }
@@ -76,7 +76,7 @@ export function syntheticTopicPaper(paperId: string, overrides: Record<string, u
   const moduleTests = paperModuleTestIds(paperId);
   return syntheticPaper({
     moduleId: paperId,
-    questions: Array.from({ length: 44 }, (_, index) => {
+    questions: Array.from({ length: 45 }, (_, index) => {
       const question = syntheticPaperQuestion(index);
       return {
         ...question,

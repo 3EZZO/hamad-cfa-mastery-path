@@ -2,8 +2,8 @@ import { MOCK_MODULES } from "./mockModules";
 import { READING_CATALOG } from "./readings";
 
 /**
- * Mock Exams: one comprehensive paper per CFA Level I topic, 44 questions in
- * 66 minutes, built from the hardest unseen questions of that topic. Like a
+ * Mock Exams: one comprehensive paper per CFA Level I topic, 45 questions in
+ * 67.5 minutes, built from the hardest unseen questions of that topic. Like a
  * module test, the id is the Firestore document id of the paper and the
  * suffix of every attempt id, so it must never change once a paper has been
  * uploaded (`qm-paper-01` predates this list and keeps its id). Papers are

@@ -22,6 +22,7 @@ import {
 } from "./cloud";
 import {
   MOCK_KIND_QUESTION_COUNT,
+  MOCK_KNOWN_QUESTION_COUNTS,
   MOCK_SCHEMA_VERSION_V2,
   MockContentError,
   emptyAnswers,
@@ -221,8 +222,7 @@ export async function saveMockAnswerKey(
 ): Promise<void> {
   try {
     const { firestore } = services();
-    const counts = Object.values(MOCK_KIND_QUESTION_COUNT);
-    if (!counts.includes(key.correct.length) || review.items.length !== key.correct.length) {
+    if (!MOCK_KNOWN_QUESTION_COUNTS.includes(key.correct.length) || review.items.length !== key.correct.length) {
       throw new MockContentError("The key and the review must each cover every question of the test.");
     }
     const batch = writeBatch(firestore);
