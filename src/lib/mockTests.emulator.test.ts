@@ -1,0 +1,427 @@
+/**
+ * Executable permission suite for module mock tests, full papers and tutor
+ * rehearsals, run only against the local Auth/Firestore emulators with a
+ * `demo-` project:
+ *
+ *   npm run test:materials:emulator
+ *
+ * Synthetic accounts and a synthetic 44-question paper exercise firestore.rules
+ * through the real Firebase SDK. It refuses to run otherwise, so it can never
+ * reach the live project.
+ */
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { deleteApp, initializeApp, type FirebaseApp } from "firebase/app";
+import { connectAuthEmulator, createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import {
+  collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocFromServer, getDocs, getFirestore,
+  query, serverTimestamp, setDoc, terminate, updateDoc, where, writeBatch, type Firestore,
+} from "firebase/firestore";
+import {
+  MOCK_KIND_QUESTION_COUNT,
+  emptyAnswers,
+  emptyDwell,
+  emptyFlags,
+  gradeMockAnswers,
+  mockDocBytes,
+  mockDurationMsFor,
+  parseMockTestDraft,
+  splitMockDraft,
+  type MockKeystroke,
+  type MockOption,
+  type MockTestDraft,
+} from "./mockTestContent";
+import { syntheticPaper } from "../testFixtures/syntheticPaper";
+
+const PROJECT = process.env.GCLOUD_PROJECT ?? "";
+const FIRESTORE_HOST = process.env.FIRESTORE_EMULATOR_HOST ?? "";
+const AUTH_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST ?? "";
+
+// Fail closed: every endpoint must be an emulator of a demo project.
+if (!PROJECT.startsWith("demo-") || !FIRESTORE_HOST || !AUTH_HOST) {
+  throw new Error(
+    "Emulator suite refused to start: run it through `npm run test:materials:emulator` " +
+      "(demo- project with Auth and Firestore emulators).",
+  );
+}
+
+const ROOT = "programs/project-202";
+const DENIED = /permission-denied|unauthorized|unauthenticated/;
+const PAPER = "qm-paper-01";
+const MODULE = "m99-synthetic-module";
+
+interface Actor {
+  name: string;
+  app: FirebaseApp;
+  firestore: Firestore;
+  uid: string;
+}
+
+const apps: FirebaseApp[] = [];
+let counter = 0;
+
+function hostPort(value: string): [string, number] {
+  const [host, port] = value.split(":");
+  return [host!, Number(port)];
+}
+
+async function actor(name: string): Promise<Actor> {
+  const app = initializeApp({ apiKey: "demo-api-key", projectId: PROJECT, appId: "demo-app" }, `${name}-${++counter}`);
+  apps.push(app);
+  const auth = getAuth(app);
+  connectAuthEmulator(auth, `http://${AUTH_HOST}`, { disableWarnings: true });
+  const firestore = getFirestore(app);
+  connectFirestoreEmulator(firestore, ...hostPort(FIRESTORE_HOST));
+  const credential = await createUserWithEmailAndPassword(auth, `mock-${name}-${counter}@synthetic.test`, "synthetic-password-1");
+  return { name, app, firestore, uid: credential.user.uid };
+}
+
+/** Writes as the emulator owner (bypasses rules): seeding only. */
+async function ownerPatch(path: string, fields: Record<string, unknown>, mask?: string[]) {
+  const params = mask ? `?${mask.map(field => `updateMask.fieldPaths=${field}`).join("&")}` : "";
+  const response = await fetch(
+    `http://${FIRESTORE_HOST}/v1/projects/${PROJECT}/databases/(default)/documents/${path}${params}`,
+    { method: "PATCH", headers: { Authorization: "Bearer owner", "Content-Type": "application/json" }, body: JSON.stringify({ fields }) },
+  );
+  if (!response.ok) throw new Error(`Owner write failed: ${response.status} ${await response.text()}`);
+}
+
+async function seedMember(uid: string, role: string) {
+  await ownerPatch(`${ROOT}/members/${uid}`, { active: { booleanValue: true }, role: { stringValue: role } });
+}
+
+/** Moves an attempt's server start time into the past, as if minutes had elapsed. */
+async function backdateStart(attemptId: string, minutesAgo: number) {
+  const at = new Date(Date.now() - minutesAgo * 60_000).toISOString();
+  await ownerPatch(`${ROOT}/mockAttempts/${attemptId}`, { startedAt: { timestampValue: at } }, ["startedAt"]);
+}
+
+async function expectDenied(work: Promise<unknown>) {
+  let error: unknown = null;
+  try {
+    await work;
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error, "expected the request to be denied").not.toBeNull();
+  expect(String((error as { code?: string }).code)).toMatch(DENIED);
+}
+
+const ref = (who: Actor, collectionName: string, id: string) => doc(who.firestore, "programs", "project-202", collectionName, id);
+
+function syntheticModuleDraft(): MockTestDraft {
+  return parseMockTestDraft({
+    schemaVersion: 1,
+    moduleId: MODULE,
+    version: "module-v1",
+    title: "Synthetic module test",
+    source: "emulator fixture",
+    questions: Array.from({ length: 8 }, (_, index) => ({
+      id: `syn-q${index + 1}`,
+      stem: `Synthetic stem ${index + 1}`,
+      table: null,
+      options: ["Alpha.", "Beta.", "Gamma."],
+      correctOption: index % 3,
+      concept: "Synthetic concept",
+      explanation: "Synthetic explanation",
+      distractors: ["a", "b", "c"],
+      confidence: "High",
+    })),
+  });
+}
+
+/** The same batch the tutor upload writes (cloudMockTests.uploadMockTestDraft). */
+function uploadBatch(who: Actor, draft: MockTestDraft, status: "draft" | "published" = "draft") {
+  const docs = splitMockDraft(draft);
+  const count = MOCK_KIND_QUESTION_COUNT[draft.kind];
+  const batch = writeBatch(who.firestore);
+  batch.set(ref(who, "mockTests", draft.moduleId), {
+    schemaVersion: draft.schemaVersion,
+    ...(draft.schemaVersion === 2 ? { kind: draft.kind } : {}),
+    moduleId: draft.moduleId,
+    title: draft.title,
+    version: draft.version,
+    status,
+    questionCount: count,
+    durationSeconds: mockDurationMsFor(count) / 1000,
+    updatedBy: who.uid,
+    updatedAtClient: new Date().toISOString(),
+    publishedAtClient: null,
+  });
+  batch.set(ref(who, "mockTestQuestions", draft.moduleId), docs.questions);
+  batch.set(ref(who, "mockTestKeys", draft.moduleId), docs.key);
+  batch.set(ref(who, "mockTestReviews", draft.moduleId), docs.review);
+  if (docs.sources) batch.set(ref(who, "mockTestSources", draft.moduleId), docs.sources);
+  return batch;
+}
+
+async function publish(who: Actor, testId: string) {
+  const meta = (await getDocFromServer(ref(who, "mockTests", testId))).data()!;
+  await setDoc(ref(who, "mockTests", testId), { ...meta, status: "published", updatedBy: who.uid, publishedAtClient: new Date().toISOString() });
+}
+
+function newAttempt(who: Actor, testId: string, version: string, count: number, frozen: boolean) {
+  return {
+    uid: who.uid,
+    moduleId: testId,
+    testVersion: version,
+    attemptNumber: 1,
+    status: "active",
+    ...(frozen ? { questionCount: count, durationSeconds: mockDurationMsFor(count) / 1000, dwellMs: emptyDwell(count) } : {}),
+    startedAt: serverTimestamp(),
+    lastSeenAt: serverTimestamp(),
+    answers: emptyAnswers(count),
+    flags: emptyFlags(count),
+    incidents: [],
+    keystrokes: [],
+    submittedAt: null,
+    finishReason: null,
+    score: null,
+    correct: null,
+    reviewReleased: false,
+  };
+}
+
+function strokes(count: number): MockKeystroke[] {
+  const registers = { N: 0, IY: 0, PV: 0, PMT: 0, FV: 0, PY: 1, CY: 1, isBGN: false };
+  return Array.from({ length: count }, (_, index) => ({ q: index % 44, key: "1", display: "1", t: index, registers }));
+}
+
+let tutor: Actor;
+let secondTutor: Actor;
+let student: Actor;
+let otherStudent: Actor;
+let paper: MockTestDraft;
+let paperKey: MockOption[];
+
+beforeAll(async () => {
+  [tutor, secondTutor, student, otherStudent] = await Promise.all([
+    actor("tutor"), actor("second-tutor"), actor("student"), actor("other-student"),
+  ]);
+  await seedMember(tutor.uid, "tutor");
+  await seedMember(secondTutor.uid, "tutor");
+  await seedMember(student.uid, "student");
+  await seedMember(otherStudent.uid, "student");
+  paper = parseMockTestDraft(syntheticPaper());
+  paperKey = splitMockDraft(paper).key.correct;
+});
+
+afterAll(async () => {
+  for (const app of apps) {
+    await terminate(getFirestore(app)).catch(() => undefined);
+    await deleteApp(app).catch(() => undefined);
+  }
+});
+
+describe("mock test and paper rules (emulator)", () => {
+  it("lets the tutor upload a 44-question paper draft with tags and tutor-only sources", async () => {
+    await uploadBatch(tutor, paper).commit();
+    const key = (await getDocFromServer(ref(tutor, "mockTestKeys", PAPER))).data()!;
+    expect(key.modules).toHaveLength(44);
+    expect((await getDocFromServer(ref(tutor, "mockTestSources", PAPER))).data()!.items).toHaveLength(44);
+  });
+
+  it("rejects paper metadata with a wrong count, duration or schema", async () => {
+    const meta = (await getDocFromServer(ref(tutor, "mockTests", PAPER))).data()!;
+    await expectDenied(setDoc(ref(tutor, "mockTests", PAPER), { ...meta, durationSeconds: 720 }));
+    await expectDenied(setDoc(ref(tutor, "mockTests", PAPER), { ...meta, questionCount: 8, durationSeconds: 720 }));
+    await expectDenied(setDoc(ref(tutor, "mockTests", PAPER), { ...meta, schemaVersion: 1 }));
+    await expectDenied(setDoc(ref(tutor, "mockTests", PAPER), { ...meta, questionCount: 20, durationSeconds: 1800 }));
+  });
+
+  it("rejects paper content lists that do not cover all 44 questions", async () => {
+    const docs = splitMockDraft(paper);
+    await expectDenied(setDoc(ref(tutor, "mockTestKeys", PAPER), { ...docs.key, correct: docs.key.correct.slice(0, 8) }));
+    await expectDenied(setDoc(ref(tutor, "mockTestKeys", PAPER), { ...docs.key, modules: docs.key.modules!.slice(0, 43) }));
+    await expectDenied(setDoc(ref(tutor, "mockTestQuestions", PAPER), { ...docs.questions, questions: docs.questions.questions.slice(0, 8) }));
+  });
+
+  it("keeps drafts and sources away from students", async () => {
+    await expectDenied(getDocFromServer(ref(student, "mockTests", PAPER)));
+    await expectDenied(getDocFromServer(ref(student, "mockTestQuestions", PAPER)));
+    await expectDenied(getDocFromServer(ref(student, "mockTestSources", PAPER)));
+    await expectDenied(setDoc(ref(student, "mockTests", PAPER), { status: "published" }));
+  });
+
+  it("accepts a realistic 44-question paper near the document budget", async () => {
+    const heavy = parseMockTestDraft(syntheticPaper({
+      moduleId: "qm-paper-03",
+      questions: syntheticPaper().questions.map(question => ({
+        ...question,
+        stem: "s".repeat(1500),
+        explanation: "x".repeat(4000),
+        working: Array(12).fill("y".repeat(600)),
+        distractors: ["z".repeat(1200), "z".repeat(1200), "z".repeat(1200)],
+      })),
+    }));
+    const docs = splitMockDraft(heavy);
+    expect(mockDocBytes(docs.review)).toBeGreaterThan(600_000);
+    await uploadBatch(tutor, heavy).commit();
+  });
+
+  it("starts a paper attempt only with the frozen 44-question, 66-minute shape", async () => {
+    await publish(tutor, PAPER);
+    const id = `${student.uid}_${PAPER}`;
+    await expectDenied(setDoc(ref(student, "mockAttempts", id), newAttempt(student, PAPER, paper.version, 8, false)));
+    await expectDenied(setDoc(ref(student, "mockAttempts", id), { ...newAttempt(student, PAPER, paper.version, 44, true), durationSeconds: 720 }));
+    await expectDenied(setDoc(ref(student, "mockAttempts", id), { ...newAttempt(student, PAPER, paper.version, 44, true), dwellMs: Array(44).fill(5) }));
+    await setDoc(ref(student, "mockAttempts", id), newAttempt(student, PAPER, paper.version, 44, true));
+    expect((await getDocFromServer(ref(student, "mockTestQuestions", PAPER))).data()!.questions).toHaveLength(44);
+    await expectDenied(getDocFromServer(ref(student, "mockTestKeys", PAPER)));
+    await expectDenied(getDocFromServer(ref(student, "mockTestSources", PAPER)));
+  });
+
+  it("validates paper saves: answers, flags, dwell and a 1,500-keystroke log", async () => {
+    const id = `${student.uid}_${PAPER}`;
+    const answers = paperKey.map((right, index) => (index < 40 ? right : null));
+    const save = (fields: Record<string, unknown>) => updateDoc(ref(student, "mockAttempts", id), { ...fields, lastSeenAt: serverTimestamp() });
+    await save({ answers, flags: emptyFlags(44), dwellMs: Array(44).fill(1000), keystrokes: strokes(1200) });
+    await expectDenied(save({ answers: [...answers.slice(0, 43), 3] }));
+    await expectDenied(save({ answers: answers.slice(0, 43) }));
+    await expectDenied(save({ dwellMs: Array(8).fill(0) }));
+    // The heaviest legitimate save: the full 1,500-keystroke log, every answer and every flag set.
+    await save({ answers: paperKey, flags: Array(44).fill(true), dwellMs: Array(44).fill(90_000), keystrokes: strokes(1500) });
+    await save({ answers, flags: emptyFlags(44), dwellMs: Array(44).fill(1000) });
+    await expectDenied(save({ keystrokes: strokes(1501) }));
+    await expectDenied(save({ keystrokes: strokes(1499) }));
+  });
+
+  it("keeps a paper open after 13 minutes and closes it after 66", async () => {
+    const id = `${student.uid}_${PAPER}`;
+    const save = () => updateDoc(ref(student, "mockAttempts", id), { flags: emptyFlags(44).map((_, i) => i === 0), lastSeenAt: serverTimestamp() });
+    await backdateStart(id, 13);
+    await save();
+    await backdateStart(id, 67);
+    await expectDenied(save());
+    await expectDenied(updateDoc(ref(student, "mockAttempts", id), {
+      status: "submitted", finishReason: "submit", submittedAt: serverTimestamp(), lastSeenAt: serverTimestamp(),
+    }));
+    await updateDoc(ref(student, "mockAttempts", id), {
+      status: "submitted", finishReason: "expired", submittedAt: serverTimestamp(), lastSeenAt: serverTimestamp(),
+    });
+  });
+
+  it("grades a locked paper only with the key applied to all 44 frozen answers", async () => {
+    const id = `${student.uid}_${PAPER}`;
+    const attempt = (await getDocFromServer(ref(student, "mockAttempts", id))).data()!;
+    const key = (await getDocFromServer(ref(student, "mockTestKeys", PAPER))).data()!;
+    const graded = gradeMockAnswers(attempt.answers, key.correct);
+    expect(graded.score).toBe(40);
+    await expectDenied(updateDoc(ref(student, "mockAttempts", id), { score: 44, correct: Array(44).fill(true) }));
+    const forgedLast = [...graded.correct.slice(0, 43), !graded.correct[43]];
+    await expectDenied(updateDoc(ref(student, "mockAttempts", id), { score: graded.score, correct: forgedLast }));
+    await expectDenied(updateDoc(ref(student, "mockAttempts", id), { score: graded.score + 1, correct: graded.correct }));
+    await expectDenied(updateDoc(ref(student, "mockAttempts", id), { score: graded.score, correct: graded.correct.slice(0, 8) }));
+    await updateDoc(ref(student, "mockAttempts", id), { score: graded.score, correct: graded.correct });
+    expect(key.modules).toHaveLength(44);
+    await expectDenied(getDocFromServer(ref(student, "mockTestReviews", PAPER)));
+    await expectDenied(getDocFromServer(ref(student, "mockTestSources", PAPER)));
+    await updateDoc(ref(tutor, "mockAttempts", id), { reviewReleased: true });
+    expect((await getDocFromServer(ref(student, "mockTestReviews", PAPER))).data()!.items).toHaveLength(44);
+    await expectDenied(getDocFromServer(ref(student, "mockTestSources", PAPER)));
+  });
+
+  it("keeps eight-question module tests exactly as before", async () => {
+    const draft = syntheticModuleDraft();
+    await uploadBatch(tutor, draft).commit();
+    await publish(tutor, MODULE);
+    const id = `${otherStudent.uid}_${MODULE}`;
+    await expectDenied(setDoc(ref(otherStudent, "mockAttempts", id), newAttempt(otherStudent, MODULE, draft.version, 44, true)));
+    await expectDenied(setDoc(ref(otherStudent, "mockAttempts", id), newAttempt(otherStudent, MODULE, draft.version, 8, true)));
+    await setDoc(ref(otherStudent, "mockAttempts", id), newAttempt(otherStudent, MODULE, draft.version, 8, false));
+    const save = (fields: Record<string, unknown>) => updateDoc(ref(otherStudent, "mockAttempts", id), { ...fields, lastSeenAt: serverTimestamp() });
+    await save({ answers: [0, 1, 2, 0, null, null, null, null], keystrokes: strokes(600) });
+    await expectDenied(save({ keystrokes: strokes(601) }));
+    await expectDenied(save({ dwellMs: Array(8).fill(0) }));
+    await expectDenied(save({ answers: emptyAnswers(44) }));
+    await backdateStart(id, 11);
+    await save({ flags: [true, false, false, false, false, false, false, false] });
+    await backdateStart(id, 13);
+    await expectDenied(save({ flags: emptyFlags() }));
+    await updateDoc(ref(otherStudent, "mockAttempts", id), {
+      status: "submitted", finishReason: "expired", submittedAt: serverTimestamp(), lastSeenAt: serverTimestamp(),
+    });
+    const key = (await getDocFromServer(ref(otherStudent, "mockTestKeys", MODULE))).data()!;
+    const graded = gradeMockAnswers([0, 1, 2, 0, null, null, null, null], key.correct);
+    await expectDenied(updateDoc(ref(otherStudent, "mockAttempts", id), { score: 8, correct: Array(8).fill(true) }));
+    await updateDoc(ref(otherStudent, "mockAttempts", id), { score: graded.score, correct: graded.correct });
+  });
+
+  it("archives and resets a paper attempt with its frozen shape", async () => {
+    const id = `${student.uid}_${PAPER}`;
+    const current = (await getDocFromServer(ref(tutor, "mockAttempts", id))).data()!;
+    const batch = writeBatch(tutor.firestore);
+    batch.set(ref(tutor, "mockAttemptHistory", `${id}_1`), { ...current, id, archivedAt: serverTimestamp(), archivedBy: tutor.uid });
+    batch.set(ref(tutor, "mockAttemptCounters", id), { next: 2 });
+    batch.delete(ref(tutor, "mockAttempts", id));
+    await batch.commit();
+    const archived = (await getDocFromServer(ref(student, "mockAttemptHistory", `${id}_1`))).data()!;
+    expect(archived.questionCount).toBe(44);
+    expect(archived.durationSeconds).toBe(3960);
+    await setDoc(ref(student, "mockAttempts", id), { ...newAttempt(student, PAPER, paper.version, 44, true), attemptNumber: 2 });
+
+    // The heaviest legitimate submit and grade: all answers, full keystroke log, in time.
+    await updateDoc(ref(student, "mockAttempts", id), {
+      answers: paperKey, flags: Array(44).fill(true), dwellMs: Array(44).fill(60_000), keystrokes: strokes(1500),
+      status: "submitted", finishReason: "submit", submittedAt: serverTimestamp(), lastSeenAt: serverTimestamp(),
+    });
+    const graded = gradeMockAnswers(paperKey, paperKey);
+    await updateDoc(ref(student, "mockAttempts", id), { score: graded.score, correct: graded.correct });
+    expect((await getDocFromServer(ref(student, "mockAttempts", id))).data()!.score).toBe(44);
+  });
+});
+
+describe("tutor rehearsals (emulator)", () => {
+  const rehearsal = (who: Actor, overrides: Record<string, unknown> = {}) => ({
+    uid: who.uid,
+    testId: PAPER,
+    testVersion: paper.version,
+    questionCount: 44,
+    durationSeconds: 3960,
+    status: "active",
+    startedAtMs: 1_700_000_000_000,
+    updatedAtMs: 1_700_000_000_000,
+    finishedAtMs: null,
+    finishReason: null,
+    answers: emptyAnswers(44),
+    flags: emptyFlags(44),
+    dwellMs: emptyDwell(44),
+    score: null,
+    correct: null,
+    ...overrides,
+  });
+  const rehearsalId = (who: Actor) => `${who.uid}_${PAPER}_1700000000000`;
+
+  it("lets a tutor save, resume, finish and discard their own rehearsal", async () => {
+    const id = rehearsalId(tutor);
+    await setDoc(ref(tutor, "mockRehearsals", id), rehearsal(tutor));
+    await setDoc(ref(tutor, "mockRehearsals", id), rehearsal(tutor, { answers: paperKey, updatedAtMs: 1_700_000_100_000 }));
+    const mine = await getDocs(query(
+      collection(tutor.firestore, "programs", "project-202", "mockRehearsals"),
+      where("uid", "==", tutor.uid), where("testId", "==", PAPER),
+    ));
+    expect(mine.docs.map(item => item.id)).toEqual([id]);
+    const graded = gradeMockAnswers(paperKey, paperKey);
+    await setDoc(ref(tutor, "mockRehearsals", id), rehearsal(tutor, {
+      answers: paperKey, status: "finished", finishedAtMs: 1_700_000_200_000, finishReason: "submit", score: graded.score, correct: graded.correct,
+    }));
+    await expectDenied(setDoc(ref(tutor, "mockRehearsals", id), rehearsal(tutor, { testVersion: "other" })));
+    await deleteDoc(ref(tutor, "mockRehearsals", id));
+    expect((await getDocFromServer(ref(tutor, "mockRehearsals", id))).exists()).toBe(false);
+  });
+
+  it("never touches a student attempt and stays private to its tutor", async () => {
+    const id = rehearsalId(tutor);
+    await setDoc(ref(tutor, "mockRehearsals", id), rehearsal(tutor));
+    expect((await getDoc(ref(tutor, "mockAttempts", `${tutor.uid}_${PAPER}`))).exists()).toBe(false);
+    for (const who of [student, secondTutor]) {
+      await expectDenied(getDocFromServer(ref(who, "mockRehearsals", id)));
+      await expectDenied(setDoc(ref(who, "mockRehearsals", id), rehearsal(tutor)));
+      await expectDenied(deleteDoc(ref(who, "mockRehearsals", id)));
+    }
+    await expectDenied(getDocs(query(collection(student.firestore, "programs", "project-202", "mockRehearsals"), where("uid", "==", tutor.uid))));
+    await expectDenied(setDoc(ref(student, "mockRehearsals", rehearsalId(student)), rehearsal(student)));
+    await expectDenied(setDoc(ref(tutor, "mockRehearsals", `${secondTutor.uid}_${PAPER}_1`), rehearsal(tutor)));
+    await expectDenied(setDoc(ref(tutor, "mockRehearsals", `${tutor.uid}_${PAPER}_2`), rehearsal(tutor, { answers: emptyAnswers(43) })));
+    await expectDenied(setDoc(ref(tutor, "mockRehearsals", `${tutor.uid}_${PAPER}_3`), rehearsal(tutor, { durationSeconds: 720 })));
+  });
+});

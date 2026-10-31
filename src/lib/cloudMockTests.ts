@@ -20,13 +20,15 @@ import {
   mapCloudError,
 } from "./cloud";
 import {
-  MOCK_DURATION_MS,
-  MOCK_QUESTION_COUNT,
-  MOCK_SCHEMA_VERSION,
+  MOCK_KIND_QUESTION_COUNT,
+  MOCK_SCHEMA_VERSION_V2,
   MockContentError,
   emptyAnswers,
+  emptyDwell,
   emptyFlags,
   gradeMockAnswers,
+  mockDurationMsFor,
+  mockTestKind,
   mockAttemptId,
   mockHistoryId,
   parseMockTestDraft,
@@ -41,6 +43,7 @@ import {
   type MockOption,
   type MockQuestionsDoc,
   type MockReviewDoc,
+  type MockSourcesDoc,
   type MockTestMeta,
 } from "./mockTestContent";
 
@@ -83,6 +86,11 @@ function millis(value: unknown): number | null {
 function parseAttempt(id: string, data: DocumentData): MockAttempt {
   const startedAtMs = millis(data.startedAt);
   if (startedAtMs === null) throw new CloudClientError("invalid-cloud-data");
+  // Paper attempts freeze their size and length; module-test attempts never carry them.
+  const frozen = typeof data.questionCount === "number" && typeof data.durationSeconds === "number"
+    ? { questionCount: data.questionCount, durationSeconds: data.durationSeconds }
+    : {};
+  const count = frozen.questionCount;
   return {
     id,
     uid: String(data.uid),
@@ -90,10 +98,12 @@ function parseAttempt(id: string, data: DocumentData): MockAttempt {
     testVersion: String(data.testVersion),
     attemptNumber: Number(data.attemptNumber),
     status: data.status,
+    ...frozen,
     startedAtMs,
     lastSeenAtMs: millis(data.lastSeenAt) ?? startedAtMs,
-    answers: Array.isArray(data.answers) ? data.answers : emptyAnswers(),
-    flags: Array.isArray(data.flags) ? data.flags : emptyFlags(),
+    answers: Array.isArray(data.answers) ? data.answers : emptyAnswers(count),
+    flags: Array.isArray(data.flags) ? data.flags : emptyFlags(count),
+    ...(Array.isArray(data.dwellMs) ? { dwellMs: data.dwellMs as number[] } : {}),
     incidents: Array.isArray(data.incidents) ? data.incidents : [],
     keystrokes: Array.isArray(data.keystrokes) ? data.keystrokes : [],
     submittedAtMs: millis(data.submittedAt),
@@ -137,15 +147,18 @@ export async function uploadMockTestDraft(value: unknown): Promise<MockTestMeta>
         "This module's test is already published. Unpublish it before uploading a new version.",
       );
     }
-    const { questions, key, review } = splitMockDraft(draft);
+    const { questions, key, review, sources } = splitMockDraft(draft);
+    const questionCount = MOCK_KIND_QUESTION_COUNT[draft.kind];
     const meta: MockTestMeta = {
-      schemaVersion: MOCK_SCHEMA_VERSION,
+      schemaVersion: draft.schemaVersion,
+      // Schema 1 module tests keep the exact meta shape they always had.
+      ...(draft.schemaVersion === MOCK_SCHEMA_VERSION_V2 ? { kind: draft.kind } : {}),
       moduleId: draft.moduleId,
       title: draft.title,
       version: draft.version,
       status: "draft",
-      questionCount: MOCK_QUESTION_COUNT,
-      durationSeconds: MOCK_DURATION_MS / 1000,
+      questionCount,
+      durationSeconds: mockDurationMsFor(questionCount) / 1000,
       updatedBy: user.uid,
       updatedAtClient: new Date().toISOString(),
       publishedAtClient: null,
@@ -155,6 +168,7 @@ export async function uploadMockTestDraft(value: unknown): Promise<MockTestMeta>
     batch.set(ref(firestore, "mockTestQuestions", draft.moduleId), questions);
     batch.set(ref(firestore, "mockTestKeys", draft.moduleId), key);
     batch.set(ref(firestore, "mockTestReviews", draft.moduleId), review);
+    if (sources) batch.set(ref(firestore, "mockTestSources", draft.moduleId), sources);
     await batch.commit();
     return meta;
   } catch (error) {
@@ -167,6 +181,8 @@ export interface MockTestPackage {
   questions: MockQuestionsDoc;
   key: MockKeyDoc;
   review: MockReviewDoc;
+  /** Schema 2 papers: tutor-only provenance. Null for module tests. */
+  sources: MockSourcesDoc | null;
 }
 
 /** Tutor only: the whole test, for the answer key review and rehearsal. */
@@ -180,11 +196,16 @@ export async function loadMockTestPackage(moduleId: string): Promise<MockTestPac
       getDoc(ref(firestore, "mockTestReviews", moduleId)),
     ]);
     if (!meta.exists() || !questions.exists() || !key.exists() || !review.exists()) return null;
+    const metaData = meta.data() as MockTestMeta;
+    const sources = metaData.schemaVersion === MOCK_SCHEMA_VERSION_V2
+      ? await getDoc(ref(firestore, "mockTestSources", moduleId))
+      : null;
     return {
-      meta: meta.data() as MockTestMeta,
+      meta: metaData,
       questions: questions.data() as MockQuestionsDoc,
       key: key.data() as MockKeyDoc,
       review: review.data() as MockReviewDoc,
+      sources: sources?.exists() ? (sources.data() as MockSourcesDoc) : null,
     };
   } catch (error) {
     throw mapError(error);
@@ -199,8 +220,9 @@ export async function saveMockAnswerKey(
 ): Promise<void> {
   try {
     const { firestore } = services();
-    if (key.correct.length !== MOCK_QUESTION_COUNT || review.items.length !== MOCK_QUESTION_COUNT) {
-      throw new MockContentError("The key and the review must each cover 8 questions.");
+    const counts = Object.values(MOCK_KIND_QUESTION_COUNT);
+    if (!counts.includes(key.correct.length) || review.items.length !== key.correct.length) {
+      throw new MockContentError("The key and the review must each cover every question of the test.");
     }
     const batch = writeBatch(firestore);
     batch.set(ref(firestore, "mockTestKeys", moduleId), key);
@@ -269,13 +291,19 @@ async function readAnchored(firestore: Firestore, id: string, sentAtMs: number):
   return { attempt, serverOffsetMs };
 }
 
-/** Start the one and only attempt. The server stamps the start time. */
+/**
+ * Start the one and only attempt. The server stamps the start time. A paper
+ * attempt freezes its question count and duration, so a later edit of the
+ * paper can never change what this attempt means.
+ */
 export async function startMockAttempt(meta: MockTestMeta): Promise<ServerAnchoredAttempt> {
   try {
     const { firestore, user } = services();
     const id = mockAttemptId(user.uid, meta.moduleId);
     const counter = await getDoc(ref(firestore, "mockAttemptCounters", id));
     const attemptNumber = counter.exists() ? Number(counter.data().next) : 1;
+    const paper = mockTestKind(meta) === "paper";
+    const count = paper ? meta.questionCount : undefined;
     const sentAtMs = Date.now();
     await withTimeout(setDoc(ref(firestore, "mockAttempts", id), {
       uid: user.uid,
@@ -283,10 +311,11 @@ export async function startMockAttempt(meta: MockTestMeta): Promise<ServerAnchor
       testVersion: meta.version,
       attemptNumber,
       status: "active",
+      ...(paper ? { questionCount: meta.questionCount, durationSeconds: meta.durationSeconds, dwellMs: emptyDwell(meta.questionCount) } : {}),
       startedAt: serverTimestamp(),
       lastSeenAt: serverTimestamp(),
-      answers: emptyAnswers(),
-      flags: emptyFlags(),
+      answers: emptyAnswers(count),
+      flags: emptyFlags(count),
       incidents: [],
       keystrokes: [],
       submittedAt: null,
@@ -321,13 +350,21 @@ export interface MockWork {
   flags: boolean[];
   incidents: MockIncident[];
   keystrokes: MockKeystroke[];
+  /** Paper attempts only. */
+  dwellMs?: number[];
+}
+
+/** Firestore rejects undefined fields, and module-test attempts have no dwell. */
+function workFields(work: MockWork) {
+  const { dwellMs, ...rest } = work;
+  return dwellMs ? { ...rest, dwellMs } : rest;
 }
 
 export async function saveMockWork(attemptId: string, work: MockWork): Promise<void> {
   try {
     const { firestore } = services();
     await withTimeout(updateDoc(ref(firestore, "mockAttempts", attemptId), {
-      ...work,
+      ...workFields(work),
       lastSeenAt: serverTimestamp(),
     }));
   } catch (error) {
@@ -344,7 +381,7 @@ export async function finishMockAttempt(
   try {
     const { firestore } = services();
     await withTimeout(updateDoc(ref(firestore, "mockAttempts", attemptId), {
-      ...work,
+      ...workFields(work),
       status: reason === "leave" ? "forfeited" : "submitted",
       finishReason: reason,
       submittedAt: serverTimestamp(),
@@ -394,6 +431,17 @@ export async function getMockAnswerKey(moduleId: string): Promise<MockOption[]> 
     const snapshot = await getDoc(ref(firestore, "mockTestKeys", moduleId));
     if (!snapshot.exists()) throw new CloudClientError("invalid-cloud-data");
     return (snapshot.data() as MockKeyDoc).correct;
+  } catch (error) {
+    throw mapError(error);
+  }
+}
+
+/** Tutor only: private provenance and tags of a schema 2 paper. */
+export async function getMockSources(moduleId: string): Promise<MockSourcesDoc | null> {
+  try {
+    const { firestore } = services();
+    const snapshot = await getDoc(ref(firestore, "mockTestSources", moduleId));
+    return snapshot.exists() ? (snapshot.data() as MockSourcesDoc) : null;
   } catch (error) {
     throw mapError(error);
   }

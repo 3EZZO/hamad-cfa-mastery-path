@@ -137,9 +137,11 @@ describe("module mock test Firestore rule boundary", () => {
     expect(mock()).toContain("data.attemptNumber == (exists(counter) ? get(counter).data.next : 1)");
   });
 
-  it("enforces the 12-minute deadline and freezes answers once it passes", () => {
-    expect(mock()).toContain("request.time <= attempt.startedAt + duration.value(735, 's')");
-    const late = blockBetween("function mockStudentFinishLate()", "function mockCorrectAt(");
+  it("enforces each attempt's own deadline (12 minutes by default) and freezes answers once it passes", () => {
+    const deadline = blockBetween("function mockDeadlineOpen(attempt)", "function mockValidAnswers(");
+    expect(deadline).toContain("request.time <= attempt.startedAt");
+    expect(deadline).toContain("duration.value(attempt.get('durationSeconds', 720) + 15, 's')");
+    const late = blockBetween("function mockStudentFinishLate()", "function mockGradedFirstEight(");
     expect(late).toContain("!mockDeadlineOpen(previous)");
     expect(late).toContain(".hasOnly(['status', 'submittedAt', 'finishReason', 'lastSeenAt'])");
     expect(late).toContain("data.finishReason == 'expired'");
@@ -155,8 +157,14 @@ describe("module mock test Firestore rule boundary", () => {
     expect(grade).toContain("previous.status in ['submitted', 'forfeited']");
     expect(grade).toContain("previous.score == null");
     expect(grade).toContain(".hasOnly(['score', 'correct'])");
-    expect(grade).toContain("mockCorrectAt(data, key, 7)");
-    expect(mock()).toContain("data.correct[index] == (data.answers[index] == key.correct[index])");
+    expect(grade).toContain("key.version == previous.testVersion");
+    expect(grade).toContain("mockGradedFirstEight(data.correct, previous.answers, key.correct)");
+    expect(grade).toContain("(n == 8 || mockGradedPaperRest(data.correct, previous.answers, key.correct))");
+    expect(grade).toContain("data.score == data.correct.removeAll([false]).size()");
+    // Every question index of a paper is checked exactly once.
+    for (let index = 0; index < 44; index += 1) {
+      expect(mock().split(`c[${index}] == (a[${index}] == k[${index}])`), String(index)).toHaveLength(2);
+    }
   });
 
   it("never serves the answer key or review before the attempt is locked", () => {
@@ -191,6 +199,31 @@ describe("module mock test Firestore rule boundary", () => {
     const counters = match("mockAttemptCounters/{attemptId}");
     expect(counters).toContain("allow create, update: if activeProject202Role('tutor')");
     expect(counters).not.toContain("activeProject202Role('student')");
+  });
+
+  it("allows only 8-question/12-minute module tests and 44-question/66-minute papers", () => {
+    const meta = blockBetween("function validMockTestMeta(moduleId)", "function validMockContent(");
+    expect(meta).toContain("(kind == 'module' && data.questionCount == 8)");
+    expect(meta).toContain("(kind == 'paper' && data.schemaVersion == 2 && data.questionCount == 44)");
+    expect(meta).toContain("data.durationSeconds == data.questionCount * 90");
+    const shape = blockBetween("function mockNewAttemptShape(data, meta)", "function validNewMockAttempt(");
+    expect(shape).toContain("data.answers == [null, null, null, null, null, null, null, null]");
+    expect(shape).toContain("data.durationSeconds == meta.durationSeconds");
+    expect(shape).toContain("data.dwellMs.size() == 44 && data.dwellMs.hasOnly([0])");
+    expect(mock()).toContain("mockAppendOnly(data.keystrokes, previous.keystrokes, n == 44 ? 1500 : 600)");
+  });
+
+  it("keeps paper provenance tutor-only and rehearsals private to their tutor", () => {
+    const sources = match("mockTestSources/{moduleId}");
+    expect(sources).toContain("allow get: if activeProject202Role('tutor');");
+    expect(sources).toContain("allow list, delete: if false");
+    expect(sources).not.toContain("activeProject202Role('student')");
+    expect(sources).not.toContain("activeProject202Member()");
+    const rehearsals = match("mockRehearsals/{rehearsalId}");
+    expect(rehearsals).not.toContain("activeProject202Role('student')");
+    expect(rehearsals).not.toContain("activeProject202Member()");
+    expect(rehearsals).toContain("resource.data.uid == request.auth.uid");
+    expect(mock()).toContain("rehearsalId.split('_')[0] == request.auth.uid");
   });
 
   it("lets the tutor own reminders while the student only stamps seen and acknowledged", () => {
