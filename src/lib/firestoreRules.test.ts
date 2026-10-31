@@ -167,19 +167,21 @@ describe("module mock test Firestore rule boundary", () => {
     }
   });
 
-  it("never serves the answer key or review before the attempt is locked", () => {
+  it("never serves the answer key or review before the attempt is locked, and serves the review once it is", () => {
     const keys = match("mockTestKeys/{moduleId}");
     expect(keys).toContain("mockAttemptLocked(request.auth.uid + '_' + moduleId)");
     expect(keys).toContain("allow list, delete: if false");
     const reviews = match("mockTestReviews/{moduleId}");
     expect(reviews).toContain("mockAttemptLocked(request.auth.uid + '_' + moduleId)");
-    expect(reviews).toContain(".data.reviewReleased == true");
+    // The review opens with the lock: no tutor release.
+    expect(reviews).not.toContain("reviewReleased");
+    expect(reviews).toContain("allow list, delete: if false");
     const questions = match("mockTestQuestions/{moduleId}");
     expect(questions).toContain("exists(mockDoc('mockAttempts', request.auth.uid + '_' + moduleId))");
     expect(mock()).toContain("get(mockDoc('mockAttempts', attemptId)).data.status in ['submitted', 'forfeited']");
   });
 
-  it("hides drafts and lets only the tutor author, publish, release and reset", () => {
+  it("hides drafts and lets only the tutor author, publish and reset", () => {
     const tests = match("mockTests/{moduleId}");
     expect(tests).toContain("resource == null || resource.data.status == 'published'");
     expect(tests).toContain("allow create, update: if activeProject202Role('tutor') && validMockTestMeta(moduleId)");
@@ -191,14 +193,53 @@ describe("module mock test Firestore rule boundary", () => {
     }
     const attempts = match("mockAttempts/{attemptId}");
     expect(attempts).toContain(".hasOnly(['reviewReleased', 'score', 'correct'])");
-    expect(attempts).toContain("allow delete: if activeProject202Role('tutor')");
+    expect(attempts).toContain("allow delete: if (activeProject202Role('tutor')");
     expect(attempts).toContain("existsAfter(mockDoc('mockAttemptHistory'");
+    // A student may delete only their own attempt, and only with a retake copy archived in the batch.
+    expect(attempts).toMatch(/resource\.data\.uid == request\.auth\.uid\s+&& mockRetakeArchived\(attemptId, resource\.data\.attemptNumber\)/);
     const history = match("mockAttemptHistory/{historyId}");
     expect(history).toContain("allow update, delete: if false");
-    expect(history).not.toContain("activeProject202Role('student')");
+    expect(history).toContain("|| (activeProject202Role('student') && mockStudentRetakeCopy(historyId))");
+    // A tutor reset can never pose as a student's retake.
+    expect(history).toContain("!('archiveReason' in request.resource.data)");
     const counters = match("mockAttemptCounters/{attemptId}");
-    expect(counters).toContain("allow create, update: if activeProject202Role('tutor')");
-    expect(counters).not.toContain("activeProject202Role('student')");
+    expect(counters).toContain("allow create, update: if (activeProject202Role('tutor')");
+    expect(counters).toContain("request.resource.data.next == get(mockDoc('mockAttempts', attemptId)).data.attemptNumber + 1");
+    expect(counters).toContain("mockRetakeArchived(attemptId, request.resource.data.next - 1)");
+  });
+
+  it("lets the student retake only a graded, locked, non-final module-test attempt, as an exact copy", () => {
+    const copy = blockBetween("function mockStudentRetakeCopy(historyId)", "// Paper provenance");
+    expect(copy).toContain("mockOwnsId(data.id)");
+    expect(copy).toContain("live.uid == request.auth.uid");
+    expect(copy).toContain("historyId == data.id + '_' + string(live.attemptNumber)");
+    expect(copy).toContain("live.status in ['submitted', 'forfeited']");
+    expect(copy).toContain("live.score is int");
+    // Papers (frozen questionCount) and final attempts can never be retaken.
+    expect(copy).toContain("!('questionCount' in live)");
+    expect(copy).toContain("!('firstTryScore' in live)");
+    expect(copy).toContain("data.archivedAt == request.time");
+    expect(copy).toContain("data.diff(live).affectedKeys().hasOnly(['id', 'archivedAt', 'archivedBy', 'archiveReason'])");
+    expect(copy).toContain("!existsAfter(attempt)");
+    const archived = blockBetween("function mockRetakeArchived(attemptId, attemptNumber)", "function mockStudentRetakeCopy(");
+    expect(archived).toContain("getAfter(archive).data.get('archiveReason', '') == 'retake'");
+    expect(archived).toContain("getAfter(archive).data.archivedBy == request.auth.uid");
+  });
+
+  it("binds a final attempt to the archived first-try score, and forbids it otherwise", () => {
+    const first = blockBetween("function mockFirstTryMatches(attemptId, data)", "function validNewMockAttempt(");
+    expect(first).toContain("get(previous).data.get('archiveReason', '') == 'retake'");
+    expect(first).toContain("? data.get('firstTryScore', null) == get(previous).data.score");
+    expect(first).toContain(": !('firstTryScore' in data)");
+    expect(blockBetween("function validNewMockAttempt(attemptId)", "function mockValidDwell(")).toContain("mockFirstTryMatches(attemptId, data)");
+    // Papers never carry a first-try score: only the module-test shape lists it.
+    const shape = blockBetween("function mockNewAttemptShape(data, meta)", "function mockHistoryDoc(");
+    expect(shape.split("'firstTryScore'")).toHaveLength(2);
+    expect(shape.indexOf("'firstTryScore'")).toBeLessThan(shape.indexOf("meta.questionCount in [44, 45]"));
+    // Nobody can change it after the start: no update path lists it.
+    for (const update of ["function mockStudentSave()", "function mockStudentFinishInTime()", "function mockStudentFinishLate()", "function mockStudentGrade()"]) {
+      expect(blockBetween(update, "\n    }")).not.toContain("firstTryScore");
+    }
   });
 
   it("allows 8-question/12-minute module tests and 45-question/67.5-minute papers (44 for earlier papers)", () => {
@@ -206,7 +247,7 @@ describe("module mock test Firestore rule boundary", () => {
     expect(meta).toContain("(kind == 'module' && data.questionCount == 8)");
     expect(meta).toContain("(kind == 'paper' && data.schemaVersion == 2 && data.questionCount in [44, 45])");
     expect(meta).toContain("data.durationSeconds == data.questionCount * 90");
-    const shape = blockBetween("function mockNewAttemptShape(data, meta)", "function validNewMockAttempt(");
+    const shape = blockBetween("function mockNewAttemptShape(data, meta)", "function mockHistoryDoc(");
     expect(shape).toContain("data.answers == [null, null, null, null, null, null, null, null]");
     expect(shape).toContain("data.durationSeconds == meta.durationSeconds");
     expect(shape).toContain("data.dwellMs.size() == meta.questionCount && data.dwellMs.hasOnly([0])");

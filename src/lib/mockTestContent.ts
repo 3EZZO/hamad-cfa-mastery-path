@@ -314,12 +314,23 @@ export interface MockAttempt {
   finishReason: MockFinishReason | null;
   score: number | null;
   correct: boolean[] | null;
+  /**
+   * The tutor's old manual release. Reviews now open as soon as an attempt
+   * is locked; the field stays on stored attempts and is no longer read.
+   */
   reviewReleased: boolean;
+  /**
+   * Present only on a module test's final attempt: the score of the first
+   * attempt the student archived to take it (checked by firestore.rules).
+   */
+  firstTryScore?: number;
 }
 
 export interface MockAttemptHistoryEntry extends MockAttempt {
   archivedAtMs: number;
   archivedBy: string;
+  /** "retake": the student archived a first try to take the final attempt. Absent on a tutor reset. */
+  archiveReason?: "retake";
 }
 
 export class MockContentError extends Error {
@@ -751,6 +762,35 @@ export function emptyDwell(count: number): number[] {
 /** Questions in an attempt: frozen on paper attempts, 8 on every module-test attempt. */
 export function mockAttemptQuestionCount(attempt: Pick<MockAttempt, "questionCount">): number {
   return attempt.questionCount ?? MOCK_QUESTION_COUNT;
+}
+
+/** A module test's final attempt: the one taken after the student's retake. */
+export function isFinalMockAttempt(attempt: Pick<MockAttempt, "firstTryScore">): boolean {
+  return typeof attempt.firstTryScore === "number";
+}
+
+/**
+ * Module tests are learn-then-final: once the first attempt is locked and
+ * graded, the student may take one final attempt. Papers have one attempt.
+ * Mirrors firestore.rules (mockStudentRetakeCopy).
+ */
+export function canStartFinalMockAttempt(
+  attempt: Pick<MockAttempt, "status" | "score" | "questionCount" | "firstTryScore"> | null,
+): boolean {
+  return attempt !== null
+    && (attempt.status === "submitted" || attempt.status === "forfeited")
+    && attempt.score !== null
+    && attempt.questionCount === undefined
+    && !isFinalMockAttempt(attempt);
+}
+
+/**
+ * The score the tutor's analytics read: the first try, before the student
+ * had seen the answers. On a final attempt that is the archived first try;
+ * otherwise the attempt's own score.
+ */
+export function mockFirstTryScore(attempt: Pick<MockAttempt, "score" | "firstTryScore">): number | null {
+  return attempt.firstTryScore ?? attempt.score;
 }
 
 export function mockAttemptDurationMs(attempt: Pick<MockAttempt, "durationSeconds">): number {

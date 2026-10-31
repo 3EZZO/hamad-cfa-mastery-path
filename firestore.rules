@@ -258,13 +258,20 @@ service cloud.firestore {
     }
 
     // ---- Module mock tests and full papers ---------------------------------
-    // One compulsory, single-attempt test per module (8 questions, 12 minutes)
-    // and comprehensive papers (45 questions, 67.5 minutes; papers uploaded
-    // before 2026-11 have 44): 90 seconds a question either way. The student never reads the answer key or the
-    // review before the attempt is locked, and never the tutor-only sources;
-    // the server clock (request.time) is the only timer that counts. A paper
-    // attempt freezes its question count and duration when it starts; every
-    // attempt without them is an 8-question / 12-minute module-test attempt.
+    // One compulsory test per module (8 questions, 12 minutes) and
+    // comprehensive papers (45 questions, 67.5 minutes; papers uploaded
+    // before 2026-11 have 44): 90 seconds a question either way. The student
+    // never reads the answer key or the review while an attempt is running,
+    // reads both as soon as it is locked, and never reads the tutor-only
+    // sources; the server clock (request.time) is the only timer that counts.
+    // A paper attempt freezes its question count and duration when it starts;
+    // every attempt without them is an 8-question / 12-minute module-test
+    // attempt.
+    //
+    // Module tests: learn, then final. After a graded first attempt the
+    // student may archive it (a "retake") and take one final attempt, which
+    // carries the archived first-try score. A final attempt cannot be retaken;
+    // only a tutor reset starts a new first attempt. Papers have one attempt.
 
     function mockDoc(collectionName, docId) {
       return /databases/$(database)/documents/programs/project-202/$(collectionName)/$(docId);
@@ -368,7 +375,7 @@ service cloud.firestore {
           && data.keys().hasOnly([
             'uid', 'moduleId', 'testVersion', 'attemptNumber', 'status', 'startedAt',
             'lastSeenAt', 'answers', 'flags', 'incidents', 'keystrokes', 'submittedAt',
-            'finishReason', 'score', 'correct', 'reviewReleased'
+            'finishReason', 'score', 'correct', 'reviewReleased', 'firstTryScore'
           ])
           && data.answers == [null, null, null, null, null, null, null, null]
           && data.flags == [false, false, false, false, false, false, false, false])
@@ -386,6 +393,20 @@ service cloud.firestore {
           && data.dwellMs.size() == meta.questionCount && data.dwellMs.hasOnly([0]));
     }
 
+    function mockHistoryDoc(attemptId, attemptNumber) {
+      return mockDoc('mockAttemptHistory', attemptId + '_' + string(attemptNumber));
+    }
+
+    // A final attempt follows a retake and must carry that first try's score;
+    // any other attempt (the first, or one after a tutor reset) must not.
+    function mockFirstTryMatches(attemptId, data) {
+      let previous = mockHistoryDoc(attemptId, data.attemptNumber - 1);
+      return (data.attemptNumber > 1 && exists(previous)
+          && get(previous).data.get('archiveReason', '') == 'retake')
+        ? data.get('firstTryScore', null) == get(previous).data.score
+        : !('firstTryScore' in data);
+    }
+
     function validNewMockAttempt(attemptId) {
       let data = request.resource.data;
       let counter = mockDoc('mockAttemptCounters', attemptId);
@@ -396,6 +417,7 @@ service cloud.firestore {
         && data.testVersion == get(mockDoc('mockTests', data.moduleId)).data.version
         && mockNewAttemptShape(data, get(mockDoc('mockTests', data.moduleId)).data)
         && data.attemptNumber == (exists(counter) ? get(counter).data.next : 1)
+        && mockFirstTryMatches(attemptId, data)
         && data.status == 'active'
         && data.startedAt == request.time
         && data.lastSeenAt == request.time
@@ -553,12 +575,41 @@ service cloud.firestore {
     match /programs/project-202/mockTestReviews/{moduleId} {
       allow get: if activeProject202Role('tutor')
         || (activeProject202Member()
-          && mockAttemptLocked(request.auth.uid + '_' + moduleId)
-          && get(mockDoc('mockAttempts', request.auth.uid + '_' + moduleId)).data.reviewReleased == true);
+          && mockAttemptLocked(request.auth.uid + '_' + moduleId));
       allow list, delete: if false;
       allow create, update: if activeProject202Role('tutor')
         && mockTestIsDraftAfter(moduleId)
         && validMockContent(moduleId, 'items');
+    }
+
+    // The student's retake of a module test, written in one batch: an exact
+    // copy of their graded, locked, non-final first attempt goes to history
+    // (marked "retake"), the counter moves on and the live attempt is deleted.
+    function mockRetakeArchived(attemptId, attemptNumber) {
+      let archive = mockHistoryDoc(attemptId, attemptNumber);
+      return existsAfter(archive)
+        && getAfter(archive).data.get('archiveReason', '') == 'retake'
+        && getAfter(archive).data.archivedBy == request.auth.uid;
+    }
+
+    function mockStudentRetakeCopy(historyId) {
+      let data = request.resource.data;
+      let attempt = mockDoc('mockAttempts', data.id);
+      let live = get(attempt).data;
+      return data.id is string
+        && mockOwnsId(data.id)
+        && exists(attempt)
+        && live.uid == request.auth.uid
+        && historyId == data.id + '_' + string(live.attemptNumber)
+        && live.status in ['submitted', 'forfeited']
+        && live.score is int
+        && !('questionCount' in live)
+        && !('firstTryScore' in live)
+        && data.archiveReason == 'retake'
+        && data.archivedBy == request.auth.uid
+        && data.archivedAt == request.time
+        && data.diff(live).affectedKeys().hasOnly(['id', 'archivedAt', 'archivedBy', 'archiveReason'])
+        && !existsAfter(attempt);
     }
 
     // Paper provenance (private source ids, pages, authoring): tutor only, always.
@@ -583,20 +634,26 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['reviewReleased', 'score', 'correct'])
           && request.resource.data.reviewReleased is bool);
-      // A reset must archive the attempt in the same batch.
-      allow delete: if activeProject202Role('tutor')
-        && existsAfter(mockDoc('mockAttemptHistory',
-          attemptId + '_' + string(resource.data.attemptNumber)));
+      // A reset must archive the attempt in the same batch; so must a
+      // student's retake, as a "retake" copy.
+      allow delete: if (activeProject202Role('tutor')
+          && existsAfter(mockDoc('mockAttemptHistory',
+            attemptId + '_' + string(resource.data.attemptNumber))))
+        || (activeProject202Role('student')
+          && resource.data.uid == request.auth.uid
+          && mockRetakeArchived(attemptId, resource.data.attemptNumber));
     }
 
     match /programs/project-202/mockAttemptHistory/{historyId} {
       allow get: if activeProject202Role('tutor')
         || (activeProject202Member() && mockOwnsId(historyId));
       allow list: if activeProject202Role('tutor');
-      allow create: if activeProject202Role('tutor')
-        && historyId == request.resource.data.id + '_' + string(request.resource.data.attemptNumber)
-        && request.resource.data.archivedBy == request.auth.uid
-        && request.resource.data.archivedAt == request.time;
+      allow create: if (activeProject202Role('tutor')
+          && historyId == request.resource.data.id + '_' + string(request.resource.data.attemptNumber)
+          && !('archiveReason' in request.resource.data)
+          && request.resource.data.archivedBy == request.auth.uid
+          && request.resource.data.archivedAt == request.time)
+        || (activeProject202Role('student') && mockStudentRetakeCopy(historyId));
       allow update, delete: if false;
     }
 
@@ -643,11 +700,17 @@ service cloud.firestore {
       allow get: if activeProject202Role('tutor')
         || (activeProject202Member() && mockOwnsId(attemptId));
       allow list, delete: if false;
-      allow create, update: if activeProject202Role('tutor')
-        && request.resource.data.keys().hasOnly(['next'])
-        && request.resource.data.next is int
-        && request.resource.data.next >= 2
-        && request.resource.data.next <= 100;
+      allow create, update: if (activeProject202Role('tutor')
+          && request.resource.data.keys().hasOnly(['next'])
+          && request.resource.data.next is int
+          && request.resource.data.next >= 2
+          && request.resource.data.next <= 100)
+        || (activeProject202Role('student')
+          && mockOwnsId(attemptId)
+          && request.resource.data.keys().hasOnly(['next'])
+          && exists(mockDoc('mockAttempts', attemptId))
+          && request.resource.data.next == get(mockDoc('mockAttempts', attemptId)).data.attemptNumber + 1
+          && mockRetakeArchived(attemptId, request.resource.data.next - 1));
     }
 
     // Tutor reminders about the module mock tests. The tutor writes the

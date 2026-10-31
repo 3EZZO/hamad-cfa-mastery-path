@@ -27,6 +27,7 @@ import {
   MockContentError,
   emptyAnswers,
   emptyDwell,
+  canStartFinalMockAttempt,
   emptyFlags,
   gradeMockAnswers,
   mockDurationMsFor,
@@ -113,6 +114,7 @@ function parseAttempt(id: string, data: DocumentData): MockAttempt {
     score: typeof data.score === "number" ? data.score : null,
     correct: Array.isArray(data.correct) ? data.correct : null,
     reviewReleased: data.reviewReleased === true,
+    ...(typeof data.firstTryScore === "number" ? { firstTryScore: data.firstTryScore } : {}),
   };
 }
 
@@ -293,9 +295,21 @@ async function readAnchored(firestore: Firestore, id: string, sentAtMs: number):
 }
 
 /**
- * Start the one and only attempt. The server stamps the start time. A paper
- * attempt freezes its question count and duration, so a later edit of the
- * paper can never change what this attempt means.
+ * The first-try score a new attempt must carry: set when the previous attempt
+ * was archived by the student's retake (a module test's final attempt).
+ */
+async function firstTryScoreFor(firestore: Firestore, id: string, attemptNumber: number): Promise<number | null> {
+  if (attemptNumber < 2) return null;
+  const previous = await getDoc(ref(firestore, "mockAttemptHistory", mockHistoryId(id, attemptNumber - 1)));
+  const data = previous.exists() ? previous.data() : null;
+  return data?.archiveReason === "retake" && typeof data.score === "number" ? data.score : null;
+}
+
+/**
+ * Start an attempt: a first attempt, or a module test's final attempt after
+ * the student's retake (it then carries the first-try score). The server
+ * stamps the start time. A paper attempt freezes its question count and
+ * duration, so a later edit of the paper can never change what it means.
  */
 export async function startMockAttempt(meta: MockTestMeta): Promise<ServerAnchoredAttempt> {
   try {
@@ -304,6 +318,7 @@ export async function startMockAttempt(meta: MockTestMeta): Promise<ServerAnchor
     const counter = await getDoc(ref(firestore, "mockAttemptCounters", id));
     const attemptNumber = counter.exists() ? Number(counter.data().next) : 1;
     const paper = mockTestKind(meta) === "paper";
+    const firstTryScore = paper ? null : await firstTryScoreFor(firestore, id, attemptNumber);
     const count = paper ? meta.questionCount : undefined;
     const sentAtMs = Date.now();
     await withTimeout(setDoc(ref(firestore, "mockAttempts", id), {
@@ -324,11 +339,45 @@ export async function startMockAttempt(meta: MockTestMeta): Promise<ServerAnchor
       score: null,
       correct: null,
       reviewReleased: false,
+      ...(firstTryScore === null ? {} : { firstTryScore }),
     }));
     return await readAnchored(firestore, id, sentAtMs);
   } catch (error) {
     throw mapError(error);
   }
+}
+
+/**
+ * Learn, then final (module tests only): archive the student's graded first
+ * attempt as a "retake" copy, move the counter on and free the slot in one
+ * batch, then start the final attempt. If the start fails after the archive,
+ * starting again later still creates the final attempt (startMockAttempt
+ * reads the retake from history).
+ */
+export async function startFinalMockAttempt(attempt: MockAttempt, meta: MockTestMeta): Promise<ServerAnchoredAttempt> {
+  if (!canStartFinalMockAttempt(attempt)) throw new CloudClientError("invalid-cloud-data");
+  try {
+    const { firestore, user } = services();
+    const current = await getDocFromServer(ref(firestore, "mockAttempts", attempt.id));
+    if (current.exists()) {
+      const data = current.data();
+      const attemptNumber = Number(data.attemptNumber);
+      const batch = writeBatch(firestore);
+      batch.set(ref(firestore, "mockAttemptHistory", mockHistoryId(attempt.id, attemptNumber)), {
+        ...data,
+        id: attempt.id,
+        archivedAt: serverTimestamp(),
+        archivedBy: user.uid,
+        archiveReason: "retake",
+      });
+      batch.set(ref(firestore, "mockAttemptCounters", attempt.id), { next: attemptNumber + 1 });
+      batch.delete(ref(firestore, "mockAttempts", attempt.id));
+      await withTimeout(batch.commit());
+    }
+  } catch (error) {
+    throw mapError(error);
+  }
+  return startMockAttempt(meta);
 }
 
 /**
@@ -510,6 +559,7 @@ export async function listMockAttemptHistory(): Promise<MockAttemptHistoryEntry[
         ...parseAttempt(String(data.id), data),
         archivedAtMs: millis(data.archivedAt) ?? 0,
         archivedBy: String(data.archivedBy ?? ""),
+        ...(data.archiveReason === "retake" ? { archiveReason: "retake" as const } : {}),
       };
     });
   } catch (error) {
