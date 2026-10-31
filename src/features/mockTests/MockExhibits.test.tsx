@@ -1,7 +1,7 @@
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { MockFigure } from "../../lib/mockTestContent";
-import { MockExhibits, formatTick, numericColumns } from "./MockExhibits";
+import type { MockFigure, MockTree } from "../../lib/mockTestContent";
+import { MockExhibits, MockReviewExhibits, formatTick, layoutTree, numericColumns } from "./MockExhibits";
 
 const figure: MockFigure = {
   title: "Regression of fund returns on market returns",
@@ -82,5 +82,50 @@ describe("MockExhibits", () => {
 
   it("formats tick values compactly", () => {
     expect([0, 0.5, 2.5, 1000, 0.0125, -3].map(formatTick)).toEqual(["0", "0.5", "2.5", "1000", "0.0125", "-3"]);
+  });
+
+  it("draws a supplied probability tree with every probability exactly as written and a text outline", async () => {
+    const treeData: MockTree = {
+      title: "Earnings and merger tree",
+      description: "Growth splits three ways, each followed by merger or no merger.",
+      rootLabel: "Today",
+      branches: [
+        { label: "Positive", probability: "0.50", note: "", children: [
+          { label: "Merger", probability: "P(M | +) = 0.15", note: "", children: [] },
+          { label: "No merger", probability: "0.85", note: "", children: [] },
+        ] },
+        { label: "Negative", probability: "0.50", note: "payoff -2", children: [] },
+      ],
+    };
+    await act(async () => { tree = create(<MockExhibits question={{ table: null, figure: null, tree: treeData }} />); });
+    const root = tree!.root;
+    expect(root.findByType("svg").props.role).toBe("img");
+    const probabilities = root.findAll(node => node.props.className === "mock-tree__probability").map(textOf);
+    expect(probabilities).toEqual(["0.50", "P(M | +) = 0.15", "0.85", "0.50"]);
+    const outline = textOf(root.findByType("figcaption"));
+    expect(outline).toContain("Positive: 0.50");
+    expect(outline).toContain("Negative: 0.50 (payoff -2)");
+  });
+
+  it("lays a tree out with one row per leaf and parents centred on their children", () => {
+    const leaf = (label: string) => ({ label, probability: "0.5", note: "", children: [] });
+    const layout = layoutTree({
+      title: "t", description: "d", rootLabel: "",
+      branches: [{ label: "A", probability: "0.5", note: "", children: [leaf("A1"), leaf("A2")] }, leaf("B")],
+    });
+    const at = (label: string) => layout.nodes.find(node => node.node.label === label)!;
+    expect(layout.leaves).toBe(3);
+    expect(layout.depth).toBe(2);
+    expect([at("A1").y, at("A2").y, at("B").y]).toEqual([0, 1, 2]);
+    expect(at("A").y).toBe(0.5);
+    expect(at("A1").parentY).toBe(0.5);
+    expect(at("A").parentY).toBe(1.25);
+  });
+
+  it("shows a worked review graphic only when the item has one", async () => {
+    await act(async () => { tree = create(<MockReviewExhibits item={{ reviewFigure: null, reviewTree: null }} />); });
+    expect(tree!.toJSON()).toBeNull();
+    await act(async () => { tree!.update(<MockReviewExhibits item={{ reviewFigure: figure, reviewTree: null }} />); });
+    expect(textOf(tree!.root)).toContain("Worked graphic");
   });
 });

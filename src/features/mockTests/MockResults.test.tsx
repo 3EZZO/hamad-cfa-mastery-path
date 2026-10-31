@@ -162,4 +162,43 @@ describe("Module test results", () => {
     const root = await render({ attempt: attempt(false), practice });
     expect(root.findAll((node) => node.props.className === "mock-practice")).toHaveLength(0);
   });
+
+  it("scores a 44-question paper out of 44 and shows its module breakdown with the review", async () => {
+    const paperQuestions: MockQuestion[] = Array.from({ length: 44 }, (_, index) => ({
+      id: `p${index + 1}`, stem: `Paper stem ${index + 1}`, table: null, figure: null, tree: null, options: ["One", "Two", "Three"],
+    }));
+    const paperKey = paperQuestions.map(() => 0 as const);
+    const answers = paperQuestions.map((_, index) => (index < 33 ? 0 : 1));
+    const local = {
+      reason: "submit",
+      work: { answers, flags: Array(44).fill(false), incidents: [], keystrokes: [], dwellMs: Array(44).fill(60_000) },
+      correct: answers.map(answer => answer === 0),
+      score: 33,
+      timeUsedMs: 3_000_000,
+      pkg: {
+        meta: { questionCount: 44, durationSeconds: 3960 },
+        questions: { questions: paperQuestions },
+        key: { correct: paperKey, modules: paperQuestions.map((_, index) => (index < 40 ? "m01-rates-and-returns" : "m09-parametric-nonparametric")) },
+        review: { items: paperQuestions.map(question => ({ ...items[0], id: question.id })) },
+        sources: null,
+      },
+      saved: true,
+    } as unknown as LocalReview;
+    await act(async () => {
+      tree = create(
+        <MockResults
+          moduleLabel="Full QM mock 1"
+          local={local}
+          onBack={vi.fn()}
+          breakdown={review => <p className="breakdown-probe">{review.answers.length} answers, {review.dwellMs?.length} times</p>}
+        />,
+      );
+    });
+    const root = tree!.root;
+    expect(textOf(root.findByProps({ className: "mock-score__of" }))).toBe("/ 44");
+    expect(textOf(root)).toContain("75%");
+    expect(textOf(root)).toContain("on your tutor account only");
+    expect(textOf(root.findByProps({ className: "breakdown-probe" }))).toBe("44 answers, 44 times");
+    expect(root.findByProps({ className: "mock-results__grid mock-results__grid--many" }).findAllByType("li")).toHaveLength(44);
+  });
 });

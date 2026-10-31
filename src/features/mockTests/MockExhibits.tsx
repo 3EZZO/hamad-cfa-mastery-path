@@ -1,17 +1,128 @@
 import { useId } from "react";
-import type { MockFigure, MockQuestion, MockTable } from "../../lib/mockTestContent";
+import type { MockFigure, MockQuestion, MockReviewItem, MockTable, MockTree, MockTreeNode } from "../../lib/mockTestContent";
 
 /**
- * The exhibits that belong to a question stem: its table and its figure.
- * Shared by the exam screen, the student's review and the tutor's answer-key
- * review so a question looks the same everywhere.
+ * The exhibits that belong to a question stem: its figure or tree and its
+ * table. Shared by the exam screen, the student's review and the tutor's
+ * answer-key review so a question looks the same everywhere.
  */
-export function MockExhibits({ question }: { question: Pick<MockQuestion, "table" | "figure"> }) {
+export function MockExhibits({ question }: { question: Pick<MockQuestion, "table" | "figure" | "tree"> }) {
   return (
     <>
       {question.figure && <MockFigureView figure={question.figure} />}
+      {question.tree && <MockTreeView tree={question.tree} />}
       {question.table && <MockTableView table={question.table} />}
     </>
+  );
+}
+
+/** A worked graphic shown only after the attempt, e.g. the tree the question asked the student to build. */
+export function MockReviewExhibits({ item }: { item: Pick<MockReviewItem, "reviewFigure" | "reviewTree"> }) {
+  if (!item.reviewFigure && !item.reviewTree) return null;
+  return (
+    <div className="mock-review__worked">
+      <p className="mock-review__worked-label">Worked graphic</p>
+      {item.reviewFigure && <MockFigureView figure={item.reviewFigure} />}
+      {item.reviewTree && <MockTreeView tree={item.reviewTree} />}
+    </div>
+  );
+}
+
+interface PlacedNode {
+  node: MockTreeNode;
+  depth: number;
+  y: number;
+  parentY: number;
+}
+
+/** Lays a tree out left to right: one row per leaf, a parent centred on its children. */
+export function layoutTree(tree: MockTree): { nodes: PlacedNode[]; leaves: number; depth: number } {
+  const nodes: PlacedNode[] = [];
+  let leaf = 0;
+  let maxDepth = 1;
+  const place = (node: MockTreeNode, depth: number, parentY: number | null): number => {
+    maxDepth = Math.max(maxDepth, depth);
+    const placed: PlacedNode = { node, depth, y: 0, parentY: 0 };
+    nodes.push(placed);
+    if (node.children.length === 0) {
+      placed.y = leaf;
+      leaf += 1;
+    } else {
+      const ys = node.children.map(child => place(child, depth + 1, null));
+      placed.y = (ys[0]! + ys[ys.length - 1]!) / 2;
+      // Children were placed before the parent's own row was known.
+      for (const other of nodes) if (node.children.includes(other.node)) other.parentY = placed.y;
+    }
+    if (parentY !== null) placed.parentY = parentY;
+    return placed.y;
+  };
+  const rootYs = tree.branches.map(branch => place(branch, 1, null));
+  const rootY = (rootYs[0]! + rootYs[rootYs.length - 1]!) / 2;
+  for (const placed of nodes) if (placed.depth === 1) placed.parentY = rootY;
+  return { nodes, leaves: leaf, depth: maxDepth };
+}
+
+const TREE_COLUMN = 170;
+const TREE_ROW = 46;
+const TREE_PAD = { left: 18, right: 150, top: 22, bottom: 14 };
+
+function TreeOutline({ nodes }: { nodes: MockTreeNode[] }) {
+  return (
+    <ul>
+      {nodes.map((node, index) => (
+        <li key={index}>
+          {node.label}: {node.probability}{node.note ? ` (${node.note})` : ""}
+          {node.children.length > 0 && <TreeOutline nodes={node.children} />}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A probability tree drawn from its data; branch probabilities stay exactly as written. */
+export function MockTreeView({ tree }: { tree: MockTree }) {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const { nodes, leaves, depth } = layoutTree(tree);
+  const width = TREE_PAD.left + depth * TREE_COLUMN + TREE_PAD.right;
+  const height = TREE_PAD.top + Math.max(1, leaves) * TREE_ROW + TREE_PAD.bottom;
+  const x = (level: number) => TREE_PAD.left + level * TREE_COLUMN;
+  const y = (row: number) => TREE_PAD.top + row * TREE_ROW + TREE_ROW / 2;
+  const rootY = nodes.filter(node => node.depth === 1).reduce((sum, node, _i, all) => sum + node.parentY / all.length, 0);
+  return (
+    <figure className="mock-figure mock-tree">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={`${id}-title ${id}-desc`} className="mock-figure__svg">
+        <title id={`${id}-title`}>{tree.title}</title>
+        <desc id={`${id}-desc`}>{tree.description}</desc>
+        {nodes.map((placed, index) => {
+          const x1 = x(placed.depth - 1) + 8;
+          const x2 = x(placed.depth) - 8;
+          const y1 = y(placed.parentY);
+          const y2 = y(placed.y);
+          return (
+            <g key={index} className="mock-tree__branch">
+              <line x1={x1} y1={y1} x2={x2} y2={y2} className="mock-tree__edge" />
+              <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 7} textAnchor="middle" className="mock-tree__probability">{placed.node.probability}</text>
+              <circle cx={x(placed.depth)} cy={y2} r={4} className="mock-tree__node" />
+              {placed.node.children.length > 0 ? (
+                // Inner outcomes sit above their node, clear of the branches leaving it.
+                <text x={x(placed.depth)} y={y2 - 12} textAnchor="middle" className="mock-tree__label">{placed.node.label}</text>
+              ) : (
+                <text x={x(placed.depth) + 10} y={y2} dominantBaseline="middle" className="mock-tree__label">
+                  {placed.node.label}
+                  {placed.node.note && <tspan className="mock-tree__note"> · {placed.node.note}</tspan>}
+                </text>
+              )}
+            </g>
+          );
+        })}
+        <circle cx={x(0)} cy={y(rootY)} r={5} className="mock-tree__node mock-tree__node--root" />
+        {tree.rootLabel && <text x={x(0)} y={y(rootY) - 12} className="mock-tree__label">{tree.rootLabel}</text>}
+      </svg>
+      <figcaption className="visually-hidden">
+        {tree.rootLabel || tree.title}
+        <TreeOutline nodes={tree.branches} />
+      </figcaption>
+    </figure>
   );
 }
 

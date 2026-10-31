@@ -1,5 +1,5 @@
 import { Archive, ArrowLeft, Check, CircleAlert, Clock3, Dumbbell, Flag, LockKeyhole, RotateCcw, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Crest } from "../../components/Crest";
 import {
   getMockAnswerKey,
@@ -11,8 +11,8 @@ import {
 } from "../../lib/cloudMockTests";
 import { getCloudErrorMessage } from "../../lib/cloud";
 import {
-  MOCK_QUESTION_COUNT,
   formatMockClock,
+  mockAttemptQuestionCount,
   mockTimeUsedMs,
   optionLetter,
   type MockAttempt,
@@ -21,9 +21,13 @@ import {
   type MockQuestion,
   type MockReviewItem,
 } from "../../lib/mockTestContent";
-import { MockExhibits } from "./MockExhibits";
+import { MockExhibits, MockReviewExhibits } from "./MockExhibits";
 
-/** A tutor rehearsal is graded locally and never written anywhere. */
+/**
+ * A tutor rehearsal, graded locally against the key the tutor holds. Module
+ * test rehearsals are never written anywhere; paper rehearsals are kept only
+ * in the tutor's own rehearsal record (`saved`).
+ */
 export interface LocalReview {
   reason: Exclude<MockFinishReason, "expired">;
   work: MockWork;
@@ -31,6 +35,7 @@ export interface LocalReview {
   score: number;
   timeUsedMs: number;
   pkg: MockTestPackage;
+  saved?: boolean;
 }
 
 /**
@@ -78,13 +83,18 @@ export function MockResults({
   attempt: initialAttempt,
   local,
   onBack,
+  backLabel = "All module tests",
   practice,
+  breakdown,
 }: {
   moduleLabel: string;
   attempt?: MockAttempt;
   local?: LocalReview;
   onBack: () => void;
+  backLabel?: string;
   practice?: ReviewPractice;
+  /** A paper's results by module and skill; shown once the review is open. */
+  breakdown?: (review: { answers: readonly (number | null)[]; correct: readonly boolean[] | null; dwellMs?: readonly number[] }) => ReactNode;
 }) {
   const [attempt, setAttempt] = useState(initialAttempt);
   const [review, setReview] = useState<ReviewData | null>(
@@ -118,15 +128,16 @@ export function MockResults({
   const flags = local ? local.work.flags : attempt?.flags ?? [];
   const reason = local ? local.reason : attempt?.finishReason ?? null;
   const timeUsed = local ? local.timeUsedMs : attempt ? mockTimeUsedMs(attempt) : null;
+  const count = local ? local.pkg.key.correct.length : attempt ? mockAttemptQuestionCount(attempt) : 0;
   const forfeited = reason === "leave";
-  const percent = score === null ? 0 : Math.round((score / MOCK_QUESTION_COUNT) * 100);
-  // A strong result (6 of 8 or better) earns the crest medal in the reveal.
-  const strong = !forfeited && score !== null && score >= Math.ceil(MOCK_QUESTION_COUNT * 0.75);
+  const percent = score === null || count === 0 ? 0 : Math.round((score / count) * 100);
+  // A strong result (6 of 8, 33 of 44 or better) earns the crest medal in the reveal.
+  const strong = !forfeited && score !== null && score >= Math.ceil(count * 0.75);
   // Until the tutor releases the review the student sees the final score only.
   const reviewOpen = Boolean(local) || attempt?.reviewReleased === true;
   // Unanswered counts as a mistake.
   const isMistake = (index: number) => review ? answers[index] !== review.key[index] : correct?.[index] === false;
-  const mistakes = Array.from({ length: MOCK_QUESTION_COUNT }, (_, index) => index).filter(isMistake);
+  const mistakes = Array.from({ length: count }, (_, index) => index).filter(isMistake);
   const jumpTo = (index: number) => {
     if (onlyMistakes && !isMistake(index)) {
       setOnlyMistakes(false);
@@ -143,14 +154,14 @@ export function MockResults({
 
   return (
     <section className="mock-results" aria-labelledby="mock-results-title">
-      <button type="button" className="mock-results__back" onClick={onBack}><ArrowLeft size={18} />All module tests</button>
+      <button type="button" className="mock-results__back" onClick={onBack}><ArrowLeft size={18} />{backLabel}</button>
       <div className={`mock-results__reveal${forfeited ? " is-forfeit" : ""}${strong ? " is-strong" : ""}`}>
         {strong && <Crest size={56} animated className="mock-results__medal" />}
-        <p className="mock-results__eyebrow">{local ? "Rehearsal result · not saved" : moduleLabel}</p>
+        <p className="mock-results__eyebrow">{local ? (local.saved ? "Rehearsal result · on your tutor account only" : "Rehearsal result · not saved") : moduleLabel}</p>
         <h2 id="mock-results-title">{forfeited ? "Test forfeited" : "Your result"}</h2>
-        <div className="mock-score" style={{ ["--mock-score" as string]: `${percent}` }} aria-label={score === null ? "Grading" : `${score} out of ${MOCK_QUESTION_COUNT}`}>
+        <div className="mock-score" style={{ ["--mock-score" as string]: `${percent}` }} aria-label={score === null ? "Grading" : `${score} out of ${count}`}>
           <span className="mock-score__value">{score === null ? "…" : score}</span>
-          <span className="mock-score__of">/ {MOCK_QUESTION_COUNT}</span>
+          <span className="mock-score__of">/ {count}</span>
         </div>
         <dl className="mock-results__facts">
           <div><dt>Score</dt><dd>{score === null ? "Grading…" : `${percent}%`}</dd></div>
@@ -164,9 +175,11 @@ export function MockResults({
       </div>
       {error && <p className="mock-hub__error" role="alert"><CircleAlert size={16} />{error}</p>}
 
+      {reviewOpen && breakdown?.({ answers, correct, dwellMs: local ? local.work.dwellMs : attempt?.dwellMs })}
+
       {reviewOpen && (
-        <ol className="mock-results__grid" aria-label="Question results">
-          {Array.from({ length: MOCK_QUESTION_COUNT }, (_, index) => {
+        <ol className={`mock-results__grid${count > 12 ? " mock-results__grid--many" : ""}`} aria-label="Question results">
+          {Array.from({ length: count }, (_, index) => {
             const right = correct?.[index];
             return (
               <li key={index} className={right === undefined ? "" : right ? "is-right" : "is-wrong"}>
@@ -238,6 +251,7 @@ export function MockResults({
                 {item && (
                   <>
                     <p>{item.explanation}</p>
+                    <MockReviewExhibits item={item} />
                     {item.working.length > 0 && <ol className="mock-review__working">{item.working.map((step, stepIndex) => <li key={stepIndex}>{step}</li>)}</ol>}
                     {item.keystrokes && <p className="mock-review__keys"><strong>BA II Plus:</strong> <code>{item.keystrokes}</code></p>}
                     <ul className="mock-review__why">
