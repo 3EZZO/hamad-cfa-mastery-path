@@ -242,9 +242,10 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 
 .mock-card {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
+  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  align-items: start;
+  gap: 14px 16px;
   padding: 16px 18px;
   border: 1px solid var(--mk-line);
   border-radius: var(--radius-lg);
@@ -270,6 +271,33 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-card--none .mock-card__number { color: var(--mk-muted); background: var(--mk-soft); }
 .mock-card__module { margin: 0; color: var(--mk-muted); font-size: var(--text-label); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; }
 .mock-card h4 { margin: 2px 0 8px; font-size: var(--text-body); }
+/* Text gets the full card width; status, due date and the answers note wrap as whole phrases. */
+.mock-card__body { min-width: 0; }
+.mock-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.mock-card__meta > * { max-width: 100%; }
+/* Every action in one row at the foot of the card, lined up across a row of cards. */
+.mock-card__action {
+  grid-column: 1 / -1;
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mk-line);
+}
+.mock-card__action .mock-card__actions { display: contents; }
+.mock-card__action .mock-button { min-height: 40px; padding: 0 14px; gap: 6px; }
+/* Two narrow cards per row: "Practise this module" shortens to "Practise" (the accessible name stays full). */
+@container (min-width: 820px) and (max-width: 1099px) {
+  .mock-card__more { display: none; }
+}
+@container (max-width: 459px) {
+  .mock-card { grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .mock-card__number { width: 44px; height: 44px; font-size: var(--text-body); }
+  .mock-card__action .mock-button { flex: 1 1 auto; min-height: 44px; }
+}
 .mock-card__error { display: block; margin-top: 6px; color: var(--mk-wrong); }
 .mock-status {
   display: inline-flex;
@@ -812,11 +840,6 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
   .mock-timer { grid-row: 1; grid-column: 2; width: 4.25rem; height: 4.25rem; }
   .mock-exam { --mk-gutter: 16px; }
   .mock-question__actions .mock-button { flex: 1 1 auto; }
-  .mock-card { grid-template-columns: 48px minmax(0, 1fr); }
-  .mock-card__number { width: 44px; height: 44px; font-size: var(--text-body); }
-  .mock-card__action { grid-column: 1 / -1; }
-  .mock-card__action .mock-button { width: 100%; }
-  .mock-card__actions { flex-direction: column; }
   .mock-scores__row { grid-template-columns: 36px minmax(0, 1fr) auto; }
   .mock-scores__bar { display: none; }
   .mock-topic { padding: 12px; }
@@ -1015,16 +1038,24 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-hub__summary .is-live { color: #7a4b00; font-weight: var(--weight-bold); }
 .mock-hub__summary .is-overdue { color: var(--mk-wrong); font-weight: var(--weight-bold); }
 .mock-hub__summary .mock-button { margin-left: auto; }
-.mock-card__deadline { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; color: var(--mk-muted); font-size: var(--text-caption); font-weight: var(--weight-semibold); }
+.mock-card__deadline { display: inline-flex; align-items: center; gap: 5px; color: var(--mk-muted); font-size: var(--text-caption); font-weight: var(--weight-semibold); }
 .mock-card__deadline.is-overdue { color: var(--mk-wrong); }
 /* A first attempt's two actions: take the final attempt, or go back to the review. */
 .mock-card__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.mock-card__review { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; color: var(--mk-right); font-size: var(--text-caption); font-weight: var(--weight-bold); }
-.mock-card__repair { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 8px; padding: 8px 10px; border-radius: var(--radius-lg); background: var(--mk-wrong-bg); }
-.mock-card__repair > span { flex: 1 1 100%; color: var(--mk-wrong); font-size: var(--text-nav); font-weight: var(--weight-bold); }
+.mock-card__review { display: inline-flex; align-items: center; gap: 5px; color: var(--mk-right); font-size: var(--text-caption); font-weight: var(--weight-bold); }
+.mock-card__repair { display: flex; align-items: center; gap: 6px; width: fit-content; max-width: 100%; margin: 10px 0 0; padding: 5px 10px; border-radius: var(--radius-md); color: var(--mk-wrong); background: var(--mk-wrong-bg); font-size: var(--text-caption); font-weight: var(--weight-bold); }
+.mock-card__repair > svg { flex: none; }
+/* B. A topic's to-do strip: final attempts still open and the repair count, with the shared buttons once. */
+.mock-next { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--mk-line); border-left: 4px solid var(--mk-gold); border-radius: var(--radius-lg); background: var(--mk-surface); }
+.mock-next__title { margin: 0; color: var(--mk-muted); font-size: var(--text-label); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; }
+.mock-next__list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.mock-next__item { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--mk-ink); }
+.mock-next__item > svg { flex: none; color: var(--mk-blue-deep); }
+.mock-next__item--repair > svg { color: var(--mk-wrong); }
+.mock-next__item > span:first-of-type { flex: 1 1 260px; min-width: 0; }
+.mock-next__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 :root[data-theme="dark"] .mock-hub__summary .is-live { color: var(--gold, #f1ce88); }
 @media (max-width: 600px) {
-  .mock-card__deadline, .mock-card__review { display: flex; margin: 6px 0 0; }
   .mock-hub__summary .mock-button { margin-left: 0; }
 }
 
@@ -1057,7 +1088,7 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
   .mock-nav--many.is-open ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); overflow: visible; }
 }
 
-.mock-papers { display: grid; gap: 12px; margin: 0 0 24px; padding: 18px; border: 1px solid var(--mk-line); border-radius: var(--radius-lg); background: var(--mk-surface); }
+.mock-papers { display: grid; gap: 12px; margin: 0 0 24px; padding: 18px; container-type: inline-size; border: 1px solid var(--mk-line); border-radius: var(--radius-lg); background: var(--mk-surface); }
 .mock-papers__head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
 .mock-papers__head h3 { margin: 2px 0 0; }
 .mock-papers__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
@@ -1067,6 +1098,14 @@ button.mock-week__item:focus-visible { outline: 3px solid var(--mk-gold); outlin
 .mock-paper__number { display: grid; min-width: 44px; height: 40px; padding: 0 6px; place-items: center; border-radius: var(--radius-lg); color: #fff; background: var(--mk-blue-deep); font-family: var(--font-financial, monospace); font-size: var(--text-caption); font-weight: var(--weight-bold); letter-spacing: .04em; }
 .mock-paper .mock-status { justify-self: start; white-space: normal; }
 .mock-paper__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* One or two papers (the student's usual view): a full-width row, title left and actions right,
+   instead of a small tile in an empty panel. Three or more keep the compact tile grid. */
+@container (min-width: 520px) {
+  .mock-papers__list:not(:has(> :nth-child(3))) { grid-template-columns: minmax(0, 1fr); }
+  .mock-papers__list:not(:has(> :nth-child(3))) > .mock-paper { grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; }
+  .mock-papers__list:not(:has(> :nth-child(3))) > .mock-paper > * { grid-column: 1; }
+  .mock-papers__list:not(:has(> :nth-child(3))) > .mock-paper > .mock-paper__actions { grid-column: 2; grid-row: 1; justify-content: flex-end; }
+}
 .mock-paper__rehearsals { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; color: var(--mk-muted); font-size: var(--text-caption); }
 .mock-paper__rehearsals li { display: flex; align-items: center; gap: 6px; }
 
