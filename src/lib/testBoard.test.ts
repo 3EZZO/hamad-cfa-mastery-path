@@ -57,12 +57,12 @@ describe("buildTestBoard", () => {
   });
 
   it("summarizes progress and the next deadline", () => {
-    expect(summarizeTestBoard(board)).toEqual({ published: 7, done: 3, inProgress: 1, overdue: 1, nextDeadline: "2026-09-30", dueNext: 1, doneNext: 0 });
+    expect(summarizeTestBoard(board)).toEqual({ published: 7, done: 3, inProgress: 1, overdue: 1, nextDeadline: "2026-09-30", dueNext: 1, doneNext: 0, finals: 1 });
   });
 
   it("summarizes a topic for its header", () => {
     expect(summarizeTopic(board)).toEqual({
-      published: 7, done: 3, toTake: 4, inProgress: 1, due: 2, overdue: 1, repair: 1, averageScore: 6.5,
+      published: 7, done: 3, toTake: 4, inProgress: 1, due: 2, overdue: 1, repair: 1, finals: 1, averageScore: 6.5,
     });
     expect(summarizeTopic(buildTestBoard([entry(1, { published: false })], NOW))).toMatchObject({ published: 0, averageScore: null });
   });

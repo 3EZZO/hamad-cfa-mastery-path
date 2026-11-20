@@ -138,17 +138,45 @@ describe("Module Tests priority board", () => {
     expect(summary).toContain("2 of 4 done overall");
   });
 
-  it("offers repair after a weak result", async () => {
+  it("offers repair after a weak result: one line on the card, the shared buttons once in the topic's to-do strip", async () => {
     const onOpenMistakes = vi.fn();
     const onOpenRepair = vi.fn();
     const root = (await render("student", { onOpenMistakes, onOpenRepair })).root;
     const repairs = root.findAll((node) => node.props.className === "mock-card__repair");
     expect(repairs).toHaveLength(1);
-    const buttons = repairs[0].findAllByType("button");
+    expect(textOf(repairs[0])).toBe("First try below 6/8: repair before moving on.");
+    expect(repairs[0].findAllByType("button")).toHaveLength(0);
+    const next = root.findByProps({ className: "mock-next" });
+    expect(next.props["aria-label"]).toBe("What to do next");
+    const repairItem = next.findByProps({ className: "mock-next__item mock-next__item--repair" });
+    expect(textOf(repairItem)).toContain("1 to repair. First try below 6/8: repair before moving on.");
+    const buttons = repairItem.findAllByType("button");
+    expect(buttons.map(textOf)).toEqual(["Mistake Review", "Repair queue"]);
     await act(async () => buttons[0].props.onClick());
     await act(async () => buttons[1].props.onClick());
     expect(onOpenMistakes).toHaveBeenCalledTimes(1);
     expect(onOpenRepair).toHaveBeenCalledTimes(1);
+    // Mistake Review and Repair queue appear once on the page, not on every weak card.
+    expect(root.findAll((node) => node.type === "button" && textOf(node) === "Mistake Review")).toHaveLength(1);
+  });
+
+  it("lists the open final attempts in the to-do strip and the summary", async () => {
+    const root = (await render("student")).root;
+    const next = root.findByProps({ className: "mock-next" });
+    expect(textOf(next.findAllByProps({ className: "mock-next__item" })[0])).toBe("1 final attempt to take: QM1");
+    expect(textOf(root.findByProps({ className: "mock-hub__summary" }))).toContain("1 final attempt to take");
+  });
+
+  it("puts every card action in one row at the foot of the card", async () => {
+    cloud.practiceModuleIds = ["m002-return-types"];
+    const root = (await render("student", { onPracticeModule: vi.fn() })).root;
+    const card = root.find((node) => node.type === "li" && String(node.props.className ?? "").startsWith("mock-card")
+      && textOf(node.findByType("h4")) === "Rates and Returns");
+    expect(card.props.className).toBe("mock-card mock-card--done is-weak");
+    const row = card.findByProps({ className: "mock-card__action" });
+    expect(row.findAllByType("button").map(textOf)).toEqual(["Practise this module", "Final attempt", "Review"]);
+    // Status and the answers note share one line under the title; nothing else sits beside the text.
+    expect(textOf(card.findByProps({ className: "mock-card__meta" }))).toBe("First try 4/8Answers open · final attempt to take");
   });
 
   it("offers the final attempt after a first try, and the review on every finished test", async () => {
@@ -208,6 +236,7 @@ describe("Module Tests priority board", () => {
     await act(async () => remind.props.onClick());
     expect(onOpenReminders).toHaveBeenCalledTimes(1);
     expect(root.findAll((node) => node.props.className === "mock-card__repair")).toHaveLength(0);
+    expect(root.findAll((node) => node.props.className === "mock-next")).toHaveLength(0);
   });
 
   it("groups tests by topic and hides a topic with no published test from the student", async () => {
@@ -295,19 +324,21 @@ describe("Module Tests priority board", () => {
     cloud.practiceModuleIds = ["m014-fiscal-tools", "m002-return-types"];
     const onPracticeModule = vi.fn();
     const root = (await render("student", { onPracticeModule })).root;
-    const repair = root.findByProps({ className: "mock-card__repair" });
-    const practise = repair.find((node) => node.type === "button" && textOf(node).includes("Practise"));
-    expect(textOf(practise)).toBe("Practise Rates and Returns");
+    const card = root.find((node) => node.type === "li" && String(node.props.className ?? "").includes("is-weak"));
+    const practise = card.findByProps({ className: "mock-card__action" }).find((node) => node.type === "button" && textOf(node).includes("Practise"));
+    expect(textOf(practise)).toBe("Practise this module");
     await act(async () => practise.props.onClick());
     // QM1 covers curriculum Modules 001 and 002; the assigned set for 002 is the target.
     expect(onPracticeModule).toHaveBeenCalledWith("m002-return-types");
   });
 
-  it("keeps the repair box without a practice button when no set covers the module", async () => {
+  it("keeps the repair line without a practice button when no set covers the module", async () => {
     cloud.practiceModuleIds = ["m014-fiscal-tools"];
     const root = (await render("student", { onPracticeModule: vi.fn(), onOpenMistakes: vi.fn(), onOpenRepair: vi.fn() })).root;
-    const repair = root.findByProps({ className: "mock-card__repair" });
-    expect(repair.findAll((node) => node.type === "button" && textOf(node).includes("Practise"))).toHaveLength(0);
-    expect(repair.findAllByType("button").map(textOf)).toEqual(["Mistake Review", "Repair queue"]);
+    const card = root.find((node) => node.type === "li" && String(node.props.className ?? "").includes("is-weak"));
+    expect(textOf(card.findByProps({ className: "mock-card__repair" }))).toBe("First try below 6/8: repair before moving on.");
+    expect(card.findAll((node) => node.type === "button" && textOf(node).includes("Practise"))).toHaveLength(0);
+    const repairItem = root.findByProps({ className: "mock-next__item mock-next__item--repair" });
+    expect(repairItem.findAllByType("button").map(textOf)).toEqual(["Mistake Review", "Repair queue"]);
   });
 });

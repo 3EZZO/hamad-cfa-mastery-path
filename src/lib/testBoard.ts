@@ -43,6 +43,8 @@ export interface BoardSummary {
   /** Published tests carrying that next deadline, and how many of them are finished. */
   dueNext: number;
   doneNext: number;
+  /** First tries whose final attempt is still open. */
+  finals: number;
 }
 
 /** Below 6 of 8 (75%) a module test result asks for repair. */
@@ -103,6 +105,7 @@ export function summarizeTestBoard(rows: BoardRow[]): BoardSummary {
     nextDeadline,
     dueNext: dueByNext.length,
     doneNext: dueByNext.filter(isFinished).length,
+    finals: rows.filter((row) => row.finalAvailable).length,
   };
 }
 
@@ -117,6 +120,8 @@ export interface TopicProgress {
   overdue: number;
   /** First try below WEAK_SCORE. */
   repair: number;
+  /** First tries whose final attempt is still open. */
+  finals: number;
   /** Mean of the graded scores (out of MOCK_QUESTION_COUNT), or null before any grade. */
   averageScore: number | null;
 }
@@ -132,6 +137,7 @@ export function summarizeTopic(rows: BoardRow[]): TopicProgress {
     due: rows.filter((row) => row.status === "due").length,
     overdue: rows.filter((row) => row.overdue).length,
     repair: rows.filter((row) => row.weak).length,
+    finals: rows.filter((row) => row.finalAvailable).length,
     averageScore: graded.length ? graded.reduce((sum, score) => sum + score, 0) / graded.length : null,
   };
 }

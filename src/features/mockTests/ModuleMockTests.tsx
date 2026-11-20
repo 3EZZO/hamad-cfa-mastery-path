@@ -507,6 +507,7 @@ export function ModuleMockTests({
             ? `${summary.doneNext} of ${summary.dueNext} due by ${formatReminderDate(summary.nextDeadline)}`
             : `${summary.done} of ${summary.published} done`}</strong>
           {summary.inProgress > 0 && <span className="is-live">{summary.inProgress} in progress</span>}
+          {summary.finals > 0 && <span className="is-live">{summary.finals} final {summary.finals === 1 ? "attempt" : "attempts"} to take</span>}
           {summary.overdue > 0 && <span className="is-overdue">{summary.overdue} overdue</span>}
           {summary.nextDeadline && <span><CalendarClock size={14} aria-hidden="true" />{deadlineCountdown(summary.nextDeadline, now)} · {summary.done} of {summary.published} done overall</span>}
           {isTutor && onOpenReminders && (
@@ -588,14 +589,20 @@ export function ModuleMockTests({
                 onToggle={() => updateView({ ...view, open: { ...view.open, [group.topic]: !open } })}
                 doneOpen={doneOpen}
                 onToggleDone={() => updateView({ ...view, doneOpen: { ...view.doneOpen, [group.topic]: !doneOpen } })}
+                next={isTutor ? null : (
+                  <NextSteps
+                    finals={group.ordered.filter(entry => rowFor.get(entry.module.id)?.finalAvailable).map(entry => entry.module)}
+                    repair={group.progress.repair}
+                    onOpenMistakes={onOpenMistakes}
+                    onOpenRepair={onOpenRepair}
+                  />
+                )}
                 cards={group.active.map(entry => (
                   <ModuleCard
                     key={entry.module.id}
                     entry={entry}
                     row={rowFor.get(entry.module.id)}
                     nowMs={now}
-                    onOpenMistakes={onOpenMistakes}
-                    onOpenRepair={onOpenRepair}
                     isTutor={isTutor}
                     busy={busy}
                     onOpen={() => { setError(""); setScreen({ kind: "start", moduleId: entry.module.id }); }}
@@ -629,12 +636,55 @@ export function ModuleMockTests({
   );
 }
 
+/**
+ * The student's to-do strip at the top of a topic: final attempts still open,
+ * and the repair count with the shared Mistake Review and Repair queue (once,
+ * not on every card).
+ */
+function NextSteps({
+  finals,
+  repair,
+  onOpenMistakes,
+  onOpenRepair,
+}: {
+  finals: MockModule[];
+  repair: number;
+  onOpenMistakes?: () => void;
+  onOpenRepair?: () => void;
+}) {
+  if (finals.length === 0 && repair === 0) return null;
+  const codes = [...finals].sort((left, right) => left.number - right.number).map(mockModuleCode);
+  return (
+    <section className="mock-next" aria-label="What to do next">
+      <p className="mock-next__title">What to do next</p>
+      <ul className="mock-next__list">
+        {finals.length > 0 && (
+          <li className="mock-next__item">
+            <PlayCircle size={16} aria-hidden="true" />
+            <span><strong>{finals.length} final {finals.length === 1 ? "attempt" : "attempts"} to take:</strong> {codes.join(", ")}</span>
+          </li>
+        )}
+        {repair > 0 && (
+          <li className="mock-next__item mock-next__item--repair">
+            <RotateCcw size={16} aria-hidden="true" />
+            <span><strong>{repair} to repair.</strong> First try below {WEAK_SCORE}/{MOCK_QUESTION_COUNT}: repair before moving on.</span>
+            {(onOpenMistakes || onOpenRepair) && (
+              <span className="mock-next__actions">
+                {onOpenMistakes && <button type="button" className="mock-button mock-button--ghost" onClick={onOpenMistakes}><Archive size={15} />Mistake Review</button>}
+                {onOpenRepair && <button type="button" className="mock-button mock-button--ghost" onClick={onOpenRepair}><RotateCcw size={15} />Repair queue</button>}
+              </span>
+            )}
+          </li>
+        )}
+      </ul>
+    </section>
+  );
+}
+
 function ModuleCard({
   entry,
   row,
   nowMs,
-  onOpenMistakes,
-  onOpenRepair,
   isTutor,
   busy,
   onOpen,
@@ -649,8 +699,6 @@ function ModuleCard({
   entry: ModuleState;
   row?: BoardRow;
   nowMs: number;
-  onOpenMistakes?: () => void;
-  onOpenRepair?: () => void;
   isTutor: boolean;
   busy: boolean;
   onOpen: () => void;
@@ -667,38 +715,43 @@ function ModuleCard({
 }) {
   const { module } = entry;
   const status = cardStatus(entry, row, isTutor);
+  const weak = !isTutor && Boolean(row?.weak);
 
+  // Layout (moduleMock.css): number and text on top with the full card width,
+  // every action in one row pinned to the foot of the card, at every width.
   return (
-    <li className={`mock-card mock-card--${status.tone}`}>
+    <li className={`mock-card mock-card--${status.tone}${weak ? " is-weak" : ""}`}>
       <span className="mock-card__number" aria-hidden="true">{String(module.number).padStart(2, "0")}</span>
       <div className="mock-card__body">
         <p className="mock-card__module">Module {module.number}{thisWeek && <span className="mock-week-tag">This week</span>}</p>
         <h4>{module.title}</h4>
-        <span className={`mock-status mock-status--${status.tone}`}>
-          {status.tone === "done" ? <CircleCheckBig size={14} /> : status.tone === "forfeit" ? <Flag size={14} /> : null}
-          {status.label}
-        </span>
-        {row?.deadline && (row.status === "due" || row.status === "in-progress") && (
-          <span className={`mock-card__deadline${row.overdue ? " is-overdue" : ""}`}>
-            <CalendarClock size={13} aria-hidden="true" />Due {formatReminderDate(row.deadline)} · {deadlineCountdown(row.deadline, nowMs)}
+        <div className="mock-card__meta">
+          <span className={`mock-status mock-status--${status.tone}`}>
+            {status.tone === "done" ? <CircleCheckBig size={14} /> : status.tone === "forfeit" ? <Flag size={14} /> : null}
+            {status.label}
           </span>
-        )}
-        {!isTutor && row?.finalAvailable && (
-          <span className="mock-card__review"><BookOpenCheck size={13} aria-hidden="true" />Answers open · final attempt to take</span>
-        )}
-        {!isTutor && row?.weak && (
-          <div className="mock-card__repair">
-            <span>First try below {WEAK_SCORE}/{MOCK_QUESTION_COUNT}: repair before moving on.</span>
-            {practiceModuleId && onPractise && (
-              <button type="button" className="mock-button mock-button--primary" onClick={onPractise}><Dumbbell size={15} />Practise {module.title}</button>
-            )}
-            {onOpenMistakes &&<button type="button" className="mock-button mock-button--ghost" onClick={onOpenMistakes}><Archive size={15} />Mistake Review</button>}
-            {onOpenRepair && <button type="button" className="mock-button mock-button--ghost" onClick={onOpenRepair}><RotateCcw size={15} />Repair queue</button>}
-          </div>
+          {row?.deadline && (row.status === "due" || row.status === "in-progress") && (
+            <span className={`mock-card__deadline${row.overdue ? " is-overdue" : ""}`}>
+              <CalendarClock size={13} aria-hidden="true" />Due {formatReminderDate(row.deadline)} · {deadlineCountdown(row.deadline, nowMs)}
+            </span>
+          )}
+          {!isTutor && row?.finalAvailable && (
+            <span className="mock-card__review"><BookOpenCheck size={13} aria-hidden="true" />Answers open · final attempt to take</span>
+          )}
+        </div>
+        {weak && (
+          <p className="mock-card__repair">
+            <RotateCcw size={13} aria-hidden="true" />First try below {WEAK_SCORE}/{MOCK_QUESTION_COUNT}: repair before moving on.
+          </p>
         )}
         {entry.error && <small className="mock-card__error">{entry.error}</small>}
       </div>
       <div className="mock-card__action">
+        {weak && practiceModuleId && onPractise && (
+          <button type="button" className="mock-button mock-button--ghost" aria-label="Practise this module" onClick={onPractise}>
+            <Dumbbell size={15} aria-hidden="true" />Practise<span className="mock-card__more"> this module</span>
+          </button>
+        )}
         <CardAction entry={entry} isTutor={isTutor} busy={busy} onOpen={onOpen} onResume={onResume} onResults={onResults} onFinal={onFinal} onRehearse={onRehearse} />
       </div>
     </li>
@@ -832,6 +885,7 @@ function TopicSection({
   onToggle,
   doneOpen,
   onToggleDone,
+  next,
   cards,
   settled,
 }: {
@@ -843,6 +897,8 @@ function TopicSection({
   onToggle: () => void;
   doneOpen: boolean;
   onToggleDone: () => void;
+  /** Student: the topic's to-do strip (final attempts, repair). */
+  next?: ReactNode;
   cards: ReactNode[];
   settled: ReactNode[];
 }) {
@@ -876,6 +932,7 @@ function TopicSection({
         )}
       </div>
       <div id={bodyId} className="mock-topic__body" hidden={!open}>
+        {next}
         {cards.length > 0
           ? <ol className="mock-hub__list mock-hub__list--cards">{cards}</ol>
           : upcoming === 0 && <p className="mock-topic__empty"><CircleCheckBig size={16} aria-hidden="true" />Every test in this topic is finished.</p>}
