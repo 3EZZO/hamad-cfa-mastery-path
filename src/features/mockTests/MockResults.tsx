@@ -10,7 +10,7 @@ import {
   type MockWork,
 } from "../../lib/cloudMockTests";
 import { getCloudErrorMessage } from "../../lib/cloud";
-import { paperPassMarkLabel, paperScoreLine, paperVerdict, paperVerdictMessage } from "../../lib/paperPass";
+import { paperPassMarkLabel, paperReadyMarkLabel, paperScoreLine, paperVerdict, paperVerdictMessage, paperVerdictTitle } from "../../lib/paperPass";
 import {
   canStartFinalMockAttempt,
   formatMockClock,
@@ -141,10 +141,11 @@ export function MockResults({
   const count = local ? local.pkg.key.correct.length : attempt ? mockAttemptQuestionCount(attempt) : 0;
   const forfeited = reason === "leave";
   const percent = score === null || count === 0 ? 0 : Math.round((score / count) * 100);
-  // A Mock Exam paper is judged on its pass mark (38 of 45), from the saved score.
+  // A Mock Exam paper is judged on its pass mark (38 of 45) and exam-ready mark (30), from the saved score.
   const moduleId = (local ? local.pkg.meta.moduleId : attempt?.moduleId) ?? "";
   const verdict = paperVerdict(moduleId, score, count);
   const passMark = verdict ? paperPassMarkLabel(moduleId) : null;
+  const readyMark = verdict ? paperReadyMarkLabel(moduleId) : null;
   // The crest medal: a cleared paper, or 6 of 8 or better on a module test.
   const strong = !forfeited && score !== null && (verdict ? verdict.passed : score >= Math.ceil(count * 0.75));
   const reviewOpen = Boolean(local) || (attempt ? isMockAttemptLocked(attempt) : false);
@@ -183,6 +184,7 @@ export function MockResults({
           <div><dt>{final ? "Final score" : "Score"}</dt><dd>{score === null ? "Grading…" : verdict ? `${verdict.percent}%` : `${percent}%`}</dd></div>
           {final && attempt?.firstTryScore !== undefined && <div><dt>First try</dt><dd>{attempt.firstTryScore}/{count}</dd></div>}
           {passMark && <div><dt>Pass mark</dt><dd>{passMark}</dd></div>}
+          {readyMark && <div><dt>Exam-ready</dt><dd>{readyMark}</dd></div>}
           {reviewOpen && (
             <>
               <div><dt><Clock3 size={14} />Time used</dt><dd>{timeUsed === null ? "—" : formatMockClock(timeUsed)}</dd></div>
@@ -191,8 +193,8 @@ export function MockResults({
           )}
         </dl>
         {verdict && (
-          <div className={`mock-results__verdict ${verdict.passed ? "is-pass" : "is-fail"}`} role="status">
-            <strong>{verdict.passed ? "Passed" : "Not passed"}</strong>
+          <div className={`mock-results__verdict is-${verdict.band}`} role="status">
+            <strong>{paperVerdictTitle(verdict)}</strong>
             <p>{paperVerdictMessage(verdict)}</p>
             <p className="mock-results__verdict-score">{paperScoreLine(verdict)}</p>
           </div>

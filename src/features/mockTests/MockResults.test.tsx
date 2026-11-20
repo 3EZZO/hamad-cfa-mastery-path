@@ -240,23 +240,40 @@ describe("Module test results", () => {
     }) as unknown as MockAttempt;
     const verdictOf = (root: ReactTestInstance) => root.find((node) => typeof node.props.className === "string" && node.props.className.startsWith("mock-results__verdict "));
 
-    it("fails 37/45 (82.22%) with the owner's message, and opens the review at once", async () => {
-      const root = await render({ attempt: paperAttempt(37) });
+    it("fails 29/45 (64.44%) with the owner's message, and opens the review at once", async () => {
+      const root = await render({ attempt: paperAttempt(29) });
       const verdict = verdictOf(root);
       expect(verdict.props.className).toBe("mock-results__verdict is-fail");
       expect(textOf(verdict)).toBe(
         "Not passed"
         + "Sorry, you haven’t cleared this paper yet. You need at least 38 correct answers out of 45 to pass. "
         + "Review the topics you found difficult with your tutor—we’ll work through them together."
-        + "Your score: 37/45 (82.22%)",
+        + "Your score: 29/45 (64.44%)",
       );
       expect(textOf(root)).toContain("Pass mark84.44% (38/45)");
-      expect(textOf(root)).toContain("Score82.22%");
+      expect(textOf(root)).toContain("Exam-ready66.67% (30/45)");
+      expect(textOf(root)).toContain("Score64.44%");
       expect(hasClass(root, "mock-results__reveal")).toBe(true);
       expect(textOf(root)).toContain("Time used");
       // One attempt on a paper: no retry and no final attempt.
       expect(textOf(root)).not.toContain("Retry");
       expect(hasClass(root, "mock-final")).toBe(false);
+    });
+
+    it.each([
+      [30, "66.67"],
+      [37, "82.22"],
+    ])("marks %i/45 (%s%%) exam-ready with the owner's message, without the crest", async (score, percent) => {
+      const root = await render({ attempt: paperAttempt(score) });
+      const verdict = verdictOf(root);
+      expect(verdict.props.className).toBe("mock-results__verdict is-ready");
+      expect(textOf(verdict)).toBe(
+        "Exam-ready"
+        + "Well done! You’ve reached exam-ready level on this paper. You need at least 38 correct answers out of 45 to clear it. "
+        + "Review the topics you found difficult with your tutor—we’ll work through them together."
+        + `Your score: ${score}/45 (${percent}%)`,
+      );
+      expect(hasClass(root, "mock-results__reveal is-strong")).toBe(false);
     });
 
     it.each([
