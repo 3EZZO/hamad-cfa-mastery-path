@@ -1,4 +1,4 @@
-import { BadgeCheck, CircleAlert, Clock3, Gauge, History, LockKeyhole, Maximize, PlayCircle, RotateCcw, Target, Timer, Trash2 } from "lucide-react";
+import { BadgeCheck, CircleAlert, Clock3, Eye, Gauge, History, LockKeyhole, Maximize, PlayCircle, RotateCcw, Target, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MOCK_PAPERS, MOCK_PAPER_KIND, MOCK_PAPER_SECTION, type MockPaper } from "../../data/mockPapers";
 import { getCloudErrorMessage, listActiveStudentMembers } from "../../lib/cloud";
@@ -272,6 +272,36 @@ export function FullMockPapers({
     }
   };
 
+  /** Reopens the full review of a finished rehearsal of the paper's current version. */
+  const openRehearsalReview = async (entry: PaperState, item: MockRehearsal) => {
+    setBusy(true);
+    setError("");
+    try {
+      const pkg = await loadMockTestPackage(entry.paper.id);
+      if (!pkg || pkg.meta.version !== item.testVersion) {
+        throw new Error("This rehearsal was on an older version of the paper, so its review can no longer be shown.");
+      }
+      const finishedAtMs = item.finishedAtMs ?? item.updatedAtMs;
+      setScreen({
+        kind: "rehearsal-results",
+        paperId: entry.paper.id,
+        local: {
+          reason: item.finishReason ?? "submit",
+          work: { answers: item.answers, flags: item.flags, dwellMs: item.dwellMs, incidents: [], keystrokes: [] },
+          correct: item.correct ?? [],
+          score: item.score ?? 0,
+          timeUsedMs: Math.max(0, Math.min(finishedAtMs - item.startedAtMs, item.durationSeconds * 1000)),
+          pkg,
+          saved: true,
+        },
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : getCloudErrorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const discard = async (rehearsal: MockRehearsal) => {
     if (!window.confirm("Discard this rehearsal? It is removed from your tutor account; Hamad's records are not affected.")) return;
     setBusy(true);
@@ -481,6 +511,11 @@ export function FullMockPapers({
                             Rehearsal {new Date(item.startedAtMs).toLocaleDateString()}: {item.score}/{item.questionCount}{paperVerdictSuffix(entry.paper.id, item.score, item.questionCount)}
                             {item.finishedAtMs ? ` in ${formatMockClock(Math.min(item.finishedAtMs - item.startedAtMs, item.durationSeconds * 1000))}` : ""}
                             {item.testVersion !== entry.meta?.version ? " (older version)" : ""}
+                            {item.testVersion === entry.meta?.version && (
+                              <button type="button" className="mock-hub__link" disabled={busy} onClick={() => void openRehearsalReview(entry, item)}>
+                                <Eye size={14} aria-hidden="true" />Open review
+                              </button>
+                            )}
                             <button type="button" className="mock-hub__link" disabled={busy} onClick={() => void discard(item)} aria-label="Delete this rehearsal">
                               <Trash2 size={14} aria-hidden="true" />
                             </button>

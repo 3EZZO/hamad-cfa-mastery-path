@@ -36,12 +36,18 @@ export const MOCK_PAPER_KIND = "Mock Exam";
  */
 export const MOCK_PAPER_PASS = { correct: 38, ready: 30, outOf: 45 } as const;
 
-const paper = (id: string, topic: string, code: string): MockPaper => ({ id, topic, code, title: `${topic} Paper`, pass: MOCK_PAPER_PASS });
+const paper = (id: string, topic: string, code: string, title = `${topic} Paper`): MockPaper => ({ id, topic, code, title, pass: MOCK_PAPER_PASS });
 
-/** In curriculum order. */
+/**
+ * In curriculum order. A topic's further papers follow its first one; until
+ * the tutor publishes a paper, only the tutor sees it (as a rehearsal), so a
+ * second paper can serve as a tutor-led teaching paper without reaching the
+ * student's tests or results.
+ */
 export const MOCK_PAPERS: readonly MockPaper[] = [
   paper("eth-paper-01", "Ethical and Professional Standards", "ETH"),
   paper("qm-paper-01", "Quantitative Methods", "QM"),
+  paper("qm-paper-02", "Quantitative Methods", "QM", "Quantitative Methods Paper II"),
   paper("ec-paper-01", "Economics", "EC"),
   paper("fsa-paper-01", "Financial Statement Analysis", "FSA"),
   paper("ci-paper-01", "Corporate Issuers", "CI"),
