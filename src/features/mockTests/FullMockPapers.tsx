@@ -1,4 +1,4 @@
-import { BadgeCheck, CircleAlert, Clock3, History, LockKeyhole, Maximize, PlayCircle, RotateCcw, Target, Timer, Trash2 } from "lucide-react";
+import { BadgeCheck, CircleAlert, Clock3, Gauge, History, LockKeyhole, Maximize, PlayCircle, RotateCcw, Target, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MOCK_PAPERS, MOCK_PAPER_KIND, MOCK_PAPER_SECTION, type MockPaper } from "../../data/mockPapers";
 import { getCloudErrorMessage, listActiveStudentMembers } from "../../lib/cloud";
@@ -46,7 +46,7 @@ import {
   type MockTestMeta,
 } from "../../lib/mockTestContent";
 import type { ProjectRole } from "../../lib/permissions";
-import { paperPassMarkLabel, paperVerdictSuffix } from "../../lib/paperPass";
+import { paperPassMarkLabel, paperReadyMarkLabel, paperVerdictSuffix } from "../../lib/paperPass";
 import { setShellBusy } from "../../lib/shellBusy";
 import { MockResults, type LocalReview } from "./MockResults";
 import { PaperBreakdownView } from "./PaperBreakdownView";
@@ -429,6 +429,7 @@ export function FullMockPapers({
           <li><Timer size={16} />{formatMockClock(mockDurationMsFor(MOCK_KIND_QUESTION_COUNT.paper))} total</li>
           <li><LockKeyhole size={16} />One attempt</li>
           <li><BadgeCheck size={16} />Pass mark {paperPassMarkLabel(MOCK_PAPERS[0].id)}</li>
+          <li><Gauge size={16} />Exam-ready from {paperReadyMarkLabel(MOCK_PAPERS[0].id)}</li>
         </ul>
       </div>
       {isTutor && (

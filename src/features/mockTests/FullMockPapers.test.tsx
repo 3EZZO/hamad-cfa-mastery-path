@@ -119,10 +119,16 @@ describe("Full QM mocks section", () => {
 
   it("shows the pass mark and judges 45-question papers on it (44-question attempts get no verdict)", async () => {
     const paper45 = (score: number) => ({ ...studentAttempt, questionCount: 45, durationSeconds: 4050, score }) as MockAttempt;
-    vi.mocked(getMockAttempt).mockResolvedValueOnce(paper45(37));
+    vi.mocked(getMockAttempt).mockResolvedValueOnce(paper45(29));
     let root = await render("student");
     expect(textOf(root)).toContain("Pass mark 84.44% (38/45)");
-    expect(textOf(root)).toContain("37/45 · Not passed · 30:00");
+    expect(textOf(root)).toContain("Exam-ready from 66.67% (30/45)");
+    expect(textOf(root)).toContain("29/45 · Not passed · 30:00");
+    await act(async () => tree!.unmount());
+
+    vi.mocked(getMockAttempt).mockResolvedValueOnce(paper45(37));
+    root = await render("student");
+    expect(textOf(root)).toContain("37/45 · Exam-ready · 30:00");
     await act(async () => tree!.unmount());
 
     vi.mocked(listMockAttempts).mockResolvedValueOnce([paper45(38)]);

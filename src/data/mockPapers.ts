@@ -20,17 +20,21 @@ export interface MockPaper {
   /**
    * Pass mark: the fewest correct answers that clear the paper, defined for a
    * paper of exactly `outOf` questions. Judged on the correct count, never on
-   * a rounded percentage.
+   * a rounded percentage. `ready` is the fewest correct answers for the
+   * middle "exam-ready" band below the pass mark.
    */
-  pass: { correct: number; outOf: number };
+  pass: { correct: number; ready: number; outOf: number };
 }
 
 /** What the student and the tutor call this kind of test. */
 export const MOCK_PAPER_SECTION = "Mock Exams";
 export const MOCK_PAPER_KIND = "Mock Exam";
 
-/** The owner's pass mark for every 45-question paper: 38 of 45 (84.44%). */
-export const MOCK_PAPER_PASS = { correct: 38, outOf: 45 } as const;
+/**
+ * The owner's pass mark for every 45-question paper: 38 of 45 (84.44%) clears
+ * it; 30 to 37 (66.67% and up) is exam-ready; below 30 is not passed.
+ */
+export const MOCK_PAPER_PASS = { correct: 38, ready: 30, outOf: 45 } as const;
 
 const paper = (id: string, topic: string, code: string): MockPaper => ({ id, topic, code, title: `${topic} Paper`, pass: MOCK_PAPER_PASS });
 
