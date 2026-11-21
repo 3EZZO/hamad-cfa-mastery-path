@@ -47,7 +47,6 @@ const paper = (id: string, topic: string, code: string, title = `${topic} Paper`
 export const MOCK_PAPERS: readonly MockPaper[] = [
   paper("eth-paper-01", "Ethical and Professional Standards", "ETH"),
   paper("qm-paper-01", "Quantitative Methods", "QM"),
-  paper("qm-paper-02", "Quantitative Methods", "QM", "Quantitative Methods Paper II"),
   paper("ec-paper-01", "Economics", "EC"),
   paper("fsa-paper-01", "Financial Statement Analysis", "FSA"),
   paper("ci-paper-01", "Corporate Issuers", "CI"),
@@ -57,6 +56,20 @@ export const MOCK_PAPERS: readonly MockPaper[] = [
   paper("alt-paper-01", "Alternative Investments", "ALT"),
   paper("pm-paper-01", "Portfolio Management", "PM"),
 ];
+
+/**
+ * Paper ids that were used and are now out of the app. Their stored draft and
+ * tutor rehearsals stay in Firestore, so an id here must never be registered
+ * again: a new paper under it would inherit them. `qm-paper-02` was QM Paper
+ * II, a tutor-only draft teaching paper, never published, retired after its
+ * rehearsal with Hamad on 2026-11-21.
+ */
+export const RETIRED_MOCK_PAPER_IDS: readonly string[] = ["qm-paper-02"];
+
+/** Drops uploaded tests of retired papers, so no tutor list or count shows them. */
+export function withoutRetiredPapers<T extends { moduleId: string }>(metas: readonly T[]): T[] {
+  return metas.filter(meta => !RETIRED_MOCK_PAPER_IDS.includes(meta.moduleId));
+}
 
 export function mockPaperById(id: string): MockPaper | undefined {
   return MOCK_PAPERS.find(entry => entry.id === id);
