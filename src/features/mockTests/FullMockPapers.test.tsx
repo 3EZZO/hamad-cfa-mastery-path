@@ -8,12 +8,13 @@ const meta = (id: string, status: "draft" | "published"): MockTestMeta => ({
 });
 const metas: Record<string, MockTestMeta | null> = {
   "qm-paper-01": meta("qm-paper-01", "published"),
+  // QM Paper II is retired: its draft and rehearsals are still stored, but the app no longer offers it.
   "qm-paper-02": { ...meta("qm-paper-02", "draft"), version: "paper-test-1", questionCount: 45, durationSeconds: 4050 },
-  "ec-paper-01": meta("ec-paper-01", "draft"),
+  "ec-paper-01": { ...meta("ec-paper-01", "draft"), questionCount: 45, durationSeconds: 4050 },
 };
-// A finished tutor rehearsal of the draft QM Paper II: 30 of 45 right, 50 minutes.
-const paperTwoRehearsal = (testVersion: string, id = "r3") => ({
-  id, uid: "tutor", testId: "qm-paper-02", testVersion, questionCount: 45, durationSeconds: 4050, status: "finished",
+// A finished 45-question tutor rehearsal: 30 of 45 right, 50 minutes.
+const paperRehearsal = (testId: string, testVersion: string, id = "r3") => ({
+  id, uid: "tutor", testId, testVersion, questionCount: 45, durationSeconds: 4050, status: "finished",
   startedAtMs: 0, updatedAtMs: 3_000_000, finishedAtMs: 3_000_000, finishReason: "submit",
   answers: Array.from({ length: 45 }, (_, index) => index % 3), flags: Array(45).fill(false), dwellMs: Array(45).fill(60_000),
   score: 30, correct: Array.from({ length: 45 }, (_, index) => index < 30),
@@ -42,7 +43,9 @@ vi.mock("../../lib/cloudMockTests", () => ({
 }));
 vi.mock("../../lib/cloudMockRehearsals", () => ({
   listMockRehearsals: vi.fn(async (id: string) => (id === "qm-paper-02"
-    ? [paperTwoRehearsal("paper-test-1"), paperTwoRehearsal("paper-test-0", "r4")]
+    ? [paperRehearsal(id, "paper-test-1", "r5")]
+    : id === "ec-paper-01"
+    ? [paperRehearsal(id, "v1"), paperRehearsal(id, "paper-test-0", "r4")]
     : id === "qm-paper-01"
     ? [{ id: "r1", uid: "tutor", testId: id, testVersion: "v1", questionCount: 44, durationSeconds: 3960, status: "finished", startedAtMs: 0, updatedAtMs: 0, finishedAtMs: 3_000_000, finishReason: "submit", answers: [], flags: [], dwellMs: [], score: 40, correct: [] },
       { id: "r2", uid: "tutor", testId: id, testVersion: "v1", questionCount: 44, durationSeconds: 3960, status: "active", startedAtMs: Date.now(), updatedAtMs: 0, finishedAtMs: null, finishReason: null, answers: [], flags: [], dwellMs: [], score: null, correct: null }]
@@ -58,11 +61,12 @@ vi.mock("../../lib/cloud", () => ({
   listActiveStudentMembers: vi.fn(async () => [{ uid: "student-1" }]),
 }));
 
-import { getMockAttempt, listMockAttempts, loadMockTestPackage, type MockTestPackage } from "../../lib/cloudMockTests";
+import { getMockAttempt, getMockTestMeta, listMockAttempts, loadMockTestPackage, type MockTestPackage } from "../../lib/cloudMockTests";
+import { listMockRehearsals } from "../../lib/cloudMockRehearsals";
 import { parseMockTestDraft, splitMockDraft } from "../../lib/mockTestContent";
-import { syntheticPaper } from "../../testFixtures/syntheticPaper";
+import { syntheticTopicPaper } from "../../testFixtures/syntheticPaper";
 import { FullMockPapers } from "./FullMockPapers";
-import { mockTestTitle } from "../../data/mockPapers";
+import { isMockPaperId, mockTestTitle } from "../../data/mockPapers";
 
 function textOf(node: ReactTestInstance): string {
   return node.children.map((child) => (typeof child === "string" ? child : textOf(child))).join("");
@@ -115,9 +119,9 @@ describe("Full QM mocks section", () => {
     const text = textOf(root);
     // One card per CFA topic for the tutor, in curriculum order.
     const cards = root.findAllByProps({ className: "mock-paper" });
-    expect(cards).toHaveLength(11);
+    expect(cards).toHaveLength(10);
     expect(cards.map(card => textOf(card.findByProps({ className: "mock-paper__number" })))).toEqual(
-      ["ETH", "QM", "QM", "EC", "FSA", "CI", "EQ", "FI", "DER", "ALT", "PM"],
+      ["ETH", "QM", "EC", "FSA", "CI", "EQ", "FI", "DER", "ALT", "PM"],
     );
     expect(text).toContain("No paper yet");
     expect(text).toContain("Economics Paper");
@@ -150,24 +154,29 @@ describe("Full QM mocks section", () => {
     expect(textOf(root)).not.toContain("40/44 · ");
   });
 
-  it("keeps QM Paper II, a draft, on the tutor's side only", async () => {
-    expect(mockTestTitle({ moduleId: "qm-paper-02", title: "anything" })).toBe("Quantitative Methods Paper II");
-    let root = await render("student");
+  it("no longer offers the retired QM Paper II to anyone, though its draft and rehearsals are still stored", async () => {
+    expect(isMockPaperId("qm-paper-02")).toBe(false);
+    expect(mockTestTitle({ moduleId: "qm-paper-02", title: "stored title" })).toBe("stored title");
+    vi.mocked(getMockTestMeta).mockClear();
+    vi.mocked(listMockRehearsals).mockClear();
+    let root = await render("tutor");
     expect(textOf(root)).not.toContain("Paper II");
+    expect(textOf(root)).not.toContain("paper-test-1");
+    expect(getMockTestMeta).not.toHaveBeenCalledWith("qm-paper-02");
+    expect(listMockRehearsals).not.toHaveBeenCalledWith("qm-paper-02");
+    expect(listMockRehearsals).toHaveBeenCalledWith("qm-paper-01");
     await act(async () => tree!.unmount());
 
-    root = await render("tutor");
-    const card = root.findAllByProps({ className: "mock-paper" }).find(node => textOf(node).includes("Quantitative Methods Paper II"))!;
-    expect(textOf(card)).toContain("45 questions · 67:30 · Draft · version paper-test-1");
-    expect(textOf(card)).toContain("Hamad: not available yet");
-    expect(textOf(card)).toContain("Rehearse");
+    root = await render("student");
+    expect(textOf(root)).not.toContain("Paper II");
+    expect(getMockTestMeta).not.toHaveBeenCalledWith("qm-paper-02");
   });
 
   it("reopens the review of a finished rehearsal of the current version, and not of an older one", async () => {
-    const draft = parseMockTestDraft(syntheticPaper({ moduleId: "qm-paper-02" }));
-    vi.mocked(loadMockTestPackage).mockResolvedValue({ meta: metas["qm-paper-02"]!, ...splitMockDraft(draft) } as MockTestPackage);
+    const draft = parseMockTestDraft(syntheticTopicPaper("ec-paper-01", { version: "v1" }));
+    vi.mocked(loadMockTestPackage).mockResolvedValue({ meta: metas["ec-paper-01"]!, ...splitMockDraft(draft) } as MockTestPackage);
     const root = await render("tutor");
-    const card = root.findAllByProps({ className: "mock-paper" }).find(node => textOf(node).includes("Quantitative Methods Paper II"))!;
+    const card = root.findAllByProps({ className: "mock-paper" }).find(node => textOf(node).includes("Economics Paper"))!;
     const rows = card.findByProps({ className: "mock-paper__rehearsals" }).findAllByType("li");
     const current = rows.find(row => !textOf(row).includes("older version"))!;
     const older = rows.find(row => textOf(row).includes("older version"))!;
@@ -178,7 +187,7 @@ describe("Full QM mocks section", () => {
     await act(async () => { open.props.onClick(); });
     for (let i = 0; i < 3; i += 1) await act(async () => { await Promise.resolve(); });
     const text = textOf(tree!.root);
-    expect(loadMockTestPackage).toHaveBeenCalledWith("qm-paper-02");
+    expect(loadMockTestPackage).toHaveBeenCalledWith("ec-paper-01");
     expect(text).toContain("Rehearsal result · on your tutor account only");
     expect(text).toContain("Synthetic paper stem 45");
     expect(text).toContain("Exam-ready");

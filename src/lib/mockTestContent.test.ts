@@ -388,17 +388,9 @@ describe("mock exam papers for every CFA topic", () => {
     expect(() => parseMockTestDraft(tagged)).toThrow("must be empty: Fixed Income has no module tests");
   });
 
-  it("rejects ids that are not registered papers, including the retired QM paper 3", () => {
+  it("rejects ids that are not registered papers, including the retired QM Papers II and 3", () => {
+    expect(() => parseMockTestDraft(syntheticPaper({ moduleId: "qm-paper-02" }))).toThrow("registered papers");
     expect(() => parseMockTestDraft(syntheticPaper({ moduleId: "qm-paper-03" }))).toThrow("registered papers");
     expect(() => parseMockTestDraft(syntheticPaper({ moduleId: "qm-paper-99" }))).toThrow("registered papers");
-  });
-
-  it("accepts QM Paper II, a second Quantitative Methods paper with the same topic rules", () => {
-    const draft = parseMockTestDraft(syntheticPaper({ moduleId: "qm-paper-02" }));
-    expect(draft.moduleId).toBe("qm-paper-02");
-    expect(draft.questions).toHaveLength(45);
-    const offTopic = syntheticPaper({ moduleId: "qm-paper-02" });
-    offTopic.questions[0] = syntheticPaperQuestion(0, { tags: { ...syntheticPaperQuestion(0).tags, catalogId: "cfa-2027-outline-m012" } });
-    expect(() => parseMockTestDraft(offTopic)).toThrow("must be an official Quantitative Methods module");
   });
 });

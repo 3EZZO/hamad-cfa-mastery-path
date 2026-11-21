@@ -20,6 +20,7 @@ import {
   getCurrentCloudUser,
   mapCloudError,
 } from "./cloud";
+import { withoutRetiredPapers } from "../data/mockPapers";
 import {
   MOCK_KIND_QUESTION_COUNT,
   MOCK_KNOWN_QUESTION_COUNTS,
@@ -134,7 +135,8 @@ export async function listMockTestMetas(): Promise<MockTestMeta[]> {
   try {
     const { firestore } = services();
     const snapshot = await getDocs(collection(firestore, "programs", PROGRAM_ID, "mockTests"));
-    return snapshot.docs.map(item => item.data() as MockTestMeta);
+    // A retired paper's draft stays stored but is never listed or counted.
+    return withoutRetiredPapers(snapshot.docs.map(item => item.data() as MockTestMeta));
   } catch (error) {
     throw mapError(error);
   }
